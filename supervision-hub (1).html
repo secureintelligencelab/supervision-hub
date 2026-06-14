@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MRes Supervision Hub</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     Palette: "Field notebook" — ink, paper, supervisory teal,
+     approval amber, alert clay. Grounded in research/academic
+     world: ruled-paper structure, ink-on-cream, archival feel.
+     ============================================================ */
+  :root{
+    --ink:#1c2024;
+    --ink-soft:#434b52;
+    --paper:#f6f3ec;
+    --paper-2:#fffdf8;
+    --line:#d9d3c6;
+    --line-strong:#bcb4a2;
+    --teal:#1f6f6b;          /* primary action / supervisor */
+    --teal-deep:#13504d;
+    --amber:#c98a14;         /* pending / approval */
+    --amber-soft:#f3e3bf;
+    --clay:#b5482f;          /* delete / alert */
+    --green:#3f7d4e;         /* approved / present */
+    --green-soft:#dceadc;
+    --blue:#3a5e91;          /* student tone */
+    --shadow:0 1px 0 var(--line-strong),0 6px 24px -12px rgba(28,32,36,.4);
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    line-height:1.5;font-size:15px;
+  }
+  body, input, select, button, textarea{font-family:inherit}
+  .ui{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  h1,h2,h3{font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:0}
+  a{color:var(--teal-deep)}
+  button{cursor:pointer;font-size:14px}
+  input,select,textarea{
+    font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);
+    border-radius:8px;background:var(--paper-2);color:var(--ink);width:100%;
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
+  label{font-size:12.5px;font-weight:600;color:var(--ink-soft);display:block;margin:0 0 4px;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-transform:uppercase;letter-spacing:.04em}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;border:1px solid var(--teal-deep);
+    background:var(--teal);color:#fff;padding:9px 15px;border-radius:8px;font-weight:600;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    transition:filter .12s;width:auto;
+  }
+  .btn:hover{filter:brightness(1.07)}
+  .btn:active{filter:brightness(.95)}
+  .btn.ghost{background:transparent;color:var(--teal-deep);border-color:var(--line-strong)}
+  .btn.ghost:hover{background:#0000000a;filter:none}
+  .btn.danger{background:var(--clay);border-color:#8f3823}
+  .btn.amber{background:var(--amber);border-color:#9a6b0f}
+  .btn.sm{padding:5px 10px;font-size:12.5px;border-radius:6px}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .grid{display:grid;gap:12px}
+  .card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+  .muted{color:var(--ink-soft);font-size:13px}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
+    padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;
+    font-family:ui-sans-serif,system-ui,sans-serif}
+  .pill.pending{background:var(--amber-soft);color:#7a5408}
+  .pill.approved{background:var(--green-soft);color:#235c30}
+  .pill.none{background:#eee9dd;color:#6b6555}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-soft);font-weight:700}
+  tr:hover td{background:#0000000a}
+  .hidden{display:none!important}
+
+  /* ---- Shell ---- */
+  header.app{
+    background:var(--ink);color:var(--paper);padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between;height:60px;
+    border-bottom:3px solid var(--teal);
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .mark{
+    width:34px;height:34px;border-radius:7px;background:var(--teal);
+    display:grid;place-items:center;font-weight:700;color:#fff;font-family:ui-sans-serif,sans-serif;
+    box-shadow:inset 0 0 0 1px #ffffff22;
+  }
+  .brand h1{font-size:17px;color:var(--paper)}
+  .brand .sub{font-size:11px;color:#b7b09f;font-family:ui-sans-serif,sans-serif;letter-spacing:.05em;text-transform:uppercase}
+  .who{display:flex;align-items:center;gap:12px;font-family:ui-sans-serif,sans-serif;font-size:13px}
+  .who .role{font-size:11px;color:#b7b09f;text-transform:uppercase;letter-spacing:.05em}
+
+  main{max-width:1180px;margin:0 auto;padding:22px}
+  nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  nav.tabs button{
+    background:none;border:none;padding:11px 14px;font-weight:600;color:var(--ink-soft);
+    font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  nav.tabs button.active{color:var(--teal-deep);border-bottom-color:var(--teal)}
+  nav.tabs button:hover{color:var(--ink)}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+  .field{min-width:150px}
+  .section-title{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+  .section-title h2{font-size:21px}
+  .eyebrow{font-family:ui-sans-serif,sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--teal-deep);margin-bottom:3px}
+
+  /* ---- Login ---- */
+  .auth-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;
+    background:
+      repeating-linear-gradient(transparent,transparent 31px,#0000000a 31px,#0000000a 32px),
+      var(--paper);
+  }
+  .auth-card{width:100%;max-width:400px;background:var(--paper-2);border:1px solid var(--line);
+    border-radius:14px;padding:30px;box-shadow:var(--shadow);border-top:4px solid var(--teal)}
+  .auth-card .mark-lg{width:46px;height:46px;border-radius:10px;background:var(--teal);color:#fff;
+    display:grid;place-items:center;font-weight:700;font-size:20px;font-family:ui-sans-serif,sans-serif;margin-bottom:14px}
+  .seg{display:flex;background:#0000000d;border-radius:9px;padding:3px;margin:16px 0;gap:3px}
+  .seg button{flex:1;border:none;background:none;padding:8px;border-radius:7px;font-weight:600;
+    font-family:ui-sans-serif,sans-serif;color:var(--ink-soft)}
+  .seg button.active{background:var(--paper-2);color:var(--teal-deep);box-shadow:var(--shadow)}
+
+  /* ---- Modal ---- */
+  .modal-bg{position:fixed;inset:0;background:rgba(28,32,36,.5);display:grid;place-items:center;padding:18px;z-index:50}
+  .modal{background:var(--paper-2);border-radius:14px;max-width:520px;width:100%;padding:24px;
+    box-shadow:0 20px 60px -20px rgba(0,0,0,.5);max-height:90vh;overflow:auto}
+  .modal h3{font-size:19px;margin-bottom:14px}
+
+  /* ---- Toast ---- */
+  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(120%);
+    background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:9px;
+    font-family:ui-sans-serif,sans-serif;font-size:14px;z-index:99;transition:transform .25s;box-shadow:var(--shadow);max-width:90vw}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  #toast.err{background:var(--clay)}
+
+  /* ---- Attendance grid ---- */
+  .att-grid{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--paper-2)}
+  .att-grid table{font-size:12.5px;min-width:640px}
+  .att-grid th, .att-grid td{white-space:nowrap}
+  .att-cell{cursor:pointer;text-align:center;width:34px;font-weight:700;user-select:none}
+  .att-cell.P{background:var(--green-soft);color:#235c30}
+  .att-cell.A{background:#f1d9d2;color:#8f3823}
+  .att-cell.E{background:var(--amber-soft);color:#7a5408}
+  .att-cell.-{color:#c7c0b0}
+
+  .empty{text-align:center;padding:48px 20px;color:var(--ink-soft)}
+  .empty .big{font-size:30px;margin-bottom:8px;opacity:.5}
+  .stat{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+  .stat .b{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;min-width:120px}
+  .stat .n{font-size:26px;font-weight:700;font-family:ui-sans-serif,sans-serif}
+  .stat .l{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-family:ui-sans-serif,sans-serif}
+
+  details.help{margin-top:14px;font-size:13px}
+  details.help summary{cursor:pointer;font-family:ui-sans-serif,sans-serif;color:var(--teal-deep);font-weight:600}
+  code{background:#0000000d;padding:1px 5px;border-radius:4px;font-size:12.5px}
+
+  @media (max-width:640px){
+    main{padding:14px}
+    .who .name{display:none}
+    th,td{padding:7px 6px}
+  }
+  @media print{
+    header.app,nav.tabs,.toolbar,.btn,#toast{display:none!important}
+    body{background:#fff}
+    .card{box-shadow:none;border:1px solid #999}
+  }
+</style>
+
+<!-- Firebase SDK (modular, via CDN) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
+  updateDoc, deleteDoc, query, where, writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ============================================================
+   1. FIREBASE CONFIG  — REPLACE WITH YOUR OWN
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCCD5aVaOk9HLkb8AIhC86_w6r-efFtjZI",
+  authDomain: "mrescoordination.firebaseapp.com",
+  projectId: "mrescoordination",
+  storageBucket: "mrescoordination.firebasestorage.app",
+  messagingSenderId: "322111564176",
+  appId: "1:322111564176:web:7baeffd937acd419936b15",
+  measurementId: "G-DPPZMKX9WS"
+};
+
+let app, auth, db, DEMO = false;
+try {
+  if (firebaseConfig.apiKey.startsWith("REPLACE")) throw new Error("not-configured");
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch(e){
+  DEMO = true;               // run with in-memory mock so the UI is testable
+  console.warn("Firebase not configured — running in DEMO (in-memory) mode.");
+}
+
+/* ============================================================
+   2. DATA LAYER
+   Firestore structure:
+     users/{uid}          -> {email,name,role:'admin'|'supervisor',
+                              supRole:'both'|'principal'|'co'}  // capability
+     semesters/{id}       -> {label, weeks,
+                              units:[{id,code,name}, ...]}      // 1+ units
+     students/{id}        -> {semesterId, sid, name, email, campus,
+                              unitIds:[...],                    // 1+ units
+                              principalUid, coUid, principalName, coName}
+     timetables/{id}      -> {semesterId, unitId, supervisorUid, day, start,
+                              end, room, status:'pending'|'approved'}
+     consultations/{id}   -> {semesterId, studentDocId, supervisorUid,
+                              supervisorRole:'principal'|'co',
+                              day, start, end, mode, status}
+     attendance/{id}      -> {semesterId, studentDocId, supervisorUid,
+                              weeks:{1:'P',2:'A',...}, notes:{1:'...'}}
+
+   NOTE on supervisor capability (supRole):
+     • A "supervisor" login is given a capability of 'both', 'principal'
+       (principal only) or 'co' (co-supervisor only).
+     • The capability controls which dropdowns the supervisor can be
+       assigned in on a student record (principal box, co box, or both).
+     • Principals run the weekly class, mark attendance AND may set a
+       consultation time.
+     • Co-supervisors do NOT run a class, but MAY set their own
+       consultation / meeting time for students they co-supervise.
+     • Each consultation row is keyed by supervisorUid, so a student can
+       have one consultation from the principal and one from the co.
+
+   NOTE on units:
+     • A semester holds one OR MORE units, each {id, code, name}.
+     • A student may be enrolled in several units (unitIds).
+     • Each weekly class time is tied to a specific unit (unitId).
+   ============================================================ */
+
+// ---- DEMO in-memory store (only used if Firebase not configured) ----
+const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{} };
+let memSeed = false;
+function seedDemo(){
+  if(memSeed) return; memSeed=true;
+  mem.users["admin1"]={email:"admin@uni.edu",name:"Admin Office",role:"admin"};
+  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both"};
+  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal"};
+  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co"};
+  mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,units:[
+    {id:"u1",code:"RES915",name:"Literature, Methodology & Proposal"},
+    {id:"u2",code:"RES920",name:"Research Project"}
+  ]};
+  mem.semesters["y2-s1"]={label:"Year 2 — Semester 1",weeks:12,units:[
+    {id:"u3",code:"RES930",name:"Thesis"}
+  ]};
+  const mk=(id,o)=>mem.students[id]=o;
+  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",campus:"NSW",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
+  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",campus:"NSW",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",campus:"ACT",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
+  mem.timetables["tt1"]={semesterId:"s2-2026",unitId:"u1",supervisorUid:"supA",day:"Tuesday",start:"10:00",end:"13:00",room:"NSW Rm 4.12",status:"approved"};
+}
+
+// Generic CRUD that targets Firestore OR the mock
+const DB = {
+  async getUser(uid){
+    if(DEMO){ return mem.users[uid]||null; }
+    const s = await getDoc(doc(db,"users",uid)); return s.exists()?s.data():null;
+  },
+  async setUser(uid,data){ if(DEMO){mem.users[uid]={...mem.users[uid],...data};return;} await setDoc(doc(db,"users",uid),data,{merge:true}); },
+  async findUserByEmail(email){
+    if(DEMO){ const e=Object.entries(mem.users).find(([k,v])=>v.email===email); return e?{uid:e[0],...e[1]}:null; }
+    const q=query(collection(db,"users"),where("email","==",email)); const r=await getDocs(q);
+    return r.empty?null:{uid:r.docs[0].id,...r.docs[0].data()};
+  },
+  async listUsers(){
+    if(DEMO){ return Object.entries(mem.users).map(([id,v])=>({id,...v})); }
+    const r=await getDocs(collection(db,"users")); return r.docs.map(d=>({id:d.id,...d.data()}));
+  },
+  async list(coll, filters={}){
+    if(DEMO){
+      return Object.entries(mem[coll]||{}).map(([id,v])=>({id,...v}))
+        .filter(o=>Object.entries(filters).every(([k,val])=>o[k]===val));
+    }
+    let qref=collection(db,coll); const fs=Object.entries(filters);
+    if(fs.length){ qref=query(qref,...fs.map(([k,v])=>where(k,"==",v))); }
+    const r=await getDocs(qref); return r.docs.map(d=>({id:d.id,...d.data()}));
+  },
+  async add(coll,data){
+    if(DEMO){ const id="x"+Math.random().toString(36).slice(2,9); mem[coll][id]={...data}; return id; }
+    const r=await addDoc(collection(db,coll),data); return r.id;
+  },
+  async set(coll,id,data){
+    if(DEMO){ mem[coll][id]={...mem[coll][id],...data}; return; }
+    await setDoc(doc(db,coll,id),data,{merge:true});
+  },
+  async update(coll,id,data){
+    if(DEMO){ mem[coll][id]={...mem[coll][id],...data}; return; }
+    await updateDoc(doc(db,coll,id),data);
+  },
+  async remove(coll,id){ if(DEMO){ delete mem[coll][id]; return; } await deleteDoc(doc(db,coll,id)); }
+};
+
+/* ============================================================
+   3. APP STATE & HELPERS
+   ============================================================ */
+const S = { user:null, role:null, uid:null, semesters:[], activeSem:null, tab:"students", supervisors:[] };
+
+const $ = s=>document.querySelector(s);
+const el = (tag,props={},...kids)=>{
+  const n=document.createElement(tag);
+  for(const[k,v]of Object.entries(props)){
+    if(k==="class")n.className=v; else if(k==="html")n.innerHTML=v;
+    else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);
+    else n.setAttribute(k,v);
+  }
+  kids.flat().forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c??"")));
+  return n;
+};
+function toast(msg,isErr){ const t=$("#toast"); t.textContent=msg; t.className="show"+(isErr?" err":""); setTimeout(()=>t.className="",2600); }
+const CAMPUSES=["NSW","ACT","Perth","VIC","QLD"];
+const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+// ---- Unit helpers (a semester now holds one or more units) ----
+function activeSemester(){ return S.semesters.find(s=>s.id===S.activeSem)||null; }
+function semOf(id){ return S.semesters.find(s=>s.id===id)||null; }
+function unitsOf(sem){ return Array.isArray(sem?.units)?sem.units:[]; }
+function unitById(sem,unitId){ return unitsOf(sem).find(u=>u.id===unitId)||null; }
+function unitOneLine(u){
+  if(!u) return "Unit";
+  const code=(u.code||"").trim(), name=(u.name||"").trim();
+  if(code&&name) return code+" · "+name;
+  return code||name||"Unit";
+}
+// Short summary of all units in a semester, e.g. "RES915, RES920"
+function semUnitCodes(sem){
+  const codes=unitsOf(sem).map(u=>(u.code||"").trim()).filter(Boolean);
+  return codes.length?codes.join(", "):"No units";
+}
+function uid(){ return "u"+Math.random().toString(36).slice(2,9); }
+
+// ---- Supervisor capability helpers ----
+// supRole: 'both' (default) | 'principal' | 'co'
+function capOf(u){ return u?.supRole||"both"; }
+function canBePrincipal(u){ return capOf(u)!=="co"; }
+function canBeCo(u){ return capOf(u)!=="principal"; }
+function capLabel(c){ return c==="principal"?"Principal only":c==="co"?"Co-supervisor only":"Principal & co"; }
+
+/* ============================================================
+   4. AUTH FLOW
+   ============================================================ */
+function renderLogin(){
+  document.body.innerHTML="";
+  let mode="supervisor"; // 'supervisor' (login) | 'student' (id lookup)
+  const wrap=el("div",{class:"auth-wrap"});
+  const card=el("div",{class:"auth-card ui"});
+  function draw(){
+    card.innerHTML="";
+    card.append(
+      el("div",{class:"mark-lg"},"SH"),
+      el("div",{class:"eyebrow"},"Research supervision coordination"),
+      el("h1",{style:"font-size:23px;margin:2px 0 4px;font-family:Georgia,serif"},"MRes Supervision Hub"),
+      el("p",{class:"muted"},"Sign in to manage students, timetables and consultations.")
+    );
+    const seg=el("div",{class:"seg"},
+      el("button",{class:mode==="supervisor"?"active":"",onclick:()=>{mode="supervisor";draw();}},"Staff login"),
+      el("button",{class:mode==="student"?"active":"",onclick:()=>{mode="student";draw();}},"Student lookup")
+    );
+    card.append(seg);
+
+    if(mode==="supervisor"){
+      const email=el("input",{type:"email",placeholder:"you@uni.edu",autocomplete:"username"});
+      const pass=el("input",{type:"password",placeholder:"Password",autocomplete:"current-password"});
+      const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:6px"},"Sign in");
+      btn.onclick=async()=>{
+        btn.disabled=true;btn.textContent="Signing in…";
+        try{ await doLogin(email.value.trim(),pass.value); }
+        catch(e){ toast(authMsg(e),true); btn.disabled=false;btn.textContent="Sign in"; }
+      };
+      const onEnter=e=>{ if(e.key==="Enter")btn.click(); };
+      email.addEventListener("keydown",onEnter); pass.addEventListener("keydown",onEnter);
+      card.append(
+        el("div",{style:"margin-bottom:11px"},el("label",{},"University email"),email),
+        el("div",{style:"margin-bottom:6px"},el("label",{},"Password"),pass),
+        btn
+      );
+      if(DEMO) card.append(el("p",{class:"muted",style:"margin-top:12px"},
+        "Demo mode — try ",el("code",{},"admin@uni.edu"),
+        " or ",el("code",{},"a.smith@uni.edu"),
+        " with any password."));
+    } else {
+      const sid=el("input",{placeholder:"e.g. 45001"});
+      const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:6px"},"View my schedule");
+      btn.onclick=()=>studentLookup(sid.value.trim());
+      sid.addEventListener("keydown",e=>{if(e.key==="Enter")btn.click();});
+      card.append(
+        el("div",{style:"margin-bottom:6px"},el("label",{},"Student ID"),sid),
+        btn,
+        el("p",{class:"muted",style:"margin-top:12px"},"Read-only access. No password required — your ID is your key.")
+      );
+    }
+  }
+  draw();
+  wrap.append(card);
+  document.body.append(wrap, toastNode());
+}
+function authMsg(e){
+  const c=e?.code||"";
+  if(c.includes("invalid-cred")||c.includes("wrong-password")||c.includes("user-not-found")) return "Email or password is incorrect.";
+  if(c.includes("too-many")) return "Too many attempts. Try again shortly.";
+  return e?.message||"Sign-in failed.";
+}
+function toastNode(){ return el("div",{id:"toast"}); }
+
+async function doLogin(email,password){
+  if(DEMO){
+    seedDemo();
+    const u=await DB.findUserByEmail(email);
+    if(!u) throw {code:"auth/user-not-found"};
+    S.user={email}; S.uid=u.uid; S.role=u.role; S.userName=u.name;
+    await afterLogin(); return;
+  }
+  await signInWithEmailAndPassword(auth,email,password);
+  // onAuthStateChanged handles the rest
+}
+
+async function afterLogin(){
+  S.semesters=await DB.list("semesters");
+  S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
+  S.activeSem=S.semesters[0]?.id||null;
+  S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+  renderApp();
+}
+
+/* ---- STUDENT read-only lookup (no auth) ---- */
+async function studentLookup(sid){
+  if(!sid){ toast("Enter your student ID.",true); return; }
+  if(DEMO) seedDemo();
+  const matches=await DB.list("students",{sid});
+  if(!matches.length){ toast("No student found with that ID.",true); return; }
+  // Load context for each enrolment (semester + supervisor schedules)
+  const sems=await DB.list("semesters");
+  document.body.innerHTML="";
+  renderStudentView(sid,matches,sems);
+}
+
+/* ============================================================
+   5. MAIN APP SHELL (admin + supervisor)
+   ============================================================ */
+function renderApp(){
+  document.body.innerHTML="";
+  const header=el("header",{class:"app"},
+    el("div",{class:"brand"},
+      el("div",{class:"mark ui"},"SH"),
+      el("div",{},
+        el("h1",{},"MRes Supervision Hub"),
+        el("div",{class:"sub"},"Research supervision coordination"))
+    ),
+    el("div",{class:"who ui"},
+      el("div",{style:"text-align:right"},
+        el("div",{class:"name"},S.userName||S.user.email),
+        el("div",{class:"role"},S.role)),
+      el("button",{class:"btn ghost sm",onclick:logout},"Sign out"))
+  );
+  const tabs=el("nav",{class:"tabs ui"});
+  const TABS = S.role==="admin"
+    ? [["students","Students"],["timetables","Class timetables"],["consultations","Consultations"],["attendance","Attendance"],["export","Moodle export"],["people","Semesters & staff"]]
+    : [["students","My students"],["timetables","My class time"],["consultations","Consultations"],["attendance","Attendance"]];
+  TABS.forEach(([id,label])=>{
+    tabs.append(el("button",{class:S.tab===id?"active":"",onclick:()=>{S.tab=id;drawMain();}},label));
+  });
+  const main=el("main",{},el("div",{id:"view"}));
+  document.body.append(header,el("div",{},tabs),main,toastNode());
+  // move tabs inside main container width
+  main.prepend(tabs);
+  drawMain();
+}
+function logout(){ if(DEMO){ S.user=null; renderLogin(); return; } signOut(auth); }
+
+function semesterPicker(onChange){
+  const sel=el("select",{style:"width:auto;min-width:170px",onchange:e=>{S.activeSem=e.target.value;onChange();}});
+  if(!S.semesters.length){ sel.append(el("option",{},"No semesters yet")); sel.disabled=true; }
+  S.semesters.forEach(s=>sel.append(el("option",{value:s.id,...(s.id===S.activeSem?{selected:"selected"}:{})},
+    s.label+" · "+semUnitCodes(s))));
+  return el("div",{class:"field"},el("label",{},"Semester"),sel);
+}
+
+async function drawMain(){
+  const v=$("#view"); v.innerHTML="<div class='muted ui' style='padding:30px'>Loading…</div>";
+  if(S.tab==="students") return viewStudents(v);
+  if(S.tab==="timetables") return viewTimetables(v);
+  if(S.tab==="consultations") return viewConsultations(v);
+  if(S.tab==="attendance") return viewAttendance(v);
+  if(S.tab==="export") return viewExport(v);
+  if(S.tab==="people") return viewPeople(v);
+}
+
+/* ============================================================
+   6. STUDENTS TAB
+   ============================================================ */
+async function viewStudents(v){
+  v.innerHTML="";
+  const sem=activeSemester();
+  let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+  if(S.role==="supervisor"){
+    students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
+  }
+  const head=el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Enrolment"),
+    el("h2",{},S.role==="admin"?"Students":"My students")));
+  v.append(head);
+
+  const bar=el("div",{class:"toolbar"});
+  bar.append(semesterPicker(()=>viewStudents(v)));
+  const search=el("input",{placeholder:"Search name, ID, email…",style:"min-width:200px"});
+  const campusFilter=el("select",{style:"width:auto"},el("option",{value:""},"All campuses"),
+    ...[...new Set(students.map(s=>s.campus))].filter(Boolean).map(c=>el("option",{value:c},c)));
+  bar.append(el("div",{class:"field"},el("label",{},"Search"),search),
+             el("div",{class:"field"},el("label",{},"Campus"),campusFilter));
+  if(S.role==="admin"){
+    bar.append(el("div",{style:"flex:1"}));
+    bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Upload CSV"),
+               el("button",{class:"btn",onclick:()=>studentForm(null,()=>viewStudents(v))},"+ Add student"));
+  }
+  v.append(bar);
+
+  const body=el("div",{});
+  function render(){
+    body.innerHTML="";
+    const term=search.value.toLowerCase(), cf=campusFilter.value;
+    const filtered=students.filter(s=>
+      (!cf||s.campus===cf) &&
+      [s.name,s.sid,s.email].some(x=>(x||"").toLowerCase().includes(term)));
+    if(!filtered.length){ body.append(emptyState("No students here yet","Add one or upload a CSV to begin.")); return; }
+    // group by campus
+    const byCampus={};
+    filtered.forEach(s=>{ (byCampus[s.campus||"Unassigned"] ||= []).push(s); });
+    Object.keys(byCampus).sort().forEach(campus=>{
+      const card=el("div",{class:"card",style:"margin-bottom:14px;padding:0;overflow:hidden"});
+      card.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"},
+        el("strong",{class:"ui"},campus+" campus"),
+        el("span",{class:"muted ui"},byCampus[campus].length+" student"+(byCampus[campus].length>1?"s":""))));
+      const t=el("table",{});
+      t.append(el("thead",{},el("tr",{},
+        ...["Student","ID","Units","Email","Principal","Co-supervisor",S.role==="admin"?"":null].filter(x=>x!==null).map(h=>el("th",{},h)))));
+      const tb=el("tbody",{});
+      byCampus[campus].forEach(s=>{
+        const codes=(s.unitIds||[]).map(id=>unitById(sem,id)?.code).filter(Boolean);
+        const cells=[
+          el("td",{},el("strong",{},s.name)),
+          el("td",{},s.sid),
+          el("td",{},codes.length?codes.join(", "):el("span",{class:"muted"},"—")),
+          el("td",{class:"muted"},s.email||"—"),
+          el("td",{},s.principalName||"—"),
+          el("td",{},s.coName||"—")
+        ];
+        if(S.role==="admin"){
+          cells.push(el("td",{},el("div",{class:"row"},
+            el("button",{class:"btn ghost sm",onclick:()=>studentForm(s,()=>viewStudents(v))},"Edit"),
+            el("button",{class:"btn danger sm",onclick:()=>confirmDelete("students",s.id,s.name,()=>viewStudents(v))},"Delete"))));
+        }
+        tb.append(el("tr",{},...cells));
+      });
+      t.append(tb); card.append(t); body.append(card);
+    });
+  }
+  search.oninput=render; campusFilter.onchange=render;
+  render();
+  v.append(body);
+}
+
+function emptyState(title,sub){
+  return el("div",{class:"empty card ui"},el("div",{class:"big"},"◷"),el("div",{style:"font-weight:600;color:var(--ink)"},title),el("div",{class:"muted"},sub));
+}
+
+function studentForm(existing,done){
+  const sem=activeSemester();
+  const f={
+    sid:existing?.sid||"", name:existing?.name||"", email:existing?.email||"",
+    campus:existing?.campus||CAMPUSES[0], principalUid:existing?.principalUid||"", coUid:existing?.coUid||"",
+    unitIds:existing?.unitIds||[]
+  };
+  // Capability-filtered options: principal box lists those who can be principal; co box lists those who can be co.
+  const supOpts=(pool,sel)=>[el("option",{value:""},"— none —"),
+    ...pool.map(u=>el("option",{value:u.id,...(u.id===sel?{selected:"selected"}:{})},
+      (u.name||u.email)+(capOf(u)!=="both"?" ("+capLabel(capOf(u)).toLowerCase()+")":"")))];
+  const sid=el("input",{value:f.sid}), name=el("input",{value:f.name}), email=el("input",{type:"email",value:f.email});
+  const campus=el("select",{},...CAMPUSES.map(c=>el("option",{value:c,...(c===f.campus?{selected:"selected"}:{})},c)));
+  const prin=el("select",{},...supOpts(S.supervisors.filter(canBePrincipal),f.principalUid));
+  const co=el("select",{},...supOpts(S.supervisors.filter(canBeCo),f.coUid));
+
+  // Unit checkboxes for the active semester
+  const units=unitsOf(sem);
+  const unitBoxes=units.map(u=>{
+    const cb=el("input",{type:"checkbox",style:"width:auto",...(f.unitIds.includes(u.id)?{checked:"checked"}:{})});
+    cb.dataset.unit=u.id;
+    return el("label",{class:"ui",style:"display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink);margin:0;padding:6px 8px;border:1px solid var(--line);border-radius:7px"},
+      cb, (u.code||"")+(u.name?" — "+u.name:""));
+  });
+  const unitsBlock = units.length
+    ? el("div",{class:"grid",style:"gap:6px"}, ...unitBoxes)
+    : el("p",{class:"muted",style:"margin:0"},"This semester has no units yet. Add units under Semesters & staff.");
+
+  modal(existing?"Edit student":"Add student",
+    el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
+      el("div",{},el("label",{},"Full name"),name),
+      el("div",{},el("label",{},"Student ID"),sid),
+      el("div",{},el("label",{},"Email"),email),
+      el("div",{},el("label",{},"Campus"),campus),
+      el("div",{},el("label",{},"Principal supervisor"),prin),
+      el("div",{},el("label",{},"Co-supervisor"),co),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Enrolled units"),unitsBlock)
+    ),
+    async()=>{
+      if(!name.value.trim()||!sid.value.trim()){ toast("Name and ID are required.",true); return false; }
+      if(!S.activeSem){ toast("Create a semester first.",true); return false; }
+      const pName=S.supervisors.find(u=>u.id===prin.value)?.name||S.supervisors.find(u=>u.id===prin.value)?.email||"";
+      const cName=S.supervisors.find(u=>u.id===co.value)?.name||S.supervisors.find(u=>u.id===co.value)?.email||"";
+      const unitIds=unitBoxes.filter(lbl=>lbl.querySelector("input").checked).map(lbl=>lbl.querySelector("input").dataset.unit);
+      const data={semesterId:S.activeSem,sid:sid.value.trim(),name:name.value.trim(),email:email.value.trim(),
+        campus:campus.value,unitIds,principalUid:prin.value,coUid:co.value,principalName:pName,coName:cName};
+      if(existing) await DB.update("students",existing.id,data); else await DB.add("students",data);
+      toast("Saved."); done(); return true;
+    });
+}
+
+/* ---- CSV import ---- */
+function importCSV(done){
+  const input=el("input",{type:"file",accept:".csv"});
+  const preview=el("div",{class:"muted",style:"margin-top:10px"});
+  let rows=[];
+  input.onchange=()=>{
+    const file=input.files[0]; if(!file)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      rows=parseCSV(r.result);
+      preview.innerHTML="";
+      if(!rows.length){ preview.textContent="Could not read any rows."; return; }
+      preview.append(el("strong",{},rows.length+" rows ready. "),
+        "Expected columns: name, sid, email, campus, units, principal_email, co_email");
+    };
+    r.readAsText(file);
+  };
+  const sem=activeSemester();
+  modal("Upload students from CSV",
+    el("div",{},
+      el("p",{class:"muted",style:"margin-top:0"},"First row must be a header. Supervisors are matched by email and must have the right capability (a co-only supervisor won't be set as principal). The optional “units” column lists unit codes separated by ; or | and must match this semester's units."),
+      input, preview,
+      el("details",{class:"help"},el("summary",{},"Show example CSV"),
+        el("pre",{style:"background:#0000000d;padding:10px;border-radius:8px;overflow:auto;font-size:12px"},
+          "name,sid,email,campus,units,principal_email,co_email\nAisha Khan,45001,aisha@stu.edu,NSW,RES915;RES920,a.smith@uni.edu,c.patel@uni.edu\nTom Reilly,45002,tom@stu.edu,NSW,RES915,a.smith@uni.edu,"))
+    ),
+    async()=>{
+      if(!rows.length){ toast("Choose a CSV file first.",true); return false; }
+      if(!S.activeSem){ toast("Create a semester first.",true); return false; }
+      const units=unitsOf(sem);
+      let ok=0;
+      for(const row of rows){
+        const pEmail=(row.principal_email||"").trim(), cEmail=(row.co_email||"").trim();
+        let p=pEmail?S.supervisors.find(u=>u.email===pEmail):null;
+        let c=cEmail?S.supervisors.find(u=>u.email===cEmail):null;
+        if(p&&!canBePrincipal(p)) p=null;   // capability guard
+        if(c&&!canBeCo(c)) c=null;
+        if(!row.name||!row.sid) continue;
+        const codes=(row.units||"").split(/[;|]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
+        const unitIds=units.filter(u=>codes.includes((u.code||"").toLowerCase())).map(u=>u.id);
+        await DB.add("students",{
+          semesterId:S.activeSem,sid:String(row.sid).trim(),name:row.name.trim(),
+          email:(row.email||"").trim(),campus:(row.campus||"").trim()||"NSW",unitIds,
+          principalUid:p?.id||"",coUid:c?.id||"",principalName:p?.name||p?.email||"",coName:c?.name||c?.email||""
+        });
+        ok++;
+      }
+      toast(`Imported ${ok} student${ok!==1?"s":""}.`); done(); return true;
+    },"Import");
+}
+function parseCSV(text){
+  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim().length);
+  if(lines.length<2) return [];
+  const split=l=>{ // basic quoted-CSV split
+    const out=[];let cur="",q=false;
+    for(const ch of l){ if(ch==='"'){q=!q;} else if(ch===","&&!q){out.push(cur);cur="";} else cur+=ch; }
+    out.push(cur); return out.map(s=>s.trim());
+  };
+  const headers=split(lines[0]).map(h=>h.toLowerCase().replace(/\s+/g,"_"));
+  return lines.slice(1).map(l=>{ const c=split(l); const o={}; headers.forEach((h,i)=>o[h]=c[i]??""); return o; });
+}
+
+/* ============================================================
+   7. CLASS TIMETABLES TAB  (supervisor sets weekly class)
+   Only principals run a class; co-supervisors do not appear here.
+   ============================================================ */
+async function viewTimetables(v){
+  v.innerHTML="";
+  const sem=activeSemester();
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Weekly class · "+semUnitCodes(sem)),
+    el("h2",{},S.role==="admin"?"Class timetables":"My class time"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewTimetables(v)));
+
+  // A supervisor can only set class time if they are a principal for at least
+  // one student this semester. Co-supervisors do not run classes.
+  let isPrincipalSomewhere=false;
+  if(S.role==="supervisor"){
+    const myStudents=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+    isPrincipalSomewhere=myStudents.some(s=>s.principalUid===S.uid);
+    if(isPrincipalSomewhere){
+      bar.append(el("div",{style:"flex:1"}),el("button",{class:"btn",onclick:()=>timetableForm(null,()=>viewTimetables(v))},"+ Set class time"));
+    }
+  }
+  v.append(bar);
+
+  if(S.role==="supervisor" && !isPrincipalSomewhere){
+    v.append(emptyState("Class time is set by principal supervisors",
+      "You are not a principal supervisor this semester, so you don't run a weekly class. You can still set consultation times under the Consultations tab."));
+    return;
+  }
+
+  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
+  if(S.role==="supervisor") tts=tts.filter(t=>t.supervisorUid===S.uid);
+  if(!tts.length){ v.append(emptyState("No class times set","A weekly class slot will appear here once set.")); return; }
+
+  const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
+  const t=el("table",{});
+  t.append(el("thead",{},el("tr",{},...["Unit","Supervisor","Day","Time","Room / Campus","Status",""].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  tts.sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day));
+  for(const tt of tts){
+    const supName=S.supervisors.find(u=>u.id===tt.supervisorUid)?.name||tt.supervisorUid;
+    const unit=unitById(sem,tt.unitId);
+    const actions=el("div",{class:"row"});
+    if(S.role==="supervisor"&&tt.supervisorUid===S.uid){
+      actions.append(el("button",{class:"btn ghost sm",onclick:()=>timetableForm(tt,()=>viewTimetables(v))},"Edit"),
+        el("button",{class:"btn danger sm",onclick:()=>confirmDelete("timetables",tt.id,"this class time",()=>viewTimetables(v))},"Delete"));
+    }
+    if(S.role==="admin"){
+      if(tt.status!=="approved") actions.append(el("button",{class:"btn sm",onclick:async()=>{await DB.update("timetables",tt.id,{status:"approved"});toast("Approved.");viewTimetables(v);}},"Approve"));
+      else actions.append(el("button",{class:"btn ghost sm",onclick:async()=>{await DB.update("timetables",tt.id,{status:"pending"});viewTimetables(v);}},"Unapprove"));
+    }
+    tb.append(el("tr",{},
+      el("td",{},el("strong",{},unit?.code||"—")),
+      el("td",{},supName),
+      el("td",{},tt.day),
+      el("td",{},`${tt.start}–${tt.end}`),
+      el("td",{},tt.room||"—"),
+      el("td",{},statusPill(tt.status)),
+      el("td",{},actions)));
+  }
+  t.append(tb); card.append(t); v.append(card);
+}
+function statusPill(s){ const cls=s==="approved"?"approved":s==="pending"?"pending":"none";
+  return el("span",{class:"pill "+cls},s==="approved"?"Approved":s==="pending"?"Awaiting admin":"—"); }
+
+function timetableForm(existing,done){
+  const sem=activeSemester();
+  const units=unitsOf(sem);
+  if(!units.length){ toast("Add a unit to this semester first.",true); return; }
+  const unitSel=el("select",{},...units.map(u=>el("option",{value:u.id,...(u.id===existing?.unitId?{selected:"selected"}:{})},
+    (u.code||"")+(u.name?" — "+u.name:""))));
+  const day=el("select",{},...DAYS.map(d=>el("option",{value:d,...(d===existing?.day?{selected:"selected"}:{})},d)));
+  const start=el("input",{type:"time",value:existing?.start||"10:00"});
+  const end=el("input",{type:"time",value:existing?.end||"13:00"});
+  const room=el("input",{value:existing?.room||"",placeholder:"e.g. NSW Building C, Rm 4.12"});
+  modal(existing?"Edit class time":"Set weekly class time",
+    el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Unit"),unitSel),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Day of week"),day),
+      el("div",{},el("label",{},"Start"),start),
+      el("div",{},el("label",{},"End"),end),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Room / campus"),room),
+      el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0"},"This is the once-weekly class for the chosen unit. Admin approval is required before it appears on the official Moodle export."))
+    ),
+    async()=>{
+      if(start.value>=end.value){ toast("End time must be after start.",true); return false; }
+      if(!S.activeSem){ toast("No semester selected.",true); return false; }
+      const data={semesterId:S.activeSem,unitId:unitSel.value,supervisorUid:S.uid,day:day.value,start:start.value,end:end.value,room:room.value.trim(),status:"pending"};
+      if(existing) await DB.update("timetables",existing.id,data); else await DB.add("timetables",data);
+      toast("Saved — sent for admin approval."); done(); return true;
+    });
+}
+
+/* ============================================================
+   8. CONSULTATIONS TAB
+   Both the principal AND the co-supervisor may set their own
+   consultation / meeting time for a student. Each consultation
+   row is keyed by supervisorUid + supervisorRole, so a student
+   can show one principal time and one co-supervisor time.
+   Admin approves each. A supervisor only edits their OWN row.
+   ============================================================ */
+async function viewConsultations(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Per-student supervision"),
+    el("h2",{},"Consultation times"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewConsultations(v)));
+  v.append(bar);
+  v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
+    "Principal and co-supervisor can each set their own meeting time for a student. Admin approval confirms it for the student."));
+
+  let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
+  let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+  if(!students.length){ v.append(emptyState("No students to schedule","Add students first.")); return; }
+
+  const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
+  const t=el("table",{});
+  t.append(el("thead",{},el("tr",{},...["Student","Campus","Supervisor","Role","Consultation","Status",""].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+
+  for(const s of students){
+    // Build the list of supervisor "slots" for this student.
+    const slots=[];
+    if(s.principalUid) slots.push({uid:s.principalUid,role:"principal",name:s.principalName||"—"});
+    if(s.coUid)        slots.push({uid:s.coUid,       role:"co",       name:s.coName||"—"});
+    if(!slots.length)  slots.push({uid:"",role:"principal",name:"—"}); // unassigned student still listed
+
+    let firstRowForStudent=true;
+    for(const slot of slots){
+      const c=cons.find(x=>x.studentDocId===s.id && x.supervisorUid===slot.uid);
+      const isMine=S.role==="supervisor" && slot.uid===S.uid;
+      const isAdmin=S.role==="admin";
+
+      const actions=el("div",{class:"row"});
+      if(isMine){
+        actions.append(el("button",{class:"btn ghost sm",
+          onclick:()=>consultForm(s,slot,c,()=>viewConsultations(v))}, c?"Edit":"Set time"));
+        if(c) actions.append(el("button",{class:"btn danger sm",
+          onclick:()=>confirmDelete("consultations",c.id,"this consultation",()=>viewConsultations(v))},"Delete"));
+      }
+      if(isAdmin && c){
+        if(c.status!=="approved") actions.append(el("button",{class:"btn sm",onclick:async()=>{await DB.update("consultations",c.id,{status:"approved"});toast("Approved.");viewConsultations(v);}},"Approve"));
+        else actions.append(el("button",{class:"btn ghost sm",onclick:async()=>{await DB.update("consultations",c.id,{status:"pending"});viewConsultations(v);}},"Unapprove"));
+      }
+
+      const roleTag=el("span",{class:"pill "+(slot.role==="principal"?"approved":"none"),style:"font-size:10.5px"},
+        slot.role==="principal"?"Principal":"Co-supervisor");
+
+      const cells=[
+        // student name cell only on the first row of each student
+        firstRowForStudent ? el("td",{},el("strong",{},s.name)) : el("td",{class:"muted"},""),
+        firstRowForStudent ? el("td",{},s.campus) : el("td",{},""),
+        el("td",{},slot.name||"—"),
+        el("td",{},roleTag),
+        el("td",{},c?`${c.day} ${c.start}–${c.end}${c.mode?" · "+c.mode:""}`:el("span",{class:"muted"},"Not set")),
+        el("td",{},c?statusPill(c.status):statusPill("none")),
+        el("td",{},actions)
+      ];
+      tb.append(el("tr",{},...cells));
+      firstRowForStudent=false;
+    }
+  }
+  t.append(tb); card.append(t); v.append(card);
+}
+function consultForm(student,slot,existing,done){
+  const day=el("select",{},...DAYS.map(d=>el("option",{value:d,...(d===existing?.day?{selected:"selected"}:{})},d)));
+  const start=el("input",{type:"time",value:existing?.start||"14:00"});
+  const end=el("input",{type:"time",value:existing?.end||"14:30"});
+  const mode=el("select",{},...["In person","Online","Hybrid"].map(m=>el("option",{value:m,...(m===existing?.mode?{selected:"selected"}:{})},m)));
+  const roleWord=slot.role==="principal"?"principal supervisor":"co-supervisor";
+  modal("Consultation for "+student.name,
+    el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
+      el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0 0 4px"},"You are setting this as the "+roleWord+".")),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Day"),day),
+      el("div",{},el("label",{},"Start"),start),
+      el("div",{},el("label",{},"End"),end),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Mode"),mode),
+      el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0"},"Admin must approve before the student sees it as confirmed. The other supervisor can also set their own time independently."))
+    ),
+    async()=>{
+      if(start.value>=end.value){ toast("End must be after start.",true); return false; }
+      const data={semesterId:S.activeSem,studentDocId:student.id,supervisorUid:S.uid,supervisorRole:slot.role,
+        day:day.value,start:start.value,end:end.value,mode:mode.value,status:"pending"};
+      if(existing) await DB.update("consultations",existing.id,data); else await DB.add("consultations",data);
+      toast("Saved — sent for admin approval."); done(); return true;
+    });
+}
+
+/* ============================================================
+   9. ATTENDANCE TAB (principal marks weekly; admin views)
+   ============================================================ */
+async function viewAttendance(v){
+  v.innerHTML="";
+  const sem=activeSemester();
+  const weeks=sem?.weeks||12;
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Weekly meeting log · "+weeks+" weeks"),
+    el("h2",{},"Attendance"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewAttendance(v)));
+  v.append(bar, el("p",{class:"muted ui",style:"margin-top:-6px"},
+    "Tap a cell to cycle: — (none) → P (present) → A (absent) → E (excused). "+
+    (S.role==="admin"?"Read-only for admin.":"")));
+
+  let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid);
+  if(!students.length){ v.append(emptyState("No students to track",S.role==="supervisor"?"You only mark attendance for students you principally supervise.":"Add students first.")); return; }
+  const att=await DB.list("attendance", S.activeSem?{semesterId:S.activeSem}:{});
+  const recFor=s=>att.find(a=>a.studentDocId===s.id);
+
+  const wrap=el("div",{class:"att-grid"});
+  const t=el("table",{});
+  const hr=el("tr",{},el("th",{},"Student"),el("th",{},"Campus"));
+  for(let w=1;w<=weeks;w++) hr.append(el("th",{style:"text-align:center"},"W"+w));
+  hr.append(el("th",{style:"text-align:center"},"% present"));
+  t.append(el("thead",{},hr));
+  const tb=el("tbody",{});
+  const CYCLE={"-":"P","P":"A","A":"E","E":"-"};
+  for(const s of students){
+    const rec=recFor(s); const weeksMap=rec?.weeks||{};
+    const tr=el("tr",{},el("td",{},el("strong",{},s.name)),el("td",{},s.campus));
+    const cells=[];
+    for(let w=1;w<=weeks;w++){
+      const val=weeksMap[w]||"-";
+      const cell=el("td",{class:"att-cell "+val},val==="-"?"·":val);
+      cell.dataset.w=w;
+      if(S.role==="supervisor"){
+        cell.onclick=async()=>{
+          const cur=cell.classList.contains("P")?"P":cell.classList.contains("A")?"A":cell.classList.contains("E")?"E":"-";
+          const next=CYCLE[cur];
+          cell.className="att-cell "+next; cell.textContent=next==="-"?"·":next;
+          // persist
+          let r=recFor(s);
+          const newWeeks={...(r?.weeks||{}),[w]:next};
+          if(next==="-") delete newWeeks[w];
+          if(r){ await DB.update("attendance",r.id,{weeks:newWeeks}); r.weeks=newWeeks; }
+          else { const id=await DB.add("attendance",{semesterId:S.activeSem,studentDocId:s.id,supervisorUid:S.uid,weeks:newWeeks,notes:{}}); att.push({id,studentDocId:s.id,weeks:newWeeks}); }
+          // refresh pct
+          pct.textContent=calcPct(recFor(s)?.weeks||newWeeks,weeks);
+        };
+      }
+      cells.push(cell); tr.append(cell);
+    }
+    const pct=el("td",{style:"text-align:center;font-weight:700",class:"ui"},calcPct(weeksMap,weeks));
+    tr.append(pct);
+    tb.append(tr);
+  }
+  t.append(tb); wrap.append(t); v.append(wrap);
+}
+function calcPct(weeksMap,total){
+  const marked=Object.values(weeksMap||{});
+  const present=marked.filter(x=>x==="P").length;
+  const counted=marked.filter(x=>x==="P"||x==="A").length;
+  if(!counted) return "—";
+  return Math.round(present/counted*100)+"%";
+}
+
+/* ============================================================
+   10. MOODLE EXPORT (admin) — CSV + printable
+   ============================================================ */
+async function viewExport(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"For Moodle class creation"),
+    el("h2",{},"Class timetable export"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewExport(v)));
+  v.append(bar);
+
+  const sem=activeSemester();
+  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
+  const approved=tts.filter(t=>t.status==="approved");
+  const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+
+  v.append(el("div",{class:"row",style:"margin-bottom:14px"},
+    el("button",{class:"btn",onclick:()=>downloadTimetableCSV(approved,sem)},"Download CSV"),
+    el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF")));
+
+  if(!approved.length){ v.append(emptyState("No approved class times yet","Approved timetables become available here for the official Moodle setup.")); return; }
+
+  const card=el("div",{class:"card"});
+  card.append(el("h3",{style:"margin-bottom:4px"},(sem?.label||"")+" — class timetable"),
+    el("p",{class:"muted",style:"margin-top:0"},semUnitCodes(sem)+" · "+approved.length+" class group(s)"));
+  const t=el("table",{});
+  t.append(el("thead",{},el("tr",{},...["Unit","Unit name","Supervisor","Day","Time","Room / Campus","Enrolled"].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  approved.sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day));
+  approved.forEach(tt=>{
+    const sup=S.supervisors.find(u=>u.id===tt.supervisorUid);
+    const unit=unitById(sem,tt.unitId);
+    // enrolment = students taking this unit who are supervised by this person
+    const count=students.filter(s=>(s.unitIds||[]).includes(tt.unitId)&&(s.principalUid===tt.supervisorUid||s.coUid===tt.supervisorUid)).length;
+    tb.append(el("tr",{},
+      el("td",{},unit?.code||"—"),el("td",{},unit?.name||"—"),el("td",{},sup?.name||tt.supervisorUid),
+      el("td",{},tt.day),el("td",{},`${tt.start}–${tt.end}`),el("td",{},tt.room||"—"),el("td",{},String(count))));
+  });
+  t.append(tb); card.append(t); v.append(card);
+}
+function downloadTimetableCSV(rows,sem){
+  const head=["unit","unit_name","semester","supervisor","day","start","end","room"];
+  const lines=[head.join(",")];
+  rows.forEach(tt=>{
+    const sup=S.supervisors.find(u=>u.id===tt.supervisorUid)?.name||tt.supervisorUid;
+    const unit=unitById(sem,tt.unitId);
+    lines.push([unit?.code||"",unit?.name||"",sem?.label||"",sup,tt.day,tt.start,tt.end,(tt.room||"").replace(/,/g," ")].map(x=>`"${x}"`).join(","));
+  });
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const fname=`timetable_${(sem?.label||"export").replace(/\s+/g,"_")}.csv`;
+  const a=el("a",{href:URL.createObjectURL(blob),download:fname});
+  document.body.append(a); a.click(); a.remove(); toast("CSV downloaded.");
+}
+
+/* ============================================================
+   11. SEMESTERS & STAFF (admin)
+   ============================================================ */
+async function viewPeople(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Configuration"),
+    el("h2",{},"Semesters & staff"))));
+
+  // ---- Semesters ----
+  const semCard=el("div",{class:"card",style:"margin-bottom:18px"});
+  semCard.append(el("div",{class:"row",style:"justify-content:space-between;margin-bottom:10px"},
+    el("h3",{},"Semesters & units"),
+    el("button",{class:"btn sm",onclick:()=>semesterForm(null,()=>viewPeople(v))},"+ Add semester")));
+  if(!S.semesters.length) semCard.append(el("p",{class:"muted"},"No semesters yet. Add one — give it a label like “S2 2026” and add the units that run in it."));
+  else {
+    const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Semester","Units","Weeks","",""].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    S.semesters.forEach(s=>{
+      const us=unitsOf(s);
+      const unitCell=us.length
+        ? el("td",{},us.map(u=>(u.code||"")+(u.name?" ("+u.name+")":"")).join("; "))
+        : el("td",{class:"muted"},"No units");
+      tb.append(el("tr",{},
+        el("td",{},el("strong",{},s.label)),
+        unitCell,
+        el("td",{},(s.weeks||12)+" wks"),
+        el("td",{},el("div",{class:"row"},
+          el("button",{class:"btn ghost sm",onclick:()=>semesterForm(s,()=>viewPeople(v))},"Edit units"),
+          el("button",{class:"btn ghost sm",onclick:()=>copyForward(s,()=>viewPeople(v))},"Carry students forward"))),
+        el("td",{},el("button",{class:"btn danger sm",onclick:()=>confirmDelete("semesters",s.id,s.label,async()=>{S.semesters=await DB.list("semesters");S.semesters.sort((a,b)=>(a.label>b.label?-1:1));S.activeSem=S.semesters[0]?.id||null;viewPeople(v);})},"Delete"))));
+    });
+    t.append(tb); semCard.append(t);
+  }
+  v.append(semCard);
+
+  // ---- Staff ----
+  const staffCard=el("div",{class:"card"});
+  staffCard.append(el("div",{class:"row",style:"justify-content:space-between;margin-bottom:10px"},
+    el("h3",{},"Supervisors & admins"),
+    el("button",{class:"btn sm",onclick:()=>staffForm(()=>viewPeople(v))},"+ Add staff login")));
+  staffCard.append(el("p",{class:"muted",style:"margin-top:-4px;margin-bottom:10px"},
+    "Each supervisor has a capability: principal & co, principal only, or co-supervisor only. That controls which slot they can fill on a student. Principals run the class and mark attendance; co-supervisors set a consultation only."));
+  const users=await DB.listUsers();
+  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Capability"].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  users.forEach(u=>tb.append(el("tr",{},
+    el("td",{},el("strong",{},u.name||"—")),
+    el("td",{},u.email),
+    el("td",{},el("span",{class:"pill "+(u.role==="admin"?"approved":"none")},u.role)),
+    el("td",{},u.role==="supervisor"?el("span",{class:"pill "+(capOf(u)==="both"?"approved":"pending")},capLabel(capOf(u))):el("span",{class:"muted"},"—")))));
+  t.append(tb); staffCard.append(t);
+  if(!DEMO) staffCard.append(el("p",{class:"muted",style:"margin-top:10px"},"New staff are created with a Firebase Authentication login and can sign in immediately."));
+  v.append(staffCard);
+}
+function semesterForm(existing,done){
+  const label=el("input",{placeholder:"e.g. S2 2026",value:existing?.label||""});
+  const weeks=el("select",{},
+    el("option",{value:"12",...((existing?.weeks||12)===12?{selected:"selected"}:{})},"12 weeks"),
+    el("option",{value:"15",...((existing?.weeks)===15?{selected:"selected"}:{})},"15 weeks"));
+
+  // Dynamic unit rows. Each row keeps its id (existing) or gets a new one on save.
+  const unitList=el("div",{class:"grid",style:"gap:8px"});
+  const rows=[]; // {wrap, id, code, name}
+  function addRow(u){
+    const id=u?.id||uid();
+    const code=el("input",{value:u?.code||"",placeholder:"Code e.g. RES915"});
+    const name=el("input",{value:u?.name||"",placeholder:"Name e.g. Research Project"});
+    const del=el("button",{class:"btn ghost sm",type:"button"},"Remove");
+    const wrap=el("div",{class:"row",style:"gap:8px;align-items:center"},
+      el("div",{style:"flex:0 0 32%"},code),
+      el("div",{style:"flex:1"},name),
+      del);
+    const rec={wrap,id,code,name};
+    del.onclick=()=>{ const i=rows.indexOf(rec); if(i>=0)rows.splice(i,1); wrap.remove(); };
+    rows.push(rec); unitList.append(wrap);
+  }
+  (unitsOf(existing).length?unitsOf(existing):[null]).forEach(addRow);
+  const addBtn=el("button",{class:"btn ghost sm",type:"button",onclick:()=>addRow()},"+ Add another unit");
+
+  modal(existing?"Edit semester & units":"Add semester",
+    el("div",{class:"grid"},
+      el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
+        el("div",{},el("label",{},"Semester label"),label),
+        el("div",{},el("label",{},"Teaching weeks"),weeks)),
+      el("div",{},el("label",{},"Units in this semester"),unitList,
+        el("div",{style:"margin-top:8px"},addBtn)),
+      el("div",{},el("p",{class:"muted",style:"margin:0"},"Add one or more units. Codes and names can differ each semester. Units appear on the student form, class timetables and the Moodle export."))),
+    async()=>{
+      if(!label.value.trim()){ toast("Enter a semester label.",true); return false; }
+      const units=rows.map(r=>({id:r.id,code:r.code.value.trim(),name:r.name.value.trim()}))
+        .filter(u=>u.code||u.name);
+      if(!units.length){ toast("Add at least one unit.",true); return false; }
+      if(units.some(u=>!u.code)){ toast("Each unit needs a code.",true); return false; }
+      const data={label:label.value.trim(),weeks:parseInt(weeks.value),units};
+      if(existing) await DB.update("semesters",existing.id,data);
+      else await DB.add("semesters",data);
+      S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
+      if(!existing) S.activeSem=S.semesters.find(x=>x.label===data.label)?.id||S.semesters[0]?.id;
+      toast(existing?"Semester updated.":"Semester added."); done(); return true;
+    });
+}
+function staffForm(done){
+  const name=el("input",{}), email=el("input",{type:"email"}), pass=el("input",{type:"password",placeholder:"Min 6 characters"});
+  const role=el("select",{},el("option",{value:"supervisor"},"Supervisor"),el("option",{value:"admin"},"Admin"));
+  const cap=el("select",{},
+    el("option",{value:"both"},"Principal & co-supervisor"),
+    el("option",{value:"principal"},"Principal only"),
+    el("option",{value:"co"},"Co-supervisor only"));
+  const capRow=el("div",{},el("label",{},"Supervisor capability"),cap);
+  role.onchange=()=>{ capRow.style.display = role.value==="supervisor" ? "" : "none"; };
+  modal("Add staff login",
+    el("div",{class:"grid"},
+      el("div",{},el("label",{},"Full name"),name),
+      el("div",{},el("label",{},"Email"),email),
+      el("div",{},el("label",{},"Temporary password"),pass),
+      el("div",{},el("label",{},"Account role"),role),
+      capRow,
+      el("div",{},el("p",{class:"muted",style:"margin:0"},"Creates a login account. Capability sets whether this supervisor can be a student's principal, co-supervisor, or either. Share the password so they can sign in and change it later."))),
+    async()=>{
+      if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
+      const profile={email:email.value.trim(),name:name.value.trim(),role:role.value};
+      if(role.value==="supervisor") profile.supRole=cap.value;
+      try{
+        if(DEMO){
+          const newUid="u"+Math.random().toString(36).slice(2,8);
+          await DB.setUser(newUid,profile);
+        } else {
+          // NOTE: createUser signs the new user in; we capture uid then restore admin session.
+          const cred=await createUserWithEmailAndPassword(auth,email.value.trim(),pass.value);
+          await DB.setUser(cred.user.uid,profile);
+          toast("Staff created. You may need to sign back in.",false);
+        }
+        S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+        toast("Staff login created."); done(); return true;
+      }catch(e){ toast(e.message||"Could not create account.",true); return false; }
+    });
+}
+async function copyForward(fromSem,done){
+  const label=el("input",{placeholder:"e.g. Year 2 — Semester 1"});
+  const weeks=el("select",{},
+    el("option",{value:"12",...((fromSem.weeks||12)===12?{selected:"selected"}:{})},"12 weeks"),
+    el("option",{value:"15",...((fromSem.weeks)===15?{selected:"selected"}:{})},"15 weeks"));
+  const us=unitsOf(fromSem);
+  modal("Carry students forward",
+    el("div",{class:"grid"},
+      el("p",{class:"muted",style:"margin:0"},"Copies every student (with the same supervisors and unit enrolments) from “"+fromSem.label+"” into a new semester. The units below are carried over too — edit them afterwards if the codes change. Timetables, consultations and attendance start fresh."),
+      el("div",{},el("label",{},"New semester label"),label),
+      el("div",{},el("label",{},"Teaching weeks"),weeks),
+      el("div",{},el("label",{},"Units carried over"),
+        el("p",{class:"muted",style:"margin:4px 0 0"},us.length?us.map(u=>u.code).filter(Boolean).join(", "):"None"))),
+    async()=>{
+      if(!label.value.trim()){ toast("Enter a label.",true); return false; }
+      // keep the same unit ids so student unitIds still line up
+      const units=us.map(u=>({id:u.id,code:u.code,name:u.name}));
+      const newId=await DB.add("semesters",{label:label.value.trim(),weeks:parseInt(weeks.value),units});
+      const students=await DB.list("students",{semesterId:fromSem.id});
+      for(const s of students){
+        const {id,...rest}=s; await DB.add("students",{...rest,semesterId:newId});
+      }
+      S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1)); S.activeSem=newId;
+      toast(`Carried ${students.length} students forward.`); done(); return true;
+    },"Carry forward");
+}
+
+/* ============================================================
+   12. STUDENT READ-ONLY VIEW
+   ============================================================ */
+async function renderStudentView(sid,enrolments,sems){
+  const wrap=el("div",{class:"auth-wrap",style:"align-items:flex-start;padding-top:30px"});
+  const col=el("div",{style:"width:100%;max-width:720px"});
+  const stu=enrolments[0];
+  col.append(el("div",{class:"card",style:"border-top:4px solid var(--blue);margin-bottom:16px"},
+    el("div",{class:"eyebrow ui",style:"color:var(--blue)"},"Read-only student view"),
+    el("h1",{style:"font-size:24px;margin:2px 0"},stu.name),
+    el("p",{class:"muted",style:"margin:0"},"ID "+sid+" · "+stu.email),
+    el("div",{class:"row",style:"margin-top:10px"},
+      el("button",{class:"btn ghost sm",onclick:()=>renderLogin()},"← Back"))));
+
+  for(const en of enrolments){
+    const sem=sems.find(s=>s.id===en.semesterId);
+    const myUnitIds=en.unitIds||[];
+    const myUnitCodes=myUnitIds.map(id=>unitById(sem,id)?.code).filter(Boolean);
+    const card=el("div",{class:"card",style:"margin-bottom:14px"});
+    card.append(
+      el("div",{class:"eyebrow ui"},myUnitCodes.length?myUnitCodes.join(" · "):"No units"),
+      el("h3",{style:"margin-top:2px"},sem?.label||"Semester"),
+      el("p",{class:"muted",style:"margin:4px 0 12px"},"Campus: "+en.campus+
+        " · Principal: "+(en.principalName||"—")+(en.coName?" · Co: "+en.coName:"")));
+    // class times: approved classes for the units this student takes
+    const tts=(await DB.list("timetables",{semesterId:en.semesterId}))
+      .filter(t=>t.status==="approved"&&myUnitIds.includes(t.unitId));
+    const cons=(await DB.list("consultations",{semesterId:en.semesterId})).filter(c=>c.studentDocId===en.id&&c.status==="approved");
+
+    card.append(el("div",{style:"font-weight:600;margin-bottom:4px",class:"ui"},"Weekly classes"));
+    if(tts.length) tts.forEach(t=>{
+      const u=unitById(sem,t.unitId);
+      card.append(el("p",{style:"margin:2px 0"},`${u?.code?u.code+" · ":""}${t.day} ${t.start}–${t.end} · ${t.room||""}`));
+    });
+    else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Class times not published yet."));
+
+    card.append(el("div",{style:"font-weight:600;margin:12px 0 4px",class:"ui"},"My consultation times"));
+    if(cons.length){
+      cons.forEach(c=>{
+        const who=c.supervisorUid===en.principalUid?en.principalName:(c.supervisorUid===en.coUid?en.coName:"");
+        const roleWord=c.supervisorRole==="co"?"Co-supervisor":"Principal";
+        const tag=who?` · ${roleWord}: ${who}`:` · ${roleWord}`;
+        card.append(el("p",{style:"margin:2px 0"},`${c.day} ${c.start}–${c.end} · ${c.mode||""}${tag}`));
+      });
+    } else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Consultation time not confirmed yet."));
+
+    col.append(card);
+  }
+  wrap.append(col);
+  document.body.append(wrap, toastNode());
+}
+
+/* ============================================================
+   13. SHARED MODAL + DELETE
+   ============================================================ */
+function modal(title,bodyNode,onSave,saveLabel="Save"){
+  const bg=el("div",{class:"modal-bg",onclick:e=>{if(e.target===bg)close();}});
+  const saveBtn=el("button",{class:"btn"},saveLabel);
+  function close(){ bg.remove(); }
+  saveBtn.onclick=async()=>{ saveBtn.disabled=true; const ok=await onSave(); saveBtn.disabled=false; if(ok!==false)close(); };
+  const m=el("div",{class:"modal ui"},
+    el("h3",{},title), bodyNode,
+    el("div",{class:"row",style:"justify-content:flex-end;margin-top:18px"},
+      el("button",{class:"btn ghost",onclick:close},"Cancel"), saveBtn));
+  bg.append(m); document.body.append(bg);
+}
+function confirmDelete(coll,id,name,done){
+  modal("Delete "+name+"?",
+    el("p",{class:"muted",style:"margin:0"},"This cannot be undone."),
+    async()=>{ await DB.remove(coll,id); toast("Deleted."); done(); return true; },"Delete");
+  // recolor save button to danger
+  const btns=document.querySelectorAll(".modal .btn"); btns[btns.length-1].classList.add("danger");
+}
+
+/* ============================================================
+   14. BOOTSTRAP
+   ============================================================ */
+if(DEMO){
+  renderLogin();
+} else {
+  onAuthStateChanged(auth, async (fbUser)=>{
+    if(!fbUser){ renderLogin(); return; }
+    const u=await DB.getUser(fbUser.uid);
+    if(!u){ toast("No staff profile found for this login.",true); await signOut(auth); renderLogin(); return; }
+    S.user={email:fbUser.email}; S.uid=fbUser.uid; S.role=u.role; S.userName=u.name;
+    await afterLogin();
+  });
+}
+window.addEventListener("error",e=>console.error(e));
+</script>
+</head>
+<body>
+  <div class="auth-wrap"><div class="muted ui">Loading…</div></div>
+</body>
+</html>
