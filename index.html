@@ -236,10 +236,10 @@ try {
 /* ============================================================
    2. DATA LAYER
    Firestore structure:
-     users/{uid}      -> {email,name,role:'admin'|'supervisor',
+     users/{uid}      -> {email,name,mobile,role:'admin'|'supervisor',
                           supRole:'both'|'principal'|'co'}
      semesters/{id}   -> {label, weeks, units:[{id,code,name}, ...]}
-     students/{id}    -> {semesterId, sid, name, email, campus, unitIds:[...],
+     students/{id}    -> {semesterId, sid, name, email, mobile, campus, unitIds:[...],
                           principalUid, coUid, principalName, coName}
      timetables/{id}  -> {semesterId, unitId, supervisorUid, day, start, end,
                           room, status:'pending'|'approved'}   // class still admin-approved
@@ -265,10 +265,10 @@ const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
-  mem.users["admin1"]={email:"admin@uni.edu",name:"Admin Office",role:"admin"};
-  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both"};
-  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal"};
-  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co"};
+  mem.users["admin1"]={email:"admin@uni.edu",name:"Admin Office",role:"admin",mobile:"+61 400 000 001"};
+  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222"};
+  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444"};
+  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666"};
   mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,units:[
     {id:"u1",code:"RES915",name:"Literature, Methodology & Proposal"},
     {id:"u2",code:"RES920",name:"Research Project"}
@@ -277,9 +277,9 @@ function seedDemo(){
     {id:"u3",code:"RES930",name:"Thesis"}
   ]};
   const mk=(id,o)=>mem.students[id]=o;
-  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",campus:"NSW",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
-  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",campus:"NSW",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
-  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",campus:"ACT",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
+  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",mobile:"+61 411 111 111",campus:"NSW",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
+  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",mobile:"+61 422 222 222",campus:"NSW",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",mobile:"",campus:"ACT",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
   mem.timetables["tt1"]={semesterId:"s2-2026",unitId:"u1",supervisorUid:"supA",day:"Tuesday",start:"10:00",end:"13:00",room:"NSW Rm 4.12",status:"approved"};
   // sample consultation with a couple of weeks logged
   mem.consultations["c1"]={semesterId:"s2-2026",studentDocId:"st1",supervisorUid:"supA",
@@ -569,7 +569,7 @@ function renderApp(){
   const TABS = S.role==="admin"
     ? [["students","Students"],["timetables","Class timetables"],["consultations","Consultations"],
        ["meetinglog","Supervision diary"],["messages","Messages"],["report","Summary report"],
-       ["export","Moodle export"],["people","Semesters & staff"]]
+       ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
     : [["students","My students"],["timetables","My class time"],["consultations","Consultation times"],
        ["meetinglog","Supervision diary"],["messages","Messages"]];
   const tabs=el("nav",{class:"tabs ui"});
@@ -602,6 +602,7 @@ async function drawMain(){
   if(S.tab==="messages") return viewMessages(v);
   if(S.tab==="report") return viewReport(v);
   if(S.tab==="export") return viewExport(v);
+  if(S.tab==="contacts") return viewContacts(v);
   if(S.tab==="people") return viewPeople(v);
 }
 
@@ -615,6 +616,8 @@ async function viewStudents(v){
   if(S.role==="supervisor"){
     students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
   }
+  // admin contacts (for the "Email admin" quick action available to supervisors)
+  const admins = S.role==="supervisor" ? (await DB.listUsers()).filter(u=>u.role==="admin") : [];
   const head=el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Enrolment"),
     el("h2",{},S.role==="admin"?"Students":"My students")));
@@ -633,6 +636,14 @@ async function viewStudents(v){
                el("button",{class:"btn",onclick:()=>studentForm(null,()=>viewStudents(v))},"+ Add student"));
   }
   v.append(bar);
+  // supervisor convenience: one-tap email to admin
+  if(S.role==="supervisor"){
+    const adminEmail=admins[0]?.email;
+    v.append(el("div",{class:"row",style:"margin:-4px 0 12px"},
+      el("span",{class:"muted ui",style:"font-size:13px"},"Need the coordinator? "),
+      emailButton(adminEmail,"MRes supervision query","Dear Admin Office,\n\n","✉ Email admin","btn sm ghost"),
+      el("button",{class:"btn sm ghost",onclick:()=>{ if(admins[0]) composeMessage(()=>toast("Sent."),"staff:"+admins[0].id); else toast("No admin on file.",true); }},"✉ Message admin")));
+  }
 
   const body=el("div",{});
   function render(){
@@ -651,7 +662,7 @@ async function viewStudents(v){
         el("span",{class:"muted ui"},byCampus[campus].length+" student"+(byCampus[campus].length>1?"s":""))));
       const t=el("table",{});
       t.append(el("thead",{},el("tr",{},
-        ...["Student","ID","Units","Email","Principal","Co-supervisor",S.role==="admin"?"":null].filter(x=>x!==null).map(h=>el("th",{},h)))));
+        ...["Student","ID","Units","Email","Principal","Co-supervisor",(S.role==="admin"||S.role==="supervisor")?"Contact":null].filter(x=>x!==null).map(h=>el("th",{},h)))));
       const tb=el("tbody",{});
       byCampus[campus].forEach(s=>{
         const codes=(s.unitIds||[]).map(id=>unitById(sem,id)?.code).filter(Boolean);
@@ -667,6 +678,22 @@ async function viewStudents(v){
           cells.push(el("td",{},el("div",{class:"row"},
             el("button",{class:"btn ghost sm",onclick:()=>studentForm(s,()=>viewStudents(v))},"Edit"),
             el("button",{class:"btn danger sm",onclick:()=>confirmDelete("students",s.id,s.name,()=>viewStudents(v))},"Delete"))));
+        } else if(S.role==="supervisor"){
+          // contact this student: in-app message + email handoff
+          const contact=el("div",{class:"row",style:"gap:5px"});
+          contact.append(el("button",{class:"btn xs blue",title:"Message "+s.name,
+            onclick:()=>composeMessage(()=>toast("Sent."),"student:"+s.sid+":"+s.id)},"✉ Msg"));
+          contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
+          // if I'm the co, offer to contact the principal and vice versa
+          if(s.principalUid && s.principalUid!==S.uid){
+            contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.principalName||"principal"),
+              onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.principalUid)},"Principal"));
+          }
+          if(s.coUid && s.coUid!==S.uid){
+            contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.coName||"co-supervisor"),
+              onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.coUid)},"Co"));
+          }
+          cells.push(el("td",{},contact));
         }
         tb.append(el("tr",{},...cells));
       });
@@ -685,7 +712,7 @@ function emptyState(title,sub){
 function studentForm(existing,done){
   const sem=activeSemester();
   const f={
-    sid:existing?.sid||"", name:existing?.name||"", email:existing?.email||"",
+    sid:existing?.sid||"", name:existing?.name||"", email:existing?.email||"", mobile:existing?.mobile||"",
     campus:existing?.campus||CAMPUSES[0], principalUid:existing?.principalUid||"", coUid:existing?.coUid||"",
     unitIds:existing?.unitIds||[]
   };
@@ -693,6 +720,7 @@ function studentForm(existing,done){
     ...pool.map(u=>el("option",{value:u.id,...(u.id===sel?{selected:"selected"}:{})},
       (u.name||u.email)+(capOf(u)!=="both"?" ("+capLabel(capOf(u)).toLowerCase()+")":"")))];
   const sid=el("input",{value:f.sid}), name=el("input",{value:f.name}), email=el("input",{type:"email",value:f.email});
+  const mobile=el("input",{type:"tel",value:f.mobile,placeholder:"e.g. +61 4xx xxx xxx"});
   const campus=el("select",{},...CAMPUSES.map(c=>el("option",{value:c,...(c===f.campus?{selected:"selected"}:{})},c)));
   const prin=el("select",{},...supOpts(S.supervisors.filter(canBePrincipal),f.principalUid));
   const co=el("select",{},...supOpts(S.supervisors.filter(canBeCo),f.coUid));
@@ -713,6 +741,7 @@ function studentForm(existing,done){
       el("div",{},el("label",{},"Full name"),name),
       el("div",{},el("label",{},"Student ID"),sid),
       el("div",{},el("label",{},"Email"),email),
+      el("div",{},el("label",{},"Mobile (optional)"),mobile),
       el("div",{},el("label",{},"Campus"),campus),
       el("div",{},el("label",{},"Principal supervisor"),prin),
       el("div",{},el("label",{},"Co-supervisor"),co),
@@ -724,7 +753,7 @@ function studentForm(existing,done){
       const pName=S.supervisors.find(u=>u.id===prin.value)?.name||S.supervisors.find(u=>u.id===prin.value)?.email||"";
       const cName=S.supervisors.find(u=>u.id===co.value)?.name||S.supervisors.find(u=>u.id===co.value)?.email||"";
       const unitIds=unitBoxes.filter(lbl=>lbl.querySelector("input").checked).map(lbl=>lbl.querySelector("input").dataset.unit);
-      const data={semesterId:S.activeSem,sid:sid.value.trim(),name:name.value.trim(),email:email.value.trim(),
+      const data={semesterId:S.activeSem,sid:sid.value.trim(),name:name.value.trim(),email:email.value.trim(),mobile:mobile.value.trim(),
         campus:campus.value,unitIds,principalUid:prin.value,coUid:co.value,principalName:pName,coName:cName};
       if(existing) await DB.update("students",existing.id,data); else await DB.add("students",data);
       // keep linked consultation's denormalised supervisor names in sync
@@ -756,11 +785,11 @@ function importCSV(done){
   const sem=activeSemester();
   modal("Upload students from CSV",
     el("div",{},
-      el("p",{class:"muted",style:"margin-top:0"},"First row must be a header. Supervisors are matched by email and must have the right capability. The optional \u201Cunits\u201D column lists unit codes separated by ; or | and must match this semester's units."),
+      el("p",{class:"muted",style:"margin-top:0"},"First row must be a header. Supervisors are matched by email and must have the right capability. The optional \u201Cunits\u201D column lists unit codes separated by ; or | and must match this semester's units. An optional \u201Cmobile\u201D column is also supported."),
       input, preview,
       el("details",{class:"help"},el("summary",{},"Show example CSV"),
         el("pre",{style:"background:#0000000d;padding:10px;border-radius:8px;overflow:auto;font-size:12px"},
-          "name,sid,email,campus,units,principal_email,co_email\nAisha Khan,45001,aisha@stu.edu,NSW,RES915;RES920,a.smith@uni.edu,c.patel@uni.edu\nTom Reilly,45002,tom@stu.edu,NSW,RES915,a.smith@uni.edu,"))
+          "name,sid,email,mobile,campus,units,principal_email,co_email\nAisha Khan,45001,aisha@stu.edu,+61 411 111 111,NSW,RES915;RES920,a.smith@uni.edu,c.patel@uni.edu\nTom Reilly,45002,tom@stu.edu,,NSW,RES915,a.smith@uni.edu,"))
     ),
     async()=>{
       if(!rows.length){ toast("Choose a CSV file first.",true); return false; }
@@ -778,7 +807,7 @@ function importCSV(done){
         const unitIds=units.filter(u=>codes.includes((u.code||"").toLowerCase())).map(u=>u.id);
         await DB.add("students",{
           semesterId:S.activeSem,sid:String(row.sid).trim(),name:row.name.trim(),
-          email:(row.email||"").trim(),campus:(row.campus||"").trim()||"NSW",unitIds,
+          email:(row.email||"").trim(),mobile:(row.mobile||"").trim(),campus:(row.campus||"").trim()||"NSW",unitIds,
           principalUid:p?.id||"",coUid:c?.id||"",principalName:p?.name||p?.email||"",coName:c?.name||c?.email||""
         });
         ok++;
@@ -806,12 +835,14 @@ async function viewTimetables(v){
   const sem=activeSemester();
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Weekly class · "+semUnitCodes(sem)),
-    el("h2",{},S.role==="admin"?"Class timetables":"My class time"))));
+    el("h2",{},S.role==="admin"?"Class timetables":"Class times"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewTimetables(v)));
 
   let isPrincipalSomewhere=false;
+  let myStudents=[];
   if(S.role==="supervisor"){
-    const myStudents=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+    myStudents=(await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}))
+      .filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
     isPrincipalSomewhere=myStudents.some(s=>s.principalUid===S.uid);
     if(isPrincipalSomewhere){
       bar.append(el("div",{style:"flex:1"}),el("button",{class:"btn",onclick:()=>timetableForm(null,()=>viewTimetables(v))},"+ Set class time"));
@@ -819,27 +850,43 @@ async function viewTimetables(v){
   }
   v.append(bar);
 
-  if(S.role==="supervisor" && !isPrincipalSomewhere){
-    v.append(emptyState("Class time is set by principal supervisors",
-      "You are not a principal supervisor this semester, so you don't run a weekly class. You can still set consultation times under the Consultation times tab."));
-    return;
+  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
+
+  if(S.role==="supervisor"){
+    // Units of the students this supervisor co-supervises (for read-only class
+    // times the principal set), plus this supervisor's own class slots.
+    const coUnitIds=new Set();
+    myStudents.filter(s=>s.coUid===S.uid).forEach(s=>(s.unitIds||[]).forEach(id=>coUnitIds.add(id)));
+    tts=tts.filter(t=>
+      t.supervisorUid===S.uid ||                                   // my own classes
+      (t.status==="approved" && coUnitIds.has(t.unitId))           // approved classes for my co-students' units
+    );
+    if(!tts.length){
+      v.append(emptyState("No class times yet",
+        isPrincipalSomewhere
+          ? "Set a class time with the button above. Approved classes for students you co-supervise will also appear here."
+          : "Once the principal supervisor sets and admin approves a class time for your co-supervised students' units, it will show here."));
+      return;
+    }
+  } else {
+    if(!tts.length){ v.append(emptyState("No class times set","A weekly class slot will appear here once set.")); return; }
   }
 
-  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
-  if(S.role==="supervisor") tts=tts.filter(t=>t.supervisorUid===S.uid);
-  if(!tts.length){ v.append(emptyState("No class times set","A weekly class slot will appear here once set.")); return; }
-
   const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
+  const showRoleCol = S.role==="supervisor";
   const t=el("table",{});
-  t.append(el("thead",{},el("tr",{},...["Unit","Supervisor","Day","Time","Room / Campus","Status",""].map(h=>el("th",{},h)))));
+  t.append(el("thead",{},el("tr",{},...["Unit","Supervisor",...(showRoleCol?["For you"]:[]),"Day","Time","Room / Campus","Status",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
   tts.sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day));
   for(const tt of tts){
     const unit=unitById(sem,tt.unitId);
+    const isOwn = S.role==="supervisor" && tt.supervisorUid===S.uid;
     const actions=el("div",{class:"row"});
-    if(S.role==="supervisor"&&tt.supervisorUid===S.uid){
+    if(isOwn){
       actions.append(el("button",{class:"btn ghost sm",onclick:()=>timetableForm(tt,()=>viewTimetables(v))},"Edit"),
         el("button",{class:"btn danger sm",onclick:()=>confirmDelete("timetables",tt.id,"this class time",()=>viewTimetables(v))},"Delete"));
+    } else if(S.role==="supervisor"){
+      actions.append(el("span",{class:"muted ui",style:"font-size:12.5px"},"Read-only"));
     }
     if(S.role==="admin"){
       if(tt.status!=="approved") actions.append(el("button",{class:"btn sm",onclick:async()=>{await DB.update("timetables",tt.id,{status:"approved"});toast("Approved.");viewTimetables(v);}},"Approve"));
@@ -848,9 +895,13 @@ async function viewTimetables(v){
       actions.append(el("button",{class:"btn ghost sm",onclick:()=>timetableForm(tt,()=>viewTimetables(v),true)},"Edit"),
         el("button",{class:"btn danger sm",onclick:()=>confirmDelete("timetables",tt.id,"this class time",()=>viewTimetables(v))},"Delete"));
     }
+    const roleCell = showRoleCol
+      ? el("td",{}, isOwn?el("span",{class:"pill held"},"Your class"):el("span",{class:"pill blue"},"Co-student"))
+      : null;
     tb.append(el("tr",{},
       el("td",{},el("strong",{},unit?.code||"—")),
       el("td",{},supName(tt.supervisorUid)),
+      ...(roleCell?[roleCell]:[]),
       el("td",{},tt.day),
       el("td",{},`${tt.start}–${tt.end}`),
       el("td",{},tt.room||"—"),
@@ -901,49 +952,60 @@ async function viewConsultations(v){
   const sem=activeSemester();
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Per-student supervision"),
-    el("h2",{},S.role==="admin"?"Consultation times":"My consultation times"))));
+    el("h2",{},S.role==="admin"?"Consultation times":"Consultation times"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewConsultations(v)));
   v.append(bar);
   v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
-    "The principal supervisor sets a recurring meeting time and a meeting link for each allocated student. No admin sign-off needed. Use the Meeting log to change a single week or to record attendance."));
+    S.role==="supervisor"
+      ? "You can set or change the recurring meeting time and link for any student you principal- OR co-supervise. Use the Supervision diary to adjust a single week or record attendance."
+      : "The principal or co-supervisor sets a recurring meeting time and a meeting link for each allocated student. No admin sign-off needed. Use the Meeting log to change a single week or to record attendance."));
 
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
-  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid);
+  // A supervisor sees students they supervise EITHER as principal or as co.
+  // They can only set/edit the time as principal; as co they see it read-only.
+  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
   let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
   if(!students.length){
-    v.append(emptyState(S.role==="supervisor"?"No students assigned to you as principal":"No students yet",
-      S.role==="supervisor"?"Consultation times are set by the principal supervisor.":"Add students first."));
+    v.append(emptyState(S.role==="supervisor"?"No students assigned to you":"No students yet",
+      S.role==="supervisor"?"You'll see consultation times for students you principal- or co-supervise here.":"Add students first."));
     return;
   }
 
+  const showRole = S.role==="supervisor";
   const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
   const t=el("table",{});
-  t.append(el("thead",{},el("tr",{},...["Student","Campus","Principal","Recurring time","Mode","Meeting link",""].map(h=>el("th",{},h)))));
+  t.append(el("thead",{},el("tr",{},...["Student","Campus",...(showRole?["Your role"]:[]),"Principal","Recurring time","Mode","Meeting link",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
+
+  // sort so a supervisor's principal students come first, then co
+  if(showRole) students.sort((a,b)=>(a.principalUid===S.uid?0:1)-(b.principalUid===S.uid?0:1));
 
   for(const s of students){
     const c=cons.find(x=>x.studentDocId===s.id && x.supervisorUid===s.principalUid);
-    const isMine=S.role==="supervisor" && s.principalUid===S.uid;
+    const isPrincipal=S.role==="supervisor" && s.principalUid===S.uid;
+    const isCo  =S.role==="supervisor" && s.coUid===S.uid && !isPrincipal;
     const isAdmin=S.role==="admin";
+    // Co-supervisors may also set/edit the time directly (per coordinator policy).
+    const canEdit = isPrincipal || isCo || isAdmin;
 
     const actions=el("div",{class:"row"});
-    if(isMine){
+    if(canEdit){
       actions.append(el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>viewConsultations(v))}, c?"Edit":"Set time"));
-      if(c) actions.append(el("button",{class:"btn danger sm",onclick:()=>confirmDelete("consultations",c.id,"this consultation",()=>viewConsultations(v))},"Delete"));
-    }
-    if(isAdmin){
-      // admin may edit or delete any consultation
-      actions.append(el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>viewConsultations(v))}, c?"Edit":"Set time"));
-      if(c) actions.append(el("button",{class:"btn danger sm",onclick:()=>confirmDelete("consultations",c.id,"this consultation",()=>viewConsultations(v))},"Delete"));
+      if(c && (isPrincipal||isAdmin)) actions.append(el("button",{class:"btn danger sm",onclick:()=>confirmDelete("consultations",c.id,"this consultation",()=>viewConsultations(v))},"Delete"));
     }
 
     const link = c?.meetingLink
       ? el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Open link")
       : el("span",{class:"muted"},"—");
 
+    const roleCell = showRole
+      ? el("td",{}, s.principalUid===S.uid?el("span",{class:"pill held"},"Principal"):el("span",{class:"pill blue"},"Co-supervisor"))
+      : null;
+
     tb.append(el("tr",{},
       el("td",{},el("strong",{},s.name)),
       el("td",{},s.campus),
+      ...(roleCell?[roleCell]:[]),
       el("td",{},s.principalName||"—"),
       el("td",{},c?`${c.day} ${c.start}–${c.end}`:el("span",{class:"muted"},"Not set")),
       el("td",{},c?.mode||el("span",{class:"muted"},"—")),
@@ -971,6 +1033,7 @@ function consultForm(student,existing,done){
     ),
     async()=>{
       if(start.value>=end.value){ toast("End must be after start.",true); return false; }
+      if(!student.principalUid){ toast("Assign a principal supervisor to this student first (Students tab).",true); return false; }
       const data={
         semesterId:student.semesterId||S.activeSem, studentDocId:student.id,
         supervisorUid:student.principalUid, principalName:student.principalName||"",
@@ -1000,17 +1063,23 @@ async function viewMeetingLog(v){
   v.append(bar);
 
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
-  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid);
+  // Supervisors see students they principal- OR co-supervise. The principal
+  // records the log; a co-supervisor sees the same record read-only.
+  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
   if(!students.length){
     v.append(emptyState("No students to log",
-      S.role==="supervisor"?"You log meetings for students you principally supervise.":"Add students first."));
+      S.role==="supervisor"?"You'll see the weekly record for students you principal- or co-supervise here.":"Add students first."));
     return;
   }
   let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
 
-  // pick student
-  const sel=el("select",{style:"width:auto;min-width:220px"});
-  students.forEach(s=>sel.append(el("option",{value:s.id},s.name+" · "+s.campus)));
+  // pick student — flag the supervisor's role so co-supervised entries are clear
+  const sel=el("select",{style:"width:auto;min-width:240px"});
+  if(S.role==="supervisor") students.sort((a,b)=>(a.principalUid===S.uid?0:1)-(b.principalUid===S.uid?0:1));
+  students.forEach(s=>{
+    const roleTag = S.role==="supervisor" ? (s.principalUid===S.uid?" · principal":" · co-supervisor") : "";
+    sel.append(el("option",{value:s.id},s.name+" · "+s.campus+roleTag));
+  });
   const picker=el("div",{class:"toolbar"},el("div",{class:"field"},el("label",{},"Student"),sel));
   v.append(picker);
 
@@ -1036,13 +1105,18 @@ async function viewMeetingLog(v){
       statBox(stats.held?Math.round(stats.attended/stats.held*100)+"%":"—","Attendance rate"));
     panel.append(strip);
 
+    // who can arrange/change the meeting TIME & LINK (principal, co, or admin)
+    const canSetTime = (S.role==="supervisor" && (s.principalUid===S.uid||s.coUid===S.uid)) || S.role==="admin";
+    // who records ATTENDANCE each week (principal only; admin & co are read-only)
+    const canEdit = (S.role==="supervisor" && s.principalUid===S.uid);
+
     if(!c){
       panel.append(el("div",{class:"card"},
         el("p",{class:"muted",style:"margin:0 0 10px"},
           "No recurring consultation time is set for "+s.name+" yet."),
-        S.role==="supervisor"&&s.principalUid===S.uid
+        canSetTime
           ? el("button",{class:"btn",onclick:()=>consultForm(s,null,()=>renderStudentAfterReload(studentId))},"Set consultation time")
-          : el("span",{class:"muted"},"The principal supervisor needs to set a time first.")));
+          : el("span",{class:"muted"},"A supervisor needs to set a time first.")));
       return;
     }
 
@@ -1056,10 +1130,8 @@ async function viewMeetingLog(v){
           el("div",{class:"muted ui",style:"margin-top:2px"},(c.mode||"")+(c.coName?" · Co-supervisor: "+c.coName:" · No co-supervisor"))),
         el("div",{class:"row"},
           c.meetingLink?el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Meeting link"):el("span",{class:"muted"},"No link set"),
-          (s.principalUid===S.uid||S.role==="admin")?el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>renderStudentAfterReload(studentId))},"Edit time / link"):"")));
+          canSetTime?el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>renderStudentAfterReload(studentId))},"Edit time / link"):"")));
     panel.append(head);
-
-    const canEdit = (S.role==="supervisor" && s.principalUid===S.uid);
 
     const log=el("div",{class:"weeklog"});
     for(let w=1;w<=weeks;w++){
@@ -1070,6 +1142,10 @@ async function viewMeetingLog(v){
     if(!canEdit && S.role==="admin"){
       panel.append(el("p",{class:"muted ui",style:"margin-top:10px"},
         "Read-only for admin. To change times, links or the whole record, use Edit time / link above or the Consultations tab."));
+    }
+    if(!canEdit && S.role==="supervisor" && s.coUid===S.uid){
+      panel.append(el("p",{class:"muted ui",style:"margin-top:10px"},
+        "You co-supervise "+s.name+". You can arrange or change the meeting time and link above. Weekly attendance is recorded by the principal supervisor"+(s.principalName?" ("+s.principalName+")":"")+" and is shown to you read-only."));
     }
   }
 
@@ -1328,16 +1404,18 @@ function fmtTs(ts){
   return d.toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 }
 
-async function composeMessage(done){
+async function composeMessage(done, preselect){
   // Build recipient list: all staff (except me) + all students.
+  // `preselect` (optional) is a recipient value string, e.g. "staff:<uid>"
+  // or "student:<sid>:<docId>", used to open the composer pre-addressed.
   const users=(await DB.listUsers()).filter(u=>u.id!==S.uid);
   const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
 
   const sel=el("select",{});
-  sel.append(el("option",{value:"",disabled:"disabled",selected:"selected"},"Choose a recipient…"));
+  sel.append(el("option",{value:"",disabled:"disabled",...(preselect?{}:{selected:"selected"})},"Choose a recipient…"));
   if(users.length){
     const og=el("optgroup",{label:"Staff"});
-    users.forEach(u=>og.append(el("option",{value:"staff:"+u.id},(u.name||u.email)+" · "+(u.role==="admin"?"Admin":capLabel(capOf(u))))));
+    users.forEach(u=>og.append(el("option",{value:"staff:"+u.id,...(preselect==="staff:"+u.id?{selected:"selected"}:{})},(u.name||u.email)+" · "+(u.role==="admin"?"Admin":capLabel(capOf(u))))));
     sel.append(og);
   }
   if(students.length){
@@ -1345,7 +1423,8 @@ async function composeMessage(done){
     // de-dupe students by sid (a student may recur across semesters)
     const seen=new Set();
     students.forEach(s=>{ if(seen.has(s.sid))return; seen.add(s.sid);
-      og.append(el("option",{value:"student:"+s.sid+":"+s.id},s.name+" · "+s.sid)); });
+      const val="student:"+s.sid+":"+s.id;
+      og.append(el("option",{value:val,...(preselect===val||(preselect&&preselect.startsWith("student:"+s.sid+":")?{selected:"selected"}:{}))},s.name+" · "+s.sid)); });
     sel.append(og);
   }
   const body=el("textarea",{placeholder:"Write your message…",style:"min-height:120px"});
@@ -1385,67 +1464,222 @@ async function viewReport(v){
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Oversight · "+(sem?.label||""),),
     el("h2",{},"Supervision summary"))));
-  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewReport(v)));
-  v.append(bar);
+
+  // ---- Toolbar: semester + supervisor focus + role lens ----
+  // viewReport keeps its own filter state so it survives re-renders.
+  viewReport._sup = viewReport._sup || "all";        // supervisor uid or "all"
+  viewReport._lens = viewReport._lens || "any";       // "any" | "principal" | "co"
 
   const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
   const cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+
+  // Supervisor focus dropdown (built from staff who actually supervise here,
+  // plus any supervisor on the roster so admin can pick anyone).
+  const supSel=el("select",{style:"width:auto;min-width:200px",onchange:e=>{viewReport._sup=e.target.value;viewReport(v);}});
+  supSel.append(el("option",{value:"all",...(viewReport._sup==="all"?{selected:"selected"}:{})},"All supervisors"));
+  // collect unique supervisors referenced on students + the global supervisor list
+  const supMap=new Map();
+  S.supervisors.forEach(u=>supMap.set(u.id,u.name||u.email||u.id));
+  students.forEach(s=>{ if(s.principalUid)supMap.set(s.principalUid,s.principalName||supMap.get(s.principalUid)||s.principalUid);
+                        if(s.coUid)supMap.set(s.coUid,s.coName||supMap.get(s.coUid)||s.coUid); });
+  [...supMap.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).forEach(([uid,name])=>{
+    supSel.append(el("option",{value:uid,...(viewReport._sup===uid?{selected:"selected"}:{})},name));
+  });
+
+  const lensSel=el("select",{style:"width:auto;min-width:150px",onchange:e=>{viewReport._lens=e.target.value;viewReport(v);}});
+  [["any","As principal or co"],["principal","As principal only"],["co","As co-supervisor only"]].forEach(([val,lab])=>
+    lensSel.append(el("option",{value:val,...(viewReport._lens===val?{selected:"selected"}:{})},lab)));
+
+  const bar=el("div",{class:"toolbar"});
+  bar.append(semesterPicker(()=>viewReport(v)));
+  bar.append(el("div",{class:"field"},el("label",{},"Supervisor focus"),supSel));
+  bar.append(el("div",{class:"field"},el("label",{},"Role lens"),
+    (viewReport._sup==="all"
+      ? el("select",{style:"width:auto;min-width:150px",disabled:"disabled"},el("option",{},"—"))
+      : lensSel)));
+  v.append(bar);
+
   if(!students.length){ v.append(emptyState("Nothing to report yet","Add students and meetings first.")); return; }
 
-  // overall stats
-  const rows=students.map(s=>{
+  // ---- Build the per-student rows for the CURRENT lens ----
+  // When a supervisor is focused, a student is included if that supervisor is
+  // their principal and/or co (depending on the lens). We also tag which role
+  // the focused supervisor plays for that student so the detail view is clear.
+  const focus=viewReport._sup;
+  const lens=viewReport._lens;
+  function matches(s){
+    if(focus==="all") return true;
+    const isP=s.principalUid===focus, isC=s.coUid===focus;
+    if(lens==="principal") return isP;
+    if(lens==="co") return isC;
+    return isP||isC; // any
+  }
+  const rows=students.filter(matches).map(s=>{
+    // the consultation record always belongs to the principal supervisor
     const c=cons.find(x=>x.studentDocId===s.id && x.supervisorUid===s.principalUid);
     const st=c?consultStats(c,weeks):{held:0,attended:0,missed:0,logged:0};
-    return {s,c,st,arranged:!!c};
+    const focusRole = focus==="all" ? "" : (s.principalUid===focus?"Principal":(s.coUid===focus?"Co-supervisor":""));
+    return {s,c,st,arranged:!!c,focusRole};
   });
+
+  // ---- Headline stats (reflect the current filter) ----
   const arranged=rows.filter(r=>r.arranged).length;
   const noTime=rows.length-arranged;
   const totalHeld=rows.reduce((a,r)=>a+r.st.held,0);
   const totalAttended=rows.reduce((a,r)=>a+r.st.attended,0);
+  const totalMissed=rows.reduce((a,r)=>a+r.st.missed,0);
+
+  const focusName = focus==="all" ? null : supMap.get(focus);
+  if(focusName){
+    v.append(el("p",{class:"muted ui",style:"margin:-4px 0 12px"},
+      "Showing "+rows.length+" student"+(rows.length===1?"":"s")+" supervised by "+focusName+
+      (lens==="any"?" (as principal or co)":lens==="principal"?" as principal":" as co-supervisor")+"."));
+  }
 
   v.append(el("div",{class:"stat"},
     statBox(String(rows.length),"Students"),
     statBox(String(arranged),"Consultation set"),
     statBox(String(noTime),"No time set"),
     statBox(String(totalHeld),"Meetings held"),
+    statBox(String(totalMissed),"Missed"),
     statBox(totalHeld?Math.round(totalAttended/totalHeld*100)+"%":"—","Attendance rate")));
 
-  v.append(el("div",{class:"row",style:"margin-bottom:14px"},
-    el("button",{class:"btn",onclick:()=>downloadReportCSV(rows,sem,weeks)},"Download report CSV"),
-    el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF")));
+  // ---- Action row: exports + (when focused) contact the supervisor ----
+  const actions=el("div",{class:"row",style:"margin-bottom:14px"});
+  actions.append(
+    el("button",{class:"btn",onclick:()=>downloadReportCSV(rows,sem,weeks)},"Download summary CSV"),
+    el("button",{class:"btn blue",onclick:()=>downloadDetailedLogCSV(rows,sem,weeks,focusName,lens)},"Download detailed week-by-week logs"),
+    el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF"));
+  if(focus!=="all"){
+    const focusUser=S.supervisors.find(u=>u.id===focus);
+    actions.append(el("button",{class:"btn amber",onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+focus)},
+      "✉ Message "+(focusName||"this supervisor")));
+    // detailed log extraction for this one supervisor (on-screen, all weeks)
+    actions.append(el("button",{class:"btn ghost",onclick:()=>showSupervisorDetail(focus,focusName,lens,rows,sem,weeks)},
+      "View full log for "+(focusName||"supervisor")));
+  }
+  v.append(actions);
 
-  // group by principal supervisor
-  const byPrin={};
-  rows.forEach(r=>{ const k=r.s.principalName||"Unassigned"; (byPrin[k] ||= []).push(r); });
-
-  Object.keys(byPrin).sort().forEach(prin=>{
+  // ---- Grouping: by principal when unfocused; flat list when focused ----
+  if(focus==="all"){
+    const byPrin={};
+    rows.forEach(r=>{ const k=r.s.principalName||"Unassigned"; (byPrin[k] ||= []).push(r); });
+    Object.keys(byPrin).sort().forEach(prin=>{
+      const grp=byPrin[prin];
+      const prinUid=grp[0]?.s.principalUid;
+      const card=el("div",{class:"card",style:"margin-bottom:14px;padding:0;overflow:hidden"});
+      const headRow=el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px"},
+        el("strong",{class:"ui"},"Principal: "+prin),
+        el("div",{class:"row"},
+          el("span",{class:"muted ui"},grp.length+" student"+(grp.length>1?"s":"")),
+          ...(prinUid&&prinUid!==S.uid?[el("button",{class:"btn xs ghost",onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+prinUid)},"✉ Message")]:[]),
+          el("button",{class:"btn xs ghost",onclick:()=>{viewReport._sup=prinUid;viewReport._lens="principal";viewReport(v);}},"Focus →")));
+      card.append(headRow);
+      card.append(buildReportTable(grp,weeks,false,v));
+      v.append(card);
+    });
+  } else {
     const card=el("div",{class:"card",style:"margin-bottom:14px;padding:0;overflow:hidden"});
     card.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"},
-      el("strong",{class:"ui"},"Principal: "+prin),
-      el("span",{class:"muted ui"},byPrin[prin].length+" student"+(byPrin[prin].length>1?"s":""))));
-    const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Student","Campus","Co-supervisor","Time arranged","Held","Attended","Missed","Co present","Last comment"].map(h=>el("th",{},h)))));
-    const tb=el("tbody",{});
-    byPrin[prin].forEach(({s,c,st})=>{
-      // co presence count
-      let coYes=0,coNo=0;
-      if(c) for(let w=1;w<=weeks;w++){ const l=weekLog(c,w); if(l?.coAttended==="yes")coYes++; else if(l?.coAttended==="no")coNo++; }
-      // last comment
-      let lastComment="";
-      if(c) for(let w=weeks;w>=1;w--){ const cm=weekLog(c,w)?.comment; if(cm){ lastComment="W"+w+": "+cm; break; } }
-      tb.append(el("tr",{},
-        el("td",{},el("strong",{},s.name)),
-        el("td",{},s.campus),
-        el("td",{},s.coName||"—"),
-        el("td",{}, c?el("span",{class:"pill held"},`${c.day} ${c.start}`):el("span",{class:"pill missed"},"Not set")),
-        el("td",{},String(st.held)),
-        el("td",{},String(st.attended)),
-        el("td",{},String(st.missed)),
-        el("td",{}, c?.coUid?`${coYes}/${coYes+coNo}`:el("span",{class:"muted"},"—")),
-        el("td",{class:"muted",style:"max-width:220px;white-space:normal"},lastComment||"—")));
-    });
-    t.append(tb); card.append(t); v.append(card);
+      el("strong",{class:"ui"},focusName||"Supervisor"),
+      el("span",{class:"muted ui"},rows.length+" student"+(rows.length===1?"":"s"))));
+    if(!rows.length){
+      card.append(el("p",{class:"muted",style:"padding:20px;margin:0"},"No students match this supervisor and role lens."));
+    } else {
+      card.append(buildReportTable(rows,weeks,true,v));
+    }
+    v.append(card);
+  }
+}
+
+// Shared table builder. showRole adds a "Role" column (which hat the focused
+// supervisor wears for that student); every row gets a "Contact" cell with
+// quick message buttons to the student and the co-supervisor.
+function buildReportTable(group,weeks,showRole,v){
+  const headers=["Student","Campus",...(showRole?["Role"]:[]),"Co-supervisor","Time arranged","Held","Attended","Missed","Co present","Last comment","Contact"];
+  const t=el("table",{});
+  t.append(el("thead",{},el("tr",{},...headers.map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  group.forEach(({s,c,st,focusRole})=>{
+    let coYes=0,coNo=0;
+    if(c) for(let w=1;w<=weeks;w++){ const l=weekLog(c,w); if(l?.coAttended==="yes")coYes++; else if(l?.coAttended==="no")coNo++; }
+    let lastComment="";
+    if(c) for(let w=weeks;w>=1;w--){ const cm=weekLog(c,w)?.comment; if(cm){ lastComment="W"+w+": "+cm; break; } }
+
+    // contact buttons: in-app message + email handoff for the student;
+    // in-app message for co/principal (their email lives in the Contacts tab)
+    const contact=el("div",{class:"row",style:"gap:5px"});
+    contact.append(el("button",{class:"btn xs blue",title:"Message "+s.name,
+      onclick:()=>composeMessage(()=>toast("Sent."),"student:"+s.sid+":"+s.id)},"✉ Msg"));
+    contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
+    if(s.coUid && s.coUid!==S.uid){
+      contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.coName||"co-supervisor"),
+        onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.coUid)},"Co"));
+    }
+    if(s.principalUid && s.principalUid!==S.uid){
+      contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.principalName||"principal"),
+        onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.principalUid)},"Principal"));
+    }
+
+    const cells=[
+      el("td",{},el("strong",{},s.name),el("div",{class:"muted ui",style:"font-size:12px"},s.sid||"")),
+      el("td",{},s.campus),
+      ...(showRole?[el("td",{}, focusRole?el("span",{class:"pill blue"},focusRole):el("span",{class:"muted"},"—"))]:[]),
+      el("td",{},s.coName||"—"),
+      el("td",{}, c?el("span",{class:"pill held"},`${c.day} ${c.start}`):el("span",{class:"pill missed"},"Not set")),
+      el("td",{},String(st.held)),
+      el("td",{},String(st.attended)),
+      el("td",{},String(st.missed)),
+      el("td",{}, c?.coUid?`${coYes}/${coYes+coNo}`:el("span",{class:"muted"},"—")),
+      el("td",{class:"muted",style:"max-width:200px;white-space:normal"},lastComment||"—"),
+      el("td",{},contact)
+    ];
+    tb.append(el("tr",{},...cells));
   });
+  t.append(tb);
+  return t;
+}
+
+// On-screen detailed week-by-week log for one focused supervisor, in a modal.
+function showSupervisorDetail(supUid,supName,lens,rows,sem,weeks){
+  const wrap=el("div",{class:"grid",style:"gap:14px"});
+  if(!rows.length){
+    wrap.append(el("p",{class:"muted",style:"margin:0"},"No students for this supervisor under the current role lens."));
+  }
+  rows.forEach(({s,c,focusRole})=>{
+    const block=el("div",{style:"border:1px solid var(--line);border-radius:8px;overflow:hidden"});
+    block.append(el("div",{style:"padding:9px 13px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px"},
+      el("strong",{class:"ui"},s.name+(focusRole?" · "+focusRole:"")),
+      el("span",{class:"muted ui",style:"font-size:12.5px"},s.campus+(c?` · ${c.day} ${c.start}–${c.end}`:" · no time set"))));
+    if(!c){
+      block.append(el("p",{class:"muted",style:"padding:10px 13px;margin:0"},"No consultation arranged — nothing logged."));
+    } else {
+      const t=el("table",{style:"font-size:14px"});
+      t.append(el("thead",{},el("tr",{},...["Wk","Held","Student","Co","Time","Comment"].map(h=>el("th",{},h)))));
+      const tb=el("tbody",{});
+      let any=false;
+      for(let w=1;w<=weeks;w++){
+        const l=weekLog(c,w); if(!Object.keys(l).length) continue; any=true;
+        const et=weekTime(c,w);
+        tb.append(el("tr",{},
+          el("td",{},"W"+w),
+          el("td",{}, l.held===true?el("span",{class:"pill held"},"Held"):l.held===false?el("span",{class:"pill missed"},"Not held"):el("span",{class:"muted"},"—")),
+          el("td",{}, l.studentAttended===true?"✓":l.studentAttended===false?"✗":"—"),
+          el("td",{}, l.coAttended==="yes"?"✓":l.coAttended==="no"?"✗":l.coAttended==="na"?"n/a":"—"),
+          el("td",{class:"muted ui",style:"font-size:12.5px"},`${et.day||""} ${et.start||""}${et.overridden?" *":""}`),
+          el("td",{class:"muted",style:"white-space:normal;max-width:240px"},l.comment||"")));
+      }
+      if(!any) tb.append(el("tr",{},el("td",{colspan:"6",class:"muted"},"No weeks recorded yet.")));
+      t.append(tb); block.append(t);
+    }
+    wrap.append(block);
+  });
+
+  modal((supName||"Supervisor")+" — full supervision log",wrap,async()=>{
+    downloadDetailedLogCSV(rows,sem,weeks,supName,lens); return true;
+  },"Download CSV");
+  // make the modal wide for the table
+  document.querySelector(".modal")?.classList.add("wide");
 }
 function downloadReportCSV(rows,sem,weeks){
   const head=["student","sid","campus","principal","co_supervisor","time_arranged","recurring_time","meetings_held","student_attended","student_missed","co_present","attendance_rate"];
@@ -1465,6 +1699,37 @@ function downloadReportCSV(rows,sem,weeks){
   const fname=`supervision_report_${(sem?.label||"export").replace(/\s+/g,"_")}.csv`;
   const a=el("a",{href:URL.createObjectURL(blob),download:fname});
   document.body.append(a); a.click(); a.remove(); toast("Report downloaded.");
+}
+
+// Detailed extraction: one CSV row per logged week, across the given rows.
+// Used for "Download detailed week-by-week logs" and the supervisor modal.
+function downloadDetailedLogCSV(rows,sem,weeks,focusName,lens){
+  const head=["student","sid","campus","principal","co_supervisor","week",
+    "day","start","end","mode","time_overridden",
+    "meeting_held","student_attended","co_attended","comment"];
+  const lines=[head.join(",")];
+  rows.forEach(({s,c})=>{
+    if(!c) return;
+    for(let w=1;w<=weeks;w++){
+      const l=weekLog(c,w); if(!Object.keys(l).length) continue;
+      const et=weekTime(c,w);
+      const cell=[
+        s.name,s.sid,s.campus,s.principalName||"",s.coName||"",
+        "W"+w, et.day||"",et.start||"",et.end||"",et.mode||"", et.overridden?"yes":"no",
+        l.held===true?"held":l.held===false?"not_held":"",
+        l.studentAttended===true?"yes":l.studentAttended===false?"no":"",
+        l.coAttended||"",
+        (l.comment||"")
+      ];
+      lines.push(cell.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(","));
+    }
+  });
+  if(lines.length===1) lines.push('"No logged weeks for this selection"');
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const tag=focusName?("_"+focusName.replace(/\s+/g,"_")+(lens&&lens!=="any"?"_"+lens:"")):"";
+  const fname=`supervision_detailed${tag}_${(sem?.label||"export").replace(/\s+/g,"_")}.csv`;
+  const a=el("a",{href:URL.createObjectURL(blob),download:fname});
+  document.body.append(a); a.click(); a.remove(); toast("Detailed logs downloaded.");
 }
 
 /* ============================================================
@@ -1516,6 +1781,103 @@ function downloadTimetableCSV(rows,sem){
   const fname=`timetable_${(sem?.label||"export").replace(/\s+/g,"_")}.csv`;
   const a=el("a",{href:URL.createObjectURL(blob),download:fname});
   document.body.append(a); a.click(); a.remove(); toast("CSV downloaded.");
+}
+
+/* ============================================================
+   11b. EMAIL HANDOFF + CONTACTS (admin)
+   The app can't send email itself from a static page, so it opens
+   the device's own mail app pre-filled via a mailto: link. The user
+   taps send. Mobile numbers are stored as a contact record (no SMS
+   sending without a backend gateway).
+   ============================================================ */
+function openEmail(to,subject,body){
+  if(!to){ toast("No email on file for this person.",true); return; }
+  const url="mailto:"+encodeURIComponent(to)+
+    "?subject="+encodeURIComponent(subject||"")+
+    "&body="+encodeURIComponent(body||"");
+  // location assignment triggers the OS mail handler on web & mobile
+  window.location.href=url;
+}
+// Small reusable "Email" button that opens the mail app.
+function emailButton(to,subject,body,label="✉ Email",cls="btn xs ghost"){
+  return el("button",{class:cls,title:to?("Email "+to):"No email on file",...(to?{}:{disabled:"disabled"}),
+    onclick:()=>openEmail(to,subject,body)},label);
+}
+
+async function viewContacts(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Directory"),
+    el("h2",{},"Contacts"))));
+  v.append(el("p",{class:"muted ui",style:"margin-top:-8px"},
+    "Email and mobile for every staff member and student. The Email button opens your device's mail app with the message pre-filled. Mobile numbers are stored for reference; the app does not send SMS."));
+
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewContacts(v)));
+  const search=el("input",{placeholder:"Search name, email, mobile…",style:"min-width:220px"});
+  bar.append(el("div",{class:"field"},el("label",{},"Search"),search));
+  v.append(bar);
+
+  const staff=(await DB.listUsers()).sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
+  const students=(await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}))
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+
+  const host=el("div",{});
+  v.append(host);
+
+  function draw(){
+    host.innerHTML="";
+    const term=search.value.trim().toLowerCase();
+    const match=o=>!term||[o.name,o.email,o.mobile,o.sid].some(x=>(x||"").toLowerCase().includes(term));
+
+    // ---- Staff ----
+    const sCard=el("div",{class:"card",style:"padding:0;overflow:hidden;margin-bottom:16px"});
+    sCard.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line)"},
+      el("strong",{class:"ui"},"Staff")));
+    const st=el("table",{});
+    st.append(el("thead",{},el("tr",{},...["Name","Role","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
+    const stb=el("tbody",{});
+    staff.filter(match).forEach(u=>{
+      const roleLabel=u.role==="admin"?"Admin":capLabel(capOf(u));
+      const contact=el("div",{class:"row",style:"gap:5px"});
+      contact.append(emailButton(u.email,"MRes supervision","Dear "+(u.name||"")+",\n\n"));
+      contact.append(el("button",{class:"btn xs ghost",onclick:()=>staffForm(u,()=>{viewContacts(v);})},"Edit"));
+      stb.append(el("tr",{},
+        el("td",{},el("strong",{},u.name||"—")),
+        el("td",{},roleLabel),
+        el("td",{class:"muted"},u.email||"—"),
+        el("td",{class:"muted"},u.mobile||el("span",{class:"muted"},"—")),
+        el("td",{},contact)));
+    });
+    st.append(stb); sCard.append(st); host.append(sCard);
+
+    // ---- Students ----
+    const cCard=el("div",{class:"card",style:"padding:0;overflow:hidden"});
+    cCard.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line)"},
+      el("strong",{class:"ui"},"Students"+(activeSemester()?" · "+activeSemester().label:""))));
+    if(!students.length){
+      cCard.append(el("p",{class:"muted",style:"padding:18px;margin:0"},"No students in this semester."));
+    } else {
+      const ct=el("table",{});
+      ct.append(el("thead",{},el("tr",{},...["Name","ID","Campus","Email","Mobile","Principal / Co","Contact"].map(h=>el("th",{},h)))));
+      const ctb=el("tbody",{});
+      students.filter(match).forEach(s=>{
+        const contact=el("div",{class:"row",style:"gap:5px"});
+        contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n"));
+        contact.append(el("button",{class:"btn xs ghost",onclick:()=>studentForm(s,()=>{viewContacts(v);})},"Edit"));
+        ctb.append(el("tr",{},
+          el("td",{},el("strong",{},s.name)),
+          el("td",{class:"muted"},s.sid||"—"),
+          el("td",{},s.campus||"—"),
+          el("td",{class:"muted"},s.email||"—"),
+          el("td",{class:"muted"},s.mobile||el("span",{class:"muted"},"—")),
+          el("td",{class:"muted ui",style:"font-size:13px"},(s.principalName||"—")+(s.coName?" / "+s.coName:"")),
+          el("td",{},contact)));
+      });
+      ct.append(ctb); cCard.append(ct); host.append(cCard);
+    }
+  }
+  search.addEventListener("input",draw);
+  draw();
 }
 
 /* ============================================================
@@ -1634,6 +1996,7 @@ function semesterForm(existing,done){
 function staffForm(existing,done){
   const editing=!!existing;
   const name=el("input",{value:existing?.name||""}), email=el("input",{type:"email",value:existing?.email||"",...(editing?{disabled:"disabled"}:{})});
+  const mobile=el("input",{type:"tel",value:existing?.mobile||"",placeholder:"e.g. +61 4xx xxx xxx"});
   const pass=el("input",{type:"password",placeholder:editing?"(unchanged — set in Firebase)":"Min 6 characters"});
   const role=el("select",{},
     el("option",{value:"supervisor",...(existing?.role==="supervisor"?{selected:"selected"}:{})},"Supervisor"),
@@ -1649,6 +2012,7 @@ function staffForm(existing,done){
   const fields=[
     el("div",{},el("label",{},"Full name"),name),
     el("div",{},el("label",{},"Email"),email),
+    el("div",{},el("label",{},"Mobile (optional)"),mobile),
   ];
   if(!editing) fields.push(el("div",{},el("label",{},"Temporary password"),pass));
   fields.push(el("div",{},el("label",{},"Account role"),role), capRow,
@@ -1660,14 +2024,14 @@ function staffForm(existing,done){
     el("div",{class:"grid"},...fields),
     async()=>{
       if(editing){
-        const profile={name:name.value.trim(),role:role.value};
+        const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
         if(role.value==="supervisor") profile.supRole=cap.value; else profile.supRole=null;
         await DB.updateUser(existing.id,profile);
         S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
         toast("Staff updated."); done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
-      const profile={email:email.value.trim(),name:name.value.trim(),role:role.value};
+      const profile={email:email.value.trim(),name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
       if(role.value==="supervisor") profile.supRole=cap.value;
       try{
         if(DEMO){
