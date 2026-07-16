@@ -102,14 +102,40 @@
   .who{display:flex;align-items:center;gap:12px;font-family:ui-sans-serif,sans-serif;font-size:14px}
   .who .role{font-size:11.5px;color:#c4bdac;text-transform:uppercase;letter-spacing:.05em}
 
-  main{max-width:1180px;margin:0 auto;padding:22px}
-  nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--line)}
-  nav.tabs button{
-    background:none;border:none;padding:12px 15px;font-weight:600;color:var(--ink-soft);
-    font-family:ui-sans-serif,system-ui,sans-serif;font-size:15px;border-bottom:2px solid transparent;margin-bottom:-1px;
+  main{max-width:1180px;margin:0 auto;padding:0 22px 22px}
+
+  /* ---- Notebook divider tabs -------------------------------------------
+     Styled like the index tabs of a physical field notebook: raised card
+     dividers resting on the rule line. The active tab overlaps the rule so
+     it reads as attached to the page, with a teal ink stripe along its top.
+     The strip is sticky, so navigation stays in reach on long pages. ----- */
+  nav.tabs{
+    display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;
+    margin:0 0 22px;padding-top:18px;
+    position:sticky;top:0;z-index:20;
+    /* the notebook rule line, drawn as a background stripe so the active
+       tab can sit over it without negative margins */
+    background:
+      linear-gradient(var(--line-strong),var(--line-strong)) left bottom/100% 2px no-repeat,
+      var(--paper);
   }
-  nav.tabs button.active{color:var(--teal-deep);border-bottom-color:var(--teal)}
-  nav.tabs button:hover{color:var(--ink)}
+  nav.tabs button{
+    position:relative;border:1px solid var(--line);border-bottom:none;
+    background:linear-gradient(#f0ebde,#e9e3d3);
+    color:var(--ink-soft);font-weight:600;font-size:14.5px;
+    font-family:ui-sans-serif,system-ui,sans-serif;
+    padding:9px 15px 10px;margin-bottom:2px;border-radius:9px 9px 0 0;
+    box-shadow:inset 0 -6px 8px -8px rgba(28,32,36,.35);
+    transition:background .15s,color .15s,box-shadow .15s,margin .15s,padding .15s;
+  }
+  nav.tabs button:hover{background:var(--paper-2);color:var(--ink)}
+  nav.tabs button:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+  nav.tabs button.active{
+    background:var(--paper-2);color:var(--teal-deep);font-weight:700;
+    border-color:var(--line-strong);
+    margin-bottom:0;padding-bottom:12px;   /* drops onto the rule and covers it */
+    box-shadow:inset 0 3px 0 var(--teal);  /* teal ink stripe along the tab top */
+  }
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
   .field{min-width:150px}
@@ -141,9 +167,18 @@
 
   #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(120%);
     background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:9px;
+    border-left:4px solid var(--teal);
     font-family:ui-sans-serif,sans-serif;font-size:14px;z-index:99;transition:transform .25s;box-shadow:var(--shadow);max-width:90vw}
   #toast.show{transform:translateX(-50%) translateY(0)}
-  #toast.err{background:var(--clay)}
+  #toast.err{background:var(--clay);border-left-color:#7e3017}
+
+  /* Keyboard focus is always visible */
+  .btn:focus-visible,.seg button:focus-visible,.seg3 button:focus-visible{
+    outline:2px solid var(--teal);outline-offset:2px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  }
 
   .att-grid{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--paper-2)}
   .att-grid table{font-size:14px;min-width:640px}
@@ -194,14 +229,15 @@
   .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
   @media (max-width:640px){
-    main{padding:12px}
+    main{padding:0 12px 12px}
     .who .name{display:none}
     th,td{padding:8px 7px}
     body{font-size:15.5px}
-    /* tabs become a horizontal swipe strip */
-    nav.tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    /* tabs become a horizontal swipe strip (still sticky divider tabs) */
+    nav.tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-top:12px;gap:5px}
     nav.tabs::-webkit-scrollbar{display:none}
-    nav.tabs button{padding:12px 12px;flex:0 0 auto}
+    nav.tabs button{padding:11px 13px 12px;flex:0 0 auto;font-size:14px}
+    nav.tabs button.active{padding-bottom:14px}
     /* big thumb targets for taking attendance on a phone */
     .seg3 button{padding:12px 16px;font-size:15px;min-height:44px}
     .btn{padding:12px 16px}
@@ -284,6 +320,21 @@ try {
 } catch(e){
   DEMO = true;
   console.warn("Firebase not configured — running in DEMO (in-memory) mode.");
+}
+
+/* ---- Secondary "account factory" auth ----------------------------------
+   createUserWithEmailAndPassword() automatically signs the NEW user in on
+   whichever Auth instance it's called with. If that's the primary `auth`,
+   the admin gets logged out and replaced by the freshly created account.
+   Creating accounts on this separate, throwaway app instance leaves the
+   admin's session on `auth` completely untouched. ------------------------ */
+let factoryAuth = null;
+function getFactoryAuth(){
+  if(!factoryAuth){
+    const factoryApp = initializeApp(firebaseConfig, "account-factory");
+    factoryAuth = getAuth(factoryApp);
+  }
+  return factoryAuth;
 }
 
 /* ============================================================
@@ -2267,7 +2318,7 @@ function staffForm(existing,done){
   fields.push(el("div",{},el("label",{},"Account role"),role), capRow, areaRow,
     el("div",{},el("p",{class:"muted",style:"margin:0"}, editing
       ? "Updates this staff member's profile. Email and password are managed in Firebase Authentication and aren't changed here."
-      : "Creates a login account. Capability sets whether this supervisor can be a student's principal, co-supervisor, or either.")));
+      : "Creates a login account for this person — your own session isn't affected. Capability sets whether this supervisor can be a student's principal, co-supervisor, or either.")));
 
   modal(editing?"Edit staff":"Add staff login",
     el("div",{class:"grid"},...fields),
@@ -2299,10 +2350,14 @@ function staffForm(existing,done){
           newUid="u"+Math.random().toString(36).slice(2,8);
           await DB.setUser(newUid,profile);
         } else {
-          const cred=await createUserWithEmailAndPassword(auth,email.value.trim(),pass.value);
+          // Create the account on the secondary auth instance — the new user
+          // is signed in THERE (not on the admin's session), then immediately
+          // signed out. The admin stays logged in throughout.
+          const factory=getFactoryAuth();
+          const cred=await createUserWithEmailAndPassword(factory,email.value.trim(),pass.value);
           newUid=cred.user.uid;
           await DB.setUser(newUid,profile);
-          toast("Staff created. You may need to sign back in.",false);
+          await signOut(factory).catch(()=>{});
         }
         if(orphan && newUid){
           const linked=await DB.list("students");
@@ -2320,7 +2375,7 @@ function staffForm(existing,done){
           await DB.removeUser(orphan.id);
         }
         S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
-        toast("Staff login created."); done(); return true;
+        toast("Staff login created — you're still signed in."); done(); return true;
       }catch(e){ toast(e.message||"Could not create account.",true); return false; }
     });
   sync();
