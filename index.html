@@ -288,7 +288,8 @@ try {
       lives inside consultations.weeks so meetings + attendance are one record.)
 
    Consultation times need NO admin approval — supervisors set & change them
-   week to week. Class timetables still go through admin approval for Moodle.
+   week to week. Class timetables are set and changed by ADMIN ONLY —
+   supervisors (including principals) see them read-only.
    The consultation meeting is held in the unit's Teams classroom, inside the
    student's own private channel; its link is stored on the consultation and
    the weekly record doubles as the ATTENDANCE register.
@@ -976,38 +977,38 @@ async function viewTimetables(v){
     el("h2",{},S.role==="admin"?"Class timetables":"Class times"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewTimetables(v)));
 
-  let isPrincipalSomewhere=false;
   let myStudents=[];
-  if(S.role==="supervisor"){
+  if(S.role==="admin"){
+    bar.append(el("div",{style:"flex:1"}),
+      el("button",{class:"btn",onclick:()=>timetableForm(null,()=>viewTimetables(v))},"+ Set class time"));
+  } else {
     myStudents=(await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}))
       .filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
-    isPrincipalSomewhere=myStudents.some(s=>s.principalUid===S.uid);
-    if(isPrincipalSomewhere){
-      bar.append(el("div",{style:"flex:1"}),el("button",{class:"btn",onclick:()=>timetableForm(null,()=>viewTimetables(v))},"+ Set class time"));
-    }
   }
   v.append(bar);
+  if(S.role==="supervisor"){
+    v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
+      "Class times are set by the admin office. Your weekly class and the classes for units of students you co-supervise are shown here read-only — contact admin to request a change."));
+  }
 
   let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
 
   if(S.role==="supervisor"){
     // Units of the students this supervisor co-supervises (for read-only class
-    // times the principal set), plus this supervisor's own class slots.
+    // times), plus any class slots assigned to this supervisor by admin.
     const coUnitIds=new Set();
     myStudents.filter(s=>s.coUid===S.uid).forEach(s=>(s.unitIds||[]).forEach(id=>coUnitIds.add(id)));
     tts=tts.filter(t=>
-      t.supervisorUid===S.uid ||                                   // my own classes
+      t.supervisorUid===S.uid ||                                   // classes assigned to me
       (t.status==="approved" && coUnitIds.has(t.unitId))           // approved classes for my co-students' units
     );
     if(!tts.length){
       v.append(emptyState("No class times yet",
-        isPrincipalSomewhere
-          ? "Set a class time with the button above. Approved classes for students you co-supervise will also appear here."
-          : "Once the principal supervisor sets and admin approves a class time for your co-supervised students' units, it will show here."));
+        "Admin sets the weekly class times. Once a class is set for you, or for units of students you co-supervise, it will show here."));
       return;
     }
   } else {
-    if(!tts.length){ v.append(emptyState("No class times set","A weekly class slot will appear here once set.")); return; }
+    if(!tts.length){ v.append(emptyState("No class times set","Use “+ Set class time” to create the weekly class slot for a unit and supervisor.")); return; }
   }
 
   const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
@@ -1020,17 +1021,15 @@ async function viewTimetables(v){
     const unit=unitById(sem,tt.unitId);
     const isOwn = S.role==="supervisor" && tt.supervisorUid===S.uid;
     const actions=el("div",{class:"row"});
-    if(isOwn){
-      actions.append(el("button",{class:"btn ghost sm",onclick:()=>timetableForm(tt,()=>viewTimetables(v))},"Edit"),
-        el("button",{class:"btn danger sm",onclick:()=>confirmDelete("timetables",tt.id,"this class time",()=>viewTimetables(v))},"Delete"));
-    } else if(S.role==="supervisor"){
-      actions.append(el("span",{class:"muted ui",style:"font-size:12.5px"},"Read-only"));
+    if(S.role==="supervisor"){
+      // supervisors never edit class times — admin only
+      actions.append(el("span",{class:"muted ui",style:"font-size:12.5px"},"Set by admin"));
     }
     if(S.role==="admin"){
       if(tt.status!=="approved") actions.append(el("button",{class:"btn sm",onclick:async()=>{await DB.update("timetables",tt.id,{status:"approved"});toast("Approved.");viewTimetables(v);}},"Approve"));
       else actions.append(el("button",{class:"btn ghost sm",onclick:async()=>{await DB.update("timetables",tt.id,{status:"pending"});viewTimetables(v);}},"Unapprove"));
       // admin may edit & delete any class time
-      actions.append(el("button",{class:"btn ghost sm",onclick:()=>timetableForm(tt,()=>viewTimetables(v),true)},"Edit"),
+      actions.append(el("button",{class:"btn ghost sm",onclick:()=>timetableForm(tt,()=>viewTimetables(v))},"Edit"),
         el("button",{class:"btn danger sm",onclick:()=>confirmDelete("timetables",tt.id,"this class time",()=>viewTimetables(v))},"Delete"));
     }
     const roleCell = showRoleCol
@@ -1051,12 +1050,17 @@ async function viewTimetables(v){
 function statusPill(s){ const cls=s==="approved"?"approved":s==="pending"?"pending":"none";
   return el("span",{class:"pill "+cls},s==="approved"?"Approved":s==="pending"?"Awaiting admin":"—"); }
 
-function timetableForm(existing,done,asAdmin){
+// Admin-only: supervisors can no longer set or change class times.
+function timetableForm(existing,done){
   const sem= existing? semOf(existing.semesterId)||activeSemester() : activeSemester();
   const units=unitsOf(sem);
   if(!units.length){ toast("Add a unit to this semester first.",true); return; }
   const unitSel=el("select",{},...units.map(u=>el("option",{value:u.id,...(u.id===existing?.unitId?{selected:"selected"}:{})},
     (u.code||"")+(u.name?" — "+u.name:""))));
+  const supSel=el("select",{},
+    el("option",{value:""},"— Choose supervisor —"),
+    ...S.supervisors.filter(canBePrincipal).map(u=>el("option",{value:u.id,...(u.id===existing?.supervisorUid?{selected:"selected"}:{})},
+      (u.name||u.email)+(u.area?" ("+u.area+")":""))));
   const day=el("select",{},...DAYS.map(d=>el("option",{value:d,...(d===existing?.day?{selected:"selected"}:{})},d)));
   const start=el("input",{type:"time",value:existing?.start||"10:00"});
   const end=el("input",{type:"time",value:existing?.end||"13:00"});
@@ -1064,18 +1068,20 @@ function timetableForm(existing,done,asAdmin){
   modal(existing?"Edit class time":"Set weekly class time",
     el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
       el("div",{style:"grid-column:1/-1"},el("label",{},"Unit"),unitSel),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Supervisor taking the class"),supSel),
       el("div",{style:"grid-column:1/-1"},el("label",{},"Day of week"),day),
       el("div",{},el("label",{},"Start"),start),
       el("div",{},el("label",{},"End"),end),
       el("div",{style:"grid-column:1/-1"},el("label",{},"Room / campus"),room),
-      el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0"},"This is the once-weekly class for the chosen unit. Admin approval is required before it appears on the official Moodle export."))
+      el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0"},"Class times are set by admin only — supervisors see them read-only. Approved class times feed the official Moodle export."))
     ),
     async()=>{
+      if(!supSel.value){ toast("Choose the supervisor taking this class.",true); return false; }
       if(start.value>=end.value){ toast("End time must be after start.",true); return false; }
-      const data={unitId:unitSel.value,day:day.value,start:start.value,end:end.value,room:room.value.trim()};
+      const data={unitId:unitSel.value,supervisorUid:supSel.value,day:day.value,start:start.value,end:end.value,room:room.value.trim()};
       if(existing){ await DB.update("timetables",existing.id,data); }
-      else { await DB.add("timetables",{semesterId:S.activeSem,supervisorUid:S.uid,status:"pending",...data}); }
-      toast(existing?"Class time updated.":"Saved — sent for admin approval."); done(); return true;
+      else { await DB.add("timetables",{semesterId:S.activeSem,status:"approved",...data}); }
+      toast(existing?"Class time updated.":"Class time set."); done(); return true;
     });
 }
 
