@@ -134,6 +134,7 @@
 
   .modal-bg{position:fixed;inset:0;background:rgba(28,32,36,.5);display:grid;place-items:center;padding:18px;z-index:50}
   .modal{background:var(--paper-2);border-radius:14px;max-width:560px;width:100%;padding:24px;
+    max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
     box-shadow:0 20px 60px -20px rgba(0,0,0,.5);max-height:90vh;overflow:auto}
   .modal.wide{max-width:760px}
   .modal h3{font-size:19px;margin-bottom:14px}
@@ -216,6 +217,32 @@
     .toolbar select,.toolbar input{width:100%}
     .modal{padding:18px}
     .modal .grid[style*="1fr 1fr"]{grid-template-columns:1fr!important}
+    .section-title{flex-wrap:wrap;gap:8px}
+    h2{font-size:21px}
+    input,select,textarea{font-size:16px} /* stops iOS zoom-on-focus */
+  }
+
+  /* ---- Phone layout: every data table stacks into cards ----
+     Each <td> gets a data-label copied from its column header (done in JS),
+     so on small screens rows read as label/value pairs instead of requiring
+     sideways scrolling. `screen` keeps printing on real tables. -------- */
+  @media screen and (max-width:640px){
+    table.resp{display:block}
+    table.resp thead{display:none}
+    table.resp tbody{display:block}
+    table.resp tr{display:block;padding:10px 14px;border-bottom:1px solid var(--line)}
+    table.resp tr:last-child{border-bottom:none}
+    table.resp td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+      padding:4px 0;border-bottom:none;text-align:right}
+    table.resp td::before{content:attr(data-label);font-family:ui-sans-serif,system-ui,sans-serif;
+      font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-soft);opacity:.75;
+      flex:0 0 auto;text-align:left}
+    table.resp td[data-label=""]{justify-content:flex-end;padding-top:8px}
+    table.resp td[data-label=""]::before{display:none}
+    table.resp td:first-child{font-size:16px}
+    table.resp td .row{justify-content:flex-end;flex-wrap:wrap}
+    /* first cell (usually the name) reads as the card title */
+    table.resp td:first-child::before{align-self:center}
   }
   @media print{
     header.app,nav.tabs,.toolbar,.btn,#toast{display:none!important}
@@ -420,6 +447,27 @@ const el = (tag,props={},...kids)=>{
   return n;
 };
 function toast(msg,isErr){ let t=$("#toast"); if(!t){ t=toastNode(); document.body.append(t); } t.textContent=msg; t.className="show"+(isErr?" err":""); setTimeout(()=>t.className="",2600); }
+
+/* ---- Mobile tables ----
+   Copies each column header onto its cells (data-label) and tags the table
+   `resp`, letting the phone stylesheet stack every row into a label/value
+   card. Runs automatically for every table any view renders — no per-view
+   work needed. Desktop and print layouts are untouched. */
+function labelTable(t){
+  const heads=[...t.querySelectorAll("thead th")].map(th=>th.textContent.trim());
+  if(!heads.length) return;
+  t.querySelectorAll("tbody tr").forEach(tr=>{
+    [...tr.children].forEach((td,i)=>td.setAttribute("data-label",heads[i]??""));
+  });
+  t.classList.add("resp");
+}
+new MutationObserver(muts=>{
+  for(const m of muts) for(const n of m.addedNodes){
+    if(n.nodeType!==1) continue;
+    if(n.tagName==="TABLE") labelTable(n);
+    else n.querySelectorAll?.("table").forEach(labelTable);
+  }
+}).observe(document.documentElement,{childList:true,subtree:true});
 const CAMPUSES=["NSW","ACT","Perth","VIC","QLD"];
 const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 // Supervision areas — lets the hub host both IT and Business supervisors/students.
