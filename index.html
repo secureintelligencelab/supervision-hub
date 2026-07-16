@@ -186,10 +186,36 @@
   details.help summary{cursor:pointer;font-family:ui-sans-serif,sans-serif;color:var(--teal-deep);font-weight:600}
   code{background:#0000000d;padding:1px 5px;border-radius:4px;font-size:13.5px}
 
+  .pill.area-it{background:var(--blue-soft);color:#264068}
+  .pill.area-business{background:var(--amber-soft);color:#7a5408}
+  /* Cards that hold a table scroll sideways instead of clipping (phone-friendly) */
+  .card:has(> table){overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
   @media (max-width:640px){
-    main{padding:14px}
+    main{padding:12px}
     .who .name{display:none}
     th,td{padding:8px 7px}
+    body{font-size:15.5px}
+    /* tabs become a horizontal swipe strip */
+    nav.tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    nav.tabs::-webkit-scrollbar{display:none}
+    nav.tabs button{padding:12px 12px;flex:0 0 auto}
+    /* big thumb targets for taking attendance on a phone */
+    .seg3 button{padding:12px 16px;font-size:15px;min-height:44px}
+    .btn{padding:12px 16px}
+    .btn.sm{padding:9px 13px;font-size:14px}
+    .btn.xs{padding:8px 11px;font-size:13px}
+    .weeklog .wrow{grid-template-columns:52px 1fr}
+    .weeklog .wbody{padding:11px 10px}
+    .wmeta{row-gap:6px}
+    .stat{gap:8px}
+    .stat .b{flex:1 1 calc(50% - 8px);min-width:0;padding:10px 12px}
+    .stat .n{font-size:24px}
+    .toolbar .field{flex:1 1 46%;min-width:0}
+    .toolbar select,.toolbar input{width:100%}
+    .modal{padding:18px}
+    .modal .grid[style*="1fr 1fr"]{grid-template-columns:1fr!important}
   }
   @media print{
     header.app,nav.tabs,.toolbar,.btn,#toast{display:none!important}
@@ -237,9 +263,13 @@ try {
    2. DATA LAYER
    Firestore structure:
      users/{uid}      -> {email,name,mobile,role:'admin'|'supervisor',
-                          supRole:'both'|'principal'|'co'}
+                          supRole:'both'|'principal'|'co',
+                          area:'IT'|'Business',            // supervision area
+                          pendingLogin:true?               // profile auto-created from an
+                                                           // import; no auth login yet
+                         }
      semesters/{id}   -> {label, weeks, units:[{id,code,name}, ...]}
-     students/{id}    -> {semesterId, sid, name, email, mobile, campus, unitIds:[...],
+     students/{id}    -> {semesterId, sid, name, email, mobile, campus, area, unitIds:[...],
                           principalUid, coUid, principalName, coName}
      timetables/{id}  -> {semesterId, unitId, supervisorUid, day, start, end,
                           room, status:'pending'|'approved'}   // class still admin-approved
@@ -257,29 +287,24 @@ try {
      (attendance collection retained for back-compat reads only; new logging
       lives inside consultations.weeks so meetings + attendance are one record.)
 
-     coslots/{id}     -> {                                   // co-supervisor's OWN diary
-                          semesterId, supervisorUid,          // the co-supervisor
-                          label, day, start, end, mode,
-                          meetingLink, note
-                        }
-       A co-supervisor's own recurring consultation/office hours, independent
-       of any one student. Use this when a co wants to offer their own slot
-       instead of (or in addition to) following the principal's per-student
-       consultation time. Visible to students they co-supervise and to the
-       principal. No admin approval.
-
    Consultation times need NO admin approval — supervisors set & change them
    week to week. Class timetables still go through admin approval for Moodle.
+   The consultation meeting is held in the unit's Teams classroom, inside the
+   student's own private channel; its link is stored on the consultation and
+   the weekly record doubles as the ATTENDANCE register.
+   Co-supervisors see the consultation timetable and the attendance record for
+   their students read-only. (Legacy `coslots` / `messages` collections are no
+   longer used by the app.)
    ============================================================ */
 
-const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, messages:{}, coslots:{} };
+const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{} };
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
   mem.users["admin1"]={email:"admin@uni.edu",name:"Admin Office",role:"admin",mobile:"+61 400 000 001"};
-  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222"};
-  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444"};
-  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666"};
+  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222",area:"IT"};
+  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444",area:"Business"};
+  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666",area:"IT"};
   mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,units:[
     {id:"u1",code:"RES915",name:"Literature, Methodology & Proposal"},
     {id:"u2",code:"RES920",name:"Research Project"}
@@ -288,9 +313,9 @@ function seedDemo(){
     {id:"u3",code:"RES930",name:"Thesis"}
   ]};
   const mk=(id,o)=>mem.students[id]=o;
-  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",mobile:"+61 411 111 111",campus:"NSW",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
-  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",mobile:"+61 422 222 222",campus:"NSW",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
-  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",mobile:"",campus:"ACT",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
+  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",mobile:"+61 411 111 111",campus:"NSW",area:"IT",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
+  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",mobile:"+61 422 222 222",campus:"NSW",area:"IT",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",mobile:"",campus:"ACT",area:"Business",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
   mem.timetables["tt1"]={semesterId:"s2-2026",unitId:"u1",supervisorUid:"supA",day:"Tuesday",start:"10:00",end:"13:00",room:"NSW Rm 4.12",status:"approved"};
   // sample consultation with a couple of weeks logged
   mem.consultations["c1"]={semesterId:"s2-2026",studentDocId:"st1",supervisorUid:"supA",
@@ -302,26 +327,6 @@ function seedDemo(){
       2:{held:true,studentAttended:false,coAttended:"na",comment:"Student unwell, rescheduled offline."},
       3:{held:true,studentAttended:true,coAttended:"no",comment:""}
     }};
-  // sample co-supervisor own diary slot (Dr Patel offers a weekly drop-in)
-  mem.coslots["cs1"]={semesterId:"s2-2026",supervisorUid:"supC",
-    label:"Drop-in office hours",day:"Thursday",start:"11:00",end:"12:00",
-    mode:"Online",meetingLink:"https://teams.microsoft.com/l/meetup/patel-dropin",
-    note:"Open to all students I co-supervise — bring methods questions."};
-  // sample messages.
-  // Recipient is either staff (toType 'staff', toUid) or a student (toType
-  // 'student', toSid). Students are read-only and cannot send.
-  mem.messages["m1"]={fromUid:"supA",fromName:"Dr Smith",fromRole:"supervisor",
-    toType:"staff",toUid:"supC",toName:"Dr Patel",
-    body:"Could you join Aisha's week 5 consultation? We'll be reviewing her methodology.",
-    ts:Date.parse("2026-03-01T09:15:00"),readBy:{}};
-  mem.messages["m2"]={fromUid:"supC",fromName:"Dr Patel",fromRole:"supervisor",
-    toType:"staff",toUid:"supA",toName:"Dr Smith",
-    body:"Yes, I can make week 5. I'll prepare comments on her sampling plan beforehand.",
-    ts:Date.parse("2026-03-01T11:40:00"),readBy:{}};
-  mem.messages["m3"]={fromUid:"supA",fromName:"Dr Smith",fromRole:"supervisor",
-    toType:"student",toSid:"45001",toName:"Aisha Khan",
-    body:"Great progress this week. Please send your updated chapter draft before our next meeting.",
-    ts:Date.parse("2026-03-02T14:05:00"),readBy:{}};
 }
 
 const DB = {
@@ -416,6 +421,12 @@ const el = (tag,props={},...kids)=>{
 function toast(msg,isErr){ let t=$("#toast"); if(!t){ t=toastNode(); document.body.append(t); } t.textContent=msg; t.className="show"+(isErr?" err":""); setTimeout(()=>t.className="",2600); }
 const CAMPUSES=["NSW","ACT","Perth","VIC","QLD"];
 const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+// Supervision areas — lets the hub host both IT and Business supervisors/students.
+const AREAS=["IT","Business"];
+function areaPill(a){
+  if(!a) return el("span",{class:"muted"},"—");
+  return el("span",{class:"pill area-"+String(a).toLowerCase().replace(/\s+/g,"-")},a);
+}
 
 function activeSemester(){ return S.semesters.find(s=>s.id===S.activeSem)||null; }
 function semOf(id){ return S.semesters.find(s=>s.id===id)||null; }
@@ -598,12 +609,17 @@ function renderApp(){
         el("div",{class:"role"},S.role)),
       el("button",{class:"btn ghost sm",onclick:logout},"Sign out"))
   );
+  // A co-supervisor-only staff member never SETS consultation times — they
+  // only view what the principal has arranged, so their tab says so.
+  const meSup=S.supervisors.find(u=>u.id===S.uid);
+  const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
   const TABS = S.role==="admin"
-    ? [["students","Students"],["timetables","Class timetables"],["consultations","Consultations"],
-       ["meetinglog","Supervision diary"],["messages","Messages"],["report","Summary report"],
+    ? [["students","Students"],["timetables","Class timetables"],["consultations","Consultation times"],
+       ["meetinglog","Attendance"],["report","Summary report"],
        ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
-    : [["students","My students"],["timetables","My class time"],["consultations","Consultation times"],
-       ["meetinglog","Supervision diary"],["messages","Messages"]];
+    : [["students","My students"],["timetables","My class time"],
+       ["consultations",coOnly?"View consultation time":"Set consultation time"],
+       ["meetinglog","Attendance"]];
   const tabs=el("nav",{class:"tabs ui"});
   TABS.forEach(([id,label])=>{
     tabs.append(el("button",{class:S.tab===id?"active":"",onclick:()=>{S.tab=id;drawMain();}},label));
@@ -631,7 +647,6 @@ async function drawMain(){
   if(S.tab==="timetables") return viewTimetables(v);
   if(S.tab==="consultations") return viewConsultations(v);
   if(S.tab==="meetinglog") return viewMeetingLog(v);
-  if(S.tab==="messages") return viewMessages(v);
   if(S.tab==="report") return viewReport(v);
   if(S.tab==="export") return viewExport(v);
   if(S.tab==="contacts") return viewContacts(v);
@@ -660,32 +675,33 @@ async function viewStudents(v){
   const search=el("input",{placeholder:"Search name, ID, email…",style:"min-width:200px"});
   const campusFilter=el("select",{style:"width:auto"},el("option",{value:""},"All campuses"),
     ...[...new Set(students.map(s=>s.campus))].filter(Boolean).map(c=>el("option",{value:c},c)));
+  const areaFilter=el("select",{style:"width:auto"},el("option",{value:""},"All areas"),
+    ...AREAS.map(a=>el("option",{value:a},a)));
   bar.append(el("div",{class:"field"},el("label",{},"Search"),search),
-             el("div",{class:"field"},el("label",{},"Campus"),campusFilter));
+             el("div",{class:"field"},el("label",{},"Campus"),campusFilter),
+             el("div",{class:"field"},el("label",{},"Area"),areaFilter));
   if(S.role==="admin"){
     bar.append(el("div",{style:"flex:1"}));
-    bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Upload CSV"),
+    bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Import students (CSV / paste)"),
                el("button",{class:"btn",onclick:()=>studentForm(null,()=>viewStudents(v))},"+ Add student"));
   }
   v.append(bar);
-  // supervisor convenience: one-tap email to admin
+  // supervisor convenience: one-tap email to admin & to all students
   if(S.role==="supervisor"){
     const adminEmail=admins[0]?.email;
     v.append(el("div",{class:"row",style:"margin:-4px 0 12px"},
       el("span",{class:"muted ui",style:"font-size:13px"},"Need the coordinator? "),
       emailButton(adminEmail,"MRes supervision query","Dear Admin Office,\n\n","✉ Email admin","btn sm ghost"),
-      el("button",{class:"btn sm ghost",onclick:()=>{ if(admins[0]) composeMessage(()=>toast("Sent."),"staff:"+admins[0].id); else toast("No admin on file.",true); }},"✉ Message admin"),
       el("span",{style:"flex:1"}),
-      el("button",{class:"btn sm ghost",onclick:()=>bulkEmailStudents()},"📧 Email all my students"),
-      el("button",{class:"btn sm blue",onclick:()=>broadcastMessage(()=>viewStudents(v))},"📣 Message all my students")));
+      el("button",{class:"btn sm ghost",onclick:()=>bulkEmailStudents()},"📧 Email all my students")));
   }
 
   const body=el("div",{});
   function render(){
     body.innerHTML="";
-    const term=search.value.toLowerCase(), cf=campusFilter.value;
+    const term=search.value.toLowerCase(), cf=campusFilter.value, af=areaFilter.value;
     const filtered=students.filter(s=>
-      (!cf||s.campus===cf) &&
+      (!cf||s.campus===cf) && (!af||s.area===af) &&
       [s.name,s.sid,s.email].some(x=>(x||"").toLowerCase().includes(term)));
     if(!filtered.length){ body.append(emptyState("No students here yet","Add one or upload a CSV to begin.")); return; }
     const byCampus={};
@@ -697,13 +713,14 @@ async function viewStudents(v){
         el("span",{class:"muted ui"},byCampus[campus].length+" student"+(byCampus[campus].length>1?"s":""))));
       const t=el("table",{});
       t.append(el("thead",{},el("tr",{},
-        ...["Student","ID","Units","Email","Principal","Co-supervisor",(S.role==="admin"||S.role==="supervisor")?"Contact":null].filter(x=>x!==null).map(h=>el("th",{},h)))));
+        ...["Student","ID","Area","Units","Email","Principal","Co-supervisor",(S.role==="admin"||S.role==="supervisor")?"Contact":null].filter(x=>x!==null).map(h=>el("th",{},h)))));
       const tb=el("tbody",{});
       byCampus[campus].forEach(s=>{
         const codes=(s.unitIds||[]).map(id=>unitById(sem,id)?.code).filter(Boolean);
         const cells=[
           el("td",{},el("strong",{},s.name)),
           el("td",{},s.sid),
+          el("td",{},areaPill(s.area)),
           el("td",{},codes.length?codes.join(", "):el("span",{class:"muted"},"—")),
           el("td",{class:"muted"},s.email||"—"),
           el("td",{},s.principalName||"—"),
@@ -714,19 +731,17 @@ async function viewStudents(v){
             el("button",{class:"btn ghost sm",onclick:()=>studentForm(s,()=>viewStudents(v))},"Edit"),
             el("button",{class:"btn danger sm",onclick:()=>confirmDelete("students",s.id,s.name,()=>viewStudents(v))},"Delete"))));
         } else if(S.role==="supervisor"){
-          // contact this student: in-app message + email handoff
+          // contact via email only — opens the device's mail app
           const contact=el("div",{class:"row",style:"gap:5px"});
-          contact.append(el("button",{class:"btn xs blue",title:"Message "+s.name,
-            onclick:()=>composeMessage(()=>toast("Sent."),"student:"+s.sid+":"+s.id)},"✉ Msg"));
           contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
-          // if I'm the co, offer to contact the principal and vice versa
+          // if I'm the co, offer to email the principal and vice versa
           if(s.principalUid && s.principalUid!==S.uid){
-            contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.principalName||"principal"),
-              onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.principalUid)},"Principal"));
+            const pEmail=S.supervisors.find(u=>u.id===s.principalUid)?.email;
+            contact.append(emailButton(pEmail,"MRes supervision — "+s.name,"Dear "+(s.principalName||"")+",\n\nRegarding "+s.name+" ("+s.sid+"):\n\n","✉ Principal","btn xs ghost"));
           }
           if(s.coUid && s.coUid!==S.uid){
-            contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.coName||"co-supervisor"),
-              onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.coUid)},"Co"));
+            const cEmail=S.supervisors.find(u=>u.id===s.coUid)?.email;
+            contact.append(emailButton(cEmail,"MRes supervision — "+s.name,"Dear "+(s.coName||"")+",\n\nRegarding "+s.name+" ("+s.sid+"):\n\n","✉ Co","btn xs ghost"));
           }
           cells.push(el("td",{},contact));
         }
@@ -735,7 +750,7 @@ async function viewStudents(v){
       t.append(tb); card.append(t); body.append(card);
     });
   }
-  search.oninput=render; campusFilter.onchange=render;
+  search.oninput=render; campusFilter.onchange=render; areaFilter.onchange=render;
   render();
   v.append(body);
 }
@@ -748,7 +763,8 @@ function studentForm(existing,done){
   const sem=activeSemester();
   const f={
     sid:existing?.sid||"", name:existing?.name||"", email:existing?.email||"", mobile:existing?.mobile||"",
-    campus:existing?.campus||CAMPUSES[0], principalUid:existing?.principalUid||"", coUid:existing?.coUid||"",
+    campus:existing?.campus||CAMPUSES[0], area:existing?.area||AREAS[0],
+    principalUid:existing?.principalUid||"", coUid:existing?.coUid||"",
     unitIds:existing?.unitIds||[]
   };
   const supOpts=(pool,sel)=>[el("option",{value:""},"— none —"),
@@ -757,8 +773,14 @@ function studentForm(existing,done){
   const sid=el("input",{value:f.sid}), name=el("input",{value:f.name}), email=el("input",{type:"email",value:f.email});
   const mobile=el("input",{type:"tel",value:f.mobile,placeholder:"e.g. +61 4xx xxx xxx"});
   const campus=el("select",{},...CAMPUSES.map(c=>el("option",{value:c,...(c===f.campus?{selected:"selected"}:{})},c)));
+  const area=el("select",{},...AREAS.map(a=>el("option",{value:a,...(a===f.area?{selected:"selected"}:{})},a)));
   const prin=el("select",{},...supOpts(S.supervisors.filter(canBePrincipal),f.principalUid));
   const co=el("select",{},...supOpts(S.supervisors.filter(canBeCo),f.coUid));
+  // convenience: picking a principal pre-selects their supervision area
+  prin.addEventListener("change",()=>{
+    const pa=S.supervisors.find(u=>u.id===prin.value)?.area;
+    if(pa && AREAS.includes(pa)) area.value=pa;
+  });
 
   const units=unitsOf(sem);
   const unitBoxes=units.map(u=>{
@@ -778,6 +800,7 @@ function studentForm(existing,done){
       el("div",{},el("label",{},"Email"),email),
       el("div",{},el("label",{},"Mobile (optional)"),mobile),
       el("div",{},el("label",{},"Campus"),campus),
+      el("div",{},el("label",{},"Supervision area"),area),
       el("div",{},el("label",{},"Principal supervisor"),prin),
       el("div",{},el("label",{},"Co-supervisor"),co),
       el("div",{style:"grid-column:1/-1"},el("label",{},"Enrolled units"),unitsBlock)
@@ -789,7 +812,7 @@ function studentForm(existing,done){
       const cName=S.supervisors.find(u=>u.id===co.value)?.name||S.supervisors.find(u=>u.id===co.value)?.email||"";
       const unitIds=unitBoxes.filter(lbl=>lbl.querySelector("input").checked).map(lbl=>lbl.querySelector("input").dataset.unit);
       const data={semesterId:S.activeSem,sid:sid.value.trim(),name:name.value.trim(),email:email.value.trim(),mobile:mobile.value.trim(),
-        campus:campus.value,unitIds,principalUid:prin.value,coUid:co.value,principalName:pName,coName:cName};
+        campus:campus.value,area:area.value,unitIds,principalUid:prin.value,coUid:co.value,principalName:pName,coName:cName};
       if(existing) await DB.update("students",existing.id,data); else await DB.add("students",data);
       // keep linked consultation's denormalised supervisor names in sync
       if(existing){
@@ -800,65 +823,145 @@ function studentForm(existing,done){
     });
 }
 
-/* ---- CSV import ---- */
+/* ---- STUDENT IMPORT (CSV file OR pasted rows) ----
+   Accepts the supervisor-wise allocation list straight from the spreadsheet:
+     Student Name | Student ID | Student Email | Principal Supervisor |
+     Principal Supervisor Email | Co-Supervisor Name | Co-supervisor Email
+   Tab- or comma-separated, header row required (column order is free — headers
+   are matched by meaning). Supervisors are identified by EMAIL, so different
+   spellings of the same name ("Associate Professor John Ayoade" vs
+   "A/Prof John Ayoade") resolve to one supervisor. Supervisors not yet on the
+   staff list are auto-created as profiles (admin adds their login later).
+   Re-importing a student ID that already exists in this semester UPDATES that
+   student instead of duplicating them. */
 function importCSV(done){
-  const input=el("input",{type:"file",accept:".csv"});
+  const sem=activeSemester();
+  const input=el("input",{type:"file",accept:".csv,.txt,.tsv"});
+  const paste=el("textarea",{
+    placeholder:"…or paste rows copied from Excel here (header row first).\nExample:\nStudent Name\tStudent ID\tStudent Email\tPrincipal Supervisor\tPrincipal Supervisor Email\tCo-Supervisor Name\tCo-supervisor Email\nHasibul Haque Hira\tcihe260061\tcihe260061@student.cihe.edu.au\tAssociate Professor John Ayoade\tjohn.ayoade@cihe.edu.au\tDr Madhumita Abhijeet Takalkar\tmadhumita.takalkar@cihe.edu.au",
+    style:"min-height:130px;font-size:13px;font-family:ui-monospace,monospace"});
+  const areaSel=el("select",{},...AREAS.map(a=>el("option",{value:a},a)));
   const preview=el("div",{class:"muted",style:"margin-top:10px"});
   let rows=[];
+
+  function refreshPreview(){
+    preview.innerHTML="";
+    if(!rows.length){ preview.textContent="No rows detected yet."; return; }
+    const missing=rows.filter(r=>!r.name||!r.sid).length;
+    const supEmails=new Set();
+    rows.forEach(r=>{ if(r.principal_email)supEmails.add(r.principal_email.toLowerCase());
+                      if(r.co_email)supEmails.add(r.co_email.toLowerCase()); });
+    const newSups=[...supEmails].filter(e=>!S.supervisors.some(u=>(u.email||"").toLowerCase()===e));
+    preview.append(el("strong",{},rows.length+" student row"+(rows.length===1?"":"s")+" ready."));
+    if(missing) preview.append(" "+missing+" row(s) missing a name or ID will be skipped.");
+    if(newSups.length) preview.append(el("div",{style:"margin-top:4px"},
+      "New supervisors to be created from email: "+newSups.join(", ")));
+  }
   input.onchange=()=>{
     const file=input.files[0]; if(!file)return;
     const r=new FileReader();
-    r.onload=()=>{
-      rows=parseCSV(r.result);
-      preview.innerHTML="";
-      if(!rows.length){ preview.textContent="Could not read any rows."; return; }
-      preview.append(el("strong",{},rows.length+" rows ready. "),
-        "Expected columns: name, sid, email, campus, units, principal_email, co_email");
-    };
+    r.onload=()=>{ rows=parseImport(r.result); refreshPreview(); };
     r.readAsText(file);
   };
-  const sem=activeSemester();
-  modal("Upload students from CSV",
+  let pasteTimer=null;
+  paste.addEventListener("input",()=>{ clearTimeout(pasteTimer);
+    pasteTimer=setTimeout(()=>{ rows=parseImport(paste.value); refreshPreview(); },350); });
+
+  modal("Import students — CSV or paste",
     el("div",{},
-      el("p",{class:"muted",style:"margin-top:0"},"First row must be a header. Supervisors are matched by email and must have the right capability. The optional \u201Cunits\u201D column lists unit codes separated by ; or | and must match this semester's units. An optional \u201Cmobile\u201D column is also supported."),
-      input, preview,
-      el("details",{class:"help"},el("summary",{},"Show example CSV"),
-        el("pre",{style:"background:#0000000d;padding:10px;border-radius:8px;overflow:auto;font-size:12px"},
-          "name,sid,email,mobile,campus,units,principal_email,co_email\nAisha Khan,45001,aisha@stu.edu,+61 411 111 111,NSW,RES915;RES920,a.smith@uni.edu,c.patel@uni.edu\nTom Reilly,45002,tom@stu.edu,,NSW,RES915,a.smith@uni.edu,"))
-    ),
+      el("p",{class:"muted",style:"margin-top:0"},
+        "Upload a CSV or paste the allocation list per principal supervisor (copied from Excel). "+
+        "Needed columns: student name, student ID, student email, principal supervisor (name), principal supervisor email, co-supervisor name, co-supervisor email. "+
+        "Supervisors are matched by email — new ones are created automatically. Optional columns: mobile, campus, units (codes separated by ; or |), area."),
+      el("div",{style:"margin-bottom:10px"},el("label",{},"Supervision area for this batch"),areaSel,
+        el("p",{class:"muted",style:"margin:4px 0 0;font-size:13px"},"Applied to every imported student and any newly created supervisor. Add an \u201Carea\u201D column to mix IT and Business rows in one import.")),
+      el("div",{style:"margin-bottom:8px"},el("label",{},"CSV file"),input),
+      el("div",{},el("label",{},"Or paste rows"),paste),
+      preview),
     async()=>{
-      if(!rows.length){ toast("Choose a CSV file first.",true); return false; }
+      if(!rows.length){ toast("Choose a CSV file or paste rows first.",true); return false; }
       if(!S.activeSem){ toast("Create a semester first.",true); return false; }
       const units=unitsOf(sem);
-      let ok=0;
+      const existing=await DB.list("students",{semesterId:S.activeSem});
+      const batchArea=areaSel.value;
+
+      // find a supervisor by email; create a profile record if unknown
+      async function ensureSupervisor(email,name,rowArea){
+        email=(email||"").trim(); if(!email) return null;
+        let u=S.supervisors.find(x=>(x.email||"").toLowerCase()===email.toLowerCase());
+        if(u) return u;
+        const profile={email,name:(name||"").trim()||email,role:"supervisor",supRole:"both",
+          area:rowArea||batchArea,mobile:"",pendingLogin:true};
+        const id=await DB.add("users",profile);
+        u={id,...profile};
+        S.supervisors.push(u);
+        return u;
+      }
+
+      let added=0,updated=0;
       for(const row of rows){
-        const pEmail=(row.principal_email||"").trim(), cEmail=(row.co_email||"").trim();
-        let p=pEmail?S.supervisors.find(u=>u.email===pEmail):null;
-        let c=cEmail?S.supervisors.find(u=>u.email===cEmail):null;
+        if(!row.name||!row.sid) continue;
+        const rowArea=AREAS.find(a=>a.toLowerCase()===(row.area||"").trim().toLowerCase())||batchArea;
+        let p=await ensureSupervisor(row.principal_email,row.principal_name,rowArea);
+        let c=await ensureSupervisor(row.co_email,row.co_name,rowArea);
         if(p&&!canBePrincipal(p)) p=null;
         if(c&&!canBeCo(c)) c=null;
-        if(!row.name||!row.sid) continue;
         const codes=(row.units||"").split(/[;|]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
         const unitIds=units.filter(u=>codes.includes((u.code||"").toLowerCase())).map(u=>u.id);
-        await DB.add("students",{
-          semesterId:S.activeSem,sid:String(row.sid).trim(),name:row.name.trim(),
-          email:(row.email||"").trim(),mobile:(row.mobile||"").trim(),campus:(row.campus||"").trim()||"NSW",unitIds,
-          principalUid:p?.id||"",coUid:c?.id||"",principalName:p?.name||p?.email||"",coName:c?.name||c?.email||""
-        });
-        ok++;
+        const sid=String(row.sid).trim();
+        const data={
+          semesterId:S.activeSem,sid,name:row.name.trim(),
+          email:(row.email||"").trim(),mobile:(row.mobile||"").trim(),
+          campus:(row.campus||"").trim()||"NSW",area:rowArea,
+          principalUid:p?.id||"",coUid:c?.id||"",
+          principalName:p?.name||p?.email||"",coName:c?.name||c?.email||""
+        };
+        const prev=existing.find(s=>String(s.sid).trim().toLowerCase()===sid.toLowerCase());
+        if(prev){
+          // keep existing unit enrolments unless the import supplies them
+          await DB.update("students",prev.id,{...data,unitIds:unitIds.length?unitIds:(prev.unitIds||[])});
+          updated++;
+        } else {
+          await DB.add("students",{...data,unitIds});
+          added++;
+        }
       }
-      toast(`Imported ${ok} student${ok!==1?"s":""}.`); done(); return true;
+      S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+      toast(`Imported ${added} new, updated ${updated} existing student${(added+updated)===1?"":"s"}.`);
+      done(); return true;
     },"Import");
 }
-function parseCSV(text){
-  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim().length);
+
+// Parse pasted or uploaded rows. Detects tab vs comma delimiter and maps
+// header names by meaning ("Student Name", "Principal Supervisor Email",
+// "Co-supervisor Email", etc — spacing, case and punctuation don't matter).
+function parseImport(text){
+  const lines=(text||"").replace(/\r/g,"").split("\n").filter(l=>l.trim().length);
   if(lines.length<2) return [];
+  const delim=lines[0].includes("\t")?"\t":",";
   const split=l=>{
+    if(delim==="\t") return l.split("\t").map(s=>s.trim());
     const out=[];let cur="",q=false;
     for(const ch of l){ if(ch==='"'){q=!q;} else if(ch===","&&!q){out.push(cur);cur="";} else cur+=ch; }
     out.push(cur); return out.map(s=>s.trim());
   };
-  const headers=split(lines[0]).map(h=>h.toLowerCase().replace(/\s+/g,"_"));
+  // normalise a header down to letters only, then map to a canonical key
+  const canon=h=>{
+    const k=h.toLowerCase().replace(/[^a-z]/g,"");
+    if(/^(studentname|name|fullname)$/.test(k)) return "name";
+    if(/^(studentid|sid|id|studentno|studentnumber)$/.test(k)) return "sid";
+    if(/^(studentemail|email)$/.test(k)) return "email";
+    if(/^(principalsupervisoremail|principalemail|supervisoremail)$/.test(k)) return "principal_email";
+    if(/^(principalsupervisor|principalsupervisorname|principal|principalname|supervisor|supervisorname)$/.test(k)) return "principal_name";
+    if(/^(cosupervisoremail|coemail)$/.test(k)) return "co_email";
+    if(/^(cosupervisorname|cosupervisor|co|coname)$/.test(k)) return "co_name";
+    if(k==="mobile"||k==="phone") return "mobile";
+    if(k==="campus") return "campus";
+    if(k==="units"||k==="unit") return "units";
+    if(k==="area"||k==="supervisionarea"||k==="discipline") return "area";
+    return k;
+  };
+  const headers=split(lines[0]).map(canon);
   return lines.slice(1).map(l=>{ const c=split(l); const o={}; headers.forEach((h,i)=>o[h]=c[i]??""); return o; });
 }
 
@@ -980,20 +1083,26 @@ function timetableForm(existing,done,asAdmin){
    8. CONSULTATIONS TAB
    The PRINCIPAL supervisor sets ONE recurring consultation time +
    meeting link per allocated student. No admin approval needed —
-   times can change week to week (handled in the Meeting log tab).
+   times can change week to week (handled in the Attendance tab).
    ============================================================ */
 async function viewConsultations(v){
   v.innerHTML="";
   const sem=activeSemester();
+  const weeks=sem?.weeks||12;
+  // capability check: a co-supervisor-only account can never set times here
+  const meSup=S.supervisors.find(u=>u.id===S.uid);
+  const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
   v.append(el("div",{class:"section-title"},el("div",{},
-    el("div",{class:"eyebrow ui"},"Per-student supervision"),
-    el("h2",{},S.role==="admin"?"Consultation times":"Consultation times"))));
+    el("div",{class:"eyebrow ui"},"Per-student supervision · used for attendance"),
+    el("h2",{},S.role==="admin"?"Consultation times":coOnly?"View consultation times":"Set consultation time"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewConsultations(v)));
   v.append(bar);
   v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
-    S.role==="supervisor"
-      ? "The recurring per-student meeting time and link are set by the PRINCIPAL supervisor. For students you principal-supervise you can set them here; for students you co-supervise they are read-only. As a co-supervisor, publish your own recurring time in the Co-supervisor diary below — your students otherwise follow the principal's time."
-      : "The principal supervisor sets a recurring meeting time and a meeting link for each allocated student. No admin sign-off needed. Use the Supervision diary to change a single week or to record attendance. Co-supervisors' own consultation hours are listed below."));
+    S.role==="admin"
+      ? "The principal supervisor sets a recurring consultation time and the student's Teams-classroom channel link for each allocated student. This time is what weekly attendance is recorded against — no admin sign-off needed. Use the Attendance tab to change a single week or to record attendance."
+      : coOnly
+      ? "As co-supervisor you VIEW here — the consultation time and the student's Teams-classroom channel are set by each student's principal supervisor. What you see is the current timetable, plus each student's attendance so far. The full week-by-week record is on the Attendance tab."
+      : "Set the recurring consultation time for each student here — this time is what weekly ATTENDANCE is recorded against (Attendance tab). The meeting is held in the Team classroom, in the student's own channel; paste that channel's link below. Only the PRINCIPAL supervisor sets the time. For students you co-supervise, the time and current attendance are shown read-only."));
 
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
   // A supervisor sees students they supervise EITHER as principal or as co.
@@ -1003,15 +1112,13 @@ async function viewConsultations(v){
   if(!students.length){
     v.append(emptyState(S.role==="supervisor"?"No students assigned to you":"No students yet",
       S.role==="supervisor"?"You'll see consultation times for students you principal- or co-supervise here.":"Add students first."));
-    // a co-capable supervisor can still publish their own diary
-    await renderCoDiary(v, sem);
     return;
   }
 
   const showRole = S.role==="supervisor";
   const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
   const t=el("table",{});
-  t.append(el("thead",{},el("tr",{},...["Student","Campus",...(showRole?["Your role"]:[]),"Principal","Recurring time","Mode","Meeting link",""].map(h=>el("th",{},h)))));
+  t.append(el("thead",{},el("tr",{},...["Student","Area",...(showRole?["Your role"]:[]),"Principal","Consultation time","Mode","Teams channel","Attendance",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
 
   // sort so a supervisor's principal students come first, then co
@@ -1036,129 +1143,38 @@ async function viewConsultations(v){
     }
 
     const link = c?.meetingLink
-      ? el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Open link")
+      ? el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Open channel")
       : el("span",{class:"muted"},"—");
 
     const roleCell = showRole
       ? el("td",{}, s.principalUid===S.uid?el("span",{class:"pill held"},"Principal"):el("span",{class:"pill blue"},"Co-supervisor"))
       : null;
 
+    // current attendance snapshot — visible to admin, principal AND co-supervisor
+    const st=c?consultStats(c,weeks):null;
+    const attCell = st && st.held
+      ? el("td",{},el("span",{class:"pill held"},st.attended+" ✓"),
+          st.missed?el("span",{class:"pill missed",style:"margin-left:4px"},st.missed+" ✗"):"",
+          el("div",{class:"muted ui",style:"font-size:12px;margin-top:2px"},st.held+" held · "+Math.round(st.attended/st.held*100)+"%"))
+      : el("td",{},el("span",{class:"muted"},"No record"));
+
     tb.append(el("tr",{},
-      el("td",{},el("strong",{},s.name)),
-      el("td",{},s.campus),
+      el("td",{},el("strong",{},s.name),el("div",{class:"muted ui",style:"font-size:12px"},s.campus)),
+      el("td",{},areaPill(s.area)),
       ...(roleCell?[roleCell]:[]),
       el("td",{},s.principalName||"—"),
       el("td",{},c?`${c.day} ${c.start}–${c.end}`:el("span",{class:"muted"},"Not set")),
       el("td",{},c?.mode||el("span",{class:"muted"},"—")),
       el("td",{},link),
+      attCell,
       el("td",{},actions)));
   }
   t.append(tb); card.append(t); v.append(card);
 
-  // ---- Co-supervisor's OWN diary (independent of any one student) ----
-  // A co-supervisor can publish their own recurring consultation/office hours
-  // here. Students they co-supervise will see these in their schedule. If a co
-  // sets nothing, students simply follow the principal's per-student time.
-  await renderCoDiary(v, sem);
-}
-
-// Co-supervisor diary section. For a supervisor it's editable (their own
-// slots); for admin it's a read-only roll-up of every co-supervisor's slots.
-async function renderCoDiary(v, sem){
-  const me = S.supervisors.find(u=>u.id===S.uid);
-  const meCanCo = S.role==="supervisor" && canBeCo(me);
-  // Admin sees all; a supervisor sees only their own.
-  let slots = await DB.list("coslots", S.activeSem?{semesterId:S.activeSem}:{});
-  if(S.role==="supervisor") slots = slots.filter(x=>x.supervisorUid===S.uid);
-
-  if(S.role==="supervisor" && !meCanCo && !slots.length) return; // principal-only staff: nothing to show
-
-  const wrap=el("div",{style:"margin-top:30px"});
-  wrap.append(el("div",{class:"section-title"},el("div",{},
-    el("div",{class:"eyebrow ui"},"Co-supervisor diary"),
-    el("h2",{style:"font-size:21px"},S.role==="admin"?"Co-supervisor consultation hours":"My consultation hours"))));
-  wrap.append(el("p",{class:"muted ui",style:"margin-top:-8px"},
-    S.role==="admin"
-      ? "Recurring hours that co-supervisors offer on their own, separate from the principal's per-student times. Read-only here."
-      : "Optional. Publish your own recurring consultation/office hours as a co-supervisor — students you co-supervise will see these alongside the principal's time. If you set nothing here, your students simply follow the principal's consultation timetable."));
-
-  if(meCanCo){
-    wrap.append(el("div",{class:"row",style:"margin-bottom:12px"},
-      el("button",{class:"btn blue",onclick:()=>coSlotForm(null,()=>viewConsultations(v))},"+ Add a consultation slot")));
+  if(S.role==="supervisor" && !coOnly && students.some(s=>s.coUid===S.uid && s.principalUid!==S.uid)){
+    v.append(el("p",{class:"muted ui",style:"margin-top:10px"},
+      "As co-supervisor you see the consultation time set by the principal and the student's current attendance. The full week-by-week record is on the Attendance tab (read-only for you)."));
   }
-
-  if(!slots.length){
-    wrap.append(emptyState(
-      S.role==="admin"?"No co-supervisor slots published":"You haven't published any consultation hours",
-      S.role==="admin"?"Co-supervisors who offer their own hours will appear here."
-        :"Add a slot above to offer your own time, or leave this empty to follow each principal's schedule."));
-    v.append(wrap); return;
-  }
-
-  const card=el("div",{class:"card",style:"padding:0;overflow:hidden"});
-  const t=el("table",{});
-  t.append(el("thead",{},el("tr",{},...[
-    ...(S.role==="admin"?["Co-supervisor"]:[]),"Slot","Day & time","Mode","Link","Note",""
-  ].map(h=>el("th",{},h)))));
-  const tb=el("tbody",{});
-  slots.sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day));
-  slots.forEach(sl=>{
-    const mine = sl.supervisorUid===S.uid;
-    const actions=el("div",{class:"row"});
-    if(S.role==="supervisor" && mine){
-      actions.append(
-        el("button",{class:"btn ghost sm",onclick:()=>coSlotForm(sl,()=>viewConsultations(v))},"Edit"),
-        el("button",{class:"btn danger sm",onclick:()=>confirmDelete("coslots",sl.id,"this consultation slot",()=>viewConsultations(v))},"Delete"));
-    }
-    const link = sl.meetingLink
-      ? el("a",{class:"linkpill",href:sl.meetingLink,target:"_blank",rel:"noopener"},"Open link")
-      : el("span",{class:"muted"},"—");
-    tb.append(el("tr",{},
-      ...(S.role==="admin"?[el("td",{},supName(sl.supervisorUid))]:[]),
-      el("td",{},el("strong",{},sl.label||"Consultation")),
-      el("td",{},`${sl.day} ${sl.start}–${sl.end}`),
-      el("td",{},sl.mode||"—"),
-      el("td",{},link),
-      el("td",{class:"muted",style:"max-width:240px;white-space:normal"},sl.note||"—"),
-      el("td",{},actions)));
-  });
-  t.append(tb); card.append(t); wrap.append(card);
-  v.append(wrap);
-}
-
-// Create / edit a co-supervisor's own diary slot.
-function coSlotForm(existing,done){
-  const label=el("input",{value:existing?.label||"",placeholder:"e.g. Drop-in office hours / Stats clinic"});
-  const day=el("select",{},...DAYS.map(d=>el("option",{value:d,...(d===existing?.day?{selected:"selected"}:{})},d)));
-  const start=el("input",{type:"time",value:existing?.start||"11:00"});
-  const end=el("input",{type:"time",value:existing?.end||"12:00"});
-  const mode=el("select",{},...["Online","In person","Hybrid"].map(m=>el("option",{value:m,...(m===existing?.mode?{selected:"selected"}:{})},m)));
-  const link=el("input",{value:existing?.meetingLink||"",placeholder:"https://teams.microsoft.com/… (optional)"});
-  const note=el("textarea",{placeholder:"Optional note shown to students — e.g. who it's for, what to bring."},existing?.note||"");
-  modal((existing?"Edit":"Add")+" consultation slot",
-    el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
-      el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0"},
-        "This is your OWN recurring consultation time as a co-supervisor. It's separate from any principal supervisor's per-student diary and needs no admin approval. Students you co-supervise will see it in their schedule.")),
-      el("div",{style:"grid-column:1/-1"},el("label",{},"Label"),label),
-      el("div",{style:"grid-column:1/-1"},el("label",{},"Day of week"),day),
-      el("div",{},el("label",{},"Start"),start),
-      el("div",{},el("label",{},"End"),end),
-      el("div",{style:"grid-column:1/-1"},el("label",{},"Mode"),mode),
-      el("div",{style:"grid-column:1/-1"},el("label",{},"Meeting link (optional)"),link),
-      el("div",{style:"grid-column:1/-1"},el("label",{},"Note (optional)"),note)
-    ),
-    async()=>{
-      if(start.value>=end.value){ toast("End must be after start.",true); return false; }
-      const data={
-        semesterId:S.activeSem, supervisorUid:S.uid,
-        label:label.value.trim()||"Consultation",
-        day:day.value, start:start.value, end:end.value, mode:mode.value,
-        meetingLink:link.value.trim(), note:note.value.trim()
-      };
-      if(existing){ await DB.update("coslots",existing.id,data); }
-      else { await DB.add("coslots",data); }
-      toast("Consultation slot saved."); done(); return true;
-    });
 }
 
 function consultForm(student,existing,done){
@@ -1166,16 +1182,16 @@ function consultForm(student,existing,done){
   const start=el("input",{type:"time",value:existing?.start||"14:00"});
   const end=el("input",{type:"time",value:existing?.end||"14:30"});
   const mode=el("select",{},...["Online","In person","Hybrid"].map(m=>el("option",{value:m,...(m===existing?.mode?{selected:"selected"}:{})},m)));
-  const link=el("input",{value:existing?.meetingLink||"",placeholder:"https://teams.microsoft.com/… (Teams channel / meeting)"});
-  modal((existing?"Edit":"Set")+" consultation — "+student.name,
+  const link=el("input",{value:existing?.meetingLink||"",placeholder:"https://teams.microsoft.com/… (this student's channel in the Team classroom)"});
+  modal((existing?"Edit":"Set")+" consultation time — "+student.name,
     el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
       el("div",{style:"grid-column:1/-1"},el("p",{class:"muted",style:"margin:0"},
-        "This recurring time applies every week. To change one week or to record attendance, use the Meeting log tab. No admin approval is required.")),
+        "This recurring consultation time is used for ATTENDANCE: each week's meeting is recorded against it on the Attendance tab. The meeting is held in the Team classroom, using this student's own channel — paste that channel's link below. To change a single week's time, use the Attendance tab. No admin approval is required.")),
       el("div",{style:"grid-column:1/-1"},el("label",{},"Day of week"),day),
       el("div",{},el("label",{},"Start"),start),
       el("div",{},el("label",{},"End"),end),
       el("div",{style:"grid-column:1/-1"},el("label",{},"Mode"),mode),
-      el("div",{style:"grid-column:1/-1"},el("label",{},"Meeting link (Teams individual channel)"),link)
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Student's Teams channel link (Team classroom)"),link)
     ),
     async()=>{
       if(start.value>=end.value){ toast("End must be after start.",true); return false; }
@@ -1203,10 +1219,14 @@ async function viewMeetingLog(v){
   const sem=activeSemester();
   const weeks=sem?.weeks||12;
   v.append(el("div",{class:"section-title"},el("div",{},
-    el("div",{class:"eyebrow ui"},"Per-student weekly record · "+weeks+" weeks"),
-    el("h2",{},"Supervision diary"))));
+    el("div",{class:"eyebrow ui"},"Weekly attendance register · "+weeks+" weeks"),
+    el("h2",{},"Attendance"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewMeetingLog(v)));
   v.append(bar);
+  v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
+    S.role==="supervisor"
+      ? "Pick a student and tap to mark each week's consultation: held, student attended, co-supervisor attended. Works on your phone — tap straight after the meeting in the Teams channel. Co-supervised students are shown read-only."
+      : "Read-only view of each student's weekly consultation attendance, recorded by the principal supervisor."));
 
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
   // Supervisors see students they principal- OR co-supervise. The principal
@@ -1272,11 +1292,11 @@ async function viewMeetingLog(v){
     head.append(
       el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start"},
         el("div",{},
-          el("div",{class:"eyebrow ui"},"Recurring consultation"),
+          el("div",{class:"eyebrow ui"},"Recurring consultation (attendance is recorded against this time)"),
           el("div",{style:"font-size:20px;font-weight:700"},`${c.day} ${c.start}–${c.end}`),
           el("div",{class:"muted ui",style:"margin-top:2px"},(c.mode||"")+(c.coName?" · Co-supervisor: "+c.coName:" · No co-supervisor"))),
         el("div",{class:"row"},
-          c.meetingLink?el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Meeting link"):el("span",{class:"muted"},"No link set"),
+          c.meetingLink?el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Teams channel"):el("span",{class:"muted"},"No channel link set"),
           canSetTime?el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>renderStudentAfterReload(studentId))},"Edit time / link"):"")));
     panel.append(head);
 
@@ -1292,7 +1312,7 @@ async function viewMeetingLog(v){
     }
     if(!canEdit && S.role==="supervisor" && s.coUid===S.uid){
       panel.append(el("p",{class:"muted ui",style:"margin-top:10px"},
-        "You co-supervise "+s.name+". The recurring meeting time, link and weekly attendance are set by the principal supervisor"+(s.principalName?" ("+s.principalName+")":"")+" and are shown to you read-only. To offer your own time, use “My consultation hours” on the Consultations tab."));
+        "You co-supervise "+s.name+". The consultation time, Teams channel link and weekly attendance are set by the principal supervisor"+(s.principalName?" ("+s.principalName+")":"")+" and are shown to you read-only — this is the current timetable and attendance record for this student."));
     }
   }
 
@@ -1509,186 +1529,6 @@ function weekOverrideForm(c,w,done){
 
 
 /* ============================================================
-   9b. MESSAGES  (staff send; students read-only)
-   Direct 1-to-1 messages. A staff member (admin, principal or
-   co-supervisor) composes to one recipient — any staff member or
-   any student. Students never send; they only read messages
-   addressed to them (shown in their read-only lookup view).
-   Message shape:
-     {fromUid, fromName, fromRole,
-      toType:'staff'|'student',
-      toUid (if staff) | toSid (if student),
-      toName, body, ts, readBy:{uid:true}}
-   ============================================================ */
-async function viewMessages(v){
-  v.innerHTML="";
-  v.append(el("div",{class:"section-title"},el("div",{},
-    el("div",{class:"eyebrow ui"},"Direct messages"),
-    el("h2",{},"Messages"))));
-  v.append(el("p",{class:"muted ui",style:"margin-top:-8px"},
-    "Send a direct message to any staff member or student, or a shared note to all your students. In-app only: messages appear inside the app — they are not sent to anyone's email or mobile. Students can read messages addressed to them but cannot reply."));
-
-  // sub-tabs: Inbox / Sent
-  let sub = viewMessages._sub || "inbox";
-  const subBar=el("div",{class:"seg",style:"max-width:280px;margin:0 0 16px"});
-  const mkSub=(id,label)=>el("button",{class:sub===id?"active":"",onclick:()=>{viewMessages._sub=id;viewMessages(v);}},label);
-  subBar.append(mkSub("inbox","Inbox"),mkSub("sent","Sent"));
-  v.append(el("div",{class:"row",style:"justify-content:space-between;align-items:center"},
-    subBar,
-    el("div",{class:"row"},
-      el("button",{class:"btn blue",onclick:()=>broadcastMessage(()=>viewMessages(v))},"📣 Message all my students"),
-      el("button",{class:"btn",onclick:()=>composeMessage(()=>viewMessages(v))},"✎ New message"))));
-
-  const all=await DB.list("messages");
-  let rows;
-  if(sub==="inbox"){
-    rows=all.filter(m=>m.toType==="staff" && m.toUid===S.uid);
-  } else {
-    rows=all.filter(m=>m.fromUid===S.uid);
-  }
-  rows.sort((a,b)=>(b.ts||0)-(a.ts||0)); // newest first
-
-  if(!rows.length){
-    v.append(emptyState(sub==="inbox"?"No messages yet":"You haven't sent anything",
-      sub==="inbox"?"Messages sent to you will appear here.":"Use New message to write to a colleague or student."));
-    return;
-  }
-
-  // mark inbox messages as read
-  if(sub==="inbox"){
-    for(const m of rows){
-      if(!m.readBy || !m.readBy[S.uid]){
-        const readBy={...(m.readBy||{}),[S.uid]:true};
-        DB.update("messages",m.id,{readBy}); // fire-and-forget
-        m.readBy=readBy;
-      }
-    }
-  }
-
-  const list=el("div",{class:"grid",style:"gap:10px"});
-  rows.forEach(m=>{
-    const who = sub==="inbox"
-      ? "From "+(m.fromName||"—")
-      : "To "+(m.toName||"—")+(m.toType==="student"?" (student)":"")+(m.broadcast?" · broadcast":"");
-    const unread = sub==="inbox" && false; // already marked read above
-    const card=el("div",{class:"card",style:"padding:14px 16px"});
-    card.append(
-      el("div",{class:"row",style:"justify-content:space-between;align-items:baseline;margin-bottom:6px"},
-        el("strong",{class:"ui",style:"font-size:15px"},who),
-        el("span",{class:"muted ui",style:"font-size:12.5px"},fmtTs(m.ts))),
-      el("div",{style:"white-space:pre-wrap"},m.body||""));
-    // sender (or admin) can delete their own message
-    if(m.fromUid===S.uid || S.role==="admin"){
-      card.append(el("div",{class:"row",style:"justify-content:flex-end;margin-top:8px"},
-        el("button",{class:"btn ghost sm",onclick:()=>confirmDelete("messages",m.id,"this message",()=>viewMessages(v))},"Delete")));
-    }
-    list.append(card);
-  });
-  v.append(list);
-}
-
-function fmtTs(ts){
-  if(!ts) return "";
-  const d=new Date(ts);
-  if(isNaN(d)) return "";
-  return d.toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-}
-
-async function composeMessage(done, preselect){
-  // Build recipient list: all staff (except me) + all students.
-  // `preselect` (optional) is a recipient value string, e.g. "staff:<uid>"
-  // or "student:<sid>:<docId>", used to open the composer pre-addressed.
-  const users=(await DB.listUsers()).filter(u=>u.id!==S.uid);
-  const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
-
-  const sel=el("select",{});
-  sel.append(el("option",{value:"",disabled:"disabled",...(preselect?{}:{selected:"selected"})},"Choose a recipient…"));
-  if(users.length){
-    const og=el("optgroup",{label:"Staff"});
-    users.forEach(u=>og.append(el("option",{value:"staff:"+u.id,...(preselect==="staff:"+u.id?{selected:"selected"}:{})},(u.name||u.email)+" · "+(u.role==="admin"?"Admin":capLabel(capOf(u))))));
-    sel.append(og);
-  }
-  if(students.length){
-    const og=el("optgroup",{label:"Students"});
-    // de-dupe students by sid (a student may recur across semesters)
-    const seen=new Set();
-    students.forEach(s=>{ if(seen.has(s.sid))return; seen.add(s.sid);
-      const val="student:"+s.sid+":"+s.id;
-      og.append(el("option",{value:val,...(preselect===val||(preselect&&preselect.startsWith("student:"+s.sid+":")?{selected:"selected"}:{}))},s.name+" · "+s.sid)); });
-    sel.append(og);
-  }
-  const body=el("textarea",{placeholder:"Write your message…",style:"min-height:120px"});
-
-  modal("New message",
-    el("div",{class:"grid"},
-      el("div",{},el("label",{},"To"),sel),
-      el("div",{},el("label",{},"Message"),body),
-      el("p",{class:"muted",style:"margin:0"},"In-app only: the recipient sees this inside the app (students in their schedule view) — it is not sent to their email or mobile. Students can't reply.")),
-    async()=>{
-      if(!sel.value){ toast("Choose a recipient.",true); return false; }
-      if(!body.value.trim()){ toast("Write a message first.",true); return false; }
-      const parts=sel.value.split(":");
-      const data={fromUid:S.uid,fromName:S.userName||S.user.email,fromRole:S.role,
-        body:body.value.trim(),ts:Date.now(),readBy:{}};
-      if(parts[0]==="staff"){
-        const u=users.find(x=>x.id===parts[1]);
-        data.toType="staff"; data.toUid=parts[1]; data.toName=u?.name||u?.email||"";
-      } else {
-        const s=students.find(x=>x.id===parts[2]);
-        data.toType="student"; data.toSid=parts[1]; data.toName=s?.name||"";
-      }
-      await DB.add("messages",data);
-      toast("Message sent."); done(); return true;
-    },"Send");
-}
-
-// Broadcast: send the SAME message to every student a supervisor supervises
-// (as principal or co), or — for admin — to every student in the active
-// semester. One student-addressed message row is created per recipient, so it
-// lands in each student's read-only view. Nothing is emailed or texted.
-async function broadcastMessage(done){
-  const allStudents=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
-  let recipients=allStudents;
-  if(S.role==="supervisor"){
-    recipients=allStudents.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
-  }
-  // de-dupe by student ID (sid) so a student enrolled twice gets one copy
-  const seen=new Set(); recipients=recipients.filter(s=>{ if(seen.has(s.sid))return false; seen.add(s.sid); return true; });
-
-  if(!recipients.length){
-    toast(S.role==="supervisor"?"You have no students in this semester.":"No students in this semester.",true);
-    return;
-  }
-
-  const body=el("textarea",{placeholder:"Shared message to all your students — e.g. a reading, a deadline reminder, a room change…",style:"min-height:130px"});
-  const scopeNote = S.role==="supervisor"
-    ? `This goes to all ${recipients.length} student${recipients.length===1?"":"s"} you supervise (principal or co) this semester.`
-    : `This goes to all ${recipients.length} student${recipients.length===1?"":"s"} in this semester.`;
-
-  modal("Message all my students",
-    el("div",{class:"grid"},
-      el("div",{},el("label",{},"Recipients"),
-        el("p",{class:"muted",style:"margin:2px 0 0"},scopeNote)),
-      el("div",{},el("label",{},"Message"),body),
-      el("p",{class:"muted",style:"margin:0"},
-        "In-app only: students see this in their schedule view when they next open the app. It is NOT sent to their email or mobile, and students cannot reply.")),
-    async()=>{
-      const text=body.value.trim();
-      if(!text){ toast("Write a message first.",true); return false; }
-      const fromName=S.userName||S.user.email;
-      // Write each recipient as a separate student-addressed message.
-      for(const s of recipients){
-        await DB.add("messages",{
-          fromUid:S.uid, fromName, fromRole:S.role,
-          toType:"student", toSid:s.sid, toName:s.name||"",
-          body:text, ts:Date.now(), readBy:{}, broadcast:true
-        });
-      }
-      toast(`Sent to ${recipients.length} student${recipients.length===1?"":"s"}.`); done(); return true;
-    },"Send to all");
-}
-
-/* ============================================================
    9b. BULK EMAIL TO STUDENTS (supervisor)
    Opens the supervisor's own mail app (via mailto:) with their
    students' addresses pre-loaded into BCC, plus a subject/body the
@@ -1866,8 +1706,8 @@ async function viewReport(v){
     el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF"));
   if(focus!=="all"){
     const focusUser=S.supervisors.find(u=>u.id===focus);
-    actions.append(el("button",{class:"btn amber",onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+focus)},
-      "✉ Message "+(focusName||"this supervisor")));
+    actions.append(emailButton(focusUser?.email,"MRes supervision — "+(sem?.label||""),
+      "Dear "+(focusName||"")+",\n\n","✉ Email "+(focusName||"this supervisor"),"btn amber"));
     // detailed log extraction for this one supervisor (on-screen, all weeks)
     actions.append(el("button",{class:"btn ghost",onclick:()=>showSupervisorDetail(focus,focusName,lens,rows,sem,weeks)},
       "View full log for "+(focusName||"supervisor")));
@@ -1886,7 +1726,7 @@ async function viewReport(v){
         el("strong",{class:"ui"},"Principal: "+prin),
         el("div",{class:"row"},
           el("span",{class:"muted ui"},grp.length+" student"+(grp.length>1?"s":"")),
-          ...(prinUid&&prinUid!==S.uid?[el("button",{class:"btn xs ghost",onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+prinUid)},"✉ Message")]:[]),
+          ...(prinUid&&prinUid!==S.uid?[emailButton(S.supervisors.find(u=>u.id===prinUid)?.email,"MRes supervision","Dear "+prin+",\n\n","✉ Email","btn xs ghost")]:[]),
           el("button",{class:"btn xs ghost",onclick:()=>{viewReport._sup=prinUid;viewReport._lens="principal";viewReport(v);}},"Focus →")));
       card.append(headRow);
       card.append(buildReportTable(grp,weeks,false,v));
@@ -1920,19 +1760,16 @@ function buildReportTable(group,weeks,showRole,v){
     let lastComment="";
     if(c) for(let w=weeks;w>=1;w--){ const cm=weekLog(c,w)?.comment; if(cm){ lastComment="W"+w+": "+cm; break; } }
 
-    // contact buttons: in-app message + email handoff for the student;
-    // in-app message for co/principal (their email lives in the Contacts tab)
+    // contact buttons: email handoff only (opens the device's mail app)
     const contact=el("div",{class:"row",style:"gap:5px"});
-    contact.append(el("button",{class:"btn xs blue",title:"Message "+s.name,
-      onclick:()=>composeMessage(()=>toast("Sent."),"student:"+s.sid+":"+s.id)},"✉ Msg"));
     contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
     if(s.coUid && s.coUid!==S.uid){
-      contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.coName||"co-supervisor"),
-        onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.coUid)},"Co"));
+      contact.append(emailButton(S.supervisors.find(u=>u.id===s.coUid)?.email,
+        "MRes supervision — "+s.name,"Dear "+(s.coName||"")+",\n\n","✉ Co","btn xs ghost"));
     }
     if(s.principalUid && s.principalUid!==S.uid){
-      contact.append(el("button",{class:"btn xs ghost",title:"Message "+(s.principalName||"principal"),
-        onclick:()=>composeMessage(()=>toast("Sent."),"staff:"+s.principalUid)},"Principal"));
+      contact.append(emailButton(S.supervisors.find(u=>u.id===s.principalUid)?.email,
+        "MRes supervision — "+s.name,"Dear "+(s.principalName||"")+",\n\n","✉ Principal","btn xs ghost"));
     }
 
     const cells=[
@@ -2236,9 +2073,9 @@ async function viewPeople(v){
     el("h3",{},"Supervisors & admins"),
     el("button",{class:"btn sm",onclick:()=>staffForm(null,()=>viewPeople(v))},"+ Add staff login")));
   staffCard.append(el("p",{class:"muted",style:"margin-top:-4px;margin-bottom:10px"},
-    "Each supervisor has a capability: principal & co, principal only, or co-supervisor only. Principals run the class, set consultation times and log meetings; co-supervisors attend meetings the principal logs."));
+    "Each supervisor has a supervision area (IT or Business) and a capability: principal & co, principal only, or co-supervisor only. Principals run the class, set consultation times and record attendance; co-supervisors attend the meetings and see the timetable and attendance read-only. Supervisors marked \u201CNo login yet\u201D were auto-created from a student import — add a staff login with the same email to activate them."));
   const users=await DB.listUsers();
-  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Capability",""].map(h=>el("th",{},h)))));
+  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Area","Capability",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
   users.forEach(u=>{
     const actions=el("div",{class:"row"});
@@ -2248,10 +2085,14 @@ async function viewPeople(v){
     actions.append(el("button",{class:"btn danger sm",...(isSelf?{disabled:"disabled",title:"You can't delete your own account"}:{}),
       onclick:()=> isSelf ? toast("You can't delete your own account.",true)
                          : confirmDelete("users",u.id,u.name||u.email,async()=>{ await DB.removeUser(u.id); S.supervisors=(await DB.listUsers()).filter(x=>x.role==="supervisor"); viewPeople(v); }, true)},"Delete"));
+    const acct = u.pendingLogin
+      ? el("span",{class:"pill pending",title:"Profile auto-created from an import — add a login with the same email to activate it"},"No login yet")
+      : el("span",{class:"pill "+(u.role==="admin"?"approved":"none")},u.role);
     tb.append(el("tr",{},
       el("td",{},el("strong",{},u.name||"—")),
       el("td",{},u.email),
-      el("td",{},el("span",{class:"pill "+(u.role==="admin"?"approved":"none")},u.role)),
+      el("td",{},acct),
+      el("td",{},u.role==="supervisor"?areaPill(u.area):el("span",{class:"muted"},"—")),
       el("td",{},u.role==="supervisor"?el("span",{class:"pill "+(capOf(u)==="both"?"approved":"pending")},capLabel(capOf(u))):el("span",{class:"muted"},"—")),
       el("td",{},actions)));
   });
@@ -2319,8 +2160,10 @@ function staffForm(existing,done){
     el("option",{value:"both",...(capOf(existing)==="both"?{selected:"selected"}:{})},"Principal & co-supervisor"),
     el("option",{value:"principal",...(capOf(existing)==="principal"?{selected:"selected"}:{})},"Principal only"),
     el("option",{value:"co",...(capOf(existing)==="co"?{selected:"selected"}:{})},"Co-supervisor only"));
+  const area=el("select",{},...AREAS.map(a=>el("option",{value:a,...(a===(existing?.area||AREAS[0])?{selected:"selected"}:{})},a)));
   const capRow=el("div",{},el("label",{},"Supervisor capability"),cap);
-  const sync=()=>{ capRow.style.display = role.value==="supervisor" ? "" : "none"; };
+  const areaRow=el("div",{},el("label",{},"Supervision area"),area);
+  const sync=()=>{ const show = role.value==="supervisor" ? "" : "none"; capRow.style.display=show; areaRow.style.display=show; };
   role.onchange=sync;
 
   const fields=[
@@ -2329,7 +2172,7 @@ function staffForm(existing,done){
     el("div",{},el("label",{},"Mobile (optional)"),mobile),
   ];
   if(!editing) fields.push(el("div",{},el("label",{},"Temporary password"),pass));
-  fields.push(el("div",{},el("label",{},"Account role"),role), capRow,
+  fields.push(el("div",{},el("label",{},"Account role"),role), capRow, areaRow,
     el("div",{},el("p",{class:"muted",style:"margin:0"}, editing
       ? "Updates this staff member's profile. Email and password are managed in Firebase Authentication and aren't changed here."
       : "Creates a login account. Capability sets whether this supervisor can be a student's principal, co-supervisor, or either.")));
@@ -2339,22 +2182,50 @@ function staffForm(existing,done){
     async()=>{
       if(editing){
         const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
-        if(role.value==="supervisor") profile.supRole=cap.value; else profile.supRole=null;
+        if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
+        else { profile.supRole=null; profile.area=null; }
         await DB.updateUser(existing.id,profile);
         S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
         toast("Staff updated."); done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
       const profile={email:email.value.trim(),name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
-      if(role.value==="supervisor") profile.supRole=cap.value;
+      if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
       try{
+        // If an import auto-created a profile-only record for this email,
+        // carry its details over and remove it once the real login exists,
+        // updating any students linked to the old profile id.
+        const emailLc=email.value.trim().toLowerCase();
+        const orphan=(await DB.listUsers()).find(u=>u.pendingLogin && (u.email||"").toLowerCase()===emailLc);
+        if(orphan){
+          profile.name=profile.name||orphan.name;
+          profile.area=profile.area||orphan.area;
+          profile.supRole=profile.supRole||orphan.supRole;
+        }
+        let newUid;
         if(DEMO){
-          const newUid="u"+Math.random().toString(36).slice(2,8);
+          newUid="u"+Math.random().toString(36).slice(2,8);
           await DB.setUser(newUid,profile);
         } else {
           const cred=await createUserWithEmailAndPassword(auth,email.value.trim(),pass.value);
-          await DB.setUser(cred.user.uid,profile);
+          newUid=cred.user.uid;
+          await DB.setUser(newUid,profile);
           toast("Staff created. You may need to sign back in.",false);
+        }
+        if(orphan && newUid){
+          const linked=await DB.list("students");
+          for(const s of linked){
+            const patch={};
+            if(s.principalUid===orphan.id) patch.principalUid=newUid;
+            if(s.coUid===orphan.id) patch.coUid=newUid;
+            if(Object.keys(patch).length) await DB.update("students",s.id,patch);
+            // move any consultations owned by the old profile id too
+            if(patch.principalUid){
+              const cs=await DB.list("consultations",{studentDocId:s.id});
+              for(const c of cs){ if(c.supervisorUid===orphan.id) await DB.update("consultations",c.id,{supervisorUid:newUid}); }
+            }
+          }
+          await DB.removeUser(orphan.id);
         }
         S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
         toast("Staff login created."); done(); return true;
@@ -2415,6 +2286,7 @@ async function renderStudentView(sid,enrolments,sems){
       el("div",{class:"eyebrow ui"},myUnitCodes.length?myUnitCodes.join(" · "):"No units"),
       el("h3",{style:"margin-top:2px"},sem?.label||"Semester"),
       el("p",{class:"muted",style:"margin:4px 0 12px"},"Campus: "+en.campus+
+        (en.area?" · Area: "+en.area:"")+
         " · Principal: "+(en.principalName||"—")+(en.coName?" · Co: "+en.coName:"")));
 
     // ---- Weekly classes ----
@@ -2499,55 +2371,11 @@ async function renderStudentView(sid,enrolments,sems){
       });
     } else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Consultation time not set yet."));
 
-    // ---- Co-supervisor's own consultation hours (if their co-supervisor offers any) ----
-    if(en.coUid){
-      const coSlots=(await DB.list("coslots",{semesterId:en.semesterId}))
-        .filter(x=>x.supervisorUid===en.coUid);
-      if(coSlots.length){
-        card.append(el("div",{style:"font-weight:600;margin:14px 0 4px",class:"ui"},
-          "Co-supervisor consultation hours"+(en.coName?" · "+en.coName:"")));
-        coSlots.sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day)).forEach(sl=>{
-          const block=el("div",{style:"margin:2px 0 6px"});
-          block.append(el("p",{style:"margin:2px 0"},
-            (sl.label?sl.label+": ":"")+`${sl.day} ${sl.start}–${sl.end}`+(sl.mode?" · "+sl.mode:"")));
-          if(sl.note) block.append(el("p",{class:"muted",style:"margin:0 0 2px"},sl.note));
-          if(sl.meetingLink) block.append(el("a",{class:"linkpill",href:sl.meetingLink,target:"_blank",rel:"noopener"},"Join"));
-          card.append(block);
-        });
-      }
-    }
+    card.append(el("p",{class:"muted ui",style:"margin:12px 0 0;font-size:13px"},
+      "Consultations are held in your Team classroom, in your own channel — use the Join button above at the shown time. Attendance is recorded against these meetings. To contact your supervisor, email them directly."));
 
     col.append(card);
   }
-
-  // ---- Messages to this student (read-only) ----
-  // Filter the query to this student's own messages. An unfiltered read of the
-  // whole `messages` collection is rejected by security rules for an
-  // unauthenticated student (staff-to-staff rows aren't publicly readable),
-  // which would abort the whole view. Querying by toType+toSid means every
-  // returned row satisfies the public student-message read rule.
-  const msgs=(await DB.list("messages",{toType:"student",toSid:sid}))
-    .sort((a,b)=>(b.ts||0)-(a.ts||0));
-  const msgCard=el("div",{class:"card",style:"margin-bottom:14px;border-top:4px solid var(--teal)"});
-  msgCard.append(
-    el("div",{class:"eyebrow ui",style:"color:var(--teal-deep)"},"Messages from your supervisors"),
-    el("h3",{style:"margin:2px 0 10px"},"Messages"));
-  if(!msgs.length){
-    msgCard.append(el("p",{class:"muted",style:"margin:0"},"No messages yet."));
-  } else {
-    const list=el("div",{class:"grid",style:"gap:10px"});
-    msgs.forEach(m=>{
-      list.append(el("div",{style:"border:1px solid var(--line);border-radius:8px;padding:11px 13px;background:var(--paper)"},
-        el("div",{class:"row",style:"justify-content:space-between;align-items:baseline;margin-bottom:5px"},
-          el("strong",{class:"ui",style:"font-size:14px"},"From "+(m.fromName||"your supervisor")),
-          el("span",{class:"muted ui",style:"font-size:12px"},fmtTs(m.ts))),
-        el("div",{style:"white-space:pre-wrap"},m.body||"")));
-    });
-    msgCard.append(list);
-    msgCard.append(el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
-      "This is a read-only view. To reply, contact your supervisor directly."));
-  }
-  col.append(msgCard);
 
   wrap.append(col);
   document.body.append(wrap, toastNode());
