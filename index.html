@@ -678,9 +678,14 @@ async function viewStudents(v){
     ...[...new Set(students.map(s=>s.campus))].filter(Boolean).map(c=>el("option",{value:c},c)));
   const areaFilter=el("select",{style:"width:auto"},el("option",{value:""},"All areas"),
     ...AREAS.map(a=>el("option",{value:a},a)));
+  const groupSel=el("select",{style:"width:auto"},
+    el("option",{value:"campus"},"Campus"),
+    el("option",{value:"principal"},"Principal supervisor"),
+    el("option",{value:"area"},"Supervision area"));
   bar.append(el("div",{class:"field"},el("label",{},"Search"),search),
              el("div",{class:"field"},el("label",{},"Campus"),campusFilter),
              el("div",{class:"field"},el("label",{},"Area"),areaFilter));
+  if(S.role==="admin") bar.append(el("div",{class:"field"},el("label",{},"Group by"),groupSel));
   if(S.role==="admin"){
     bar.append(el("div",{style:"flex:1"}));
     bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Import students (CSV / paste)"),
@@ -701,32 +706,65 @@ async function viewStudents(v){
   function render(){
     body.innerHTML="";
     const term=search.value.toLowerCase(), cf=campusFilter.value, af=areaFilter.value;
+    const mode=S.role==="admin"?groupSel.value:"campus";
     const filtered=students.filter(s=>
       (!cf||s.campus===cf) && (!af||s.area===af) &&
-      [s.name,s.sid,s.email].some(x=>(x||"").toLowerCase().includes(term)));
-    if(!filtered.length){ body.append(emptyState("No students here yet","Add one or upload a CSV to begin.")); return; }
-    const byCampus={};
-    filtered.forEach(s=>{ (byCampus[s.campus||"Unassigned"] ||= []).push(s); });
-    Object.keys(byCampus).sort().forEach(campus=>{
+      [s.name,s.sid,s.email,s.principalName].some(x=>(x||"").toLowerCase().includes(term)));
+    if(!filtered.length){ body.append(emptyState("No students here yet","Add one or import a list to begin.")); return; }
+
+    // group key + header per mode
+    const keyOf = s => mode==="principal" ? (s.principalName||"No principal assigned")
+                     : mode==="area"      ? (s.area||"No area set")
+                     :                      (s.campus||"Unassigned");
+    const groups={};
+    filtered.forEach(s=>{ (groups[keyOf(s)] ||= []).push(s); });
+
+    // columns adapt so the group key isn't repeated in every row
+    const cols=["Student","ID"];
+    if(mode!=="area") cols.push("Area");
+    if(mode!=="campus") cols.push("Campus");
+    cols.push("Units","Email");
+    if(mode!=="principal") cols.push("Principal");
+    cols.push("Co-supervisor");
+    if(S.role==="admin"||S.role==="supervisor") cols.push("Contact");
+
+    Object.keys(groups).sort().forEach(gkey=>{
+      const list=groups[gkey];
       const card=el("div",{class:"card",style:"margin-bottom:14px;padding:0;overflow:hidden"});
-      card.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"},
-        el("strong",{class:"ui"},campus+" campus"),
-        el("span",{class:"muted ui"},byCampus[campus].length+" student"+(byCampus[campus].length>1?"s":""))));
+
+      // group header — for principal grouping, add area + email for quick management
+      const hdrLeft=el("div",{class:"row",style:"gap:8px;align-items:center"});
+      if(mode==="principal"){
+        hdrLeft.append(el("strong",{class:"ui"},gkey));
+        const sup=S.supervisors.find(u=>u.id===list[0].principalUid);
+        if(sup?.area) hdrLeft.append(areaPill(sup.area));
+        if(S.role==="admin"&&sup?.email)
+          hdrLeft.append(emailButton(sup.email,"MRes supervision","Dear "+(sup.name||"")+",\n\n","✉ Email","btn xs ghost"));
+      } else if(mode==="area"){
+        hdrLeft.append(el("strong",{class:"ui"},gkey+" supervision"));
+      } else {
+        hdrLeft.append(el("strong",{class:"ui"},gkey+" campus"));
+      }
+      card.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"},
+        hdrLeft,
+        el("span",{class:"muted ui"},list.length+" student"+(list.length>1?"s":""))));
+
       const t=el("table",{});
-      t.append(el("thead",{},el("tr",{},
-        ...["Student","ID","Area","Units","Email","Principal","Co-supervisor",(S.role==="admin"||S.role==="supervisor")?"Contact":null].filter(x=>x!==null).map(h=>el("th",{},h)))));
+      t.append(el("thead",{},el("tr",{},...cols.map(h=>el("th",{},h)))));
       const tb=el("tbody",{});
-      byCampus[campus].forEach(s=>{
+      list.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
         const codes=(s.unitIds||[]).map(id=>unitById(sem,id)?.code).filter(Boolean);
         const cells=[
           el("td",{},el("strong",{},s.name)),
-          el("td",{},s.sid),
-          el("td",{},areaPill(s.area)),
-          el("td",{},codes.length?codes.join(", "):el("span",{class:"muted"},"—")),
-          el("td",{class:"muted"},s.email||"—"),
-          el("td",{},s.principalName||"—"),
-          el("td",{},s.coName||"—")
+          el("td",{},s.sid)
         ];
+        if(mode!=="area") cells.push(el("td",{},areaPill(s.area)));
+        if(mode!=="campus") cells.push(el("td",{},s.campus||"—"));
+        cells.push(
+          el("td",{},codes.length?codes.join(", "):el("span",{class:"muted"},"—")),
+          el("td",{class:"muted"},s.email||"—"));
+        if(mode!=="principal") cells.push(el("td",{},s.principalName||"—"));
+        cells.push(el("td",{},s.coName||"—"));
         if(S.role==="admin"){
           cells.push(el("td",{},el("div",{class:"row"},
             el("button",{class:"btn ghost sm",onclick:()=>studentForm(s,()=>viewStudents(v))},"Edit"),
@@ -751,7 +789,7 @@ async function viewStudents(v){
       t.append(tb); card.append(t); body.append(card);
     });
   }
-  search.oninput=render; campusFilter.onchange=render; areaFilter.onchange=render;
+  search.oninput=render; campusFilter.onchange=render; areaFilter.onchange=render; groupSel.onchange=render;
   render();
   v.append(body);
 }
@@ -2394,7 +2432,20 @@ function modal(title,bodyNode,onSave,saveLabel="Save"){
   const bg=el("div",{class:"modal-bg",onclick:e=>{if(e.target===bg)close();}});
   const saveBtn=el("button",{class:"btn"},saveLabel);
   function close(){ bg.remove(); }
-  saveBtn.onclick=async()=>{ saveBtn.disabled=true; const ok=await onSave(); saveBtn.disabled=false; if(ok!==false)close(); };
+  saveBtn.onclick=async()=>{
+    saveBtn.disabled=true;
+    try{
+      const ok=await onSave();
+      saveBtn.disabled=false;
+      if(ok!==false)close();
+    }catch(err){
+      // e.g. Firestore "Missing or insufficient permissions" — show it,
+      // don't fail silently with the modal stuck open
+      saveBtn.disabled=false;
+      console.error(err);
+      toast((err&&err.message)||"Could not save — check your connection or permissions.",true);
+    }
+  };
   const m=el("div",{class:"modal ui"},
     el("h3",{},title), bodyNode,
     el("div",{class:"row",style:"justify-content:flex-end;margin-top:18px"},
