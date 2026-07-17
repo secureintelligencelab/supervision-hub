@@ -218,6 +218,18 @@
   .linkpill{font-family:ui-sans-serif,sans-serif;font-size:13px;display:inline-flex;align-items:center;gap:5px;
     background:var(--blue-soft);color:#22406a;padding:4px 11px;border-radius:99px;text-decoration:none;font-weight:700}
 
+  /* Attendance student picker — tappable cards */
+  .stupick{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+  .stucard{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
+    border:1px solid var(--line-strong);background:var(--paper-2);border-radius:9px;
+    padding:10px 14px;min-width:158px;cursor:pointer;
+    transition:box-shadow .12s,border-color .12s,background .12s}
+  .stucard:hover{border-color:var(--teal)}
+  .stucard .nm{font-weight:700;font-size:14.5px;font-family:ui-sans-serif,system-ui,sans-serif;color:var(--ink)}
+  .stucard .mt{font-size:11.5px;color:var(--ink-soft)}
+  .stucard.active{border-color:var(--teal);background:#1a5f5b0f;
+    box-shadow:inset 0 0 0 1px var(--teal),var(--shadow)}
+
   /* Week planner (My week) */
   .weekgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
   .daycol{padding:13px}
@@ -263,6 +275,8 @@
     .btn.sm{padding:9px 13px;font-size:14px}
     .btn.xs{padding:8px 11px;font-size:13px}
     .weeklog .wrow{grid-template-columns:52px 1fr}
+    .stupick{gap:8px}
+    .stucard{flex:1 1 calc(50% - 8px);min-width:0;padding:12px 13px}
     .weeklog .wbody{padding:11px 10px}
     .wmeta{row-gap:6px}
     .stat{gap:8px}
@@ -1561,15 +1575,50 @@ async function viewMeetingLog(v){
   }
   let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
 
-  // pick student — flag the supervisor's role so co-supervised entries are clear
-  const sel=el("select",{style:"width:auto;min-width:240px"});
+  // Pick a student — tappable cards instead of a dropdown. One tap on a
+  // phone, and each card doubles as a status chip: it shows the role you
+  // hold for that student and whether THIS week still needs recording
+  // (or the overall attendance rate when no semester start date is set).
   if(S.role==="supervisor") students.sort((a,b)=>(a.principalUid===S.uid?0:1)-(b.principalUid===S.uid?0:1));
-  students.forEach(s=>{
-    const roleTag = S.role==="supervisor" ? (s.principalUid===S.uid?" · principal":" · co-supervisor") : "";
-    sel.append(el("option",{value:s.id},s.name+" · "+s.campus+roleTag));
-  });
-  const picker=el("div",{class:"toolbar"},el("div",{class:"field"},el("label",{},"Student"),sel));
-  v.append(picker);
+  let selectedId=students[0].id;
+  const cards=el("div",{class:"stupick"});
+  const searchBox=el("input",{placeholder:"Filter by name, ID or campus…",style:"max-width:280px"});
+  function cardStatus(s){
+    const c=cons.find(x=>x.studentDocId===s.id && x.supervisorUid===s.principalUid);
+    if(!c) return {cls:"pending",txt:"No time set"};
+    if(cw){
+      const l=weekLog(c,cw);
+      if(l.held===true) return l.studentAttended===true ? {cls:"held",txt:"W"+cw+" ✓"}
+                             : l.studentAttended===false ? {cls:"missed",txt:"W"+cw+" ✗"}
+                             : {cls:"none",txt:"W"+cw+" held"};
+      if(l.held===false) return {cls:"none",txt:"W"+cw+" not held"};
+      return {cls:"pending",txt:"W"+cw+" to record"};
+    }
+    const st=consultStats(c,weeks);
+    return st.held ? {cls:"held",txt:Math.round(st.attended/st.held*100)+"% attend"} : {cls:"none",txt:"No record yet"};
+  }
+  function drawCards(){
+    cards.innerHTML="";
+    const term=searchBox.value.trim().toLowerCase();
+    students
+      .filter(s=>!term||[s.name,s.sid,s.campus].some(x=>(x||"").toLowerCase().includes(term)))
+      .forEach(s=>{
+        const st=cardStatus(s);
+        const roleTag = S.role==="supervisor" ? (s.principalUid===S.uid?"principal":"co-supervisor")
+                                              : (s.principalName||"—");
+        const b=el("button",{class:"stucard"+(s.id===selectedId?" active":""),
+          onclick:()=>{ selectedId=s.id; drawCards(); renderStudent(s.id); }},
+          el("span",{class:"nm"},s.name),
+          el("span",{class:"mt ui"},s.campus+" · "+roleTag),
+          el("span",{class:"pill "+st.cls,style:"font-size:11px"},st.txt));
+        cards.append(b);
+      });
+    if(!cards.children.length) cards.append(el("span",{class:"muted ui",style:"padding:6px 0"},"No students match."));
+  }
+  searchBox.addEventListener("input",drawCards);
+  if(students.length>6)
+    v.append(el("div",{class:"field",style:"margin-bottom:8px"},el("label",{},"Find student"),searchBox));
+  v.append(cards);
 
   const panel=el("div",{});
   v.append(panel);
@@ -1788,11 +1837,12 @@ async function viewMeetingLog(v){
 
   async function renderStudentAfterReload(studentId){
     cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+    drawCards();               // keep the status chips on the picker cards fresh
     renderStudent(studentId);
   }
 
-  sel.onchange=()=>renderStudent(sel.value);
-  renderStudent(sel.value);
+  drawCards();
+  renderStudent(selectedId);
 }
 
 function statBox(n,l){ return el("div",{class:"b"},el("div",{class:"n"},n),el("div",{class:"l"},l)); }
