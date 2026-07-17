@@ -1125,7 +1125,7 @@ async function viewTimetables(v){
   v.append(bar);
   if(S.role==="supervisor"){
     v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
-      "Class times are set by the admin office. Your weekly class and the classes for units of students you co-supervise are shown here read-only — contact admin to request a change."));
+      "Class times are set by the admin office. Your weekly class and the classes for units of students you co-supervise are shown here read-only"));
   }
 
   let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
