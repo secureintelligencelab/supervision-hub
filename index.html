@@ -218,6 +218,25 @@
   .linkpill{font-family:ui-sans-serif,sans-serif;font-size:13px;display:inline-flex;align-items:center;gap:5px;
     background:var(--blue-soft);color:#22406a;padding:4px 11px;border-radius:99px;text-decoration:none;font-weight:700}
 
+  /* Week planner (My week) */
+  .weekgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
+  .daycol{padding:13px}
+  .dayhead{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12.5px;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+    border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:9px}
+  .slot{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:7px;
+    padding:8px 10px;margin-bottom:8px;background:var(--paper)}
+  .slot:last-child{margin-bottom:0}
+  .slot.consult{border-left-color:var(--blue)}
+  .slot-time{font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+  .slot-label{font-weight:600;font-size:14.5px;line-height:1.3;margin-top:1px}
+  .slot-sub{font-size:12.5px;margin-top:1px}
+
+  /* Attendance log: highlight the current teaching week */
+  .weeklog .wrow.now{background:#1a5f5b0d}
+  .weeklog .wrow.now .wk{background:var(--teal);border-right-color:var(--teal-deep)}
+  .weeklog .wrow.now .wk .num,.weeklog .wrow.now .wk .lab{color:#fff}
+
   details.help{margin-top:14px;font-size:14px}
   details.help summary{cursor:pointer;font-family:ui-sans-serif,sans-serif;color:var(--teal-deep);font-weight:600}
   code{background:#0000000d;padding:1px 5px;border-radius:4px;font-size:13.5px}
@@ -384,7 +403,7 @@ function seedDemo(){
   mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222",area:"IT"};
   mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444",area:"Business"};
   mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666",area:"IT"};
-  mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,units:[
+  mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,start:"2026-07-13",units:[
     {id:"u1",code:"RES915",name:"Literature, Methodology & Proposal"},
     {id:"u2",code:"RES920",name:"Research Project"}
   ]};
@@ -564,6 +583,37 @@ function weekTime(cons,w){
   };
 }
 function weekLog(cons,w){ return (cons?.weeks?.[w]) || (cons?.weeks?.[String(w)]) || {}; }
+
+// Which class slots a SUPERVISOR may see:
+//  - classes assigned to them by admin, and
+//  - for students they co-supervise, ONLY the approved class run by that
+//    student's PRINCIPAL supervisor for a unit the student is enrolled in.
+// (A unit can have several class groups — one per supervisor/campus — and a
+//  co-supervisor must see only their principal's group, not every group.)
+function classSlotsFor(tts,myStudents){
+  if(S.role!=="supervisor") return tts;
+  const coPairs=new Set();
+  myStudents
+    .filter(s=>s.coUid===S.uid && s.principalUid && s.principalUid!==S.uid)
+    .forEach(s=>(s.unitIds||[]).forEach(id=>coPairs.add(id+"|"+s.principalUid)));
+  return tts.filter(t=>
+    t.supervisorUid===S.uid ||                                          // my own classes
+    (t.status==="approved" && coPairs.has(t.unitId+"|"+t.supervisorUid)) // principal's class for my co-students
+  );
+}
+
+// Current teaching week, derived from the semester's (optional) start date.
+// Week 1 begins on the Monday of the week containing the start date.
+// Returns null when no start date is set or we're outside the teaching weeks.
+function currentWeekOf(sem){
+  if(!sem?.start) return null;
+  const s=new Date(sem.start+"T00:00:00");
+  if(isNaN(s.getTime())) return null;
+  const mon=new Date(s); mon.setDate(s.getDate()-((s.getDay()+6)%7));
+  const now=new Date(); now.setHours(0,0,0,0);
+  const wk=Math.floor((now-mon)/(7*24*3600*1000))+1;
+  return (wk>=1 && wk<=(sem.weeks||12)) ? wk : null;
+}
 // counts across a consultation's weeks
 function consultStats(cons,totalWeeks){
   let held=0, attended=0, missed=0, logged=0;
@@ -714,21 +764,30 @@ function renderApp(){
   const meSup=S.supervisors.find(u=>u.id===S.uid);
   const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
   const TABS = S.role==="admin"
-    ? [["students","Students"],["timetables","Class timetables"],["consultations","Consultation times"],
+    ? [["students","Students"],["schedule","Week planner"],["timetables","Class timetables"],["consultations","Consultation times"],
        ["meetinglog","Attendance"],["report","Summary report"],
        ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
-    : [["students","My students"],["timetables","My class time"],
+    : [["students","My students"],["schedule","My week"],["timetables","My class time"],
        ["consultations",coOnly?"View consultation time":"Set consultation time"],
        ["meetinglog","Attendance"]];
+  // guard FIRST: if current tab not in this role's set, default to the first,
+  // so the tab strip below is built with the correct button highlighted.
+  if(!TABS.some(t=>t[0]===S.tab)) S.tab=TABS[0][0];
   const tabs=el("nav",{class:"tabs ui"});
   TABS.forEach(([id,label])=>{
-    tabs.append(el("button",{class:S.tab===id?"active":"",onclick:()=>{S.tab=id;drawMain();}},label));
+    const b=el("button",{class:S.tab===id?"active":"",onclick:()=>{
+      S.tab=id;
+      // BUGFIX: drawMain() only re-renders the content pane, so the tab
+      // strip's highlight went stale (e.g. "My students" stayed selected
+      // while Attendance content was showing). Sync the active class here.
+      [...tabs.children].forEach(x=>x.classList.toggle("active",x===b));
+      drawMain();
+    }},label);
+    tabs.append(b);
   });
   const main=el("main",{},el("div",{id:"view"}));
   document.body.append(header,el("div",{},main),toastNode());
   main.prepend(tabs);
-  // guard: if current tab not in this role's set, default to first
-  if(!TABS.some(t=>t[0]===S.tab)) S.tab=TABS[0][0];
   drawMain();
 }
 function logout(){ if(DEMO){ S.user=null; renderLogin(); return; } signOut(auth); }
@@ -744,6 +803,7 @@ function semesterPicker(onChange){
 async function drawMain(){
   const v=$("#view"); v.innerHTML="<div class='muted ui' style='padding:30px'>Loading…</div>";
   if(S.tab==="students") return viewStudents(v);
+  if(S.tab==="schedule") return viewSchedule(v);
   if(S.tab==="timetables") return viewTimetables(v);
   if(S.tab==="consultations") return viewConsultations(v);
   if(S.tab==="meetinglog") return viewMeetingLog(v);
@@ -1125,23 +1185,16 @@ async function viewTimetables(v){
   v.append(bar);
   if(S.role==="supervisor"){
     v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
-      "Class times are set by the admin office. Your weekly class and the classes for units of students you co-supervise are shown here read-only"));
+      "Class times are set by the admin office. You see your own weekly class, and — for students you co-supervise — only the class run by that student's principal supervisor. Other supervisors' class groups are not shown."));
   }
 
   let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
 
   if(S.role==="supervisor"){
-    // Units of the students this supervisor co-supervises (for read-only class
-    // times), plus any class slots assigned to this supervisor by admin.
-    const coUnitIds=new Set();
-    myStudents.filter(s=>s.coUid===S.uid).forEach(s=>(s.unitIds||[]).forEach(id=>coUnitIds.add(id)));
-    tts=tts.filter(t=>
-      t.supervisorUid===S.uid ||                                   // classes assigned to me
-      (t.status==="approved" && coUnitIds.has(t.unitId))           // approved classes for my co-students' units
-    );
+    tts=classSlotsFor(tts,myStudents);
     if(!tts.length){
       v.append(emptyState("No class times yet",
-        "Admin sets the weekly class times. Once a class is set for you, or for units of students you co-supervise, it will show here."));
+        "Admin sets the weekly class times. Once a class is set for you, or by the principal supervisor of a student you co-supervise, it will show here."));
       return;
     }
   } else {
@@ -1220,6 +1273,131 @@ function timetableForm(existing,done){
       else { await DB.add("timetables",{semesterId:S.activeSem,status:"approved",...data}); }
       toast(existing?"Class time updated.":"Class time set."); done(); return true;
     });
+}
+
+/* ============================================================
+   7b. WEEK PLANNER / MY WEEK  (new)
+   One combined day-by-day view of everything recurring: class times
+   plus every student consultation. Supervisors see their own classes,
+   the principal's class for co-supervised students, and the
+   consultations of all students they principal- or co-supervise.
+   Admin sees the whole program. If the semester has a start date and
+   we're inside teaching weeks, the CURRENT week's one-off time
+   changes are applied so the planner shows what actually happens
+   this week. Everything can be downloaded as an .ics calendar file.
+   ============================================================ */
+async function viewSchedule(v){
+  v.innerHTML="";
+  const sem=activeSemester();
+  const weeks=sem?.weeks||12;
+  const cw=currentWeekOf(sem);
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Classes & consultations, day by day"+(cw?" · week "+cw+" of "+weeks:"")),
+    el("h2",{},S.role==="admin"?"Week planner":"My week"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewSchedule(v)));
+  v.append(bar);
+
+  const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
+  let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+
+  if(S.role==="supervisor"){
+    const mine=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
+    tts=classSlotsFor(tts,mine);                    // same visibility rule as the class-times tab
+    const ids=new Set(mine.map(s=>s.id));
+    cons=cons.filter(c=>ids.has(c.studentDocId));
+  } else {
+    tts=tts.filter(t=>t.status==="approved");
+  }
+
+  const items=[];
+  tts.forEach(t=>{
+    const u=unitById(sem,t.unitId);
+    items.push({day:t.day,start:t.start,end:t.end,type:"class",
+      label:(u?.code||"Class")+" — weekly class",
+      sub:supName(t.supervisorUid)+(t.room?" · "+t.room:"")});
+  });
+  cons.forEach(c=>{
+    const s=students.find(x=>x.id===c.studentDocId); if(!s) return;
+    // in the current teaching week, show that week's (possibly changed) time
+    const et=cw?weekTime(c,cw):{day:c.day,start:c.start,end:c.end,mode:c.mode,link:c.meetingLink,overridden:false};
+    const asCo=S.role==="supervisor" && s.coUid===S.uid && s.principalUid!==S.uid;
+    items.push({day:et.day,start:et.start,end:et.end,type:"consult",
+      label:"Consultation — "+s.name,
+      sub:(et.mode||"")+(asCo?" · you co-supervise ("+(s.principalName||"principal")+" leads)"
+                        :S.role==="admin"?(s.principalName?" · "+s.principalName:""):""),
+      link:et.link, changed:!!et.overridden});
+  });
+
+  if(!items.length){
+    v.append(emptyState("Nothing scheduled yet","Class times and consultation times will appear here once they are set."));
+    return;
+  }
+
+  v.append(el("div",{class:"row",style:"margin-bottom:14px"},
+    el("button",{class:"btn",onclick:()=>downloadScheduleICS(items,sem)},"⤓ Add to calendar (.ics)"),
+    el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF"),
+    cw?el("span",{class:"pill blue"},"Showing week "+cw+"'s times (one-off changes applied)")
+      :el("span",{class:"muted ui",style:"font-size:13px"},
+        "Recurring times shown."+(S.role==="admin"?" Set a semester start date (Semesters & staff) to track the current week.":""))));
+
+  const wrap=el("div",{class:"weekgrid"});
+  DAYS.forEach(d=>{
+    const dayItems=items.filter(i=>i.day===d).sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+    if(!dayItems.length && (d==="Saturday")) return;   // skip an empty Saturday column
+    const col=el("div",{class:"card daycol"});
+    col.append(el("div",{class:"dayhead"},d));
+    if(!dayItems.length) col.append(el("div",{class:"muted ui",style:"font-size:13px"},"Nothing scheduled"));
+    dayItems.forEach(i=>{
+      const b=el("div",{class:"slot "+i.type});
+      b.append(el("div",{class:"slot-time ui"},`${i.start||"?"}–${i.end||"?"}`,
+        i.changed?el("span",{class:"pill blue",style:"font-size:10.5px;margin-left:6px"},"changed this week"):""));
+      b.append(el("div",{class:"slot-label"},i.label));
+      if(i.sub) b.append(el("div",{class:"slot-sub muted ui"},i.sub));
+      if(i.link) b.append(el("div",{style:"margin-top:4px"},
+        el("a",{class:"linkpill",href:i.link,target:"_blank",rel:"noopener"},"Join")));
+      col.append(b);
+    });
+    wrap.append(col);
+  });
+  v.append(wrap);
+  v.append(el("p",{class:"muted ui",style:"margin-top:12px;font-size:13px"},
+    "Teal = weekly class · blue = student consultation. The .ics download adds every recurring slot to Outlook, Google or Apple Calendar for the whole semester."));
+}
+
+// Build a weekly-recurring .ics calendar for the given schedule items.
+// First occurrence: the item's weekday on/after the semester start date
+// (or on/after today when no start date is set); repeats for `weeks` weeks.
+function downloadScheduleICS(items,sem){
+  const weeks=sem?.weeks||12;
+  const pad=n=>String(n).padStart(2,"0");
+  const esc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+  let base=sem?.start?new Date(sem.start+"T00:00:00"):new Date();
+  if(isNaN(base.getTime())) base=new Date();
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MRes Supervision Hub//EN","CALSCALE:GREGORIAN"];
+  items.forEach((it,i)=>{
+    const target=DAYS.indexOf(it.day)+1; if(target<1) return;  // Monday=1 … Saturday=6
+    const d=new Date(base); d.setHours(0,0,0,0);
+    while((d.getDay()||7)!==target) d.setDate(d.getDate()+1);
+    const ds=""+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+    const st=(it.start||"09:00").replace(":","")+"00";
+    const en=(it.end||"10:00").replace(":","")+"00";
+    L.push("BEGIN:VEVENT",
+      "UID:sh-"+i+"-"+ds+"-"+st+"@supervisionhub",
+      "DTSTART:"+ds+"T"+st,
+      "DTEND:"+ds+"T"+en,
+      "RRULE:FREQ=WEEKLY;COUNT="+weeks,
+      "SUMMARY:"+esc(it.label));
+    if(it.sub) L.push("DESCRIPTION:"+esc(it.sub));
+    if(it.link) L.push("URL:"+esc(it.link));
+    L.push("END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  const blob=new Blob([L.join("\r\n")],{type:"text/calendar"});
+  const fname=`supervision_schedule_${(sem?.label||"export").replace(/\s+/g,"_")}.ics`;
+  const a=el("a",{href:URL.createObjectURL(blob),download:fname});
+  document.body.append(a); a.click(); a.remove();
+  toast("Calendar file downloaded — open it to add the semester to your calendar.");
 }
 
 /* ============================================================
@@ -1361,8 +1539,9 @@ async function viewMeetingLog(v){
   v.innerHTML="";
   const sem=activeSemester();
   const weeks=sem?.weeks||12;
+  const cw=currentWeekOf(sem);
   v.append(el("div",{class:"section-title"},el("div",{},
-    el("div",{class:"eyebrow ui"},"Weekly attendance register · "+weeks+" weeks"),
+    el("div",{class:"eyebrow ui"},"Weekly attendance register · "+weeks+" weeks"+(cw?" · now in week "+cw:"")),
     el("h2",{},"Attendance"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewMeetingLog(v)));
   v.append(bar);
@@ -1412,6 +1591,12 @@ async function viewMeetingLog(v){
       statBox(String(stats.attended),"Student attended"),
       statBox(String(stats.missed),"Student missed"),
       statBox(stats.held?Math.round(stats.attended/stats.held*100)+"%":"—","Attendance rate"));
+    // if we know the current week, surface how many past weeks are unrecorded
+    if(cw && c){
+      let unrec=0;
+      for(let w=1;w<cw;w++){ const l=weekLog(c,w); if(l.held!==true&&l.held!==false) unrec++; }
+      if(unrec) strip.append(statBox(String(unrec),"Past weeks unrecorded"));
+    }
     panel.append(strip);
 
     // who can arrange/change the per-student meeting TIME & LINK
@@ -1462,7 +1647,8 @@ async function viewMeetingLog(v){
   function weekRow(c,s,w,canEdit,studentId){
     const et=weekTime(c,w);
     const l=weekLog(c,w);
-    const wk=el("div",{class:"wk"},el("div",{class:"num"},String(w)),el("div",{class:"lab"},"Week"));
+    const isNow=cw===w;
+    const wk=el("div",{class:"wk"},el("div",{class:"num"},String(w)),el("div",{class:"lab"},isNow?"This wk":"Week"));
     const body=el("div",{class:"wbody"});
 
     // meta line: effective time + override marker
@@ -1578,7 +1764,7 @@ async function viewMeetingLog(v){
       meta.prepend(el("span",{class:"pill none"},"No record"));
     }
 
-    return el("div",{class:"wrow"},wk,body);
+    return el("div",{class:"wrow"+(isNow?" now":"")},wk,body);
   }
 
   // persist a partial update to a single week, merging into that week's data.
@@ -1840,6 +2026,53 @@ async function viewReport(v){
     statBox(String(totalHeld),"Meetings held"),
     statBox(String(totalMissed),"Missed"),
     statBox(totalHeld?Math.round(totalAttended/totalHeld*100)+"%":"—","Attendance rate")));
+
+  // ---- Needs attention: automatic early-warning flags ----
+  // Low attendance rate, runs of consecutive misses, no consultation time,
+  // and (when the semester has a start date) past weeks left unrecorded.
+  const cw=currentWeekOf(sem);
+  const flaggedRows=rows.map(r=>{
+    const flags=[];
+    if(!r.arranged) flags.push("No consultation time set");
+    if(r.c){
+      if(r.st.held>=3 && (r.st.attended/r.st.held)<0.7)
+        flags.push("Low attendance ("+Math.round(r.st.attended/r.st.held*100)+"%)");
+      let run=0,maxRun=0;
+      for(let w=1;w<=weeks;w++){
+        const l=weekLog(r.c,w);
+        if(l?.held===true && l.studentAttended===false){ run++; maxRun=Math.max(maxRun,run); }
+        else if(l?.held===true && l.studentAttended===true) run=0;
+      }
+      if(maxRun>=2) flags.push(maxRun+" consecutive meetings missed");
+      if(cw){
+        let unrec=0;
+        for(let w=1;w<cw;w++){ const l=weekLog(r.c,w); if(l.held!==true&&l.held!==false) unrec++; }
+        if(unrec>=2) flags.push(unrec+" past weeks unrecorded");
+      }
+    }
+    return {...r,flags};
+  }).filter(r=>r.flags.length);
+
+  if(flaggedRows.length){
+    const fc=el("div",{class:"card",style:"margin-bottom:14px;border-left:4px solid var(--amber)"});
+    fc.append(el("div",{class:"row",style:"justify-content:space-between;margin-bottom:8px"},
+      el("strong",{class:"ui"},"⚠ Needs attention"),
+      el("span",{class:"muted ui"},flaggedRows.length+" student"+(flaggedRows.length===1?"":"s")+" flagged")));
+    flaggedRows.forEach(r=>{
+      const line=el("div",{class:"row",style:"padding:7px 0;border-top:1px solid var(--line);gap:8px;align-items:center"},
+        el("strong",{style:"flex:0 0 auto"},r.s.name),
+        el("span",{class:"muted ui",style:"font-size:12.5px"},r.s.principalName?("Principal: "+r.s.principalName):"No principal"),
+        el("span",{style:"flex:1"}),
+        ...r.flags.map(f=>el("span",{class:"pill "+(f.startsWith("No consultation")?"pending":"missed"),style:"font-size:11.5px"},f)));
+      if(r.s.principalUid)
+        line.append(emailButton(S.supervisors.find(u=>u.id===r.s.principalUid)?.email,
+          "MRes supervision — "+r.s.name,
+          "Dear "+(r.s.principalName||"")+",\n\nRegarding "+r.s.name+" ("+(r.s.sid||"")+"): "+r.flags.join("; ")+".\n\n",
+          "✉ Principal","btn xs ghost"));
+      fc.append(line);
+    });
+    v.append(fc);
+  }
 
   // ---- Action row: exports + (when focused) contact the supervisor ----
   const actions=el("div",{class:"row",style:"margin-bottom:14px"});
@@ -2249,6 +2482,7 @@ function semesterForm(existing,done){
   const weeks=el("select",{},
     el("option",{value:"12",...((existing?.weeks||12)===12?{selected:"selected"}:{})},"12 weeks"),
     el("option",{value:"15",...((existing?.weeks)===15?{selected:"selected"}:{})},"15 weeks"));
+  const start=el("input",{type:"date",value:existing?.start||""});
 
   const unitList=el("div",{class:"grid",style:"gap:8px"});
   const rows=[];
@@ -2272,17 +2506,18 @@ function semesterForm(existing,done){
     el("div",{class:"grid"},
       el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
         el("div",{},el("label",{},"Semester label"),label),
-        el("div",{},el("label",{},"Teaching weeks"),weeks)),
+        el("div",{},el("label",{},"Teaching weeks"),weeks),
+        el("div",{style:"grid-column:1/-1"},el("label",{},"Week 1 start date (optional)"),start)),
       el("div",{},el("label",{},"Units in this semester"),unitList,
         el("div",{style:"margin-top:8px"},addBtn)),
-      el("div",{},el("p",{class:"muted",style:"margin:0"},"Add one or more units. Codes and names can differ each semester. Units appear on the student form, class timetables and the Moodle export."))),
+      el("div",{},el("p",{class:"muted",style:"margin:0"},"Add one or more units. Codes and names can differ each semester. Units appear on the student form, class timetables and the Moodle export. Setting a start date lets the app highlight the current teaching week in the Attendance register and the week planner."))),
     async()=>{
       if(!label.value.trim()){ toast("Enter a semester label.",true); return false; }
       const units=rows.map(r=>({id:r.id,code:r.code.value.trim(),name:r.name.value.trim()}))
         .filter(u=>u.code||u.name);
       if(!units.length){ toast("Add at least one unit.",true); return false; }
       if(units.some(u=>!u.code)){ toast("Each unit needs a code.",true); return false; }
-      const data={label:label.value.trim(),weeks:parseInt(weeks.value),units};
+      const data={label:label.value.trim(),weeks:parseInt(weeks.value),units,start:start.value||""};
       if(existing) await DB.update("semesters",existing.id,data);
       else await DB.add("semesters",data);
       S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
@@ -2387,17 +2622,19 @@ async function copyForward(fromSem,done){
     el("option",{value:"12",...((fromSem.weeks||12)===12?{selected:"selected"}:{})},"12 weeks"),
     el("option",{value:"15",...((fromSem.weeks)===15?{selected:"selected"}:{})},"15 weeks"));
   const us=unitsOf(fromSem);
+  const start=el("input",{type:"date"});
   modal("Carry students forward",
     el("div",{class:"grid"},
       el("p",{class:"muted",style:"margin:0"},"Copies every student (with the same supervisors and unit enrolments) from \u201C"+fromSem.label+"\u201D into a new semester. The units below are carried over too. Timetables, consultations and meeting logs start fresh."),
       el("div",{},el("label",{},"New semester label"),label),
       el("div",{},el("label",{},"Teaching weeks"),weeks),
+      el("div",{},el("label",{},"Week 1 start date (optional)"),start),
       el("div",{},el("label",{},"Units carried over"),
         el("p",{class:"muted",style:"margin:4px 0 0"},us.length?us.map(u=>u.code).filter(Boolean).join(", "):"None"))),
     async()=>{
       if(!label.value.trim()){ toast("Enter a label.",true); return false; }
       const units=us.map(u=>({id:u.id,code:u.code,name:u.name}));
-      const newId=await DB.add("semesters",{label:label.value.trim(),weeks:parseInt(weeks.value),units});
+      const newId=await DB.add("semesters",{label:label.value.trim(),weeks:parseInt(weeks.value),units,start:start.value||""});
       const students=await DB.list("students",{semesterId:fromSem.id});
       for(const s of students){
         const {id,...rest}=s; await DB.add("students",{...rest,semesterId:newId});
