@@ -660,7 +660,7 @@ new MutationObserver(muts=>{
   }
 }).observe(document.documentElement,{childList:true,subtree:true});
 const CAMPUSES=["NSW","ACT","Perth","VIC","QLD"];
-const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 // Supervision areas — lets the hub host both IT and Business supervisors/students.
 const AREAS=["IT","Business"];
 function areaPill(a){
@@ -742,13 +742,13 @@ function semWeekBounds(sem,w){
   const s=new Date(sem.start+"T00:00:00");
   if(isNaN(s.getTime())) return null;
   const mon=new Date(s); mon.setDate(s.getDate()-((s.getDay()+6)%7)+(w-1)*7);
-  const sat=new Date(mon); sat.setDate(mon.getDate()+5);
-  return {mon,sat};
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);   // weeks run Mon\u2013Sun
+  return {mon,sun};
 }
 function weekRangeLabel(sem,w){
   const b=semWeekBounds(sem,w); if(!b) return "";
   const f=d=>d.getDate()+" "+d.toLocaleString("en",{month:"short"});
-  return f(b.mon)+" \u2013 "+f(b.sat);
+  return f(b.mon)+" \u2013 "+f(b.sun);
 }
 // Reference week for the attendance editing window:
 //   before the semester -> 0 (nothing recordable yet)
@@ -1474,6 +1474,7 @@ async function viewSchedule(v){
     const s=students.find(x=>x.id===c.studentDocId); if(!s) return;
     // in the current teaching week, show that week's (possibly changed) time
     const et=cw?weekTime(c,cw):{day:c.day,start:c.start,end:c.end,mode:c.mode,link:c.meetingLink,overridden:false};
+    if(!et.day||!et.start) return;   // default slot with no time this week \u2014 nothing to place on the grid
     const asCo=S.role==="supervisor" && s.coUid===S.uid && s.principalUid!==S.uid;
     items.push({day:et.day,start:et.start,end:et.end,type:"consult",
       label:"Consultation — "+s.name,
@@ -1497,7 +1498,7 @@ async function viewSchedule(v){
   const wrap=el("div",{class:"weekgrid"});
   DAYS.forEach(d=>{
     const dayItems=items.filter(i=>i.day===d).sort((a,b)=>(a.start||"").localeCompare(b.start||""));
-    if(!dayItems.length && (d==="Saturday")) return;   // skip an empty Saturday column
+    if(!dayItems.length && (d==="Saturday"||d==="Sunday")) return;   // skip empty weekend columns
     const col=el("div",{class:"card daycol"});
     col.append(el("div",{class:"dayhead"},d));
     if(!dayItems.length) col.append(el("div",{class:"muted ui",style:"font-size:13px"},"Nothing scheduled"));
@@ -1606,8 +1607,11 @@ async function viewConsultations(v){
     // A co-supervisor cannot set or edit it here.
     const canEdit = isPrincipal || isAdmin;
     const st=c?consultStats(c,weeks):null;
+    const scheduled=!!(c&&c.day);   // a record may exist as a "default slot" with no fixed time
+    let changedWeeks=0;
+    if(c) for(let w=1;w<=weeks;w++) if(weekTime(c,w).overridden) changedWeeks++;
 
-    const card=el("div",{class:"ccard"+(c?"":" unset")});
+    const card=el("div",{class:"ccard"+(scheduled?"":" unset")});
 
     // --- identity block ---
     const idBlock=el("div",{class:"cid"});
@@ -1624,11 +1628,15 @@ async function viewConsultations(v){
 
     // --- time "ticket" ---
     const timeBlock=el("div",{class:"ctime"});
-    if(c){
+    if(scheduled){
       timeBlock.append(
         el("div",{class:"cday ui"},c.day),
         el("div",{class:"chrs ui"},c.start+"\u2013"+c.end),
         el("div",{class:"muted ui",style:"font-size:11.5px"},c.mode||""));
+    } else if(c){
+      timeBlock.append(
+        el("div",{class:"cday ui",style:"color:var(--amber)"},"Default slot"),
+        el("div",{class:"muted ui",style:"font-size:11.5px"},"any day, Mon\u2013Sun"));
     } else {
       timeBlock.append(
         el("div",{class:"cday ui",style:"color:var(--amber)"},"No time"),
@@ -1641,6 +1649,8 @@ async function viewConsultations(v){
     detail.append(c?.meetingLink
       ? el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Open Teams channel")
       : el("span",{class:"muted ui",style:"font-size:12.5px"},c?"No channel link set":"\u2014"));
+    if(changedWeeks) detail.append(el("span",{class:"pill blue",style:"font-size:11px;margin-left:8px"},
+      changedWeeks+" week"+(changedWeeks===1?"":"s")+" changed"));
     if(st && st.held){
       const pct=Math.round(st.attended/st.held*100);
       detail.append(el("div",{class:"attmini"},
@@ -1654,8 +1664,10 @@ async function viewConsultations(v){
     // --- actions ---
     const actions=el("div",{class:"cact"});
     if(canEdit){
-      actions.append(el("button",{class:c?"btn ghost sm":"btn sm",
-        onclick:()=>consultForm(s,c,()=>viewConsultations(v))}, c?"Edit time / link":"\uFF0B Set time"));
+      actions.append(el("button",{class:scheduled?"btn ghost sm":"btn sm",
+        onclick:()=>consultForm(s,c,()=>viewConsultations(v))}, scheduled?"Edit time / link":"\uFF0B Set time"));
+      if(c) actions.append(el("button",{class:"btn ghost sm",
+        onclick:()=>weekPickThenOverride(c,()=>viewConsultations(v))},"Change one week"));
       if(c) actions.append(el("button",{class:"btn danger sm",
         onclick:()=>confirmDelete("consultations",c.id,"this consultation",()=>viewConsultations(v))},"Delete"));
     } else if(isCo){
@@ -1735,7 +1747,7 @@ async function viewMeetingLog(v){
   v.append(bar);
   v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
     S.role==="supervisor"
-      ? "Pick a student, choose the week, then tap to mark that week's consultation: held, student attended, co-supervisor attended. You can record the current week and go back as far as your admin allows; future weeks are locked. Co-supervised students are shown read-only."
+      ? "Pick a student, choose the week, then tap to mark that week's consultation: held, student attended, co-supervisor attended. Weeks run Monday\u2013Sunday and you can record on any day of the week \u2014 even if no consultation time is set yet. You can go back as far as your admin allows; future weeks are locked. Co-supervised students are shown read-only."
       : "Read-only view of each student's weekly consultation attendance, recorded by the principal supervisor."));
 
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
@@ -1829,26 +1841,43 @@ async function viewMeetingLog(v){
     const canEdit = (S.role==="supervisor" && s.principalUid===S.uid);
 
     if(!c){
-      panel.append(el("div",{class:"card"},
-        el("p",{class:"muted",style:"margin:0 0 10px"},
-          "No recurring consultation time is set for "+s.name+" yet."),
-        canSetTime
-          ? el("button",{class:"btn",onclick:()=>consultForm(s,null,()=>renderStudentAfterReload(studentId))},"Set consultation time")
-          : el("span",{class:"muted"},"A supervisor needs to set a time first.")));
-      return;
+      if(canEdit){
+        // The PRINCIPAL can record attendance even before a consultation time
+        // exists: we work against a "default slot" (any day, Mon\u2013Sun). The
+        // record is created automatically the first time they save something.
+        c={virtual:true, semesterId:S.activeSem||s.semesterId||"", studentDocId:s.id,
+           supervisorUid:s.principalUid, coUid:s.coUid||"", coName:s.coName||"",
+           day:"", start:"", end:"", mode:"", meetingLink:"", unscheduled:true, weeks:{}};
+      } else {
+        panel.append(el("div",{class:"card"},
+          el("p",{class:"muted",style:"margin:0 0 10px"},
+            "No consultation time or attendance record exists for "+s.name+" yet."),
+          canSetTime
+            ? el("button",{class:"btn",onclick:()=>consultForm(s,null,()=>renderStudentAfterReload(studentId))},"Set consultation time")
+            : el("span",{class:"muted"},"The principal supervisor records attendance; nothing to show yet.")));
+        return;
+      }
     }
+    const scheduled=!!c.day;   // false = default slot (no fixed time yet)
 
     // header card: recurring time + link
     const head=el("div",{class:"card",style:"margin-bottom:14px"});
     head.append(
       el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start"},
         el("div",{},
-          el("div",{class:"eyebrow ui"},"Recurring consultation (attendance is recorded against this time)"),
-          el("div",{style:"font-size:20px;font-weight:700"},`${c.day} ${c.start}–${c.end}`),
+          el("div",{class:"eyebrow ui"},scheduled
+            ?"Recurring consultation (attendance is recorded against this time)"
+            :"No fixed time \u2014 default weekly slot"),
+          el("div",{style:"font-size:20px;font-weight:700"},scheduled?`${c.day} ${c.start}–${c.end}`:"Any day, Mon\u2013Sun"),
           el("div",{class:"muted ui",style:"margin-top:2px"},(c.mode||"")+(c.coName?" · Co-supervisor: "+c.coName:" · No co-supervisor"))),
         el("div",{class:"row"},
           c.meetingLink?el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Teams channel"):el("span",{class:"muted"},"No channel link set"),
-          canSetTime?el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>renderStudentAfterReload(studentId))},"Edit time / link"):"")));
+          canSetTime?el("button",{class:scheduled?"btn ghost sm":"btn sm",
+            onclick:()=>consultForm(s,c.virtual?null:c,()=>renderStudentAfterReload(studentId))},
+            scheduled?"Edit time / link":"Set consultation time"):"")));
+    if(!scheduled && canEdit)
+      head.append(el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:12.5px"},
+        "You can record each week's meeting now and set a fixed time later \u2014 attendance is kept per week (Mon\u2013Sun), not per day, so record it on whichever day the meeting happened."));
     panel.append(head);
 
     // ---- one week at a time (Moodle-style): pick the week, then record ----
@@ -1930,13 +1959,15 @@ async function viewMeetingLog(v){
 
     // meta line: effective time + override marker
     const meta=el("div",{class:"wmeta"});
-    meta.append(el("span",{},`${et.day} ${et.start}–${et.end}`));
+    meta.append(et.day
+      ? el("span",{},`${et.day} ${et.start}–${et.end}`)
+      : el("span",{class:"muted"},"No fixed time \u2014 any day this week"));
     const _rng=weekRangeLabel(sem,w);
     if(_rng) meta.append(el("span",{class:"muted"},"\u00B7 "+_rng));
     if(et.mode) meta.append(el("span",{},"· "+et.mode));
     if(et.overridden) meta.append(el("span",{class:"pill blue",style:"font-size:11.5px"},"Changed this week"));
     if(et.link) meta.append(el("a",{class:"linkpill",href:et.link,target:"_blank",rel:"noopener"},"Link"));
-    if(canEdit) meta.append(el("button",{class:"btn ghost xs",onclick:()=>weekOverrideForm(c,w,()=>renderStudentAfterReload(studentId))},
+    if(canEdit && !c.virtual) meta.append(el("button",{class:"btn ghost xs",onclick:()=>weekOverrideForm(c,w,()=>renderStudentAfterReload(studentId))},
       et.overridden?"Edit this week":"Change time"));
     body.append(meta);
 
@@ -2059,6 +2090,19 @@ async function viewMeetingLog(v){
   // persist a partial update to a single week, merging into that week's data.
   // Writes only the one nested key (weeks.<n>) so Firestore can't drop it.
   async function patchWeek(c,w,partial){
+    // First write against a "default slot": create the consultation record
+    // now (with no fixed time) so the week data has somewhere to live.
+    if(c.virtual){
+      try{
+        const {virtual,weeks:_w,...data}=c;
+        c.id=await DB.add("consultations",{...data,weeks:{}});
+        delete c.virtual;
+      }catch(err){
+        console.error("auto-create consultation failed",err);
+        toast("Couldn't create the attendance record \u2014 "+(err?.code||err?.message||"please try again."),true);
+        throw err;
+      }
+    }
     const key=String(w);
     const prev=(c.weeks?.[key]) || (c.weeks?.[w]) || {};
     const merged={...prev,...partial};
@@ -2099,6 +2143,26 @@ function toggleGroup(label,current,options,enabled,onPick){
 }
 
 // Override a single week's time / link
+// Pick a week, then open the one-off time change for it. Lives on the
+// Consultations tab so per-week changes don't require the Attendance register.
+function weekPickThenOverride(c,done){
+  const sem=activeSemester(); const weeks=sem?.weeks||12; const cw=currentWeekOf(sem);
+  const sel=el("select",{});
+  for(let w=1;w<=weeks;w++){
+    const range=weekRangeLabel(sem,w);
+    const ov=weekTime(c,w).overridden;
+    sel.append(el("option",{value:String(w),...((cw?w===cw:w===1)?{selected:"selected"}:{})},
+      "Week "+w+(range?" \u00B7 "+range:"")+(w===cw?" \u00B7 this week":"")+(ov?" \u00B7 changed":"")));
+  }
+  modal("Change the time for one week",
+    el("div",{class:"grid"},
+      el("p",{class:"muted",style:"margin:0"},
+        "Pick the week, then set a one-off day/time/link for it. The recurring time stays unchanged for every other week, and the student sees the change."),
+      el("div",{},el("label",{},"Week"),sel)),
+    async()=>{ const w=parseInt(sel.value); setTimeout(()=>weekOverrideForm(c,w,done),50); return true; },
+    "Next");
+}
+
 function weekOverrideForm(c,w,done){
   const cur=(c.weeks?.[w]) || (c.weeks?.[String(w)]) || {};
   const useDefault=el("input",{type:"checkbox",style:"width:auto",...(!(cur.day||cur.start||cur.end||cur.mode||cur.link)?{checked:"checked"}:{})});
@@ -2292,7 +2356,7 @@ async function viewReport(v){
     const c=cons.find(x=>x.studentDocId===s.id && x.supervisorUid===s.principalUid);
     const st=c?consultStats(c,weeks):{held:0,attended:0,missed:0,logged:0};
     const focusRole = focus==="all" ? "" : (s.principalUid===focus?"Principal":(s.coUid===focus?"Co-supervisor":""));
-    return {s,c,st,arranged:!!c,focusRole};
+    return {s,c,st,arranged:!!(c&&c.day),focusRole};
   });
 
   // ---- Headline stats (reflect the current filter) ----
@@ -2443,7 +2507,9 @@ function buildReportTable(group,weeks,showRole,v){
       el("td",{},s.campus),
       ...(showRole?[el("td",{}, focusRole?el("span",{class:"pill blue"},focusRole):el("span",{class:"muted"},"—"))]:[]),
       el("td",{},s.coName||"—"),
-      el("td",{}, c?el("span",{class:"pill held"},`${c.day} ${c.start}`):el("span",{class:"pill missed"},"Not set")),
+      el("td",{}, (c&&c.day)?el("span",{class:"pill held"},`${c.day} ${c.start}`)
+        : c?el("span",{class:"pill pending"},"Default slot")
+        : el("span",{class:"pill missed"},"Not set")),
       el("td",{},String(st.held)),
       el("td",{},String(st.attended)),
       el("td",{},String(st.missed)),
@@ -2467,7 +2533,7 @@ function showSupervisorDetail(supUid,supName,lens,rows,sem,weeks){
     const block=el("div",{style:"border:1px solid var(--line);border-radius:8px;overflow:hidden"});
     block.append(el("div",{style:"padding:9px 13px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px"},
       el("strong",{class:"ui"},s.name+(focusRole?" · "+focusRole:"")),
-      el("span",{class:"muted ui",style:"font-size:12.5px"},s.campus+(c?` · ${c.day} ${c.start}–${c.end}`:" · no time set"))));
+      el("span",{class:"muted ui",style:"font-size:12.5px"},s.campus+((c&&c.day)?` · ${c.day} ${c.start}–${c.end}`:c?" · default slot (no fixed time)":" · no time set"))));
     if(!c){
       block.append(el("p",{class:"muted",style:"padding:10px 13px;margin:0"},"No consultation arranged — nothing logged."));
     } else {
@@ -2507,7 +2573,7 @@ function downloadReportCSV(rows,sem,weeks){
     const rate=st.held?Math.round(st.attended/st.held*100)+"%":"";
     const cell=[
       s.name,s.sid,s.campus,s.principalName||"",s.coName||"",
-      c?"yes":"no", c?`${c.day} ${c.start}-${c.end}`:"",
+      (c&&c.day)?"yes":"no", (c&&c.day)?`${c.day} ${c.start}-${c.end}`:"",
       st.held,st.attended,st.missed, c?.coUid?`${coYes}/${coTot}`:"", rate
     ];
     lines.push(cell.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(","));
@@ -3036,7 +3102,8 @@ async function renderStudentView(sid,enrolments,sems){
         const block=el("div",{style:"margin:2px 0 6px"});
         block.append(el("p",{style:"margin:2px 0"},
           el("span",{class:"muted ui",style:"font-size:12px"},"Usual time: "),
-          `${c.day} ${c.start}–${c.end}${c.mode?" · "+c.mode:""}`+(c.principalName?" · with "+c.principalName:"")));
+          c.day?`${c.day} ${c.start}–${c.end}${c.mode?" · "+c.mode:""}`+(c.principalName?" · with "+c.principalName:"")
+               :"No fixed weekly time \u2014 your supervisor arranges each meeting"+(c.principalName?" (with "+c.principalName+")":"")));
         if(c.meetingLink) block.append(el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Join meeting"));
         card.append(block);
 
