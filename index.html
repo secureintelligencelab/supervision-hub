@@ -73,6 +73,10 @@
   html[data-theme="dark"] .stucard.active{background:#2f8f8926}
   html[data-theme="dark"] .ctime{background:#2f8f891f}
   html[data-theme="dark"] .weeklog .wrow.now{background:#2f8f891a}
+  html[data-theme="dark"] .wksq.ok{color:#9fd8ab}
+  html[data-theme="dark"] .wksq.miss{color:#f0a68f}
+  html[data-theme="dark"] .wksq.heldsq{color:#aac5f0}
+  html[data-theme="dark"] .locknote{color:#eec984}
   html{-webkit-text-size-adjust:100%}
   body{
     margin:0;background:var(--paper);color:var(--ink);
@@ -282,6 +286,21 @@
     .cact{justify-content:flex-start}
   }
 
+  /* Attendance week navigation — one week at a time */
+  .weeknav{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .wkstrip{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+  .wksq{width:31px;height:31px;border-radius:7px;border:1px solid var(--line-strong);
+    background:var(--paper-2);font:600 12px ui-sans-serif,system-ui,sans-serif;
+    color:var(--ink-soft);cursor:pointer;padding:0}
+  .wksq.ok{background:var(--green-soft);color:#256a37;border-color:transparent}
+  .wksq.miss{background:var(--clay-soft);color:#8a3315;border-color:transparent}
+  .wksq.heldsq{background:var(--blue-soft);color:#2c4a80;border-color:transparent}
+  .wksq.nh{background:var(--line);border-color:transparent}
+  .wksq.future{opacity:.4;cursor:default}
+  .wksq.sel{outline:2px solid var(--teal);outline-offset:1px}
+  .locknote{margin-top:9px;font-size:12.5px;color:#7a5408;background:var(--amber-soft);
+    border-radius:7px;padding:7px 11px;display:inline-block}
+
   /* Attendance student picker — tappable cards */
   .stupick{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
   .stucard{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
@@ -481,7 +500,7 @@ function seedDemo(){
   mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222",area:"IT"};
   mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444",area:"Business"};
   mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666",area:"IT"};
-  mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,start:"2026-07-13",units:[
+  mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,start:"2026-07-13",end:"2026-10-03",backWeeks:2,units:[
     {id:"u1",code:"RES915",name:"Literature, Methodology & Proposal"},
     {id:"u2",code:"RES920",name:"Research Project"}
   ]};
@@ -715,6 +734,36 @@ function currentWeekOf(sem){
   const now=new Date(); now.setHours(0,0,0,0);
   const wk=Math.floor((now-mon)/(7*24*3600*1000))+1;
   return (wk>=1 && wk<=(sem.weeks||12)) ? wk : null;
+}
+
+// Monday & Saturday dates of a given teaching week (null when no start date).
+function semWeekBounds(sem,w){
+  if(!sem?.start) return null;
+  const s=new Date(sem.start+"T00:00:00");
+  if(isNaN(s.getTime())) return null;
+  const mon=new Date(s); mon.setDate(s.getDate()-((s.getDay()+6)%7)+(w-1)*7);
+  const sat=new Date(mon); sat.setDate(mon.getDate()+5);
+  return {mon,sat};
+}
+function weekRangeLabel(sem,w){
+  const b=semWeekBounds(sem,w); if(!b) return "";
+  const f=d=>d.getDate()+" "+d.toLocaleString("en",{month:"short"});
+  return f(b.mon)+" \u2013 "+f(b.sat);
+}
+// Reference week for the attendance editing window:
+//   before the semester -> 0 (nothing recordable yet)
+//   during              -> the current teaching week
+//   after it ends       -> the final week (window counts back from there)
+//   no start date       -> null (no date-based locking possible)
+function lockRefWeek(sem){
+  if(!sem?.start) return null;
+  const s=new Date(sem.start+"T00:00:00");
+  if(isNaN(s.getTime())) return null;
+  const mon=new Date(s); mon.setDate(s.getDate()-((s.getDay()+6)%7));
+  const now=new Date(); now.setHours(0,0,0,0);
+  const wk=Math.floor((now-mon)/(7*24*3600*1000))+1;
+  if(wk<1) return 0;
+  return Math.min(wk, sem.weeks||12);
 }
 // counts across a consultation's weeks
 function consultStats(cons,totalWeeks){
@@ -1665,6 +1714,20 @@ async function viewMeetingLog(v){
   const sem=activeSemester();
   const weeks=sem?.weeks||12;
   const cw=currentWeekOf(sem);
+  // ---- Moodle-style editing window ----
+  // ref: the week the window counts back from; backW: how many weeks back a
+  // supervisor may still record (admin-set per semester; -1 = no limit).
+  const ref=lockRefWeek(sem);
+  const backW=(sem?.backWeeks===undefined||sem?.backWeeks===null||sem?.backWeeks==="")?2:parseInt(sem.backWeeks);
+  function weekEditable(w){
+    if(S.role!=="supervisor") return true;   // admin is never date-locked
+    if(ref===null) return true;              // no start date -> no locking
+    if(w>ref) return false;                  // future weeks not recordable
+    if(backW<0) return true;                 // no limit
+    return w>=ref-backW;
+  }
+  let selWeek=null;   // currently selected week (persists across student taps)
+  let showAll=false;  // admin-only: full register
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Weekly attendance register · "+weeks+" weeks"+(cw?" · now in week "+cw:"")),
     el("h2",{},"Attendance"))));
@@ -1672,7 +1735,7 @@ async function viewMeetingLog(v){
   v.append(bar);
   v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
     S.role==="supervisor"
-      ? "Pick a student and tap to mark each week's consultation: held, student attended, co-supervisor attended. Works on your phone — tap straight after the meeting in the Teams channel. Co-supervised students are shown read-only."
+      ? "Pick a student, choose the week, then tap to mark that week's consultation: held, student attended, co-supervisor attended. You can record the current week and go back as far as your admin allows; future weeks are locked. Co-supervised students are shown read-only."
       : "Read-only view of each student's weekly consultation attendance, recorded by the principal supervisor."));
 
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
@@ -1788,11 +1851,63 @@ async function viewMeetingLog(v){
           canSetTime?el("button",{class:"btn ghost sm",onclick:()=>consultForm(s,c,()=>renderStudentAfterReload(studentId))},"Edit time / link"):"")));
     panel.append(head);
 
-    const log=el("div",{class:"weeklog"});
+    // ---- one week at a time (Moodle-style): pick the week, then record ----
+    if(selWeek==null) selWeek = cw || (ref&&ref>=1?Math.min(ref,weeks):1);
+    selWeek=Math.min(Math.max(selWeek,1),weeks);
+
+    const navRow=el("div",{class:"weeknav"});
+    const wsel=el("select",{style:"width:auto;min-width:215px"});
     for(let w=1;w<=weeks;w++){
-      log.append(weekRow(c,s,w,canEdit,studentId));
+      const range=weekRangeLabel(sem,w);
+      let suffix="";
+      if(cw===w) suffix=" \u00B7 this week";
+      else if(canEdit && !weekEditable(w)) suffix=(ref!==null&&w>ref)?" \u00B7 upcoming":" \u00B7 locked";
+      wsel.append(el("option",{value:String(w),...(w===selWeek?{selected:"selected"}:{})},
+        "Week "+w+(range?" \u00B7 "+range:"")+suffix));
+    }
+    wsel.onchange=()=>{ selWeek=parseInt(wsel.value); renderStudent(studentId); };
+    navRow.append(
+      el("button",{class:"btn ghost sm",...(selWeek<=1?{disabled:"disabled"}:{}),
+        onclick:()=>{selWeek--;renderStudent(studentId);}},"\u2190"),
+      wsel,
+      el("button",{class:"btn ghost sm",...(selWeek>=weeks?{disabled:"disabled"}:{}),
+        onclick:()=>{selWeek++;renderStudent(studentId);}},"\u2192"));
+    if(cw && cw!==selWeek)
+      navRow.append(el("button",{class:"btn sm",onclick:()=>{selWeek=cw;renderStudent(studentId);}},"This week"));
+    panel.append(navRow);
+
+    // week strip: whole-semester overview & quick navigation
+    // (green = attended, red = missed, blue = held, grey = not held, dim = upcoming)
+    const wstrip=el("div",{class:"wkstrip"});
+    for(let w=1;w<=weeks;w++){
+      const l=weekLog(c,w);
+      let cls="";
+      if(l.held===true&&l.studentAttended===true) cls="ok";
+      else if(l.held===true&&l.studentAttended===false) cls="miss";
+      else if(l.held===true) cls="heldsq";
+      else if(l.held===false) cls="nh";
+      if(ref!==null&&w>ref) cls+=" future";
+      const range=weekRangeLabel(sem,w);
+      wstrip.append(el("button",{class:"wksq "+cls+(w===selWeek?" sel":""),
+        title:"Week "+w+(range?" \u00B7 "+range:""),
+        onclick:()=>{selWeek=w;renderStudent(studentId);}},String(w)));
+    }
+    panel.append(wstrip);
+
+    const log=el("div",{class:"weeklog"});
+    if(S.role==="admin"&&showAll){
+      for(let w=1;w<=weeks;w++) log.append(weekRow(c,s,w,canEdit,studentId));
+    } else {
+      log.append(weekRow(c,s,selWeek,canEdit,studentId));
     }
     panel.append(log);
+
+    if(S.role==="admin"){
+      const cb=el("input",{type:"checkbox",...(showAll?{checked:"checked"}:{})});
+      cb.onchange=()=>{ showAll=cb.checked; renderStudent(studentId); };
+      panel.append(el("label",{class:"row ui",style:"gap:8px;margin-top:10px;font-size:13.5px;cursor:pointer;align-items:center"},
+        cb,"Show all weeks (full register)"));
+    }
 
     if(!canEdit && S.role==="admin"){
       panel.append(el("p",{class:"muted ui",style:"margin-top:10px"},
@@ -1804,7 +1919,9 @@ async function viewMeetingLog(v){
     }
   }
 
-  function weekRow(c,s,w,canEdit,studentId){
+  function weekRow(c,s,w,canEditRole,studentId){
+    const unlocked=weekEditable(w);
+    const canEdit=canEditRole&&unlocked;   // role permission AND inside the editing window
     const et=weekTime(c,w);
     const l=weekLog(c,w);
     const isNow=cw===w;
@@ -1814,6 +1931,8 @@ async function viewMeetingLog(v){
     // meta line: effective time + override marker
     const meta=el("div",{class:"wmeta"});
     meta.append(el("span",{},`${et.day} ${et.start}–${et.end}`));
+    const _rng=weekRangeLabel(sem,w);
+    if(_rng) meta.append(el("span",{class:"muted"},"\u00B7 "+_rng));
     if(et.mode) meta.append(el("span",{},"· "+et.mode));
     if(et.overridden) meta.append(el("span",{class:"pill blue",style:"font-size:11.5px"},"Changed this week"));
     if(et.link) meta.append(el("a",{class:"linkpill",href:et.link,target:"_blank",rel:"noopener"},"Link"));
@@ -1852,6 +1971,16 @@ async function viewMeetingLog(v){
         }));
     }
     body.append(controls);
+
+    // locked-week notice \u2014 only for the supervisor who could otherwise edit
+    if(canEditRole && !unlocked){
+      body.append(el("div",{class:"locknote ui"},
+        (ref!==null && w>ref)
+          ? "\uD83D\uDD12 This week hasn't started yet \u2014 recording opens in week "+w+"."
+          : "\uD83D\uDD12 Editing window closed \u2014 your admin allows recording "+
+            (backW===0?"the current week only":"up to "+backW+" week"+(backW===1?"":"s")+" back")+
+            ". Ask admin to change earlier weeks."));
+    }
 
     // Reset — clears this week's record (held / attendance / comment) so the
     // supervisor can fix a mistake. Only shown when there's something to clear.
@@ -2644,6 +2773,26 @@ function semesterForm(existing,done){
     el("option",{value:"12",...((existing?.weeks||12)===12?{selected:"selected"}:{})},"12 weeks"),
     el("option",{value:"15",...((existing?.weeks)===15?{selected:"selected"}:{})},"15 weeks"));
   const start=el("input",{type:"date",value:existing?.start||""});
+  const endd=el("input",{type:"date",value:existing?.end||""});
+  const backSel=el("select",{},
+    ...[["0","Current week only"],["1","1 week back"],["2","2 weeks back (recommended)"],
+        ["3","3 weeks back"],["4","4 weeks back"],["-1","No limit"]]
+      .map(([val,txt])=>el("option",{value:val,
+        ...((String(existing?.backWeeks??2))===val?{selected:"selected"}:{})},txt)));
+  const dateHint=el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"");
+  function updDateHint(){
+    if(start.value&&endd.value){
+      const s=new Date(start.value+"T00:00:00"), e=new Date(endd.value+"T00:00:00");
+      if(!isNaN(s)&&!isNaN(e)&&e>=s){
+        const mon=new Date(s); mon.setDate(s.getDate()-((s.getDay()+6)%7));
+        const wk=Math.min(52,Math.max(1,Math.floor((e-mon)/(7*24*3600*1000))+1));
+        dateHint.textContent="\u2192 "+wk+" teaching weeks (derived from the dates; overrides the dropdown)";
+        return;
+      }
+    }
+    dateHint.textContent=start.value?"Add an end date to derive the weeks and enable week-by-week locking.":"";
+  }
+  start.addEventListener("change",updDateHint); endd.addEventListener("change",updDateHint); updDateHint();
 
   const unitList=el("div",{class:"grid",style:"gap:8px"});
   const rows=[];
@@ -2668,7 +2817,13 @@ function semesterForm(existing,done){
       el("div",{class:"grid",style:"grid-template-columns:1fr 1fr"},
         el("div",{},el("label",{},"Semester label"),label),
         el("div",{},el("label",{},"Teaching weeks"),weeks),
-        el("div",{style:"grid-column:1/-1"},el("label",{},"Week 1 start date (optional)"),start)),
+        el("div",{},el("label",{},"Class start date (week 1)"),start),
+        el("div",{},el("label",{},"Class end date"),endd),
+        el("div",{style:"grid-column:1/-1"},dateHint),
+        el("div",{style:"grid-column:1/-1"},
+          el("label",{},"Supervisors can record attendance\u2026"),backSel,
+          el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
+            "How far back a supervisor can go in the Attendance register (like Moodle's editing window). Future weeks are always locked. Admin can edit any week."))),
       el("div",{},el("label",{},"Units in this semester"),unitList,
         el("div",{style:"margin-top:8px"},addBtn)),
       el("div",{},el("p",{class:"muted",style:"margin:0"},"Add one or more units. Codes and names can differ each semester. Units appear on the student form, class timetables and the Moodle export. Setting a start date lets the app highlight the current teaching week in the Attendance register and the week planner."))),
@@ -2678,7 +2833,16 @@ function semesterForm(existing,done){
         .filter(u=>u.code||u.name);
       if(!units.length){ toast("Add at least one unit.",true); return false; }
       if(units.some(u=>!u.code)){ toast("Each unit needs a code.",true); return false; }
-      const data={label:label.value.trim(),weeks:parseInt(weeks.value),units,start:start.value||""};
+      let wkCount=parseInt(weeks.value);
+      if(start.value&&endd.value){
+        const s0=new Date(start.value+"T00:00:00"), e0=new Date(endd.value+"T00:00:00");
+        if(!isNaN(s0)&&!isNaN(e0)&&e0>=s0){
+          const mon=new Date(s0); mon.setDate(s0.getDate()-((s0.getDay()+6)%7));
+          wkCount=Math.min(52,Math.max(1,Math.floor((e0-mon)/(7*24*3600*1000))+1));
+        }
+      }
+      const data={label:label.value.trim(),weeks:wkCount,units,
+        start:start.value||"",end:endd.value||"",backWeeks:parseInt(backSel.value)};
       if(existing) await DB.update("semesters",existing.id,data);
       else await DB.add("semesters",data);
       S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
@@ -2784,18 +2948,30 @@ async function copyForward(fromSem,done){
     el("option",{value:"15",...((fromSem.weeks)===15?{selected:"selected"}:{})},"15 weeks"));
   const us=unitsOf(fromSem);
   const start=el("input",{type:"date"});
+  const cfEnd=el("input",{type:"date"});
   modal("Carry students forward",
     el("div",{class:"grid"},
       el("p",{class:"muted",style:"margin:0"},"Copies every student (with the same supervisors and unit enrolments) from \u201C"+fromSem.label+"\u201D into a new semester. The units below are carried over too. Timetables, consultations and meeting logs start fresh."),
       el("div",{},el("label",{},"New semester label"),label),
       el("div",{},el("label",{},"Teaching weeks"),weeks),
-      el("div",{},el("label",{},"Week 1 start date (optional)"),start),
+      el("div",{},el("label",{},"Class start date (week 1, optional)"),start),
+      el("div",{},el("label",{},"Class end date (optional)"),cfEnd),
       el("div",{},el("label",{},"Units carried over"),
         el("p",{class:"muted",style:"margin:4px 0 0"},us.length?us.map(u=>u.code).filter(Boolean).join(", "):"None"))),
     async()=>{
       if(!label.value.trim()){ toast("Enter a label.",true); return false; }
       const units=us.map(u=>({id:u.id,code:u.code,name:u.name}));
-      const newId=await DB.add("semesters",{label:label.value.trim(),weeks:parseInt(weeks.value),units,start:start.value||""});
+      let cfWk=parseInt(weeks.value);
+      if(start.value&&cfEnd.value){
+        const s0=new Date(start.value+"T00:00:00"), e0=new Date(cfEnd.value+"T00:00:00");
+        if(!isNaN(s0)&&!isNaN(e0)&&e0>=s0){
+          const mon=new Date(s0); mon.setDate(s0.getDate()-((s0.getDay()+6)%7));
+          cfWk=Math.min(52,Math.max(1,Math.floor((e0-mon)/(7*24*3600*1000))+1));
+        }
+      }
+      const newId=await DB.add("semesters",{label:label.value.trim(),weeks:cfWk,units,
+        start:start.value||"",end:cfEnd.value||"",
+        backWeeks:(fromSem.backWeeks===undefined||fromSem.backWeeks===null)?2:fromSem.backWeeks});
       const students=await DB.list("students",{semesterId:fromSem.id});
       for(const s of students){
         const {id,...rest}=s; await DB.add("students",{...rest,semesterId:newId});
