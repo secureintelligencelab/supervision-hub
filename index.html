@@ -823,7 +823,7 @@ function renderLogin(){
         " or ",el("code",{},"a.smith@uni.edu"),
         " with any password."));
     } else {
-      const sid=el("input",{placeholder:"e.g. 45001"});
+      const sid=el("input",{placeholder:"e.g. cihe45001"});
       const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:6px"},"View my schedule");
       btn.onclick=()=>studentLookup(sid.value.trim());
       sid.addEventListener("keydown",e=>{if(e.key==="Enter")btn.click();});
