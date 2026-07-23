@@ -1670,6 +1670,9 @@ async function viewConsultations(v){
         onclick:()=>weekPickThenOverride(c,()=>viewConsultations(v))},"Update Selected Weeks"));
       if(c) actions.append(el("button",{class:"btn danger sm",
         onclick:()=>confirmDelete("consultations",c.id,"this consultation",()=>viewConsultations(v))},"Delete"));
+      if(s.coUid) actions.append(el("button",{class:"btn ghost sm",
+        title:coSupEmail(s.coUid)?("Email "+(s.coName||supName(s.coUid))):"No email on file for the co-supervisor",
+        onclick:()=>emailCoSupervisors(students,cons,weeks,s)},"\u2709 Email co-supervisor"));
     } else if(isCo){
       actions.append(el("span",{class:"muted ui",style:"font-size:12.5px"},"Set by principal"));
     }
@@ -1678,10 +1681,148 @@ async function viewConsultations(v){
   }
   v.append(listEl);
 
+  // --- bulk: email every co-supervisor their students' consultation details ---
+  if(!coOnly){
+    const editable = students.filter(s=>(S.role==="admin"||s.principalUid===S.uid) && s.coUid);
+    if(editable.length){
+      const withMail=new Set(editable.filter(s=>coSupEmail(s.coUid)).map(s=>s.coUid));
+      const actionBar=el("div",{class:"toolbar",style:"margin-top:14px"},
+        el("button",{class:"btn",...(withMail.size?{}:{disabled:"disabled"}),
+          onclick:()=>emailCoSupervisors(editable,cons,weeks,null)},
+          "\u2709 Email consultation times to all co-supervisors"),
+        el("span",{class:"muted ui",style:"font-size:12.5px"},
+          withMail.size
+            ? withMail.size+" co-supervisor"+(withMail.size===1?"":"s")+" across "+editable.length+" student"+(editable.length===1?"":"s")+" — personalised or one combined email."
+            : "No email addresses on file for these co-supervisors."));
+      v.append(actionBar);
+    }
+  }
+
   if(S.role==="supervisor" && !coOnly && students.some(s=>s.coUid===S.uid && s.principalUid!==S.uid)){
     v.append(el("p",{class:"muted ui",style:"margin-top:10px"},
       "As co-supervisor you see the consultation time set by the principal and the student's current attendance. The full week-by-week record is on the Attendance tab (read-only for you)."));
   }
+}
+
+/* ------------------------------------------------------------
+   8b. EMAIL CO-SUPERVISORS (from the Consultation times tab)
+   Builds a personalised message per student — the recurring day /
+   time / mode, the Teams channel link and the attendance so far —
+   and hands it to the device's mail app via mailto:. Two modes:
+     · one student  -> a single personalised email to that co-sup
+     · all students -> either one personalised email per co-supervisor
+                       (opened one at a time) or a single combined
+                       digest to everyone in BCC.
+   Nothing is sent by the app itself; the user taps send.
+   ------------------------------------------------------------ */
+function coSupEmail(uid){ const u=S.supervisors.find(x=>x.id===uid); return u?.email||""; }
+
+// One student's consultation details rendered as plain text.
+function consultBlock(s,c,weeks){
+  const st=c?consultStats(c,weeks):null;
+  const L=[];
+  L.push("• "+(s.name||"Student")+(s.sid?" ("+s.sid+")":""));
+  L.push("  Campus: "+(s.campus||"—")+"   Area: "+(s.area||"—"));
+  L.push("  Principal supervisor: "+(s.principalName||"—"));
+  if(c&&c.day) L.push("  Consultation: "+c.day+" "+c.start+"–"+c.end+(c.mode?" ("+c.mode+")":""));
+  else if(c)   L.push("  Consultation: default slot — no fixed day/time set yet");
+  else         L.push("  Consultation: not set yet");
+  if(c?.meetingLink) L.push("  Teams channel: "+c.meetingLink);
+  if(st&&st.held) L.push("  Attendance so far: "+st.attended+" of "+st.held+" meetings attended ("
+    +Math.round(st.attended/st.held*100)+"%)"+(st.missed?", "+st.missed+" missed":""));
+  else L.push("  Attendance so far: nothing recorded yet");
+  return L.join("\n");
+}
+
+// Group students by their co-supervisor: [{uid,name,email,rows:[{s,c}]}]
+function groupByCo(students,cons){
+  const map=new Map();
+  for(const s of students){
+    if(!s.coUid) continue;
+    const c=cons.find(x=>x.studentDocId===s.id && x.supervisorUid===s.principalUid)||null;
+    if(!map.has(s.coUid)) map.set(s.coUid,{uid:s.coUid,name:s.coName||supName(s.coUid),email:coSupEmail(s.coUid),rows:[]});
+    map.get(s.coUid).rows.push({s,c});
+  }
+  return [...map.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+}
+
+// Modal: email the co-supervisor(s) about consultation times.
+// `only` = a single student object, or null for "all my students".
+function emailCoSupervisors(students,cons,weeks,only){
+  const sem=activeSemester();
+  const scoped = only ? students.filter(s=>s.id===only.id) : students;
+  const groups = groupByCo(scoped,cons);
+  if(!groups.length){ toast(only?"No co-supervisor assigned to this student.":"None of these students has a co-supervisor.",true); return; }
+
+  const withEmail = groups.filter(g=>g.email);
+  const noEmail   = groups.filter(g=>!g.email);
+  if(!withEmail.length){ toast("No email on file for "+(only?"this co-supervisor.":"any co-supervisor."),true); return; }
+
+  const style=el("select",{},
+    el("option",{value:"each"},"Personalised — one email per co-supervisor ("+withEmail.length+")"),
+    el("option",{value:"one"},"One combined email to all co-supervisors (BCC)"));
+  const subject=el("input",{value:"Consultation times — "+(sem?.label||"this semester")});
+  const intro=el("textarea",{style:"min-height:90px",value:
+    "Hello,\n\nHere are the current consultation arrangements for the student(s) you co-supervise. "+
+    "The times below are what weekly attendance is recorded against — please let me know if any of them clash with your teaching.\n"});
+  const sign=el("input",{value:(S.supervisors.find(u=>u.id===S.uid)?.name)||"",placeholder:"Your name (sign-off)"});
+  const preview=el("pre",{class:"muted ui",style:"white-space:pre-wrap;font-size:12px;max-height:190px;overflow:auto;background:rgba(127,127,127,.08);padding:10px;border-radius:8px;margin:0"});
+  const note=el("p",{class:"muted",style:"margin:0"});
+
+  function bodyFor(g){
+    return (intro.value||"")+"\n"+
+      g.rows.map(r=>consultBlock(r.s,r.c,weeks)).join("\n\n")+
+      "\n\nRecorded in the MRes Supervision Hub"+(sem?.label?" · "+sem.label:"")+
+      (sign.value?"\n\n— "+sign.value:"");
+  }
+  function combinedBody(){
+    return (intro.value||"")+"\n"+
+      groups.filter(g=>g.email).map(g=>
+        "── "+g.name+" ──\n"+g.rows.map(r=>consultBlock(r.s,r.c,weeks)).join("\n\n")).join("\n\n")+
+      "\n\nRecorded in the MRes Supervision Hub"+(sem?.label?" · "+sem.label:"")+
+      (sign.value?"\n\n— "+sign.value:"");
+  }
+  function refresh(){
+    if(style.value==="one"){
+      note.textContent="One email to "+withEmail.length+" co-supervisor"+(withEmail.length===1?"":"s")+" in BCC, covering "+scoped.filter(s=>s.coUid).length+" student(s).";
+      preview.textContent="To (BCC): "+withEmail.map(g=>g.email).join(", ")+"\nSubject: "+subject.value+"\n\n"+combinedBody();
+    } else {
+      note.textContent=withEmail.length+" personalised email"+(withEmail.length===1?"":"s")+" — your mail app opens once per co-supervisor.";
+      preview.textContent=withEmail.map(g=>"To: "+g.email+"\nSubject: "+subject.value+"\n\n"+bodyFor(g)).join("\n\n──────────\n\n");
+    }
+    if(noEmail.length) note.textContent+="  ·  "+noEmail.length+" skipped (no email on file: "+noEmail.map(g=>g.name).join(", ")+").";
+  }
+  style.onchange=refresh; subject.oninput=refresh; intro.oninput=refresh; sign.oninput=refresh;
+  refresh();
+  if(only) style.value="each", style.disabled=true;
+
+  modal(only?("Email co-supervisor — "+only.name):"Email consultation times to co-supervisors",
+    el("div",{class:"grid"},
+      el("div",{},el("label",{},"Send as"),style),
+      el("div",{},el("label",{},"Subject"),subject),
+      el("div",{},el("label",{},"Opening message"),intro),
+      el("div",{},el("label",{},"Sign off as"),sign),
+      el("div",{},el("label",{},"Preview"),preview),
+      note,
+      el("p",{class:"muted",style:"margin:0"},
+        "Each student's day, time, mode, Teams channel link and attendance so far are added automatically. This opens your device's mail app with everything pre-filled — review and tap send there; the hub does not send email itself.")),
+    async()=>{
+      if(style.value==="one"){
+        const me=S.supervisors.find(u=>u.id===S.uid);
+        window.location.href="mailto:"+encodeURIComponent(me?.email||"")
+          +"?bcc="+encodeURIComponent(withEmail.map(g=>g.email).join(","))
+          +"&subject="+encodeURIComponent(subject.value||"")
+          +"&body="+encodeURIComponent(combinedBody());
+        toast("Opening mail app with "+withEmail.length+" co-supervisor(s) in BCC.");
+      } else {
+        // open one mail draft per co-supervisor, spaced so the OS handler keeps up
+        withEmail.forEach((g,i)=>setTimeout(()=>{
+          openEmail(g.email,subject.value,bodyFor(g));
+        }, i*900));
+        toast(withEmail.length===1?"Opening mail app…":"Opening "+withEmail.length+" drafts, one at a time…");
+      }
+      return true;
+    },"Open mail app");
 }
 
 function consultForm(student,existing,done){
