@@ -283,6 +283,12 @@
   .attbar .fill{height:100%;background:var(--green);border-radius:99px}
   .attbar .fill.low{background:var(--clay)}
   .cact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .ccard .wktable{grid-column:1/-1}
+  .ccard .wktable table{width:100%;border-collapse:collapse}
+  .ccard .wktable th{text-align:left;padding:7px 10px;background:#0000000a;border-bottom:1px solid var(--line);
+    font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  .ccard .wktable td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  .ccard .wktable tr:last-child td{border-bottom:none}
   @media (max-width:820px){
     .ccard{grid-template-columns:1fr;gap:9px}
     .ctime{display:flex;gap:10px;align-items:baseline;justify-content:flex-start;text-align:left;width:fit-content;padding:6px 12px}
@@ -1749,6 +1755,24 @@ async function viewConsultations(v){
   // sort so a supervisor's principal students come first, then co
   if(showRole) students.sort((a,b)=>(a.principalUid===S.uid?0:1)-(b.principalUid===S.uid?0:1));
 
+  // Which teaching week we're in — highlighted in the per-student week table.
+  const curWeek=currentWeekOf(sem);
+
+  // Expand / collapse every student's week timetable at once.
+  S.openWeeks=S.openWeeks||{};
+  const withCons=students.map(s=>cons.find(x=>x.studentDocId===s.id && x.supervisorUid===s.principalUid)).filter(Boolean);
+  if(withCons.length){
+    const allOpen=withCons.every(c=>S.openWeeks[c.id]);
+    v.append(el("div",{class:"row",style:"margin:2px 0 12px;gap:10px;align-items:center;flex-wrap:wrap"},
+      el("button",{class:"btn ghost sm",onclick:()=>{
+        withCons.forEach(c=>{ S.openWeeks[c.id]=!allOpen; });
+        viewConsultations(v);
+      }},allOpen?"\u25B4 Collapse all week timetables":"\u25BE Expand all week timetables"),
+      el("span",{class:"muted ui",style:"font-size:12.5px"},
+        "Shows every week of the semester per student \u2014 the time that week, whether it was changed, and what was recorded."+
+        (curWeek?" You are in week "+curWeek+".":""))));
+  }
+
   // Card per student instead of a dense table: the day/time reads as a
   // "ticket", unset rows are amber-flagged with a prominent Set-time CTA,
   // and attendance shows as a mini progress bar.
@@ -1839,7 +1863,33 @@ async function viewConsultations(v){
     } else if(isCo){
       actions.append(el("span",{class:"muted ui",style:"font-size:12.5px"},"Set by principal"));
     }
+
+    // --- full week timetable: expand / collapse (everyone who can see the
+    //     card, principal and co-supervisor alike) ---
+    let panel=null;
+    if(c){
+      const open=S.openWeeks && S.openWeeks[c.id];
+      const toggle=el("button",{class:"btn ghost sm","aria-expanded":open?"true":"false"},
+        (open?"\u25B4 Hide":"\u25BE Show")+" all "+weeks+" weeks");
+      panel=el("div",{style:"grid-column:1/-1"+(open?"":";display:none")});
+      // Re-render the tab after a week is saved so both the card summary
+      // ("N weeks changed") and the table pick up the new time. The panel
+      // stays open because S.openWeeks persists across the re-render.
+      const afterSave=()=>viewConsultations(v);
+      if(open) panel.append(weekTable(c,weeks,curWeek,canEdit,afterSave));
+      toggle.onclick=()=>{
+        S.openWeeks=S.openWeeks||{};
+        const nowOpen=!S.openWeeks[c.id];
+        S.openWeeks[c.id]=nowOpen;
+        toggle.textContent=(nowOpen?"\u25B4 Hide":"\u25BE Show")+" all "+weeks+" weeks";
+        toggle.setAttribute("aria-expanded",nowOpen?"true":"false");
+        panel.style.display=nowOpen?"":"none";
+        if(nowOpen && !panel.children.length) panel.append(weekTable(c,weeks,curWeek,canEdit,afterSave));
+      };
+      actions.append(toggle);
+    }
     card.append(actions);
+    if(panel) card.append(panel);
     listEl.append(card);
   }
   v.append(listEl);
@@ -1986,6 +2036,67 @@ function emailCoSupervisors(students,cons,weeks,only){
       }
       return true;
     },"Open mail app");
+}
+
+/* ------------------------------------------------------------
+   8c. FULL WEEK TIMETABLE (expand / collapse on each card)
+   Principals and co-supervisors both need to see every week at a
+   glance — the recurring slot is only half the story once single
+   weeks have been moved. This lists week 1..N with the effective
+   time for that week, flags the ones that were changed, and shows
+   what was recorded against each.
+   ------------------------------------------------------------ */
+function weekStatusPill(l){
+  if(l.held===true){
+    if(l.studentAttended===true) return el("span",{class:"pill held",style:"font-size:11px"},"Attended");
+    if(l.studentAttended===false) return el("span",{class:"pill missed",style:"font-size:11px"},"Missed");
+    return el("span",{class:"pill none",style:"font-size:11px"},"Held");
+  }
+  if(l.held===false) return el("span",{class:"pill none",style:"font-size:11px"},"Not held");
+  return el("span",{class:"pill none",style:"font-size:11px",title:"Nothing recorded for this week yet"},"\u2014");
+}
+
+// Builds the week-by-week table for one consultation.
+// `canEdit` adds a per-row Edit button that opens the same single-week
+// override form as "Update Selected Weeks", but jumps straight to that
+// week instead of asking which one. `onSaved` re-renders the caller.
+function weekTable(c,weeks,curWeek,canEdit,onSaved){
+  const wrap=el("div",{class:"wktable",style:"margin-top:10px;border:1px solid var(--line);border-radius:10px;overflow:auto"});
+  const t=el("table",{style:"width:100%;font-size:13px"});
+  const heads=["Week","Day","Time","Mode","Status","Co-sup","Note"];
+  if(canEdit) heads.push("");
+  t.append(el("thead",{},el("tr",{},...heads.map(h=>el("th",{style:"font-size:11.5px"},h)))));
+  const tb=el("tbody",{});
+  for(let w=1;w<=weeks;w++){
+    const et=weekTime(c,w), l=weekLog(c,w);
+    const isNow=(curWeek===w);
+    const tr=el("tr",{style:isNow?"background:var(--blue-soft)":""});
+    const wkCell=el("td",{style:"white-space:nowrap"},
+      el("strong",{class:"ui"},"W"+w));
+    if(isNow) wkCell.append(el("span",{class:"pill blue",style:"font-size:10.5px;margin-left:5px"},"now"));
+    if(et.overridden) wkCell.append(el("span",{class:"pill pending",style:"font-size:10.5px;margin-left:5px",
+      title:"This week's time was changed from the recurring slot"},"changed"));
+    const coTxt=l.coAttended==="yes"?"Yes":l.coAttended==="no"?"No":l.coAttended==="na"?"n/a":"\u2014";
+    tr.append(wkCell,
+      el("td",{class:et.overridden?"":"muted"},et.day||"\u2014"),
+      el("td",{class:et.overridden?"":"muted",style:"white-space:nowrap"},
+        (et.start&&et.end)?et.start+"\u2013"+et.end:"\u2014"),
+      el("td",{class:"muted"},et.mode||"\u2014"),
+      el("td",{},weekStatusPill(l)),
+      el("td",{class:"muted"},coTxt),
+      el("td",{class:"muted",style:"font-size:12.5px"},l.comment||"\u2014"));
+    if(canEdit){
+      const cell=el("td",{style:"white-space:nowrap;text-align:right"});
+      cell.append(el("button",{class:"btn xs ghost",
+        title:et.overridden?("Change or reset week "+w+"'s time"):("Set a one-off time for week "+w),
+        onclick:()=>weekOverrideForm(c,w,onSaved)},
+        et.overridden?"Edit":"\u270E Change"));
+      tr.append(cell);
+    }
+    tb.append(tr);
+  }
+  t.append(tb); wrap.append(t);
+  return wrap;
 }
 
 function consultForm(student,existing,done){
@@ -2476,7 +2587,8 @@ function weekOverrideForm(c,w,done){
   const mode=el("select",{},...["Online","In person","Hybrid"].map(m=>el("option",{value:m,...(m===(cur.mode||c.mode)?{selected:"selected"}:{})},m)));
   const link=el("input",{value:cur.link||"",placeholder:"Leave blank to use the recurring link"});
 
-  modal("Week "+w+" — change time",
+  const wkRange=weekRangeLabel(activeSemester(),w);
+  modal("Week "+w+(wkRange?" ("+wkRange+")":"")+" — change time",
     el("div",{class:"grid"},
       el("label",{class:"ui",style:"display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink)"},
         useDefault," Use the recurring time for this week (no change)"),
