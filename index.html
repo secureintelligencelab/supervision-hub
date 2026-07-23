@@ -125,6 +125,9 @@
   .pill.held{background:var(--green-soft);color:#235c30}
   .pill.missed{background:var(--clay-soft);color:#7e3017}
   .pill.blue{background:var(--blue-soft);color:#264068}
+  .nbadge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+    padding:0 5px;margin-left:6px;border-radius:9px;background:var(--clay,#c2410c);color:#fff;
+    font-size:11px;font-weight:700;line-height:1;vertical-align:middle}
   table{width:100%;border-collapse:collapse;font-size:15px}
   th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
   th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;text-transform:uppercase;
@@ -478,6 +481,14 @@ function getFactoryAuth(){
                                   comment:string }
                           }
                         }
+     notes/{id}       -> {                                   // supervision message board
+                          semesterId, studentDocId,           // thread = ONE per student
+                          authorUid, authorName,
+                          authorRole:'principal'|'co'|'admin'|'student',
+                          text, createdAt (ms),
+                          pinned:bool,                        // staff can pin a note
+                          readBy:{ <uid|'student'>:true }     // who has seen it
+                        }
      (attendance collection retained for back-compat reads only; new logging
       lives inside consultations.weeks so meetings + attendance are one record.)
 
@@ -492,7 +503,7 @@ function getFactoryAuth(){
    longer used by the app.)
    ============================================================ */
 
-const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{} };
+const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, notes:{} };
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
@@ -522,6 +533,17 @@ function seedDemo(){
       2:{held:true,studentAttended:false,coAttended:"na",comment:"Student unwell, rescheduled offline."},
       3:{held:true,studentAttended:true,coAttended:"no",comment:""}
     }};
+  // sample supervision notes (message board)
+  const dayAgo=n=>Date.now()-n*86400000;
+  mem.notes["n1"]={semesterId:"s2-2026",studentDocId:"st1",authorUid:"supA",authorName:"Dr Smith",
+    authorRole:"principal",text:"Aisha, your literature matrix is looking strong. Dr Patel — could you cast an eye over the methodology section before week 5?",
+    createdAt:dayAgo(6),pinned:true,readBy:{supA:true}};
+  mem.notes["n2"]={semesterId:"s2-2026",studentDocId:"st1",authorUid:"supC",authorName:"Dr Patel",
+    authorRole:"co",text:"Happy to. I've added comments in the shared drive — mostly around sampling justification.",
+    createdAt:dayAgo(4),pinned:false,readBy:{supC:true}};
+  mem.notes["n3"]={semesterId:"s2-2026",studentDocId:"st1",authorUid:"student:45001",authorName:"Aisha Khan",
+    authorRole:"student",text:"Thank you both. I'll have the revised methodology ready before our Wednesday consultation.",
+    createdAt:dayAgo(2),pinned:false,readBy:{"student:45001":true}};
 }
 
 const DB = {
@@ -600,7 +622,8 @@ const DB = {
 /* ============================================================
    3. APP STATE & HELPERS
    ============================================================ */
-const S = { user:null, role:null, uid:null, semesters:[], activeSem:null, tab:"students", supervisors:[] };
+const S = { user:null, role:null, uid:null, semesters:[], activeSem:null, tab:"students", supervisors:[],
+            studentSid:null, studentName:"", unreadNotes:0, notesTabBtn:null, bannerShown:false };
 
 const $ = s=>document.querySelector(s);
 const el = (tag,props={},...kids)=>{
@@ -779,6 +802,84 @@ function consultStats(cons,totalWeeks){
   return {held,attended,missed,logged};
 }
 
+/* ------------------------------------------------------------
+   3b. SUPERVISION NOTES (message board)
+   One thread per student. Principal, co-supervisor, admin and the
+   student all post into the same thread, so nobody is working from
+   a different copy. `readBy` tracks who has seen each note, which
+   drives the unread badge on the tab and the banner shown at login.
+   ------------------------------------------------------------ */
+// Identity used in readBy / authorUid. Students have no auth account,
+// so they are keyed by their student ID.
+function noteMeId(){ return S.studentSid ? ("student:"+S.studentSid) : S.uid; }
+function noteMeName(){ return S.studentName || S.userName || S.user?.email || "Unknown"; }
+// Role of the current viewer *relative to a given student*.
+function noteMyRole(stu){
+  if(S.studentSid) return "student";
+  if(S.role==="admin") return "admin";
+  if(stu && stu.coUid===S.uid && stu.principalUid!==S.uid) return "co";
+  return "principal";
+}
+function roleLabel(r){
+  return r==="principal"?"Principal supervisor":r==="co"?"Co-supervisor":r==="admin"?"Admin":"Student";
+}
+function rolePillClass(r){
+  return r==="principal"?"held":r==="co"?"blue":r==="admin"?"pending":"none";
+}
+function isUnread(n,meId){ return !(n.readBy&&n.readBy[meId]) && n.authorUid!==meId; }
+
+// All notes for a set of students, newest first.
+// Errors are surfaced, not swallowed: if Firestore rules block the `notes`
+// collection the tab would otherwise render as a blank page with no clue why.
+async function loadNotes(semesterId,studentIds){
+  let all;
+  try{
+    all=await DB.list("notes", semesterId?{semesterId}:{});
+  }catch(err){
+    console.error("loadNotes failed",err);
+    const e=new Error(err?.message||"Could not read messages");
+    e.notesRuleError=true; throw e;
+  }
+  const set=studentIds?new Set(studentIds):null;
+  return all.filter(n=>!set||set.has(n.studentDocId))
+            .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
+async function postNote(stu,text,pinned){
+  const t=(text||"").trim();
+  if(!t) { toast("Write something first.",true); return false; }
+  const meId=noteMeId();
+  await DB.add("notes",{
+    semesterId:stu.semesterId||S.activeSem, studentDocId:stu.id,
+    authorUid:meId, authorName:noteMeName(), authorRole:noteMyRole(stu),
+    text:t, createdAt:Date.now(), pinned:!!pinned, readBy:{[meId]:true}
+  });
+  return true;
+}
+async function markNotesRead(notes){
+  const meId=noteMeId();
+  const todo=notes.filter(n=>isUnread(n,meId));
+  for(const n of todo){
+    await DB.update("notes",n.id,{readBy:{...(n.readBy||{}),[meId]:true}});
+    n.readBy={...(n.readBy||{}),[meId]:true};
+  }
+  return todo.length;
+}
+function relTime(ms){
+  if(!ms) return "";
+  const d=Math.floor((Date.now()-ms)/1000);
+  if(d<60) return "just now";
+  if(d<3600) return Math.floor(d/60)+" min ago";
+  if(d<86400) return Math.floor(d/3600)+" h ago";
+  if(d<604800) return Math.floor(d/86400)+" d ago";
+  return new Date(ms).toLocaleDateString();
+}
+// Students visible to the current staff user (for the notes tab).
+async function myNoteStudents(){
+  let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+  if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
+  return students;
+}
+
 /* ============================================================
    4. AUTH FLOW
    ============================================================ */
@@ -858,6 +959,7 @@ async function doLogin(email,password){
 }
 
 async function afterLogin(){
+  S.studentSid=null; S.studentName=""; S.bannerShown=false;
   S.semesters=await DB.list("semesters");
   S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
   // default to the semester that actually has students (fall back to first)
@@ -918,11 +1020,11 @@ function renderApp(){
   const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
   const TABS = S.role==="admin"
     ? [["students","Students"],["schedule","Week planner"],["timetables","Class timetables"],["consultations","Consultation times"],
-       ["meetinglog","Attendance"],["report","Summary report"],
+       ["meetinglog","Attendance"],["notes","Messages"],["report","Summary report"],
        ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
     : [["students","My students"],["schedule","My week"],["timetables","My class time"],
        ["consultations",coOnly?"View consultation time":"Set consultation time"],
-       ["meetinglog","Attendance"]];
+       ["meetinglog","Attendance"],["notes","Messages"]];
   // guard FIRST: if current tab not in this role's set, default to the first,
   // so the tab strip below is built with the correct button highlighted.
   if(!TABS.some(t=>t[0]===S.tab)) S.tab=TABS[0][0];
@@ -936,17 +1038,69 @@ function renderApp(){
       [...tabs.children].forEach(x=>x.classList.toggle("active",x===b));
       drawMain();
     }},label);
+    if(id==="notes"){ b.append(el("span",{class:"nbadge",style:"display:none"},"0")); S.notesTabBtn=b; }
     tabs.append(b);
   });
   const main=el("main",{},el("div",{id:"view"}));
   document.body.append(header,el("div",{},main),toastNode());
   main.prepend(tabs);
   drawMain();
+  refreshUnreadBadge();
+  showInboxBanner();
+}
+
+/* Unread count on the Messages tab, refreshed after any note action. */
+async function refreshUnreadBadge(){
+  try{
+    const b=S.notesTabBtn; if(!b||!b.isConnected) return;
+    const students=await myNoteStudents();
+    const notes=await loadNotes(S.activeSem,students.map(s=>s.id));
+    const meId=noteMeId();
+    const n=notes.filter(x=>isUnread(x,meId)).length;
+    const dot=b.querySelector(".nbadge");
+    if(!dot) return;
+    dot.textContent=n>99?"99+":String(n);
+    dot.style.display=n?"inline-flex":"none";
+    S.unreadNotes=n;
+  }catch(e){ console.warn("unread badge unavailable:",e?.message||e); }
+}
+
+/* Login banner: on sign-in, show what's waiting rather than making the
+   user hunt for it. Appears once per session, above the tab content. */
+async function showInboxBanner(){
+  if(S.bannerShown) return; S.bannerShown=true;
+  try{
+    const students=await myNoteStudents();
+    const notes=await loadNotes(S.activeSem,students.map(s=>s.id));
+    const meId=noteMeId();
+    const unread=notes.filter(n=>isUnread(n,meId));
+    if(!unread.length) return;
+    const byStudent=new Map();
+    unread.forEach(n=>byStudent.set(n.studentDocId,(byStudent.get(n.studentDocId)||0)+1));
+    const names=[...byStudent.keys()].map(id=>students.find(s=>s.id===id)?.name).filter(Boolean);
+    const bar=el("div",{class:"card ui inbox-banner",style:"border-left:4px solid var(--blue);margin:0 0 14px;padding:12px 14px"},
+      el("div",{class:"row",style:"align-items:center;gap:10px;flex-wrap:wrap"},
+        el("span",{class:"pill blue"},"\u2709 "+unread.length+" new message"+(unread.length===1?"":"s")),
+        el("span",{class:"ui",style:"font-size:13.5px"},
+          "from your supervision threads"+(names.length?" \u00B7 "+names.slice(0,3).join(", ")+(names.length>3?" +"+(names.length-3)+" more":""):"")),
+        el("span",{style:"flex:1;min-width:10px"}),
+        el("button",{class:"btn sm",onclick:()=>{
+          S.tab="notes";
+          const strip=document.querySelector("nav.tabs");
+          if(strip) [...strip.children].forEach(x=>x.classList.toggle("active",x.textContent.startsWith("Messages")));
+          drawMain();
+          bar.remove();
+        }},"Read them"),
+        el("button",{class:"btn ghost sm",onclick:()=>bar.remove()},"Dismiss")));
+    const main=document.querySelector("main");
+    const view=$("#view");
+    if(main&&view) main.insertBefore(bar,view);
+  }catch(e){ console.warn("messages banner unavailable:",e?.message||e); }
 }
 function logout(){ if(DEMO){ S.user=null; renderLogin(); return; } signOut(auth); }
 
 function semesterPicker(onChange){
-  const sel=el("select",{style:"width:auto;min-width:170px",onchange:e=>{S.activeSem=e.target.value;onChange();}});
+  const sel=el("select",{style:"width:auto;min-width:170px",onchange:e=>{S.activeSem=e.target.value;onChange();refreshUnreadBadge();}});
   if(!S.semesters.length){ sel.append(el("option",{},"No semesters yet")); sel.disabled=true; }
   S.semesters.forEach(s=>sel.append(el("option",{value:s.id,...(s.id===S.activeSem?{selected:"selected"}:{})},
     s.label+" · "+semUnitCodes(s))));
@@ -960,6 +1114,7 @@ async function drawMain(){
   if(S.tab==="timetables") return viewTimetables(v);
   if(S.tab==="consultations") return viewConsultations(v);
   if(S.tab==="meetinglog") return viewMeetingLog(v);
+  if(S.tab==="notes") return viewNotes(v);
   if(S.tab==="report") return viewReport(v);
   if(S.tab==="export") return viewExport(v);
   if(S.tab==="contacts") return viewContacts(v);
@@ -1673,6 +1828,14 @@ async function viewConsultations(v){
       if(s.coUid) actions.append(el("button",{class:"btn ghost sm",
         title:coSupEmail(s.coUid)?("Email "+(s.coName||supName(s.coUid))):"No email on file for the co-supervisor",
         onclick:()=>emailCoSupervisors(students,cons,weeks,s)},"\u2709 Email co-supervisor"));
+      actions.append(el("button",{class:"btn ghost sm",
+        title:s.mobile?("Text "+s.mobile):"No mobile number on file for this student",
+        ...(s.mobile?{}:{disabled:"disabled"}),
+        onclick:()=>openSMS(s.mobile, c&&c.day
+          ? "Hi "+(s.name||"")+", reminder: your consultation is "+c.day+" "+c.start+"\u2013"+c.end
+            +(c.mode?" ("+c.mode+")":"")+(c.meetingLink?" \u2014 "+c.meetingLink:"")+". \u2014 "+(s.principalName||"")
+          : "Hi "+(s.name||"")+", regarding your supervision consultation: ")},
+        "\uD83D\uDCAC Text reminder"));
     } else if(isCo){
       actions.append(el("span",{class:"muted ui",style:"font-size:12.5px"},"Set by principal"));
     }
@@ -2431,6 +2594,174 @@ async function bulkEmailStudents(){
 }
 
 /* ============================================================
+   9b. MESSAGES TAB — supervision notes
+   One thread per student, shared by the principal supervisor, the
+   co-supervisor, the admin office and the student. Unread notes are
+   flagged; opening a thread marks them read for this user only.
+   ============================================================ */
+async function viewNotes(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Shared supervision thread"),
+    el("h2",{},"Messages"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewNotes(v)));
+  v.append(bar);
+  v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
+    "One message board per student, shared by the principal supervisor, the co-supervisor and the student — everyone sees the same thread, so nothing gets lost in separate email chains. New messages are flagged here and on the tab, and are shown to each person when they next sign in. Students read and reply in their own portal."));
+
+  const students=await myNoteStudents();
+  if(!students.length){
+    // Distinguish "no students at all" from "none in THIS semester" or
+    // "none allocated to me" — otherwise the tab looks broken.
+    const allInSem=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+    const sem=activeSemester();
+    if(S.role==="supervisor" && allInSem.length){
+      v.append(emptyState("No students allocated to you in "+(sem?.label||"this semester"),
+        "There are "+allInSem.length+" student(s) in this semester, but none list you as principal or co-supervisor. Pick another semester above, or ask the admin office to check the allocation on the Students tab."));
+    } else if(allInSem.length===0 && sem){
+      v.append(emptyState("No students in "+sem.label,
+        "Message threads are created per student. Choose a semester that has students, or add them on the Students tab."));
+    } else {
+      v.append(emptyState("No students yet",
+        S.role==="supervisor"?"Threads appear for students you principal- or co-supervise.":"Add students first."));
+    }
+    return;
+  }
+  let notes;
+  try{
+    notes=await loadNotes(S.activeSem,students.map(s=>s.id));
+  }catch(err){
+    v.append(notesRuleHelp(err));
+    return;
+  }
+  const meId=noteMeId();
+
+  // Unread first, then most recently active.
+  const meta=students.map(s=>{
+    const thread=notes.filter(n=>n.studentDocId===s.id);
+    return {s,thread,unread:thread.filter(n=>isUnread(n,meId)).length,
+            last:thread[0]?.createdAt||0};
+  }).sort((a,b)=>(b.unread-a.unread)||(b.last-a.last));
+
+  const totalUnread=meta.reduce((t,m)=>t+m.unread,0);
+  if(totalUnread){
+    v.append(el("div",{class:"row",style:"margin:2px 0 12px;gap:10px;align-items:center;flex-wrap:wrap"},
+      el("span",{class:"pill blue"},totalUnread+" unread"),
+      el("button",{class:"btn ghost sm",onclick:async()=>{
+        await markNotesRead(notes); toast("All messages marked as read."); refreshUnreadBadge(); viewNotes(v);
+      }},"Mark all as read")));
+  }
+
+  const list=el("div",{class:"grid",style:"gap:14px"});
+  for(const m of meta){
+    const s=m.s;
+    const myRole=noteMyRole(s);
+    const card=el("div",{class:"card"});
+    const head=el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap"},
+      el("strong",{},s.name), areaPill(s.area),
+      el("span",{class:"pill "+rolePillClass(myRole),style:"font-size:11.5px"},"You: "+roleLabel(myRole)));
+    if(m.unread) head.append(el("span",{class:"pill missed",style:"font-size:11.5px"},m.unread+" new"));
+    head.append(el("span",{style:"flex:1;min-width:8px"}),
+      el("span",{class:"muted ui",style:"font-size:12.5px"},
+        m.thread.length?m.thread.length+" message"+(m.thread.length===1?"":"s")+" \u00B7 "+relTime(m.last):"No messages yet"));
+    card.append(head);
+    card.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin:3px 0 10px"},
+      "Principal: "+(s.principalName||"\u2014")+(s.coName?" \u00B7 Co: "+s.coName:" \u00B7 No co-supervisor")+
+      (s.email?" \u00B7 "+s.email:"")));
+
+    // --- thread (pinned first, then newest) ---
+    const body=el("div",{style:"display:flex;flex-direction:column;gap:8px"});
+    const ordered=[...m.thread].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.createdAt||0)-(a.createdAt||0));
+    if(!ordered.length){
+      body.append(el("p",{class:"muted",style:"margin:0"},"No messages yet — start the conversation below."));
+    }
+    ordered.slice(0,6).forEach(n=>{
+      const unread=isUnread(n,meId);
+      const row=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px"
+        +(unread?";border-left:3px solid var(--blue)":"")+(n.pinned?";background:rgba(127,127,127,.06)":"")});
+      const top=el("div",{class:"row",style:"align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"},
+        el("strong",{class:"ui",style:"font-size:13.5px"},n.authorName||"Unknown"),
+        el("span",{class:"pill "+rolePillClass(n.authorRole),style:"font-size:11px"},roleLabel(n.authorRole)),
+        el("span",{class:"muted ui",style:"font-size:12px"},relTime(n.createdAt)));
+      if(n.pinned) top.append(el("span",{class:"pill pending",style:"font-size:11px"},"\u2691 Pinned"));
+      if(unread) top.append(el("span",{class:"pill missed",style:"font-size:11px"},"New"));
+      row.append(top, el("div",{style:"white-space:pre-wrap;font-size:14px"},n.text||""));
+      // author (or admin) can pin / unpin and delete
+      if(n.authorUid===meId || S.role==="admin"){
+        row.append(el("div",{class:"row",style:"gap:6px;margin-top:7px"},
+          el("button",{class:"btn xs ghost",onclick:async()=>{
+            await DB.update("notes",n.id,{pinned:!n.pinned}); viewNotes(v);
+          }},n.pinned?"Unpin":"\u2691 Pin"),
+          el("button",{class:"btn xs ghost",onclick:async()=>{
+            await DB.remove("notes",n.id); toast("Message deleted."); refreshUnreadBadge(); viewNotes(v);
+          }},"Delete")));
+      }
+      body.append(row);
+    });
+    if(ordered.length>6) body.append(el("p",{class:"muted ui",style:"margin:0;font-size:12.5px"},
+      "Showing the 6 most recent of "+ordered.length+" messages."));
+    card.append(body);
+
+    // --- composer ---
+    const ta=el("textarea",{placeholder:"Write a message to "+
+      (myRole==="student"?"your supervisors":"the other supervisor and the student")+"\u2026",
+      style:"min-height:70px;margin-top:10px"});
+    const pin=el("input",{type:"checkbox"});
+    const actions=el("div",{class:"row",style:"gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"});
+    actions.append(el("label",{class:"ui",style:"display:flex;align-items:center;gap:6px;font-size:13px;margin:0"},
+      pin,"Pin to top of thread"));
+    actions.append(el("span",{style:"flex:1;min-width:8px"}));
+    if(m.unread) actions.append(el("button",{class:"btn ghost sm",onclick:async()=>{
+      await markNotesRead(m.thread); refreshUnreadBadge(); viewNotes(v);
+    }},"Mark thread read"));
+    actions.append(el("button",{class:"btn sm",onclick:async()=>{
+      if(await postNote(s,ta.value,pin.checked)){
+        ta.value=""; toast("Message posted."); refreshUnreadBadge(); viewNotes(v);
+      }
+    }},"Post message"));
+    card.append(ta,actions);
+    card.append(el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:12.5px"},
+      "Visible to "+(s.principalName||"the principal supervisor")+
+      (s.coName?", "+s.coName:"")+", "+s.name+" and the admin office."));
+    list.append(card);
+  }
+  v.append(list);
+
+  // opening the tab marks nothing automatically — the user decides — but we
+  // refresh the badge so it reflects any reads done above
+  refreshUnreadBadge();
+}
+
+/* Shown when the `notes` collection can't be read — almost always a missing
+   Firestore security rule, since the collection is new. Gives the exact rule
+   to paste rather than leaving a blank tab. */
+function notesRuleHelp(err){
+  const card=el("div",{class:"card",style:"border-left:4px solid var(--clay,#c2410c)"});
+  card.append(
+    el("h3",{style:"margin:0 0 6px"},"Messages can't be loaded"),
+    el("p",{class:"muted",style:"margin:0 0 10px"},
+      "The app couldn't read the \u201Cnotes\u201D collection. Firestore reported: "+
+      (err?.message||"unknown error")),
+    el("p",{style:"margin:0 0 8px;font-size:14px"},
+      "Messages are stored in a new collection called notes. If your Firestore security rules only list the older collections, every read and write here is denied and the tab comes back empty. Add a rule for notes in the Firebase console under Firestore Database \u2192 Rules, then reload:"));
+  const rule=
+"match /notes/{noteId} {\n"+
+"  allow read, create: if request.auth != null;\n"+
+"  allow update, delete: if request.auth != null;\n"+
+"}";
+  const pre=el("pre",{style:"white-space:pre-wrap;background:rgba(127,127,127,.1);padding:12px;border-radius:8px;font-size:12.5px;margin:0 0 10px"},rule);
+  card.append(pre,
+    el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+      el("button",{class:"btn sm",onclick:()=>{
+        navigator.clipboard?.writeText(rule).then(()=>toast("Rule copied."),()=>toast("Copy failed \u2014 select the text manually.",true));
+      }},"Copy rule"),
+      el("button",{class:"btn ghost sm",onclick:()=>drawMain()},"Retry")),
+    el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
+      "The rule above lets any signed-in user read and write messages, which matches how the rest of this app is secured. Students use the ID-lookup portal rather than a login, so if you want them to post you also need public access to notes \u2014 tighten it later once the roles are settled."));
+  return card;
+}
+
+/* ============================================================
    10. SUMMARY REPORT (admin) — oversight + CSV
    Shows, per principal supervisor and per student, whether the
    consultation is arranged, how many meetings held, and attendance.
@@ -2828,13 +3159,70 @@ function emailButton(to,subject,body,label="✉ Email",cls="btn xs ghost"){
     onclick:()=>openEmail(to,subject,body)},label);
 }
 
+/* ---- SMS handoff ------------------------------------------------
+   A static page cannot send an SMS by itself — there is no browser
+   API for it. What it CAN do is hand the message to the device's own
+   messaging app with the number and text pre-filled, using the sms:
+   URI scheme. On a phone (iOS/Android) this opens Messages ready to
+   send; on a desktop it works only if a messaging app is registered
+   (e.g. Phone Link, Messages for Mac), so the button is offered as a
+   convenience, not a guarantee. To send SMS automatically, without a
+   human tapping send, you need a paid gateway — see the notes in the
+   "Send a text" modal.
+   ----------------------------------------------------------------- */
+function smsHref(number,body){
+  const n=String(number||"").replace(/[^\d+]/g,"");
+  // iOS wants sms:NUMBER&body=…, Android/others want sms:NUMBER?body=…
+  const sep=/iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent)?"&":"?";
+  return "sms:"+n+sep+"body="+encodeURIComponent(body||"");
+}
+function openSMS(number,body){
+  if(!number){ toast("No mobile number on file for this person.",true); return; }
+  window.location.href=smsHref(number,body);
+}
+// Small reusable "Text" button that opens the device's messaging app.
+function smsButton(number,body,label="\uD83D\uDCAC Text",cls="btn xs ghost"){
+  return el("button",{class:cls,title:number?("Text "+number):"No mobile on file",...(number?{}:{disabled:"disabled"}),
+    onclick:()=>openSMS(number,body)},label);
+}
+
+/* Explains the two ways to get SMS out of this system, since a static
+   page has no way to send one on its own. */
+function smsInfo(){
+  const p=(t,st="")=>el("p",{style:"margin:0 0 9px;font-size:14px;line-height:1.5"+(st?";"+st:"")},t);
+  const h=t=>el("div",{class:"ui",style:"font-weight:700;margin:14px 0 5px"},t);
+  modal("Sending text messages",
+    el("div",{style:"max-height:60vh;overflow:auto"},
+      p("This app is a single HTML page with no server of its own, so it cannot send an SMS by itself \u2014 browsers have no API for that. There are two realistic options."),
+
+      h("1. Device handoff \u2014 works today, free"),
+      p("The \u201CText\u201D buttons in Contacts and on the Consultation times tab open your phone's own messaging app with the number and a draft message already filled in. You read it and tap send, so the message comes from your own number and costs nothing extra."),
+      p("This works reliably on iPhone and Android. On a desktop it only works if a messaging app is registered with the operating system (Phone Link on Windows, Messages on a Mac signed into the same Apple ID). It is a per-person action \u2014 good for a reminder to one student, not for 60 at once.",
+        "color:var(--muted,#777)"),
+
+      h("2. An SMS gateway \u2014 automatic, paid"),
+      p("To have the system send texts on its own \u2014 scheduled reminders the night before a consultation, or an alert when a student misses two meetings \u2014 you need a service that sends SMS over an API, plus a small piece of server code to call it. The page cannot call these directly from the browser, because that would expose your account credentials to anyone who views the source."),
+      p("The usual shape is: a Firebase Cloud Function (you are already on Firebase) triggered on a schedule or on a database write, which reads the numbers from Firestore and calls the gateway's API. Common gateways are Twilio, Vonage, MessageBird, ClickSend and AWS SNS; in Australia expect roughly 4\u20138 cents per message, and note that sending to Australian mobiles for anything commercial requires a registered sender ID."),
+      p("Practical order: get the number formatting right first (store every mobile in +61 format), then write one Cloud Function that sends a single test message, then add the schedule. Also plan for consent and an opt-out \u2014 students should be able to say no to texts, and that preference needs a field on the student record.",
+        "color:var(--muted,#777)"),
+
+      h("A middle option"),
+      p("If you only need reminders rather than conversations, a calendar invite does most of the work for free \u2014 the .ics download on the Week planner tab already puts every consultation into Outlook, Google or Apple Calendar, and those apps send their own reminders to the phone."),
+
+      h("What is in the app right now"),
+      p("Mobile numbers are stored on both staff and student records, the Text buttons do the device handoff described above, and nothing is sent automatically. Adding option 2 would not change any of the screens \u2014 only add a Cloud Function alongside them.")),
+    async()=>true,"Close");
+}
+
 async function viewContacts(v){
   v.innerHTML="";
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Directory"),
     el("h2",{},"Contacts"))));
   v.append(el("p",{class:"muted ui",style:"margin-top:-8px"},
-    "Email and mobile for every staff member and student. The Email button opens your device's mail app with the message pre-filled. Mobile numbers are stored for reference; the app does not send SMS."));
+    "Email and mobile for every staff member and student. The Email button opens your device's mail app and the Text button opens your phone's messaging app, both with the message pre-filled \u2014 you review and tap send. The hub itself never sends anything."));
+  v.append(el("div",{class:"row",style:"margin:-4px 0 12px"},
+    el("button",{class:"btn ghost sm",onclick:smsInfo},"How can this system send real text messages?")));
 
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewContacts(v)));
   const search=el("input",{placeholder:"Search name, email, mobile…",style:"min-width:220px"});
@@ -2864,6 +3252,7 @@ async function viewContacts(v){
       const roleLabel=u.role==="admin"?"Admin":capLabel(capOf(u));
       const contact=el("div",{class:"row",style:"gap:5px"});
       contact.append(emailButton(u.email,"MRes supervision","Dear "+(u.name||"")+",\n\n"));
+      contact.append(smsButton(u.mobile,"Hi "+(u.name||"")+", "));
       contact.append(el("button",{class:"btn xs ghost",onclick:()=>staffForm(u,()=>{viewContacts(v);})},"Edit"));
       stb.append(el("tr",{},
         el("td",{},el("strong",{},u.name||"—")),
@@ -2887,6 +3276,7 @@ async function viewContacts(v){
       students.filter(match).forEach(s=>{
         const contact=el("div",{class:"row",style:"gap:5px"});
         contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n"));
+        contact.append(smsButton(s.mobile,"Hi "+(s.name||"")+", "));
         contact.append(el("button",{class:"btn xs ghost",onclick:()=>studentForm(s,()=>{viewContacts(v);})},"Edit"));
         ctb.append(el("tr",{},
           el("td",{},el("strong",{},s.name)),
@@ -3194,6 +3584,7 @@ async function copyForward(fromSem,done){
    student's own week-by-week attendance (attended / missed).
    ============================================================ */
 async function renderStudentView(sid,enrolments,sems){
+  S.studentSid=sid; S.studentName=enrolments[0]?.name||"";
   const wrap=el("div",{class:"auth-wrap",style:"align-items:flex-start;padding-top:30px"});
   const col=el("div",{style:"width:100%;max-width:760px"});
   const stu=enrolments[0];
@@ -3304,11 +3695,90 @@ async function renderStudentView(sid,enrolments,sems){
     card.append(el("p",{class:"muted ui",style:"margin:12px 0 0;font-size:13px"},
       "Consultations are held in your Team classroom, in your own channel — use the Join button above at the shown time. Attendance is recorded against these meetings. To contact your supervisor, email them directly."));
 
+    // ---- Messages with my supervisors ----
+    await studentNotesBlock(card,en);
+
     col.append(card);
   }
 
   wrap.append(col);
   document.body.append(wrap, toastNode());
+  // "You have new messages" banner at the top of the student's portal
+  try{
+    const meId=noteMeId();
+    let unread=0;
+    for(const en of enrolments){
+      const ns=await loadNotes(en.semesterId,[en.id]);
+      unread+=ns.filter(n=>isUnread(n,meId)).length;
+    }
+    if(unread){
+      const bar=el("div",{class:"card ui",style:"border-left:4px solid var(--blue);padding:12px 14px;margin-bottom:14px"},
+        el("div",{class:"row",style:"align-items:center;gap:10px;flex-wrap:wrap"},
+          el("span",{class:"pill blue"},"\u2709 "+unread+" new message"+(unread===1?"":"s")),
+          el("span",{class:"ui",style:"font-size:13.5px"},"from your supervisors \u2014 scroll down to \u201CMessages with my supervisors\u201D."),
+          el("span",{style:"flex:1;min-width:10px"}),
+          el("button",{class:"btn ghost sm",onclick:()=>bar.remove()},"Dismiss")));
+      col.insertBefore(bar,col.children[1]||null);
+    }
+  }catch(e){ console.warn("messages banner unavailable:",e?.message||e); }
+}
+
+/* Student-side view of the shared supervision thread: read everything
+   the supervisors have posted, and reply into the same thread. */
+async function studentNotesBlock(card,en){
+  const meId=noteMeId();
+  let notes;
+  try{ notes=await loadNotes(en.semesterId,[en.id]); }
+  catch(err){
+    card.append(el("div",{style:"font-weight:600;margin:16px 0 6px",class:"ui"},"Messages with my supervisors"),
+      el("p",{class:"muted",style:"margin:0"},
+        "Messages can't be loaded right now. Please let your supervisor know \u2014 the site's database rules need to allow the \u201Cnotes\u201D collection."));
+    return;
+  }
+  const unread=notes.filter(n=>isUnread(n,meId)).length;
+
+  const head=el("div",{class:"row",style:"align-items:center;gap:8px;font-weight:600;margin:16px 0 6px",...{}},
+    el("span",{class:"ui"},"Messages with my supervisors"));
+  if(unread) head.append(el("span",{class:"pill missed",style:"font-size:11.5px"},unread+" new"));
+  card.append(head);
+  card.append(el("p",{class:"muted ui",style:"margin:0 0 8px;font-size:13px"},
+    "A shared thread with "+(en.principalName||"your principal supervisor")+
+    (en.coName?" and "+en.coName:"")+". Anything you post here is visible to both supervisors and the admin office."));
+
+  const body=el("div",{style:"display:flex;flex-direction:column;gap:8px"});
+  const ordered=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.createdAt||0)-(a.createdAt||0));
+  if(!ordered.length) body.append(el("p",{class:"muted",style:"margin:0"},"No messages yet."));
+  ordered.forEach(n=>{
+    const isNew=isUnread(n,meId);
+    const row=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px"
+      +(isNew?";border-left:3px solid var(--blue)":"")+(n.pinned?";background:rgba(127,127,127,.06)":"")});
+    const top=el("div",{class:"row",style:"align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"},
+      el("strong",{class:"ui",style:"font-size:13.5px"},n.authorName||"Unknown"),
+      el("span",{class:"pill "+rolePillClass(n.authorRole),style:"font-size:11px"},roleLabel(n.authorRole)),
+      el("span",{class:"muted ui",style:"font-size:12px"},relTime(n.createdAt)));
+    if(n.pinned) top.append(el("span",{class:"pill pending",style:"font-size:11px"},"\u2691 Pinned"));
+    if(isNew) top.append(el("span",{class:"pill missed",style:"font-size:11px"},"New"));
+    row.append(top, el("div",{style:"white-space:pre-wrap;font-size:14px"},n.text||""));
+    body.append(row);
+  });
+  card.append(body);
+
+  const ta=el("textarea",{placeholder:"Reply to your supervisors\u2026",style:"min-height:70px;margin-top:10px"});
+  const actions=el("div",{class:"row",style:"gap:8px;margin-top:8px;flex-wrap:wrap"});
+  if(unread) actions.append(el("button",{class:"btn ghost sm",onclick:async()=>{
+    await markNotesRead(notes); toast("Marked as read.");
+    card.replaceChildren(...[...card.children].slice(0,[...card.children].indexOf(head)));
+    await studentNotesBlock(card,en);
+  }},"Mark as read"));
+  actions.append(el("span",{style:"flex:1;min-width:8px"}));
+  actions.append(el("button",{class:"btn sm",onclick:async()=>{
+    if(await postNote(en,ta.value,false)){
+      toast("Message sent to your supervisors.");
+      card.replaceChildren(...[...card.children].slice(0,[...card.children].indexOf(head)));
+      await studentNotesBlock(card,en);
+    }
+  }},"Send message"));
+  card.append(ta,actions);
 }
 
 /* ============================================================
@@ -3343,13 +3813,15 @@ function modal(title,bodyNode,onSave,saveLabel="Save"){
 function confirmDelete(coll,id,name,done,custom){
   modal("Delete "+name+"?",
     el("p",{class:"muted",style:"margin:0"},"This cannot be undone."+
-      (coll==="students"?" Linked consultations and meeting logs for this student are also removed.":"")+
+      (coll==="students"?" Linked consultations, meeting logs and messages for this student are also removed.":"")+
       (coll==="semesters"?" Students, timetables and consultations in this semester remain but will be orphaned — delete with care.":"")),
     async()=>{
       if(custom){ await done(); return true; }
       if(coll==="students"){
         const cs=await DB.list("consultations",{studentDocId:id});
         for(const c of cs) await DB.remove("consultations",c.id);
+        const ns=await DB.list("notes",{studentDocId:id});
+        for(const n of ns) await DB.remove("notes",n.id);
         const ats=await DB.list("attendance",{studentDocId:id});
         for(const a of ats) await DB.remove("attendance",a.id);
       }
