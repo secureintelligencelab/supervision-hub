@@ -734,6 +734,25 @@ function weekTime(cons,w){
 }
 function weekLog(cons,w){ return (cons?.weeks?.[w]) || (cons?.weeks?.[String(w)]) || {}; }
 
+// Every week whose day/time/mode/link was changed away from the recurring slot.
+// Returns [{w, et, log}] in week order — used by the week planner, the
+// co-supervisor emails and anywhere else the "changed weeks" list is shown.
+function changedWeeksOf(cons,totalWeeks){
+  const out=[];
+  for(let w=1;w<=(totalWeeks||0);w++){
+    const et=weekTime(cons,w);
+    if(et.overridden) out.push({w,et,log:weekLog(cons,w)});
+  }
+  return out;
+}
+// "Thursday 10:00–10:30 (Online)" — one slot as plain text.
+function slotText(t){
+  if(!t||!t.day) return "no fixed day/time";
+  return t.day+" "+(t.start||"?")+"\u2013"+(t.end||"?")+(t.mode?" ("+t.mode+")":"");
+}
+// The recurring slot of a consultation, as a plain object.
+function baseSlot(c){ return {day:c?.day,start:c?.start,end:c?.end,mode:c?.mode}; }
+
 // Which class slots a SUPERVISOR may see:
 //  - classes assigned to them by admin, and
 //  - for students they co-supervise, ONLY the approved class run by that
@@ -1605,8 +1624,14 @@ async function viewSchedule(v){
   const sem=activeSemester();
   const weeks=sem?.weeks||12;
   const cw=currentWeekOf(sem);
+  // Which week is on screen. Defaults to the current teaching week; the week
+  // picker below lets a supervisor or co-supervisor look at any other week,
+  // with that week's one-off changes applied. Reset when the semester changes.
+  if(S.schedSem!==S.activeSem){ S.schedSem=S.activeSem; S.schedWeek=null; }
+  const selWeek=(S.schedWeek&&S.schedWeek>=1&&S.schedWeek<=weeks)?S.schedWeek:cw;
+  const goWeek=w=>{ S.schedWeek=(w&&w>=1&&w<=weeks)?w:null; viewSchedule(v); };
   v.append(el("div",{class:"section-title"},el("div",{},
-    el("div",{class:"eyebrow ui"},"Classes & consultations, day by day"+(cw?" · week "+cw+" of "+weeks:"")),
+    el("div",{class:"eyebrow ui"},"Classes & consultations, day by day"+(selWeek?" · week "+selWeek+" of "+weeks:"")),
     el("h2",{},S.role==="admin"?"Week planner":"My week"))));
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewSchedule(v)));
   v.append(bar);
@@ -1624,6 +1649,37 @@ async function viewSchedule(v){
     tts=tts.filter(t=>t.status==="approved");
   }
 
+  // Every one-off week change across the consultations on screen — the basis
+  // of both the week picker's "changed" markers and the panel underneath.
+  const changes=[];
+  cons.forEach(c=>{
+    const s=students.find(x=>x.id===c.studentDocId); if(!s) return;
+    changedWeeksOf(c,weeks).forEach(x=>changes.push({...x,s,c}));
+  });
+  changes.sort((a,b)=>(a.w-b.w)||String(a.s.name||"").localeCompare(String(b.s.name||"")));
+  const changedSet=new Set(changes.map(x=>x.w));
+
+  // --- week picker -----------------------------------------------------
+  const wkSel=el("select",{style:"width:auto;min-width:230px"});
+  wkSel.append(el("option",{value:"0",...(selWeek?{}:{selected:"selected"})},"Recurring timetable (no single week)"));
+  for(let w=1;w<=weeks;w++){
+    const range=weekRangeLabel(sem,w);
+    wkSel.append(el("option",{value:String(w),...(w===selWeek?{selected:"selected"}:{})},
+      "Week "+w+(range?" · "+range:"")+(w===cw?" · this week":"")+(changedSet.has(w)?" · changed":"")));
+  }
+  wkSel.onchange=()=>goWeek(parseInt(wkSel.value)||null);
+  const weekBar=el("div",{class:"row",style:"margin:2px 0 12px;gap:8px;align-items:center;flex-wrap:wrap"},
+    el("span",{class:"muted ui",style:"font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:600"},"Showing"),
+    el("button",{class:"btn ghost sm",title:"Previous week",
+      ...((selWeek&&selWeek>1)?{}:{disabled:"disabled"}),onclick:()=>goWeek((selWeek||1)-1)},"\u25C0"),
+    wkSel,
+    el("button",{class:"btn ghost sm",title:"Next week",
+      ...((selWeek&&selWeek<weeks)?{}:{disabled:"disabled"}),onclick:()=>goWeek((selWeek||0)+1)},"\u25B6"),
+    (cw&&selWeek!==cw)?el("button",{class:"btn sm",onclick:()=>goWeek(cw)},"\u21BA Back to this week"):"",
+    changedSet.size?el("span",{class:"pill blue",style:"font-size:11.5px"},
+      changedSet.size+" week"+(changedSet.size===1?"":"s")+" changed this semester"):"");
+  v.append(weekBar);
+
   const items=[];
   tts.forEach(t=>{
     const u=unitById(sem,t.unitId);
@@ -1633,26 +1689,34 @@ async function viewSchedule(v){
   });
   cons.forEach(c=>{
     const s=students.find(x=>x.id===c.studentDocId); if(!s) return;
-    // in the current teaching week, show that week's (possibly changed) time
-    const et=cw?weekTime(c,cw):{day:c.day,start:c.start,end:c.end,mode:c.mode,link:c.meetingLink,overridden:false};
+    // show the SELECTED week's (possibly changed) time — the recurring slot
+    // only when no week is in view at all
+    const et=selWeek?weekTime(c,selWeek):{day:c.day,start:c.start,end:c.end,mode:c.mode,link:c.meetingLink,overridden:false};
+    const lg=selWeek?weekLog(c,selWeek):{};
     if(!et.day||!et.start) return;   // default slot with no time this week \u2014 nothing to place on the grid
     const asCo=S.role==="supervisor" && s.coUid===S.uid && s.principalUid!==S.uid;
     items.push({day:et.day,start:et.start,end:et.end,type:"consult",
       label:"Consultation — "+s.name,
       sub:(et.mode||"")+(asCo?" · you co-supervise ("+(s.principalName||"principal")+" leads)"
                         :S.role==="admin"?(s.principalName?" · "+s.principalName:""):""),
-      link:et.link, changed:!!et.overridden});
+      link:et.link, changed:!!et.overridden, notHeld:lg.held===false,
+      was:(et.overridden&&!(et.day===c.day&&et.start===c.start&&et.end===c.end))?slotText(baseSlot(c)):"",
+      consId:c.id, base:{day:c.day,start:c.start,end:c.end,link:c.meetingLink}});
   });
 
   if(!items.length){
-    v.append(emptyState("Nothing scheduled yet","Class times and consultation times will appear here once they are set."));
+    v.append(emptyState(selWeek?("Nothing scheduled in week "+selWeek):"Nothing scheduled yet",
+      "Class times and consultation times will appear here once they are set."));
+    if(changes.length) v.append(changedWeeksPanel(changes,sem,cw,selWeek,goWeek));
     return;
   }
 
   v.append(el("div",{class:"row",style:"margin-bottom:14px"},
-    el("button",{class:"btn",onclick:()=>downloadScheduleICS(items,sem)},"⤓ Add to calendar (.ics)"),
+    el("button",{class:"btn",onclick:()=>downloadScheduleICS(items,sem,changes)},"⤓ Add to calendar (.ics)"),
     el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF"),
-    cw?el("span",{class:"pill blue"},"Showing week "+cw+"'s times (one-off changes applied)")
+    selWeek?el("span",{class:"pill blue"},
+      "Week "+selWeek+(weekRangeLabel(sem,selWeek)?" · "+weekRangeLabel(sem,selWeek):"")
+      +(selWeek===cw?" (this week)":"")+" — one-off changes applied")
       :el("span",{class:"muted ui",style:"font-size:13px"},
         "Recurring times shown."+(S.role==="admin"?" Set a semester start date (Semesters & staff) to track the current week.":""))));
 
@@ -1666,9 +1730,12 @@ async function viewSchedule(v){
     dayItems.forEach(i=>{
       const b=el("div",{class:"slot "+i.type});
       b.append(el("div",{class:"slot-time ui"},`${i.start||"?"}–${i.end||"?"}`,
-        i.changed?el("span",{class:"pill blue",style:"font-size:10.5px;margin-left:6px"},"changed this week"):""));
+        i.changed?el("span",{class:"pill blue",style:"font-size:10.5px;margin-left:6px"},
+          selWeek?("changed in week "+selWeek):"changed"):"",
+        i.notHeld?el("span",{class:"pill missed",style:"font-size:10.5px;margin-left:6px"},"not held"):""));
       b.append(el("div",{class:"slot-label"},i.label));
       if(i.sub) b.append(el("div",{class:"slot-sub muted ui"},i.sub));
+      if(i.was) b.append(el("div",{class:"slot-sub muted ui",style:"font-size:11.5px"},"moved from "+i.was));
       if(i.link) b.append(el("div",{style:"margin-top:4px"},
         el("a",{class:"linkpill",href:i.link,target:"_blank",rel:"noopener"},"Join")));
       col.append(b);
@@ -1677,34 +1744,127 @@ async function viewSchedule(v){
   });
   v.append(wrap);
   v.append(el("p",{class:"muted ui",style:"margin-top:12px;font-size:13px"},
-    "Teal = weekly class · blue = student consultation. The .ics download adds every recurring slot to Outlook, Google or Apple Calendar for the whole semester."));
+    "Teal = weekly class · blue = student consultation. The .ics download adds every recurring slot to Outlook, Google or Apple Calendar for the whole semester, plus each changed week as a one-off event."));
+
+  // Every week that has been moved — so a changed week is visible even when
+  // you are not looking at it.
+  v.append(changedWeeksPanel(changes,sem,cw,selWeek,goWeek));
+}
+
+/* Panel under the week grid: every consultation week whose day/time/mode/link
+   was changed from the recurring slot. Upcoming ones are shown first; past
+   ones sit behind a toggle. Clicking a week loads it into the grid above. */
+function changedWeeksPanel(changes,sem,cw,selWeek,goWeek){
+  const card=el("div",{class:"card",style:"margin-top:16px"});
+  card.append(el("div",{class:"eyebrow ui"},"Changed weeks"),
+    el("h3",{style:"margin:2px 0 2px"},"One-off changes to consultation times"));
+  if(!changes.length){
+    card.append(el("p",{class:"muted ui",style:"margin:6px 0 0;font-size:13px"},
+      "No week has been moved — every consultation runs at its recurring time all semester."));
+    return card;
+  }
+  card.append(el("p",{class:"muted ui",style:"margin:6px 0 10px;font-size:13px"},
+    changes.length+" week"+(changes.length===1?"":"s")+" moved away from the recurring time. "+
+    "Pick one to load that week into the planner above."));
+
+  const row=x=>{
+    const past=cw&&x.w<cw;
+    return el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)"
+      +(x.w===selWeek?";background:var(--blue-soft)":"")+(past?";opacity:.72":"")},
+      el("strong",{class:"ui",style:"min-width:42px"},"W"+x.w),
+      el("span",{class:"muted ui",style:"font-size:12px;min-width:104px"},weekRangeLabel(sem,x.w)||"—"),
+      el("span",{style:"min-width:130px"},x.s.name||"Student"),
+      el("span",{class:"pill blue",style:"font-size:11px"},slotText(x.et)),
+      el("span",{class:"muted ui",style:"font-size:12px"},
+        (x.et.day===x.c.day&&x.et.start===x.c.start&&x.et.end===x.c.end&&x.et.mode===x.c.mode)
+          ? "same time — meeting link changed"
+          : "instead of "+slotText(baseSlot(x.c))),
+      (x.log&&x.log.held===false)?el("span",{class:"pill missed",style:"font-size:11px"},"not held"):"",
+      (x.et.link&&x.et.link!==x.c.meetingLink)
+        ? el("a",{class:"linkpill",href:x.et.link,target:"_blank",rel:"noopener"},"Link for this week"):"",
+      (x.w===cw)?el("span",{class:"pill held",style:"font-size:11px"},"this week"):"",
+      el("button",{class:"btn xs ghost",onclick:()=>goWeek(x.w)},"Show week "+x.w));
+  };
+
+  const upcoming=cw?changes.filter(x=>x.w>=cw):changes;
+  const past=cw?changes.filter(x=>x.w<cw):[];
+  if(upcoming.length) upcoming.forEach(x=>card.append(row(x)));
+  else card.append(el("p",{class:"muted ui",style:"margin:0;font-size:13px"},"No changes left this semester."));
+
+  if(past.length){
+    const box=el("div",{style:"display:none"});
+    past.forEach(x=>box.append(row(x)));
+    const t=el("button",{class:"btn ghost sm",style:"margin-top:10px"},
+      "\u25BE Show "+past.length+" earlier changed week"+(past.length===1?"":"s"));
+    t.onclick=()=>{
+      const open=box.style.display==="none";
+      box.style.display=open?"":"none";
+      t.textContent=(open?"\u25B4 Hide":"\u25BE Show")+" "+past.length+" earlier changed week"+(past.length===1?"":"s");
+    };
+    card.append(t,box);
+  }
+  return card;
 }
 
 // Build a weekly-recurring .ics calendar for the given schedule items.
 // First occurrence: the item's weekday on/after the semester start date
 // (or on/after today when no start date is set); repeats for `weeks` weeks.
-function downloadScheduleICS(items,sem){
+function downloadScheduleICS(items,sem,changes){
   const weeks=sem?.weeks||12;
   const pad=n=>String(n).padStart(2,"0");
   const esc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
   let base=sem?.start?new Date(sem.start+"T00:00:00"):new Date();
   if(isNaN(base.getTime())) base=new Date();
+  const stamp=d=>""+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+  const hhmm=t=>(t||"09:00").replace(":","")+"00";
   const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MRes Supervision Hub//EN","CALSCALE:GREGORIAN"];
+  const chg=Array.isArray(changes)?changes:[];
   items.forEach((it,i)=>{
-    const target=DAYS.indexOf(it.day)+1; if(target<1) return;  // Monday=1 … Saturday=6
+    // export the RECURRING slot (not whatever week is on screen); the weeks
+    // that were moved come out below as one-off events
+    const day=it.base?.day||it.day, start=it.base?.start||it.start, end=it.base?.end||it.end;
+    const target=DAYS.indexOf(day)+1; if(target<1) return;  // Monday=1 … Saturday=6
     const d=new Date(base); d.setHours(0,0,0,0);
     while((d.getDay()||7)!==target) d.setDate(d.getDate()+1);
-    const ds=""+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
-    const st=(it.start||"09:00").replace(":","")+"00";
-    const en=(it.end||"10:00").replace(":","")+"00";
+    const ds=stamp(d), st=hhmm(start), en=hhmm(end);
+    const last=new Date(d); last.setDate(d.getDate()+7*weeks);   // end of the series
+    // weeks moved elsewhere are cut out of the repeat, so the calendar never
+    // shows the meeting twice
+    const ex=[];
+    if(it.consId) chg.filter(x=>x.c?.id===it.consId).forEach(x=>{
+      const b=semWeekBounds(sem,x.w); if(!b) return;
+      const occ=new Date(b.mon); occ.setDate(b.mon.getDate()+(target-1));
+      if(occ>=d && occ<last) ex.push(stamp(occ)+"T"+st);
+    });
     L.push("BEGIN:VEVENT",
       "UID:sh-"+i+"-"+ds+"-"+st+"@supervisionhub",
       "DTSTART:"+ds+"T"+st,
       "DTEND:"+ds+"T"+en,
       "RRULE:FREQ=WEEKLY;COUNT="+weeks,
       "SUMMARY:"+esc(it.label));
+    if(ex.length) L.push("EXDATE:"+ex.join(","));
     if(it.sub) L.push("DESCRIPTION:"+esc(it.sub));
-    if(it.link) L.push("URL:"+esc(it.link));
+    const url=it.base?("link" in it.base?it.base.link:it.link):it.link;
+    if(url) L.push("URL:"+esc(url));
+    L.push("END:VEVENT");
+  });
+  // one-off events for each changed week, on its actual date
+  chg.forEach((x,i)=>{
+    const b=semWeekBounds(sem,x.w); if(!b) return;
+    const idx=DAYS.indexOf(x.et.day); if(idx<0||!x.et.start) return;
+    const occ=new Date(b.mon); occ.setDate(b.mon.getDate()+idx);
+    const ds=stamp(occ), st=hhmm(x.et.start), en=hhmm(x.et.end||x.et.start);
+    const sameTime=x.et.day===x.c.day&&x.et.start===x.c.start&&x.et.end===x.c.end&&x.et.mode===x.c.mode;
+    L.push("BEGIN:VEVENT",
+      "UID:sh-chg-"+i+"-"+ds+"-"+st+"@supervisionhub",
+      "DTSTART:"+ds+"T"+st,
+      "DTEND:"+ds+"T"+en,
+      "SUMMARY:"+esc("Consultation — "+(x.s?.name||"student")+" (week "+x.w+", "+(sameTime?"link changed":"time changed")+")"),
+      "DESCRIPTION:"+esc("Week "+x.w+": "+(sameTime
+          ? "same time, different meeting link"
+          : "moved to "+slotText(x.et)+" — instead of "+slotText(baseSlot(x.c)))
+        +(x.log&&x.log.held===false?". Marked not held.":"")));
+    if(x.et.link) L.push("URL:"+esc(x.et.link));
     L.push("END:VEVENT");
   });
   L.push("END:VCALENDAR");
@@ -1931,7 +2091,12 @@ async function viewConsultations(v){
 function coSupEmail(uid){ const u=S.supervisors.find(x=>x.id===uid); return u?.email||""; }
 
 // One student's consultation details rendered as plain text.
-function consultBlock(s,c,weeks){
+// `opts.changes`  "all" | "upcoming" | "none"  — whether the one-off week
+//                 changes are listed under the recurring time (default "all").
+// `opts.fromWeek` first week to list when scope is "upcoming".
+function consultBlock(s,c,weeks,opts){
+  const o=opts||{};
+  const scope=o.changes||"all";
   const st=c?consultStats(c,weeks):null;
   const L=[];
   L.push("• "+(s.name||"Student")+(s.sid?" ("+s.sid+")":""));
@@ -1944,6 +2109,32 @@ function consultBlock(s,c,weeks){
   if(st&&st.held) L.push("  Attendance so far: "+st.attended+" of "+st.held+" meetings attended ("
     +Math.round(st.attended/st.held*100)+"%)"+(st.missed?", "+st.missed+" missed":""));
   else L.push("  Attendance so far: nothing recorded yet");
+
+  // ---- one-off week changes -------------------------------------------
+  // The recurring slot is only half the story: any week moved to another
+  // day/time is listed here so the co-supervisor can diary it.
+  if(c && scope!=="none"){
+    const sem=activeSemester();
+    const from=(scope==="upcoming" && o.fromWeek) ? o.fromWeek : 1;
+    const all=changedWeeksOf(c,weeks);
+    const ch=all.filter(x=>x.w>=from);
+    if(ch.length){
+      L.push("  Changed weeks (these differ from the recurring time above):");
+      ch.forEach(x=>{
+        const range=weekRangeLabel(sem,x.w);
+        const sameTime=x.et.day===c.day&&x.et.start===c.start&&x.et.end===c.end&&x.et.mode===c.mode;
+        L.push("    - Week "+x.w+(range?" ("+range+")":"")+": "+slotText(x.et)
+          +(sameTime?"  (same time — meeting link changed)":"")
+          +(x.log.held===false?"   [marked not held]":""));
+        if(x.et.link && x.et.link!==c.meetingLink) L.push("      Teams link for this week: "+x.et.link);
+      });
+      L.push("    Every other week runs at the recurring time above.");
+    } else {
+      L.push("  Changed weeks: none"+(from>1?" from week "+from+" onwards":"")
+        +" — every week runs at the recurring time above."
+        +(all.length?"  ("+all.length+" earlier week"+(all.length===1?"":"s")+" changed.)":""));
+    }
+  }
   return L.join("\n");
 }
 
@@ -1974,24 +2165,32 @@ function emailCoSupervisors(students,cons,weeks,only){
   const style=el("select",{},
     el("option",{value:"each"},"Personalised — one email per co-supervisor ("+withEmail.length+")"),
     el("option",{value:"one"},"One combined email to all co-supervisors (BCC)"));
+  const cw=currentWeekOf(sem);
+  const changeScope=el("select",{},
+    el("option",{value:"all"},"All one-off week changes (whole semester)"),
+    el("option",{value:"upcoming",...(cw?{}:{disabled:"disabled"})},
+      cw?("Only changes from week "+cw+" onwards"):"Only upcoming changes (needs a semester start date)"),
+    el("option",{value:"none"},"Recurring time only — don't list week changes"));
   const subject=el("input",{value:"Consultation times — "+(sem?.label||"this semester")});
   const intro=el("textarea",{style:"min-height:90px",value:
     "Hello,\n\nHere are the current consultation arrangements for the student(s) you co-supervise. "+
-    "The times below are what weekly attendance is recorded against — please let me know if any of them clash with your teaching.\n"});
+    "The times below are what weekly attendance is recorded against — any week that has been moved to a different day or time is listed underneath each student. "+
+    "Please let me know if any of them clash with your teaching.\n"});
   const sign=el("input",{value:(S.supervisors.find(u=>u.id===S.uid)?.name)||"",placeholder:"Your name (sign-off)"});
   const preview=el("pre",{class:"muted ui",style:"white-space:pre-wrap;font-size:12px;max-height:190px;overflow:auto;background:rgba(127,127,127,.08);padding:10px;border-radius:8px;margin:0"});
   const note=el("p",{class:"muted",style:"margin:0"});
 
+  const blockOpts=()=>({changes:changeScope.value, fromWeek:cw||1});
   function bodyFor(g){
     return (intro.value||"")+"\n"+
-      g.rows.map(r=>consultBlock(r.s,r.c,weeks)).join("\n\n")+
+      g.rows.map(r=>consultBlock(r.s,r.c,weeks,blockOpts())).join("\n\n")+
       "\n\nRecorded in the MRes Supervision Hub"+(sem?.label?" · "+sem.label:"")+
       (sign.value?"\n\n— "+sign.value:"");
   }
   function combinedBody(){
     return (intro.value||"")+"\n"+
       groups.filter(g=>g.email).map(g=>
-        "── "+g.name+" ──\n"+g.rows.map(r=>consultBlock(r.s,r.c,weeks)).join("\n\n")).join("\n\n")+
+        "── "+g.name+" ──\n"+g.rows.map(r=>consultBlock(r.s,r.c,weeks,blockOpts())).join("\n\n")).join("\n\n")+
       "\n\nRecorded in the MRes Supervision Hub"+(sem?.label?" · "+sem.label:"")+
       (sign.value?"\n\n— "+sign.value:"");
   }
@@ -2003,22 +2202,31 @@ function emailCoSupervisors(students,cons,weeks,only){
       note.textContent=withEmail.length+" personalised email"+(withEmail.length===1?"":"s")+" — your mail app opens once per co-supervisor.";
       preview.textContent=withEmail.map(g=>"To: "+g.email+"\nSubject: "+subject.value+"\n\n"+bodyFor(g)).join("\n\n──────────\n\n");
     }
+    if(changeScope.value!=="none"){
+      const from=(changeScope.value==="upcoming"&&cw)?cw:1;
+      let n=0;
+      withEmail.forEach(g=>g.rows.forEach(r=>{ if(r.c) n+=changedWeeksOf(r.c,weeks).filter(x=>x.w>=from).length; }));
+      note.textContent+="  ·  "+(n?n+" changed week"+(n===1?"":"s")+" listed":"no changed weeks to list");
+    }
     if(noEmail.length) note.textContent+="  ·  "+noEmail.length+" skipped (no email on file: "+noEmail.map(g=>g.name).join(", ")+").";
   }
-  style.onchange=refresh; subject.oninput=refresh; intro.oninput=refresh; sign.oninput=refresh;
+  style.onchange=refresh; changeScope.onchange=refresh; subject.oninput=refresh; intro.oninput=refresh; sign.oninput=refresh;
   refresh();
   if(only) style.value="each", style.disabled=true;
 
   modal(only?("Email co-supervisor — "+only.name):"Email consultation times to co-supervisors",
     el("div",{class:"grid"},
       el("div",{},el("label",{},"Send as"),style),
+      el("div",{},el("label",{},"Week changes to include"),changeScope,
+        el("p",{class:"muted",style:"margin:4px 0 0;font-size:12.5px"},
+          "Any week whose consultation was moved to a different day, time, mode or link is listed under that student, with the week number and its dates.")),
       el("div",{},el("label",{},"Subject"),subject),
       el("div",{},el("label",{},"Opening message"),intro),
       el("div",{},el("label",{},"Sign off as"),sign),
       el("div",{},el("label",{},"Preview"),preview),
       note,
       el("p",{class:"muted",style:"margin:0"},
-        "Each student's day, time, mode, Teams channel link and attendance so far are added automatically. This opens your device's mail app with everything pre-filled — review and tap send there; the hub does not send email itself.")),
+        "Each student's day, time, mode, Teams channel link, attendance so far and changed-week timetable are added automatically. This opens your device's mail app with everything pre-filled — review and tap send there; the hub does not send email itself.")),
     async()=>{
       if(style.value==="one"){
         const me=S.supervisors.find(u=>u.id===S.uid);
