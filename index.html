@@ -2966,6 +2966,194 @@ async function bulkEmailStudents(){
 }
 
 /* ============================================================
+   9c. BULK EMAIL TO STAFF, BY ROLE AND AREA (admin)
+   Lets the admin office write to a whole group of staff at once —
+   e.g. "every Business principal supervisor" or "all IT co-supervisors"
+   — and hand a shared document to them at the same time.
+
+   Two ways of sharing the document, because a static page cannot
+   attach a file to a mailto: link (no browser API allows it):
+     1. Document link  — a Drive / SharePoint / OneDrive URL is added
+        to the bottom of the message. Works everywhere, and the file
+        stays in one place so later edits reach everyone.
+     2. Attach a file  — uses the device share sheet (Web Share, mobile
+        and some desktops). Addresses are copied to the clipboard first
+        so they can be pasted into the mail app the sheet opens.
+   As everywhere else in the hub, nothing is sent by the app itself:
+   the admin reviews the draft in their own mail client and taps send.
+   ============================================================ */
+const STAFF_GROUPS=[
+  {v:"sup-all",        label:"All supervisors",                     test:u=>u.role==="supervisor"},
+  {v:"principal",      label:"Principal supervisors (incl. principal & co)", test:u=>u.role==="supervisor"&&canBePrincipal(u)},
+  {v:"co",             label:"Co-supervisors (incl. principal & co)",        test:u=>u.role==="supervisor"&&canBeCo(u)},
+  {v:"principal-only", label:"Principal only",                      test:u=>u.role==="supervisor"&&capOf(u)==="principal"},
+  {v:"co-only",        label:"Co-supervisor only",                  test:u=>u.role==="supervisor"&&capOf(u)==="co"},
+  {v:"admin",          label:"Admin staff",                         test:u=>u.role==="admin"},
+  {v:"everyone",       label:"Everyone on staff",                   test:()=>true}
+];
+
+// Copy text to the clipboard, with a fallback for browsers/webviews that
+// block the async clipboard API (older Safari, some embedded views).
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    try{
+      const ta=el("textarea",{style:"position:fixed;opacity:0"}); ta.value=text;
+      document.body.append(ta); ta.select(); const ok=document.execCommand("copy"); ta.remove();
+      return ok;
+    }catch(e2){ return false; }
+  }
+}
+
+async function bulkEmailStaff(preset={}){
+  if(S.role!=="admin"){ toast("Group email to staff is an admin tool.",true); return; }
+  const staff=(await DB.listUsers()).sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
+  if(!staff.length){ toast("No staff on file yet.",true); return; }
+
+  // ---- filters ----
+  const group=el("select",{},...STAFF_GROUPS.map(g=>
+    el("option",{value:g.v,...(g.v===(preset.group||"sup-all")?{selected:"selected"}:{})},g.label)));
+  const areaSel=el("select",{},
+    el("option",{value:"",...(preset.area?{}:{selected:"selected"})},"All areas"),
+    ...AREAS.map(a=>el("option",{value:a,...(a===preset.area?{selected:"selected"}:{})},a)));
+  const mode=el("select",{},
+    el("option",{value:"bcc"},"BCC — addresses hidden from each other"),
+    el("option",{value:"to"},"To — everyone sees who else got it"));
+
+  // ---- message ----
+  const subject=el("input",{value:"MRes supervision — "+(activeSemester()?.label||"this semester")});
+  const body=el("textarea",{placeholder:"Dear all,\n\nPlease find below the shared document for this semester…",style:"min-height:110px"});
+  const docName=el("input",{placeholder:"e.g. Supervision handbook 2026"});
+  const docLink=el("input",{placeholder:"https://… link to the shared file (Drive, SharePoint, OneDrive)"});
+  const fileInput=el("input",{type:"file",multiple:"multiple"});
+
+  // ---- recipient list with individual opt-outs ----
+  const excluded=new Set();           // user ids the admin unticked
+  const listBox=el("div",{style:"max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px 10px"});
+  const note=el("p",{class:"muted",style:"margin:0"});
+  const warn=el("p",{class:"muted",style:"margin:0;font-size:13px"});
+
+  function pool(){
+    const g=STAFF_GROUPS.find(x=>x.v===group.value)||STAFF_GROUPS[0];
+    const a=areaSel.value;
+    return staff.filter(u=>g.test(u)).filter(u=>!a||u.area===a);
+  }
+  function selected(){
+    const seen=new Set();
+    return pool().filter(u=>{
+      if(excluded.has(u.id)) return false;
+      const e=(u.email||"").trim().toLowerCase();
+      if(!e||seen.has(e)) return false;
+      seen.add(e); return true;
+    });
+  }
+  function drawList(){
+    listBox.innerHTML="";
+    const p=pool();
+    if(!p.length){
+      listBox.append(el("p",{class:"muted",style:"margin:6px 0"},"Nobody matches this group and area."));
+    }
+    p.forEach(u=>{
+      const cb=el("input",{type:"checkbox",...(excluded.has(u.id)?{}:{checked:"checked"}),
+        ...(u.email?{}:{disabled:"disabled"}),
+        onchange:e=>{ e.target.checked?excluded.delete(u.id):excluded.add(u.id); refresh(); }});
+      const row=el("label",{class:"row",style:"gap:8px;align-items:center;padding:3px 0;cursor:pointer"},
+        cb,
+        el("strong",{style:"font-weight:600"},u.name||u.email||"—"),
+        u.role==="supervisor"?el("span",{class:"pill"},capLabel(capOf(u))):el("span",{class:"pill"},"Admin"),
+        u.area?areaPill(u.area):"",
+        el("span",{class:"muted",style:"font-size:13px"},u.email||"no email on file"));
+      listBox.append(row);
+    });
+    refresh();
+  }
+  function composedBody(){
+    let b=body.value||"";
+    const link=(docLink.value||"").trim();
+    if(link){
+      const name=(docName.value||"").trim();
+      b=b.replace(/\s+$/,"")+"\n\n"+(name?("Shared document — "+name+":\n"):"Shared document:\n")+link+"\n";
+    }
+    return b;
+  }
+  function refresh(){
+    const recips=selected();
+    const noEmail=pool().filter(u=>!u.email).length;
+    note.textContent=recips.length
+      ? recips.length+" recipient"+(recips.length===1?"":"s")+" · "+(mode.value==="bcc"?"added to BCC":"added to To")
+        +(noEmail?"  ·  "+noEmail+" skipped (no email on file)":"")
+      : "No staff with an email address in this group.";
+    // rough mailto length check — some mail clients truncate very long links
+    const est=(recips.map(u=>u.email).join(",")+(subject.value||"")+composedBody()).length*1.4;
+    warn.textContent = est>1800
+      ? "This draft is long. If your mail app opens it truncated, use “Copy addresses” and paste them in instead."
+      : "";
+  }
+
+  group.onchange=()=>{ excluded.clear(); drawList(); };
+  areaSel.onchange=()=>{ excluded.clear(); drawList(); };
+  mode.onchange=refresh; subject.oninput=refresh; body.oninput=refresh;
+  docLink.oninput=refresh; docName.oninput=refresh;
+
+  // ---- secondary actions ----
+  const copyBtn=el("button",{class:"btn xs ghost",onclick:async()=>{
+    const list=selected().map(u=>u.email).join(", ");
+    if(!list){ toast("No addresses to copy.",true); return; }
+    toast(await copyText(list)?"Addresses copied — paste them into your mail app.":"Could not copy — select the addresses manually.",false);
+  }},"⧉ Copy addresses");
+
+  const shareBtn=el("button",{class:"btn xs ghost",onclick:async()=>{
+    const files=[...(fileInput.files||[])];
+    if(!files.length){ toast("Choose a file to attach first.",true); return; }
+    if(!(navigator.canShare&&navigator.canShare({files}))){
+      toast("This device can't attach files from the browser — copy the addresses and attach it in your mail app.",true); return;
+    }
+    await copyText(selected().map(u=>u.email).join(", "));
+    try{
+      await navigator.share({title:subject.value||"MRes supervision",text:composedBody(),files});
+      toast("Addresses copied — paste them into the app you picked.");
+    }catch(e){ if(e.name!=="AbortError") toast("Sharing was not available on this device.",true); }
+  }},"⇪ Attach file & share");
+
+  drawList();
+
+  modal("Email a staff group",
+    el("div",{class:"grid"},
+      el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+        el("div",{class:"field",style:"flex:1;min-width:200px"},el("label",{},"Group"),group),
+        el("div",{class:"field",style:"min-width:130px"},el("label",{},"Area"),areaSel)),
+      el("div",{},el("label",{},"Recipients"),listBox),
+      note, warn,
+      el("div",{},el("label",{},"Addressing"),mode),
+      el("div",{},el("label",{},"Subject"),subject),
+      el("div",{},el("label",{},"Message"),body),
+      el("div",{style:"border-top:1px solid var(--line);padding-top:12px"},
+        el("label",{},"Shared document"),
+        el("p",{class:"muted",style:"margin:0 0 8px;font-size:13px"},
+          "A link is the reliable option — it reaches every mail app and later edits reach everyone. Attaching a real file works through your device's share sheet, mostly on phones."),
+        el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+          el("div",{class:"field",style:"flex:1;min-width:170px"},el("label",{},"Document name (optional)"),docName),
+          el("div",{class:"field",style:"flex:2;min-width:220px"},el("label",{},"Link"),docLink)),
+        el("div",{style:"margin-top:8px"},el("label",{},"Or attach a file from this device"),fileInput),
+        el("div",{class:"row",style:"gap:6px;margin-top:8px"},copyBtn,shareBtn)),
+      el("p",{class:"muted",style:"margin:0"},
+        "“Open mail app” hands the draft to your own mail client with the addresses and text pre-filled. You review it and tap send — the hub never sends email itself.")),
+    async()=>{
+      const recips=selected();
+      if(!recips.length){ toast("No staff with an email to send to.",true); return false; }
+      const emails=recips.map(u=>u.email).join(",");
+      const me=S.user?.email||"";
+      const url="mailto:"+encodeURIComponent(mode.value==="to"?emails:me)
+        +(mode.value==="bcc"?"?bcc="+encodeURIComponent(emails)+"&":"?")
+        +"subject="+encodeURIComponent(subject.value||"")
+        +"&body="+encodeURIComponent(composedBody());
+      window.location.href=url;
+      toast("Opening mail app with "+recips.length+" recipient"+(recips.length===1?"":"s")+".");
+      return true;
+    },"Open mail app");
+}
+
+/* ============================================================
    9b. MESSAGES TAB — supervision notes
    One thread per student, shared by the principal supervisor, the
    co-supervisor, the admin office and the student. Unread notes are
@@ -3592,9 +3780,16 @@ async function viewContacts(v){
     el("div",{class:"eyebrow ui"},"Directory"),
     el("h2",{},"Contacts"))));
   v.append(el("p",{class:"muted ui",style:"margin-top:-8px"},
-    "Email and mobile for every staff member and student. The Email button opens your device's mail app and the Text button opens your phone's messaging app, both with the message pre-filled \u2014 you review and tap send. The hub itself never sends anything."));
-  v.append(el("div",{class:"row",style:"margin:-4px 0 12px"},
-    el("button",{class:"btn ghost sm",onclick:smsInfo},"How can this system send real text messages?")));
+    "Email and mobile for every staff member and student. The Email button opens your device's mail app and the Text button opens your phone's messaging app, both with the message pre-filled \u2014 you review and tap send. The hub itself never sends anything."
+    +(S.role==="admin"?" Use \u201CEmail a staff group\u201D to write to every supervisor, principal supervisor or co-supervisor at once \u2014 filtered by area \u2014 and hand them a shared document.":"")));
+  const actions=el("div",{class:"row",style:"margin:-4px 0 12px;gap:8px;flex-wrap:wrap"});
+  if(S.role==="admin"){
+    actions.append(el("button",{class:"btn sm",onclick:()=>bulkEmailStaff()},"\u2709 Email a staff group"));
+    AREAS.forEach(a=>actions.append(el("button",{class:"btn ghost sm",
+      onclick:()=>bulkEmailStaff({group:"sup-all",area:a})},"\u2709 "+a+" supervisors")));
+  }
+  actions.append(el("button",{class:"btn ghost sm",onclick:smsInfo},"How can this system send real text messages?"));
+  v.append(actions);
 
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewContacts(v)));
   const search=el("input",{placeholder:"Search name, email, mobile…",style:"min-width:220px"});
@@ -3619,7 +3814,7 @@ async function viewContacts(v){
     sCard.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line)"},
       el("strong",{class:"ui"},"Staff")));
     const st=el("table",{});
-    st.append(el("thead",{},el("tr",{},...["Name","Role","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
+    st.append(el("thead",{},el("tr",{},...["Name","Role","Area","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
     const stb=el("tbody",{});
     staff.filter(match).forEach(u=>{
       const roleLabel=u.role==="admin"?"Admin":capLabel(capOf(u));
@@ -3630,6 +3825,7 @@ async function viewContacts(v){
       stb.append(el("tr",{},
         el("td",{},el("strong",{},u.name||"—")),
         el("td",{},roleLabel),
+        el("td",{},u.role==="supervisor"?areaPill(u.area):el("span",{class:"muted"},"—")),
         el("td",{class:"muted"},u.email||"—"),
         el("td",{class:"muted"},u.mobile||el("span",{class:"muted"},"—")),
         el("td",{},contact)));
