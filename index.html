@@ -850,6 +850,21 @@ const PANEL_SIZE=3;     // members seated on each student's panel
 const PANEL_CAP=6;      // students one assessor is normally asked to take
 
 const nomId=()=>"n"+Math.random().toString(36).slice(2,9);
+/* Firestore rejects any field whose value is `undefined` \u2014 it is not the
+   same as an absent key. An EXTERNAL assessor has no uid at all, so copying
+   a member field-by-field with `uid:m.uid` writes undefined and the whole
+   save fails. Every member record therefore goes through here, which fills
+   the text fields and only sets uid when there genuinely is one. */
+function cleanMember(m){
+  const kind=m?.kind==="external"?"external":"internal";
+  const out={
+    id:m?.id||nomId(), kind,
+    name:m?.name||"", email:m?.email||"", mobile:m?.mobile||"",
+    org:m?.org||(kind==="external"?"External":"Internal")
+  };
+  if(kind==="internal"&&m?.uid) out.uid=m.uid;
+  return out;
+}
 const emailKey=x=>String(x||"").trim().toLowerCase();
 const membersOf=p=>Array.isArray(p?.members)?p.members:[];
 const poolOf=(pools,uid)=>pools.find(p=>p.supervisorUid===uid)||null;
@@ -913,7 +928,8 @@ function seatChip(m,onRemove){
 
 async function savePool(supUid,supName_,supEmail,members){
   const rec={semesterId:S.activeSem,supervisorUid:supUid,supervisorName:supName_||"",
-             supervisorEmail:supEmail||"",updatedAt:Date.now(),members};
+             supervisorEmail:supEmail||"",updatedAt:Date.now(),
+             members:(members||[]).map(cleanMember)};
   const ex=(await DB.list("panelPool",{semesterId:S.activeSem,supervisorUid:supUid}))[0];
   if(ex) await DB.update("panelPool",ex.id,rec); else await DB.add("panelPool",rec);
   return true;
@@ -921,7 +937,8 @@ async function savePool(supUid,supName_,supEmail,members){
 async function savePanel(student,members){
   const rec={semesterId:S.activeSem,studentDocId:student.id,studentName:student.name||"",
              studentSid:student.sid||"",principalUid:student.principalUid||"",
-             principalName:student.principalName||"",updatedAt:Date.now(),members};
+             principalName:student.principalName||"",updatedAt:Date.now(),
+             members:(members||[]).map(cleanMember)};
   const ex=(await DB.list("panels",{semesterId:S.activeSem,studentDocId:student.id}))[0];
   if(ex) await DB.update("panels",ex.id,rec); else await DB.add("panels",rec);
 }
@@ -1427,8 +1444,7 @@ async function viewPanelAdmin(v){
         .sort((a,b)=>a.mine-b.mine||a.n-b.n||String(a.m.name).localeCompare(String(b.m.name)))
         .slice(0,PANEL_SIZE);
       if(!pool.length) continue;
-      const chosen=pool.map(x=>({id:x.m.id,kind:x.m.kind,uid:x.m.uid,name:x.m.name,
-                                 email:x.m.email,mobile:x.m.mobile,org:x.m.org}));
+      const chosen=pool.map(x=>cleanMember(x.m));
       chosen.forEach(m=>load.set(memberKey(m),(load.get(memberKey(m))||0)+1));
       await savePanel(s,chosen);
       if(chosen.length>=PANEL_SIZE) filled++; else short++;
@@ -1471,8 +1487,7 @@ async function viewPanelAdmin(v){
       else{
         const n=load.get(k)||0;
         if(n>=PANEL_CAP) toast((m.name||"That assessor")+" is already down for "+n+" CoCs \u2014 above the usual "+PANEL_CAP+".");
-        chosen=chosen.concat([{id:m.id,kind:m.kind,uid:m.uid,name:m.name,
-                               email:m.email,mobile:m.mobile,org:m.org}]);
+        chosen=chosen.concat([cleanMember(m)]);
       }
       paint();
     }
@@ -1523,8 +1538,9 @@ async function viewPanelAdmin(v){
     search.oninput=paint;
 
     const addExt=el("button",{class:"btn ghost sm",onclick:()=>nominateExternal(null,m=>{
-      cands=cands.concat([{...m,nominators:[]}]);
-      chosen=chosen.concat([m]);
+      const cm=cleanMember(m);
+      cands=cands.concat([{...cm,nominators:[]}]);
+      chosen=chosen.concat([cm]);
       paint();
     })},"+ Add an external assessor");
 
