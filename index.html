@@ -420,6 +420,42 @@
     body{background:#fff}
     .card{box-shadow:none;border:1px solid #b6bcc3}
   }
+  /* ---- CoC assessment panels ---- */
+  .pgrid{display:grid;gap:9px}
+  .pmember{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;
+    border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:9px;background:var(--paper-2)}
+  .pmember.ext{border-left-color:var(--amber)}
+  .pmember .pm-main{flex:1;min-width:170px}
+  .pmember .pm-nm{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:14.5px;color:var(--ink)}
+  .pmember .pm-sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .loadpill{font-family:ui-sans-serif,sans-serif;font-size:11.5px;font-weight:700;padding:2px 8px;
+    border-radius:99px;background:var(--neutral-soft);color:var(--neutral-ink);white-space:nowrap}
+  .loadpill.warn{background:var(--amber-soft);color:var(--amber-ink)}
+  .loadpill.full{background:var(--clay-soft);color:var(--clay-ink)}
+  .picklist{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:9px;background:var(--paper-2)}
+  .pickrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;
+    border-bottom:1px solid var(--line);cursor:pointer}
+  .pickrow:last-child{border-bottom:none}
+  .pickrow:hover{background:var(--teal-tint)}
+  .pickrow.on{background:var(--teal-tint);box-shadow:inset 3px 0 0 var(--teal)}
+  .pickrow.blocked{opacity:.45;cursor:not-allowed}
+  .pickrow.blocked:hover{background:transparent}
+  .pickrow .pk-main{flex:1;min-width:160px}
+  .pickrow .pk-nm{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;font-size:14px;color:var(--ink)}
+  .pickrow .pk-sub{font-size:12px;color:var(--ink-soft);margin-top:1px}
+  .pickrow .tick{width:19px;height:19px;border-radius:5px;border:1.5px solid var(--line-strong);
+    display:grid;place-items:center;font-size:12px;color:#fff;flex:0 0 auto}
+  .pickrow.on .tick{background:var(--teal);border-color:var(--teal)}
+  .seatchip{display:inline-flex;align-items:center;gap:6px;font-family:ui-sans-serif,sans-serif;
+    font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:99px;
+    background:var(--teal-tint);color:var(--teal-deep);border:1px solid var(--line)}
+  .seatchip.ext{background:var(--amber-soft);color:var(--amber-ink);border-color:transparent}
+  .seatchip .x{cursor:pointer;font-weight:800;opacity:.6}
+  .seatchip .x:hover{opacity:1}
+  .subtabs{display:inline-flex;background:#0b21360d;border-radius:9px;padding:3px;gap:3px;margin-bottom:14px}
+  .subtabs button{border:none;background:none;padding:7px 14px;border-radius:7px;font-weight:600;
+    font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--ink-soft);cursor:pointer}
+  .subtabs button.active{background:var(--paper-2);color:var(--teal-deep);box-shadow:var(--shadow)}
 </style>
 <!-- Firebase SDK (modular, via CDN) -->
 <script type="module">
@@ -505,6 +541,19 @@ function getFactoryAuth(){
                           pinned:bool,                        // staff can pin a note
                           readBy:{ <uid|'student'>:true }     // who has seen it
                         }
+     panelPool/{id}   -> {                                   // CoC assessor nominations
+                          semesterId, supervisorUid,          // ONE per supervisor per semester
+                          supervisorName, supervisorEmail, updatedAt,
+                          members:[{ id, kind:'internal'|'external',
+                                     uid?,                    // set when kind==='internal'
+                                     name, email, mobile, org }]
+                        }
+     panels/{id}      -> {                                   // the seated CoC panel
+                          semesterId, studentDocId,           // ONE per student per semester
+                          studentName, studentSid,
+                          principalUid, principalName, updatedAt,
+                          members:[ ...same member shape as above... ]
+                        }
      (attendance collection retained for back-compat reads only; new logging
       lives inside consultations.weeks so meetings + attendance are one record.)
 
@@ -519,7 +568,8 @@ function getFactoryAuth(){
    longer used by the app.)
    ============================================================ */
 
-const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, notes:{} };
+const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, notes:{},
+              panelPool:{}, panels:{} };
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
@@ -560,6 +610,26 @@ function seedDemo(){
   mem.notes["n3"]={semesterId:"s2-2026",studentDocId:"st1",authorUid:"student:45001",authorName:"Aisha Khan",
     authorRole:"student",text:"Thank you both. I'll have the revised methodology ready before our Wednesday consultation.",
     createdAt:dayAgo(2),pinned:false,readBy:{"student:45001":true}};
+  // sample CoC assessor nominations + one seated panel
+  mem.users["supD"]={email:"d.novak@uni.edu",name:"Dr Novak",role:"supervisor",supRole:"both",mobile:"+61 400 777 888",area:"IT"};
+  mem.users["supE"]={email:"e.wong@uni.edu",name:"Dr Wong",role:"supervisor",supRole:"both",mobile:"",area:"Business"};
+  mem.panelPool["pp1"]={semesterId:"s2-2026",supervisorUid:"supA",supervisorName:"Dr Smith",
+    supervisorEmail:"a.smith@uni.edu",updatedAt:dayAgo(5),members:[
+      {id:"n1a",kind:"internal",uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu",mobile:"+61 400 333 444",org:"Internal"},
+      {id:"n1b",kind:"internal",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",mobile:"+61 400 777 888",org:"Internal"},
+      {id:"n1c",kind:"external",name:"Dr Priya Raman",email:"p.raman@uow.edu.au",mobile:"+61 433 090 121",org:"University of Wollongong"}
+    ]};
+  mem.panelPool["pp2"]={semesterId:"s2-2026",supervisorUid:"supB",supervisorName:"Dr Jones",
+    supervisorEmail:"b.jones@uni.edu",updatedAt:dayAgo(3),members:[
+      {id:"n2a",kind:"internal",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",mobile:"+61 400 777 888",org:"Internal"},
+      {id:"n2b",kind:"internal",uid:"supE",name:"Dr Wong",email:"e.wong@uni.edu",mobile:"",org:"Internal"}
+    ]};
+  mem.panels["pnl1"]={semesterId:"s2-2026",studentDocId:"st1",studentName:"Aisha Khan",studentSid:"45001",
+    principalUid:"supA",principalName:"Dr Smith",updatedAt:dayAgo(1),members:[
+      {id:"n1a",kind:"internal",uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu",mobile:"+61 400 333 444",org:"Internal"},
+      {id:"n1b",kind:"internal",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",mobile:"+61 400 777 888",org:"Internal"},
+      {id:"n1c",kind:"external",name:"Dr Priya Raman",email:"p.raman@uow.edu.au",mobile:"+61 433 090 121",org:"University of Wollongong"}
+    ]};
 }
 
 /* Student IDs are typed by hand at the portal sign-in, so "CIHE45001",
@@ -673,7 +743,8 @@ const DB = {
    3. APP STATE & HELPERS
    ============================================================ */
 const S = { user:null, role:null, uid:null, semesters:[], activeSem:null, tab:"students", supervisors:[],
-            studentSid:null, studentName:"", unreadNotes:0, notesTabBtn:null, bannerShown:false };
+            studentSid:null, studentName:"", unreadNotes:0, notesTabBtn:null, bannerShown:false,
+            panelTab:"nominations", panelSeating:false };
 
 const $ = s=>document.querySelector(s);
 const el = (tag,props={},...kids)=>{
@@ -761,7 +832,726 @@ function capOf(u){ return u?.supRole||"both"; }
 function canBePrincipal(u){ return capOf(u)!=="co"; }
 function canBeCo(u){ return capOf(u)!=="principal"; }
 function capLabel(c){ return c==="principal"?"Principal only":c==="co"?"Co-supervisor only":"Principal & co"; }
-function supName(uid){ const u=S.supervisors.find(x=>x.id===uid); return u?.name||u?.email||uid||"—"; }
+function supName(uid){ const u=S.supervisors.find(x=>x.id===uid); return u?.name||u?.email||uid||"\u2014"; }
+
+/* ---- CoC assessment panels -------------------------------------------
+   Confirmation of Candidature is assessed by a small panel that has to be
+   INDEPENDENT of the student's supervision team. Two rules fall out of that
+   and are enforced everywhere below:
+     1. when a supervisor nominates names, they can't put forward themselves
+        or anyone who supervises one of their own students;
+     2. a student's own principal / co can never be seated on that student's
+        panel, however the coordinator gets there.
+   Numbers are policy, not structure \u2014 change them here and every prompt,
+   warning and progress count in the UI follows. -------------------------- */
+const PANEL_TARGET=6;   // names we ask each supervisor to put forward
+const PANEL_MIN=3;      // fewer than this and we prompt for more
+const PANEL_SIZE=3;     // members seated on each student's panel
+const PANEL_CAP=6;      // students one assessor is normally asked to take
+
+const nomId=()=>"n"+Math.random().toString(36).slice(2,9);
+const emailKey=x=>String(x||"").trim().toLowerCase();
+const membersOf=p=>Array.isArray(p?.members)?p.members:[];
+const poolOf=(pools,uid)=>pools.find(p=>p.supervisorUid===uid)||null;
+const panelOf=(panels,sid)=>panels.find(p=>p.studentDocId===sid)||null;
+/* One identity for a nominee however they were entered, so the same person
+   suggested by three supervisors collapses into one candidate with one
+   workload count. Staff key off their uid; external people off their email. */
+const memberKey=m=>m.kind==="internal"&&m.uid?("u:"+m.uid):("e:"+emailKey(m.email||m.name));
+
+// Rule 1: everyone this supervisor may NOT nominate.
+function conflictedUidsFor(supUid,students){
+  const out=new Set([supUid]);
+  students.filter(s=>s.principalUid===supUid||s.coUid===supUid).forEach(s=>{
+    if(s.principalUid) out.add(s.principalUid);
+    if(s.coUid) out.add(s.coUid);
+  });
+  return out;
+}
+// Rule 2: who may never assess THIS student.
+const studentConflicts=s=>new Set([s.principalUid,s.coUid].filter(Boolean));
+
+/* How many students each assessor is already down for this semester.
+   `skipStudentId` leaves the panel being edited out of the tally so the
+   people already on it don't look one heavier than they really are. */
+function panelLoad(panels,skipStudentId){
+  const load=new Map();
+  panels.filter(p=>p.studentDocId!==skipStudentId).forEach(p=>membersOf(p).forEach(m=>{
+    const k=memberKey(m); load.set(k,(load.get(k)||0)+1);
+  }));
+  return load;
+}
+function loadPill(n){
+  const cls=n>=PANEL_CAP?"loadpill full":n>=PANEL_CAP-1?"loadpill warn":"loadpill";
+  return el("span",{class:cls,title:"Already assessing "+n+" of the usual maximum "+PANEL_CAP+" CoCs"},n+"/"+PANEL_CAP);
+}
+function noticeBar(tone,text,...extra){
+  const c={amber:"var(--amber)",blue:"var(--blue)",green:"var(--green)",clay:"var(--clay)"}[tone]||"var(--blue)";
+  return el("div",{class:"card ui",style:"border-left:4px solid "+c+";padding:12px 14px;margin-bottom:14px"},
+    el("div",{class:"row",style:"align-items:center;gap:10px"},
+      el("span",{style:"flex:1;min-width:190px;font-size:14px"},text),...extra));
+}
+function cardShell(title,right){
+  const c=el("div",{class:"card",style:"padding:0;overflow:hidden;margin-bottom:14px"});
+  c.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"},
+    el("strong",{class:"ui"},title), right||el("span",{})));
+  return c;
+}
+function memberLine(m,...extra){
+  return el("div",{class:"pmember"+(m.kind==="external"?" ext":"")},
+    el("div",{class:"pm-main"},
+      el("div",{class:"pm-nm"},m.name||"\u2014"),
+      el("div",{class:"pm-sub"},[m.email||"no email on file",m.mobile||"no mobile on file",
+        m.org||(m.kind==="internal"?"Internal":"External")].join(" \u00B7 "))),
+    ...extra);
+}
+function seatChip(m,onRemove){
+  const c=el("span",{class:"seatchip"+(m.kind==="external"?" ext":"")},m.name||"\u2014");
+  if(onRemove) c.append(el("span",{class:"x",title:"Remove",onclick:onRemove},"\u00D7"));
+  return c;
+}
+
+async function savePool(supUid,supName_,supEmail,members){
+  const rec={semesterId:S.activeSem,supervisorUid:supUid,supervisorName:supName_||"",
+             supervisorEmail:supEmail||"",updatedAt:Date.now(),members};
+  const ex=(await DB.list("panelPool",{semesterId:S.activeSem,supervisorUid:supUid}))[0];
+  if(ex) await DB.update("panelPool",ex.id,rec); else await DB.add("panelPool",rec);
+  return true;
+}
+async function savePanel(student,members){
+  const rec={semesterId:S.activeSem,studentDocId:student.id,studentName:student.name||"",
+             studentSid:student.sid||"",principalUid:student.principalUid||"",
+             principalName:student.principalName||"",updatedAt:Date.now(),members};
+  const ex=(await DB.list("panels",{semesterId:S.activeSem,studentDocId:student.id}))[0];
+  if(ex) await DB.update("panels",ex.id,rec); else await DB.add("panels",rec);
+}
+
+/* Pick a staff member from the hub. `eligible` has already had the
+   conflict rule and the already-nominated names taken out of it, so an
+   empty list is a real dead end and says so rather than showing a blank
+   dropdown. Contact details are read from the staff profile so there's
+   one source of truth for a colleague's email and mobile. */
+function nominateInternal(eligible,done){
+  if(!eligible.length){
+    modal("No eligible colleagues",
+      el("p",{class:"muted",style:"margin:0"},
+        "Every other supervisor on the hub already supervises at least one of your students, so none of them can independently assess a Confirmation of Candidature. Add an external assessor instead, or ask the coordinator to add more staff."),
+      async()=>true,"Close");
+    return;
+  }
+  const sel=el("select",{},...eligible.map(u=>el("option",{value:u.id},
+    (u.name||u.email)+"  \u00B7  "+(u.area||"no area")+"  \u00B7  "+capLabel(capOf(u)))));
+  const info=el("div",{class:"muted ui",style:"font-size:13px"});
+  const sync=()=>{
+    const u=eligible.find(x=>x.id===sel.value);
+    info.textContent=u?((u.email||"no email on file")+" \u00B7 "+(u.mobile||"no mobile on file")):"";
+  };
+  sel.onchange=sync;
+  modal("Nominate a colleague",
+    el("div",{class:"grid"},
+      el("div",{},el("label",{},"Supervisor"),sel),
+      el("div",{},info),
+      el("div",{},el("p",{class:"muted",style:"margin:0"},
+        "Only staff who don't supervise any of your students are listed \u2014 an assessor has to be independent of the supervision team. Email and mobile come from their staff profile."))),
+    async()=>{
+      const u=eligible.find(x=>x.id===sel.value);
+      if(!u){ toast("Choose a colleague.",true); return false; }
+      done({id:nomId(),kind:"internal",uid:u.id,name:u.name||u.email,
+            email:u.email||"",mobile:u.mobile||"",org:"Internal"});
+      return true;
+    },"Add nominee");
+  sync();
+}
+
+/* Someone with no hub login \u2014 typed in by hand and carried through to the
+   panel exactly like a staff nominee, so a panel can mix both. */
+function nominateExternal(existing,done){
+  const name=el("input",{value:existing?.name||"",placeholder:"e.g. Dr Priya Raman"});
+  const email=el("input",{type:"email",value:existing?.email||"",placeholder:"e.g. p.raman@uow.edu.au"});
+  const mobile=el("input",{type:"tel",value:existing?.mobile||"",placeholder:"e.g. +61 4xx xxx xxx"});
+  const org=el("input",{value:existing?.org||"",placeholder:"e.g. University of Wollongong"});
+  modal(existing?"Edit nominee":"Nominate an external assessor",
+    el("div",{class:"grid"},
+      el("div",{},el("label",{},"Full name"),name),
+      el("div",{},el("label",{},"Email"),email),
+      el("div",{},el("label",{},"Mobile (optional)"),mobile),
+      el("div",{},el("label",{},"Institution / organisation"),org),
+      el("div",{},el("p",{class:"muted",style:"margin:0"},
+        "For an assessor who has no login here. The coordinator contacts them directly using these details."))),
+    async()=>{
+      if(!name.value.trim()){ toast("A name is needed.",true); return false; }
+      if(!email.value.trim()){ toast("An email address is needed \u2014 it's how the coordinator will reach them.",true); return false; }
+      done({id:existing?.id||nomId(),kind:"external",name:name.value.trim(),
+            email:email.value.trim(),mobile:mobile.value.trim(),org:org.value.trim()});
+      return true;
+    },"Save nominee");
+}
+
+/* Same failure mode as the Messages tab: the CoC screens live in two
+   collections that older rules files don't mention, so every read is denied
+   and the tab renders as a bare heading. Say so, and hand over the exact
+   rules to paste, rather than leaving a blank page. */
+function panelRuleHelp(err){
+  const card=el("div",{class:"card",style:"border-left:4px solid var(--clay,#c2410c)"});
+  card.append(
+    el("h3",{style:"margin:0 0 6px"},"CoC panels can't be loaded"),
+    el("p",{class:"muted",style:"margin:0 0 10px"},
+      "The app couldn't read the \u201CpanelPool\u201D / \u201Cpanels\u201D collections. Firestore reported: "+
+      (err?.message||"unknown error")),
+    el("p",{style:"margin:0 0 8px;font-size:14px"},
+      "Nominations and seated panels are stored in two new collections. Anything your security rules don't mention is denied outright, so this tab comes back empty. Add these in the Firebase console under Firestore Database \u2192 Rules, then reload:"));
+  const rule=
+"match /panelPool/{poolId} {\n"+
+"  allow read, write: if request.auth != null;\n"+
+"}\n"+
+"match /panels/{panelId} {\n"+
+"  allow read, write: if request.auth != null;\n"+
+"}";
+  const pre=el("pre",{style:"white-space:pre-wrap;background:rgba(127,127,127,.1);padding:12px;border-radius:8px;font-size:12.5px;margin:0 0 10px"},rule);
+  card.append(pre,
+    el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+      el("button",{class:"btn sm",onclick:()=>{
+        navigator.clipboard?.writeText(rule).then(()=>toast("Rules copied."),()=>toast("Copy failed \u2014 select the text manually.",true));
+      }},"Copy rules"),
+      el("button",{class:"btn ghost sm",onclick:()=>drawMain()},"Retry")),
+    el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
+      "That pair is the permissive version, matching how the rest of the app is secured \u2014 use it to confirm the tab works. The tighter rules, which stop a supervisor reading a colleague's nominations and stop anyone but the coordinator seating a panel, are in the firestore.rules file supplied alongside this app."));
+  return card;
+}
+
+/* ============================================================
+   13B. CoC PANEL \u2014 SUPERVISOR VIEW
+   Where a principal or co-supervisor puts names forward. Deliberately
+   framed as a suggestion, not a booking: the coordinator seats the
+   actual panel, and this screen shows the result once they have.
+   ============================================================ */
+async function viewPanels(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),
+    el("h2",{},"CoC panel"))));
+  v.append(el("p",{class:"muted ui",style:"margin-top:-8px"},
+    "Put forward the people you would be happy to see assess your students' Confirmation of Candidature. "+
+    "The coordinator seats a "+PANEL_SIZE+"-member panel for each student from the names collected across all supervisors \u2014 "+
+    "around "+PANEL_TARGET+" gives them room to avoid clashes."));
+
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewPanels(v)));
+  v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Ask the coordinator to set one up first.")); return; }
+
+  let students,pools,panels;
+  try{
+    students=await DB.list("students",{semesterId:S.activeSem});
+    /* Only ever ask for MY OWN nomination doc, never the whole semester's.
+       A supervisor has no reason to read a colleague's suggestions, and
+       Firestore rejects a list query outright unless the query itself is
+       narrow enough to guarantee every document it could return is allowed
+       \u2014 so the security rule and this filter have to agree. */
+    pools=await DB.list("panelPool",{semesterId:S.activeSem,supervisorUid:S.uid});
+    panels=await DB.list("panels",{semesterId:S.activeSem});
+  }catch(err){ v.append(panelRuleHelp(err)); return; }
+  const mine=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
+  const asPrincipal=mine.filter(s=>s.principalUid===S.uid);
+  let members=membersOf(poolOf(pools,S.uid)).slice();
+
+  const host=el("div",{}); v.append(host);
+
+  const eligibleStaff=()=>{
+    const blocked=conflictedUidsFor(S.uid,students);
+    const taken=new Set(members.filter(m=>m.kind==="internal").map(m=>m.uid));
+    return S.supervisors.filter(u=>!blocked.has(u.id)&&!taken.has(u.id))
+      .sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
+  };
+  async function commit(msg){
+    try{
+      await savePool(S.uid,S.userName||S.user?.email||"",S.user?.email||"",members);
+      const fresh=await DB.list("panels",{semesterId:S.activeSem});
+      panels.length=0; fresh.forEach(x=>panels.push(x));
+    }catch(err){
+      // put the list back the way it was so the screen matches the database
+      members=membersOf(poolOf(pools,S.uid)).slice();
+      toast(err?.message||"Could not save \u2014 check your connection or permissions.",true);
+      draw(); return;
+    }
+    toast(msg||"Nominations saved."); draw();
+  }
+
+  function draw(){
+    host.innerHTML="";
+    const n=members.length;
+
+    // ---- progress / prompt ----
+    if(!mine.length){
+      host.append(noticeBar("blue","You have no students in this semester, so there's nothing to nominate for yet. You can still put names forward \u2014 they stay on file for the coordinator."));
+    }
+    if(n===0){
+      host.append(noticeBar("amber","You haven't nominated anyone yet. Please suggest at least "+PANEL_MIN+" names \u2014 about "+PANEL_TARGET+" is ideal."));
+    } else if(n<PANEL_MIN){
+      host.append(noticeBar("amber",
+        n+(n===1?" name":" names")+" so far. Please add at least "+(PANEL_MIN-n)+" more \u2014 the coordinator needs "+PANEL_MIN+" to seat a panel, and around "+PANEL_TARGET+" to work around clashes and workload."));
+    } else if(n<PANEL_TARGET){
+      host.append(noticeBar("blue",
+        n+" names nominated \u2014 enough to seat a panel. Another "+(PANEL_TARGET-n)+" would give the coordinator more room to spread the assessing load."));
+    } else {
+      host.append(noticeBar("green",n+" names nominated \u2014 plenty for the coordinator to work with. Thank you."));
+    }
+
+    // ---- my nominations ----
+    const load=panelLoad(panels);
+    const card=cardShell("My nominated assessors",
+      el("span",{class:"muted ui"},n+" of "+PANEL_TARGET+" suggested"));
+    const bodyBox=el("div",{style:"padding:14px 16px"});
+    if(!n){
+      bodyBox.append(el("p",{class:"muted",style:"margin:0 0 12px"},
+        "No names yet. Add colleagues from the hub, or type in an external assessor."));
+    } else {
+      const list=el("div",{class:"pgrid",style:"margin-bottom:12px"});
+      members.forEach(m=>{
+        const acts=el("div",{class:"row",style:"gap:5px"});
+        acts.append(loadPill(load.get(memberKey(m))||0));
+        acts.append(emailButton(m.email,"MRes Confirmation of Candidature",
+          "Dear "+(m.name||"")+",\n\n","\u2709","btn xs ghost"));
+        if(m.kind==="external"){
+          acts.append(el("button",{class:"btn xs ghost",onclick:()=>nominateExternal(m,upd=>{
+            members=members.map(x=>x.id===m.id?upd:x); commit("Nominee updated.");
+          })},"Edit"));
+        }
+        acts.append(el("button",{class:"btn xs ghost",onclick:()=>{
+          members=members.filter(x=>x.id!==m.id); commit("Nominee removed.");
+        }},"Remove"));
+        list.append(memberLine(m,acts));
+      });
+      bodyBox.append(list);
+    }
+    bodyBox.append(el("div",{class:"row"},
+      el("button",{class:"btn sm",onclick:()=>nominateInternal(eligibleStaff(),m=>{
+        members=members.concat([m]); commit("Nominee added.");
+      })},"+ Nominate a colleague"),
+      el("button",{class:"btn ghost sm",onclick:()=>nominateExternal(null,m=>{
+        members=members.concat([m]); commit("Nominee added.");
+      })},"+ Nominate an external assessor")));
+    card.append(bodyBox); host.append(card);
+
+    // ---- panels the coordinator has seated for my students ----
+    if(mine.length){
+      const pc=cardShell("Panels seated for my students");
+      const t=el("table",{});
+      t.append(el("thead",{},el("tr",{},...["Student","ID","My role","Panel","Contact"].map(h=>el("th",{},h)))));
+      const tb=el("tbody",{});
+      mine.sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(s=>{
+        const pn=panelOf(panels,s.id), ms=membersOf(pn);
+        const chips=el("div",{class:"row",style:"gap:5px"});
+        if(!ms.length) chips.append(el("span",{class:"pill pending"},"Not seated yet"));
+        else {
+          ms.forEach(m=>chips.append(seatChip(m)));
+          if(ms.length<PANEL_SIZE) chips.append(el("span",{class:"pill pending"},"Incomplete"));
+        }
+        const contact=el("div",{class:"row",style:"gap:5px"});
+        ms.forEach(m=>contact.append(emailButton(m.email,
+          "MRes CoC panel \u2014 "+s.name,"Dear "+(m.name||"")+",\n\nRegarding the Confirmation of Candidature for "+s.name+" ("+(s.sid||"")+"):\n\n",
+          "\u2709 "+(m.name||"").split(" ").slice(-1)[0],"btn xs ghost")));
+        tb.append(el("tr",{},
+          el("td",{},el("strong",{},s.name)),
+          el("td",{class:"muted"},s.sid||"\u2014"),
+          el("td",{},s.principalUid===S.uid?el("span",{class:"pill blue"},"Principal"):el("span",{class:"pill none"},"Co-supervisor")),
+          el("td",{},chips),
+          el("td",{},contact)));
+      });
+      t.append(tb); pc.append(t); host.append(pc);
+    }
+
+    // ---- what I've been asked to assess ----
+    const assessing=panels.filter(pn=>membersOf(pn).some(m=>m.kind==="internal"&&m.uid===S.uid));
+    const ac=cardShell("Students I'm assessing",
+      el("span",{class:assessing.length>PANEL_CAP?"pill missed":"muted ui"},
+        assessing.length+" of "+PANEL_CAP+" usual maximum"));
+    if(!assessing.length){
+      ac.append(el("p",{class:"muted",style:"padding:16px;margin:0"},
+        "You haven't been seated on any CoC panel this semester."));
+    } else {
+      const t=el("table",{});
+      t.append(el("thead",{},el("tr",{},...["Student","ID","Principal supervisor","Fellow assessors"].map(h=>el("th",{},h)))));
+      const tb=el("tbody",{});
+      assessing.forEach(pn=>{
+        const others=membersOf(pn).filter(m=>!(m.kind==="internal"&&m.uid===S.uid));
+        tb.append(el("tr",{},
+          el("td",{},el("strong",{},pn.studentName||"\u2014")),
+          el("td",{class:"muted"},pn.studentSid||"\u2014"),
+          el("td",{},pn.principalName||"\u2014"),
+          el("td",{class:"muted ui",style:"font-size:13px"},others.map(m=>m.name).join(", ")||"\u2014")));
+      });
+      t.append(tb); ac.append(t);
+      if(assessing.length>PANEL_CAP)
+        ac.append(el("div",{class:"locknote",style:"margin:0;border-radius:0"},
+          "That's above the usual limit of "+PANEL_CAP+" \u2014 let the coordinator know if it's too much."));
+    }
+    host.append(ac);
+  }
+  draw();
+}
+
+/* ============================================================
+   13C. CoC PANELS \u2014 ADMIN VIEW
+   Two jobs on one screen: chase and read the nominations coming in,
+   then seat a panel per student. Kept as sub-tabs rather than two
+   top-level tabs because the second job is done with the first in view.
+   ============================================================ */
+async function viewPanelAdmin(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),
+    el("h2",{},"CoC panels"))));
+
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewPanelAdmin(v)));
+  v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
+
+  let students,pools,panels;
+  try{
+    students=await DB.list("students",{semesterId:S.activeSem});
+    pools=await DB.list("panelPool",{semesterId:S.activeSem});
+    panels=await DB.list("panels",{semesterId:S.activeSem});
+  }catch(err){ v.append(panelRuleHelp(err)); return; }
+
+  async function reload(){
+    try{
+      students=await DB.list("students",{semesterId:S.activeSem});
+      pools=await DB.list("panelPool",{semesterId:S.activeSem});
+      panels=await DB.list("panels",{semesterId:S.activeSem});
+    }catch(err){ toast(err?.message||"Could not reload panels.",true); return; }
+    draw();
+  }
+
+  if(!S.panelTab) S.panelTab="nominations";
+  const tabs=el("div",{class:"subtabs ui"});
+  [["nominations","Nominations received"],["form","Seat the panels"]].forEach(([id,label])=>{
+    const b=el("button",{class:S.panelTab===id?"active":"",onclick:()=>{
+      S.panelTab=id;
+      [...tabs.children].forEach(x=>x.classList.toggle("active",x===b));
+      draw();
+    }},label);
+    tabs.append(b);
+  });
+  v.append(tabs);
+  const host=el("div",{}); v.append(host);
+
+  /* Every distinct person nominated by anyone, with who put them forward.
+     This is the coordinator's working list \u2014 the same colleague suggested
+     by four supervisors appears once, with all four credited. */
+  function candidatePool(){
+    const byKey=new Map();
+    pools.forEach(pl=>membersOf(pl).forEach(m=>{
+      const k=memberKey(m);
+      if(!byKey.has(k)) byKey.set(k,{...m,id:m.id,nominators:[]});
+      const rec=byKey.get(k);
+      if(!rec.nominators.includes(pl.supervisorUid)) rec.nominators.push(pl.supervisorUid);
+      // keep the fullest contact details we've been given
+      if(!rec.mobile&&m.mobile) rec.mobile=m.mobile;
+      if(!rec.email&&m.email) rec.email=m.email;
+    }));
+    return [...byKey.values()];
+  }
+
+  function draw(){
+    host.innerHTML="";
+    const principals=[...new Set(students.map(s=>s.principalUid).filter(Boolean))];
+    const seated=students.filter(s=>membersOf(panelOf(panels,s.id)).length>=PANEL_SIZE).length;
+    const nominated=pools.filter(p=>membersOf(p).length>0).length;
+    const shortPrincipals=principals.filter(uid=>membersOf(poolOf(pools,uid)).length<PANEL_MIN);
+
+    host.append(el("div",{class:"stat"},
+      statBox(students.length,"Students"),
+      statBox(seated,"Panels seated"),
+      statBox(students.length-seated,"Still to seat"),
+      statBox(nominated,"Supervisors who nominated"),
+      statBox(candidatePool().length,"Names in the pool")));
+
+    if(S.panelTab==="nominations") drawNominations(shortPrincipals,principals);
+    else drawSeating(principals);
+  }
+
+  // -------------------------------------------------- NOMINATIONS
+  function drawNominations(shortPrincipals,principals){
+    if(shortPrincipals.length){
+      const names=shortPrincipals.map(uid=>supName(uid));
+      host.append(noticeBar("amber",
+        shortPrincipals.length+(shortPrincipals.length===1?" principal supervisor has":" principal supervisors have")+
+        " fewer than "+PANEL_MIN+" names on file: "+names.join(", ")+".",
+        el("button",{class:"btn sm",onclick:()=>{
+          const to=shortPrincipals.map(uid=>S.supervisors.find(u=>u.id===uid)?.email).filter(Boolean).join(",");
+          openEmail(to,"MRes \u2014 CoC assessor nominations needed",
+            "Dear colleagues,\n\nPlease log in to the Supervision Hub and nominate assessors for your students' Confirmation of Candidature under the \"CoC panel\" tab.\n\nWe need at least "+PANEL_MIN+" names from each principal supervisor, and around "+PANEL_TARGET+" is ideal so panels can be seated without clashes.\n\nThank you,\nMRes Coordination\n");
+        }},"\u2709 Chase them")));
+    }
+
+    // ---- per supervisor ----
+    const sc=cardShell("Nominations by supervisor");
+    const t=el("table",{});
+    t.append(el("thead",{},el("tr",{},...["Supervisor","Role here","Students","Names put forward","Nominees","Contact"].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    const supIds=[...new Set([...principals,...S.supervisors.map(u=>u.id)])];
+    supIds.map(uid=>({uid,u:S.supervisors.find(x=>x.id===uid)}))
+      .sort((a,b)=>String(a.u?.name||"").localeCompare(String(b.u?.name||"")))
+      .forEach(({uid,u})=>{
+        const ms=membersOf(poolOf(pools,uid));
+        const nStu=students.filter(s=>s.principalUid===uid).length;
+        const nCo=students.filter(s=>s.coUid===uid).length;
+        const chips=el("div",{class:"row",style:"gap:5px"});
+        if(!ms.length) chips.append(el("span",{class:"muted"},"\u2014"));
+        else ms.forEach(m=>chips.append(seatChip(m)));
+        const countPill=ms.length>=PANEL_MIN
+          ? el("span",{class:"pill approved"},ms.length)
+          : el("span",{class:"pill pending"},ms.length+" of "+PANEL_MIN);
+        tb.append(el("tr",{},
+          el("td",{},el("strong",{},u?.name||supName(uid))),
+          el("td",{},nStu?el("span",{class:"pill blue"},"Principal"):el("span",{class:"pill none"},nCo?"Co-supervisor":"No students")),
+          el("td",{class:"muted"},nStu+(nCo?" + "+nCo+" as co":"")),
+          el("td",{},countPill),
+          el("td",{},chips),
+          el("td",{},emailButton(u?.email,"MRes \u2014 CoC assessor nominations",
+            "Dear "+(u?.name||"")+",\n\nCould you nominate assessors for your students' Confirmation of Candidature in the Supervision Hub? We're looking for around "+PANEL_TARGET+" names, and at least "+PANEL_MIN+".\n\nThank you,\nMRes Coordination\n"))));
+      });
+    t.append(tb); sc.append(t); host.append(sc);
+
+    // ---- the pooled list ----
+    const cands=candidatePool().sort((a,b)=>b.nominators.length-a.nominators.length
+      ||String(a.name).localeCompare(String(b.name)));
+    const load=panelLoad(panels);
+    const pc=cardShell("All suggested names",el("span",{class:"muted ui"},cands.length+" people"));
+    if(!cands.length){
+      pc.append(el("p",{class:"muted",style:"padding:18px;margin:0"},"No nominations have come in yet."));
+    } else {
+      const t2=el("table",{});
+      t2.append(el("thead",{},el("tr",{},...["Assessor","Type","Email","Mobile","Suggested by","Assessing","Contact"].map(h=>el("th",{},h)))));
+      const tb2=el("tbody",{});
+      cands.forEach(m=>{
+        const n=load.get(memberKey(m))||0;
+        const contact=el("div",{class:"row",style:"gap:5px"});
+        contact.append(emailButton(m.email,"MRes Confirmation of Candidature",
+          "Dear "+(m.name||"")+",\n\n"));
+        contact.append(smsButton(m.mobile,"Hi "+(m.name||"")+", "));
+        tb2.append(el("tr",{},
+          el("td",{},el("strong",{},m.name||"\u2014")),
+          el("td",{},m.kind==="internal"?el("span",{class:"pill none"},"Staff"):el("span",{class:"pill pending"},"External")),
+          el("td",{class:"muted"},m.email||"\u2014"),
+          el("td",{class:"muted"},m.mobile||"\u2014"),
+          el("td",{class:"muted ui",style:"font-size:13px"},m.nominators.map(u=>supName(u)).join(", ")),
+          el("td",{},loadPill(n)),
+          el("td",{},contact)));
+      });
+      t2.append(tb2); pc.append(t2);
+    }
+    host.append(pc);
+  }
+
+  // -------------------------------------------------- SEATING
+  function drawSeating(principals){
+    if(!students.length){ host.append(emptyState("No students in this semester","Add or import students first.")); return; }
+    const unseated=students.filter(s=>membersOf(panelOf(panels,s.id)).length<PANEL_SIZE).length;
+    if(unseated) host.append(noticeBar("blue",
+      unseated+(unseated===1?" student still needs a panel of ":" students still need a panel of ")+PANEL_SIZE+
+      ". Auto-seat fills from the principal supervisor's own nominations first, spreading the load, and you can adjust any panel afterwards."));
+
+    const byPrincipal={};
+    students.forEach(s=>{ (byPrincipal[s.principalUid||""] ||= []).push(s); });
+    Object.keys(byPrincipal)
+      .sort((a,b)=>String(supName(a)).localeCompare(String(supName(b))))
+      .forEach(uid=>{
+        const list=byPrincipal[uid];
+        const poolN=membersOf(poolOf(pools,uid)).length;
+        const right=el("div",{class:"row",style:"gap:8px"},
+          poolN>=PANEL_MIN?el("span",{class:"pill approved"},poolN+" names on file")
+                          :el("span",{class:"pill pending"},poolN+" names \u2014 needs "+PANEL_MIN),
+          el("button",{class:"btn sm ghost",onclick:e=>autoSeatGroup(list,e.currentTarget)},"Auto-seat all"));
+        const c=cardShell((uid?supName(uid):"No principal assigned")+" \u00B7 "+list.length+" student"+(list.length===1?"":"s"),right);
+        const t=el("table",{});
+        t.append(el("thead",{},el("tr",{},...["Student","ID","Area","Co-supervisor","Panel","",].map(h=>el("th",{},h)))));
+        const tb=el("tbody",{});
+        list.sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(s=>{
+          const pn=panelOf(panels,s.id), ms=membersOf(pn);
+          const chips=el("div",{class:"row",style:"gap:5px"});
+          if(!ms.length) chips.append(el("span",{class:"pill pending"},"Not seated"));
+          else {
+            ms.forEach(m=>chips.append(seatChip(m)));
+            if(ms.length<PANEL_SIZE) chips.append(el("span",{class:"pill pending"},"Only "+ms.length+" of "+PANEL_SIZE));
+            else if(ms.length>PANEL_SIZE) chips.append(el("span",{class:"pill blue"},ms.length+" members"));
+          }
+          const acts=el("div",{class:"row",style:"gap:5px"});
+          acts.append(el("button",{class:ms.length?"btn xs ghost":"btn xs",
+            onclick:()=>panelBuilder(s,()=>reload())},ms.length?"Edit panel":"Seat panel"));
+          if(ms.length) acts.append(el("button",{class:"btn xs ghost",onclick:async()=>{
+            await savePanel(s,[]); toast("Panel cleared."); reload();
+          }},"Clear"));
+          tb.append(el("tr",{},
+            el("td",{},el("strong",{},s.name)),
+            el("td",{class:"muted"},s.sid||"\u2014"),
+            el("td",{},areaPill(s.area)),
+            el("td",{class:"muted"},s.coName||"\u2014"),
+            el("td",{},chips),
+            el("td",{},acts)));
+        });
+        t.append(tb); c.append(t); host.append(c);
+      });
+  }
+
+  /* Auto-seat: for each unseated student take the lowest-loaded eligible
+     people, preferring names their own principal put forward. It never
+     picks a conflicted person and never pushes anyone past PANEL_CAP, so
+     it may leave a panel short rather than break a rule \u2014 the coordinator
+     finishes those by hand. */
+  function eligibleFor(student,cands){
+    const bad=studentConflicts(student);
+    return cands.filter(m=>!(m.kind==="internal"&&bad.has(m.uid)));
+  }
+  async function autoSeatGroup(list,btn){
+    const cands=candidatePool();
+    if(!cands.length){ toast("No nominations on file to seat from yet.",true); return; }
+    /* Seat one group at a time. Each run counts workload as it goes, but that
+       tally is only correct if nothing else is writing panels underneath it \u2014
+       two runs at once would each start from the same snapshot and could push
+       an assessor past the cap. The guard makes the second click wait. */
+    if(S.panelSeating){ toast("Still seating the last group \u2014 one moment."); return; }
+    S.panelSeating=true;
+    if(btn) btn.disabled=true;
+    try{
+    // re-read rather than trusting the closure: an earlier run may have
+    // seated some of these people since this screen was drawn
+    const live=await DB.list("panels",{semesterId:S.activeSem});
+    const load=panelLoad(live);
+    let filled=0,short=0;
+    for(const s of list){
+      if(membersOf(panelOf(live,s.id)).length>=PANEL_SIZE) continue;
+      const pool=eligibleFor(s,cands)
+        .map(m=>({m,n:load.get(memberKey(m))||0,mine:m.nominators.includes(s.principalUid)?0:1}))
+        .filter(x=>x.n<PANEL_CAP)
+        .sort((a,b)=>a.mine-b.mine||a.n-b.n||String(a.m.name).localeCompare(String(b.m.name)))
+        .slice(0,PANEL_SIZE);
+      if(!pool.length) continue;
+      const chosen=pool.map(x=>({id:x.m.id,kind:x.m.kind,uid:x.m.uid,name:x.m.name,
+                                 email:x.m.email,mobile:x.m.mobile,org:x.m.org}));
+      chosen.forEach(m=>load.set(memberKey(m),(load.get(memberKey(m))||0)+1));
+      await savePanel(s,chosen);
+      if(chosen.length>=PANEL_SIZE) filled++; else short++;
+    }
+    if(!filled&&!short) toast("Nothing to seat \u2014 those panels are already complete.");
+    else toast(filled+" panel"+(filled===1?"":"s")+" seated"+
+      (short?", "+short+" left short of "+PANEL_SIZE+" \u2014 not enough assessors under the "+PANEL_CAP+"-student limit":"")+".");
+    }finally{
+      S.panelSeating=false;
+      if(btn) btn.disabled=false;
+    }
+    reload();
+  }
+
+  /* The builder. Candidates are the pooled nominations plus every staff
+     member, so the coordinator is never boxed in by what was suggested.
+     Conflicted people are shown and disabled rather than hidden \u2014 seeing
+     WHY someone can't be picked saves a phone call. */
+  function panelBuilder(student,done){
+    const bad=studentConflicts(student);
+    const load=panelLoad(panels,student.id);
+    let chosen=membersOf(panelOf(panels,student.id)).slice();
+
+    const pooled=candidatePool();
+    const pooledKeys=new Set(pooled.map(memberKey));
+    const extras=S.supervisors.filter(u=>!pooledKeys.has("u:"+u.id))
+      .map(u=>({id:nomId(),kind:"internal",uid:u.id,name:u.name||u.email,
+                email:u.email||"",mobile:u.mobile||"",org:"Internal",nominators:[]}));
+    let cands=pooled.concat(extras);
+
+    const search=el("input",{placeholder:"Search name, email, institution\u2026"});
+    const chipBox=el("div",{class:"row",style:"gap:6px;min-height:30px"});
+    const listBox=el("div",{class:"picklist"});
+    const status=el("div",{class:"muted ui",style:"font-size:13px"});
+
+    const isOn=m=>chosen.some(c=>memberKey(c)===memberKey(m));
+    function toggle(m){
+      const k=memberKey(m);
+      if(isOn(m)){ chosen=chosen.filter(c=>memberKey(c)!==k); }
+      else{
+        const n=load.get(k)||0;
+        if(n>=PANEL_CAP) toast((m.name||"That assessor")+" is already down for "+n+" CoCs \u2014 above the usual "+PANEL_CAP+".");
+        chosen=chosen.concat([{id:m.id,kind:m.kind,uid:m.uid,name:m.name,
+                               email:m.email,mobile:m.mobile,org:m.org}]);
+      }
+      paint();
+    }
+    function paint(){
+      chipBox.innerHTML="";
+      if(!chosen.length) chipBox.append(el("span",{class:"muted"},"Nobody seated yet."));
+      chosen.forEach(m=>chipBox.append(seatChip(m,()=>{
+        chosen=chosen.filter(c=>memberKey(c)!==memberKey(m)); paint();
+      })));
+      status.textContent=chosen.length===PANEL_SIZE
+        ? "A full panel of "+PANEL_SIZE+"."
+        : chosen.length<PANEL_SIZE
+          ? (PANEL_SIZE-chosen.length)+" more to reach the usual panel of "+PANEL_SIZE+"."
+          : chosen.length+" members \u2014 larger than the usual "+PANEL_SIZE+".";
+
+      listBox.innerHTML="";
+      const term=search.value.trim().toLowerCase();
+      const rows=cands.filter(m=>!term||[m.name,m.email,m.org].some(x=>(x||"").toLowerCase().includes(term)))
+        .map(m=>({m,
+          conflict:m.kind==="internal"&&bad.has(m.uid),
+          mine:(m.nominators||[]).includes(student.principalUid)?0:1,
+          n:load.get(memberKey(m))||0,
+          nominated:(m.nominators||[]).length?0:1}))
+        .sort((a,b)=>a.conflict-b.conflict||a.mine-b.mine||a.nominated-b.nominated
+          ||a.n-b.n||String(a.m.name).localeCompare(String(b.m.name)));
+      if(!rows.length){ listBox.append(el("div",{class:"muted",style:"padding:16px"},"Nobody matches that search.")); return; }
+      rows.forEach(({m,conflict,n})=>{
+        const on=isOn(m);
+        const tags=el("div",{class:"row",style:"gap:5px"});
+        if(conflict) tags.append(el("span",{class:"pill missed"},
+          m.uid===student.principalUid?"Principal supervisor":"Co-supervisor"));
+        else{
+          if((m.nominators||[]).includes(student.principalUid)) tags.append(el("span",{class:"pill approved"},"Principal's pick"));
+          else if((m.nominators||[]).length) tags.append(el("span",{class:"pill none"},"Nominated \u00D7"+m.nominators.length));
+          else tags.append(el("span",{class:"pill none"},"Not nominated"));
+          tags.append(loadPill(n));
+        }
+        const row=el("div",{class:"pickrow"+(conflict?" blocked":"")+(on?" on":""),
+          ...(conflict?{}:{onclick:()=>toggle(m)})},
+          el("div",{class:"tick"},on?"\u2713":""),
+          el("div",{class:"pk-main"},
+            el("div",{class:"pk-nm"},m.name||"\u2014"),
+            el("div",{class:"pk-sub"},[m.email||"no email",m.org||(m.kind==="internal"?"Internal":"External")].join(" \u00B7 "))),
+          tags);
+        listBox.append(row);
+      });
+    }
+    search.oninput=paint;
+
+    const addExt=el("button",{class:"btn ghost sm",onclick:()=>nominateExternal(null,m=>{
+      cands=cands.concat([{...m,nominators:[]}]);
+      chosen=chosen.concat([m]);
+      paint();
+    })},"+ Add an external assessor");
+
+    modal("Panel for "+student.name+(student.sid?" ("+student.sid+")":""),
+      el("div",{class:"grid"},
+        el("div",{class:"muted ui",style:"font-size:13.5px"},
+          "Supervision team: "+(student.principalName||"no principal")+(student.coName?" and "+student.coName:"")+
+          " \u2014 they can't assess this student and are shown greyed out below."),
+        el("div",{},el("label",{},"Seated panel"),chipBox,
+          el("div",{style:"margin-top:6px"},status)),
+        el("div",{},el("label",{},"Search candidates"),search),
+        listBox,
+        el("div",{class:"row"},addExt)),
+      async()=>{
+        if(chosen.length&&chosen.length<PANEL_SIZE&&
+           !window.confirm("This panel has only "+chosen.length+" of the usual "+PANEL_SIZE+" members. Save it anyway?")) return false;
+        await savePanel(student,chosen);
+        toast(chosen.length?"Panel saved.":"Panel cleared.");
+        done(); return true;
+      },"Save panel");
+    const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+    paint();
+  }
+
+  draw();
+}
+
 
 // ---- Consultation / weekly-log helpers ----
 // The effective time for a given week = week override (if any) else the recurring default.
@@ -1095,11 +1885,11 @@ function renderApp(){
   const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
   const TABS = S.role==="admin"
     ? [["students","Students"],["schedule","Week planner"],["timetables","Class timetables"],["consultations","Consultation times"],
-       ["meetinglog","Attendance"],["notes","Messages"],["report","Summary report"],
+       ["meetinglog","Attendance"],["notes","Messages"],["panels","CoC panels"],["report","Summary report"],
        ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
     : [["students","My students"],["schedule","My week"],["timetables","My class time"],
        ["consultations",coOnly?"View consultation time":"Set consultation time"],
-       ["meetinglog","Attendance"],["notes","Messages"]];
+       ["meetinglog","Attendance"],["notes","Messages"],["panels","CoC panel"]];
   // guard FIRST: if current tab not in this role's set, default to the first,
   // so the tab strip below is built with the correct button highlighted.
   if(!TABS.some(t=>t[0]===S.tab)) S.tab=TABS[0][0];
@@ -1190,6 +1980,7 @@ async function drawMain(){
   if(S.tab==="consultations") return viewConsultations(v);
   if(S.tab==="meetinglog") return viewMeetingLog(v);
   if(S.tab==="notes") return viewNotes(v);
+  if(S.tab==="panels") return S.role==="admin"?viewPanelAdmin(v):viewPanels(v);
   if(S.tab==="report") return viewReport(v);
   if(S.tab==="export") return viewExport(v);
   if(S.tab==="contacts") return viewContacts(v);
@@ -4382,7 +5173,7 @@ function modal(title,bodyNode,onSave,saveLabel="Save"){
 function confirmDelete(coll,id,name,done,custom){
   modal("Delete "+name+"?",
     el("p",{class:"muted",style:"margin:0"},"This cannot be undone."+
-      (coll==="students"?" Linked consultations, meeting logs and messages for this student are also removed.":"")+
+      (coll==="students"?" Linked consultations, meeting logs, messages and the CoC panel for this student are also removed.":"")+
       (coll==="semesters"?" Students, timetables and consultations in this semester remain but will be orphaned — delete with care.":"")),
     async()=>{
       if(custom){ await done(); return true; }
@@ -4393,6 +5184,8 @@ function confirmDelete(coll,id,name,done,custom){
         for(const n of ns) await DB.remove("notes",n.id);
         const ats=await DB.list("attendance",{studentDocId:id});
         for(const a of ats) await DB.remove("attendance",a.id);
+        const pnl=await DB.list("panels",{studentDocId:id});
+        for(const x of pnl) await DB.remove("panels",x.id);
       }
       await DB.remove(coll,id); toast("Deleted."); done(); return true;
     },"Delete");
