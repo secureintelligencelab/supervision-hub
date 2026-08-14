@@ -444,6 +444,45 @@
      choose it, so this reads as a caution rather than a wall. */
   /* Supervisor heading inside a picker list. Sticky so you always know
      whose students you are looking at while scrolling a long list. */
+  /* ---- CoC section structure ----
+     Every accent below is CSS only: no extra text goes into the cards, so a
+     card still reads as its own title followed by its own content. */
+  .csection{margin:26px 0 12px;display:flex;align-items:flex-start;gap:11px}
+  .csection:first-child{margin-top:4px}
+  .csection .cs-mark{flex:0 0 auto;width:30px;height:30px;border-radius:9px;display:grid;
+    place-items:center;font-size:15px;line-height:1;background:var(--teal-tint);color:var(--teal-deep)}
+  .csection .cs-body{flex:1;min-width:0}
+  .csection h3{margin:0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:16.5px;
+    font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .csection p{margin:2px 0 0;font-size:13px;color:var(--ink-soft);
+    font-family:ui-sans-serif,system-ui,sans-serif}
+  .csection.act .cs-mark{background:var(--amber-soft);color:var(--amber-ink)}
+  .csection.done .cs-mark{background:var(--green-soft);color:var(--green-ink)}
+
+  /* Tone travels down the left edge and into the header strip, so a glance
+     tells you which section a card belongs to even when it scrolls alone. */
+  .card.tone{border-left:4px solid var(--line-strong)}
+  .card.tone > .cardhead{background:#0000000a}
+  .card.tone-act{border-left-color:var(--amber)}
+  .card.tone-act > .cardhead{background:var(--amber-soft)}
+  .card.tone-info{border-left-color:var(--blue)}
+  .card.tone-info > .cardhead{background:var(--blue-soft)}
+  .card.tone-ok{border-left-color:var(--green)}
+  .card.tone-ok > .cardhead{background:var(--green-soft)}
+  .card.tone-main{border-left-color:var(--teal)}
+  .card.tone-main > .cardhead{background:var(--teal-tint)}
+
+  /* Numbered steps inside an admin panel card. A CSS counter, so the DOM
+     text is untouched — the labels still read "Assessors", "Students". */
+  .panelbody{counter-reset:pstep}
+  .panelbody label{counter-increment:pstep;display:flex;align-items:center;gap:8px;
+    font-size:13px;text-transform:uppercase;letter-spacing:.06em;
+    border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+  .panelbody > label:first-child{border-top:none;padding-top:0}
+  .panelbody label::before{content:counter(pstep);flex:0 0 auto;width:21px;height:21px;
+    border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;
+    font-size:11.5px;font-weight:700;letter-spacing:0}
+
   .pickgroup{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
     padding:7px 12px;background:var(--paper-2);border-bottom:1px solid var(--line-strong);
     font-family:ui-sans-serif,system-ui,sans-serif}
@@ -950,11 +989,21 @@ function noticeBar(tone,text,...extra){
     el("div",{class:"row",style:"align-items:center;gap:10px"},
       el("span",{style:"flex:1;min-width:190px;font-size:14px"},text),...extra));
 }
-function cardShell(title,right){
-  const c=el("div",{class:"card",style:"padding:0;overflow:hidden;margin-bottom:14px"});
-  c.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"},
+function cardShell(title,right,tone){
+  const c=el("div",{class:"card"+(tone?" tone tone-"+tone:""),
+    style:"padding:0;overflow:hidden;margin-bottom:14px"});
+  c.append(el("div",{class:"cardhead",
+    style:"padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"+(tone?"":";background:#0000000a")},
     el("strong",{class:"ui"},title), right||el("span",{})));
   return c;
+}
+
+/* A heading that sits BETWEEN cards rather than inside one, so the eye can
+   find the boundary between "what I must do" and "what I can read". */
+function sectionHead(mark,title,sub,tone){
+  return el("div",{class:"csection"+(tone?" "+tone:"")},
+    el("div",{class:"cs-mark"},mark),
+    el("div",{class:"cs-body"},el("h3",{},title),sub?el("p",{},sub):el("span",{})));
 }
 function memberLine(m,...extra){
   return el("div",{class:"pmember"+(m.kind==="external"?" ext":"")},
@@ -1342,10 +1391,31 @@ async function viewPanels(v){
 
   function draw(){
     host.innerHTML="";
+    drawSummary();
     drawAvailability();
     drawNominations();
     drawMyStudents();
     drawAssessing();
+  }
+
+  /* Three tiles answering the only questions a supervisor opens this tab
+     with: have I done my bit, is anything waiting on me, and when are my
+     students on. Everything below is the detail behind these. */
+  function drawSummary(){
+    const asMember=groups.filter(g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid));
+    const pending=asMember.filter(g=>{
+      const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
+      return groupSessions(g).some(x=>availOf(g,me,x.id)===undefined);
+    }).length;
+    const scheduled=mine.filter(x=>{
+      const g=groupOfStudent(groups,x.id);
+      return g&&g.chosenSessionId&&(g.slots||[]).some(sl=>sl.studentDocId===x.id);
+    }).length;
+    host.append(el("div",{class:"stat"},
+      statBox(members.length+" / "+PANEL_TARGET,"Names nominated"),
+      statBox(pending,"Availability to answer"),
+      statBox(scheduled+" / "+mine.length,"My students scheduled"),
+      statBox(asMember.reduce((n,g)=>n+groupStudents(g).length,0),"Students I assess")));
   }
 
   /* ---- the availability request, first because it's time-critical ---- */
@@ -1353,6 +1423,8 @@ async function viewPanels(v){
     const asMember=groups.filter(g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid)
                                     && groupSessions(g).length);
     if(!asMember.length) return;
+    host.append(sectionHead("\u2713","When can you assess?",
+      "Tick the half-days you could attend. A session is only usable if every assessor says yes.","act"));
     const pending=asMember.filter(g=>{
       const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
       return groupSessions(g).some(s=>availOf(g,me,s.id)===undefined);
@@ -1366,7 +1438,8 @@ async function viewPanels(v){
       const stu=groupStudents(g).map(id=>students.find(x=>x.id===id)).filter(Boolean);
       const chosen=groupSessions(g).find(s=>s.id===g.chosenSessionId);
       const c=cardShell("My availability \u00B7 "+(g.label||"Panel"),
-        isChair(g,me)?el("span",{class:"pill blue"},"You chair this panel"):el("span",{class:"muted ui"},stu.length+" students"));
+        isChair(g,me)?el("span",{class:"pill blue"},"You chair this panel"):el("span",{class:"muted ui"},stu.length+" students"),
+        chosen?"ok":"act");
       const body=el("div",{style:"padding:14px 16px"});
 
       if(chosen){
@@ -1405,6 +1478,10 @@ async function viewPanels(v){
   /* ---- nominations ---- */
   function drawNominations(){
     const n=members.length;
+    host.append(sectionHead("\u270E","Who could assess your students?",
+      "Put forward more than three names, up to "+PANEL_TARGET+
+      ". The coordinator seats a "+PANEL_SIZE+"-member panel from everyone's suggestions.",
+      n>=PANEL_MIN?"done":"act"));
     if(!mine.length) host.append(noticeBar("blue",
       "You have no students this semester, so there's nothing to nominate for yet. Names you put forward still stay on file for the coordinator."));
     if(n===0) host.append(noticeBar("amber",
@@ -1423,7 +1500,7 @@ async function viewPanels(v){
 
     const load=groupLoad(groups);
     const card=cardShell("My nominated assessors",el("span",{class:n>=PANEL_MIN?"pill approved":"pill pending"},
-        n+" of "+PANEL_TARGET+" suggested"));
+        n+" of "+PANEL_TARGET+" suggested"), n>=PANEL_MIN?"ok":"act");
     const body=el("div",{style:"padding:14px 16px"});
     if(!n) body.append(el("p",{class:"muted",style:"margin:0 0 12px"},
       "No names yet. Add colleagues from the hub, or type in an external assessor."));
@@ -1456,7 +1533,9 @@ async function viewPanels(v){
   /* ---- my students' panels and their CoC time ---- */
   function drawMyStudents(){
     if(!mine.length) return;
-    const c=cardShell("My students' CoC");
+    host.append(sectionHead("\u25CE","Your students' CoC",
+      "Who is assessing them, and when they present. Set by the coordinator.","info"));
+    const c=cardShell("My students' CoC",null,"info");
     const t=el("table",{});
     t.append(el("thead",{},el("tr",{},...["Student","ID","My role","Panel","Chair","CoC time"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
@@ -1487,8 +1566,12 @@ async function viewPanels(v){
   function drawAssessing(){
     const asMember=groups.filter(g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid));
     const total=asMember.reduce((n,g)=>n+groupStudents(g).length,0);
+    host.append(sectionHead("\u2637","Students you're assessing",
+      "CoCs you have been asked to sit on, and your slot times.",
+      total>PANEL_CAP?"act":""));
     const c=cardShell("Students I'm assessing",
-      el("span",{class:total>PANEL_CAP?"pill missed":"muted ui"},total+" of "+PANEL_CAP+" usual maximum"));
+      el("span",{class:total>PANEL_CAP?"pill missed":"muted ui"},total+" of "+PANEL_CAP+" usual maximum"),
+      total>PANEL_CAP?"act":"main");
     if(!asMember.length){
       c.append(el("p",{class:"muted",style:"padding:16px;margin:0"},"You haven't been put on any CoC panel this semester."));
       host.append(c); return;
@@ -1601,6 +1684,9 @@ async function viewPanelAdmin(v){
 
   // ================================================== NOMINATIONS
   function drawNominations(){
+    host.append(sectionHead("\u2709","Chase and read the nominations",
+      "Every supervisor is asked for more than three names, up to "+PANEL_TARGET+
+      ". Create a panel straight from anyone's list.","act"));
     const principals=[...new Set(students.map(s=>s.principalUid).filter(Boolean))];
     const short=principals.filter(uid=>membersOf(poolOf(pools,uid)).length<PANEL_MIN);
     if(short.length) host.append(noticeBar("amber",
@@ -1614,7 +1700,7 @@ async function viewPanelAdmin(v){
           ", so panels can be seated without clashes.\n\nThank you,\nMRes Coordination\n");
       }},"\u2709 Chase them")));
 
-    const sc=cardShell("Nominations by supervisor");
+    const sc=cardShell("Nominations by supervisor",null,"main");
     const t=el("table",{});
     t.append(el("thead",{},el("tr",{},...["Supervisor","Role","Students","Names","Nominees",""].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
@@ -1651,7 +1737,9 @@ async function viewPanelAdmin(v){
     const cands=candidatePool().sort((a,b)=>b.nominators.length-a.nominators.length
       ||String(a.name).localeCompare(String(b.name)));
     const load=groupLoad(groups);
-    const pc=cardShell("All suggested names",el("span",{class:"muted ui"},cands.length+" people"));
+    host.append(sectionHead("\u2637","The pooled list",
+      "Everyone suggested by anyone, merged, with their current assessing load.","info"));
+    const pc=cardShell("All suggested names",el("span",{class:"muted ui"},cands.length+" people"),"info");
     if(!cands.length) pc.append(el("p",{class:"muted",style:"padding:18px;margin:0"},"No nominations have come in yet."));
     else{
       const t2=el("table",{});
@@ -1714,6 +1802,9 @@ async function viewPanelAdmin(v){
         el("button",{class:"btn sm",onclick:()=>autoBuild()},"Build panels automatically")));
     }
 
+    host.append(sectionHead("\u25A6","The panels",
+      "Each panel is "+PANEL_SIZE+" assessors taking up to "+PANEL_CAP+
+      " students. Work down each card: assessors, students, session, timetable.","info"));
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:14px"},
       el("button",{class:"btn",onclick:()=>editMembers(null)},"+ Create a panel"),
       groups.length?el("button",{class:"btn ghost",onclick:()=>autoBuild()},"Fill remaining students"):el("span",{})));
@@ -1750,8 +1841,9 @@ async function viewPanelAdmin(v){
       })(),
       el("button",{class:"btn xs ghost",onclick:()=>renameGroup(g)},"Rename"),
       el("button",{class:"btn xs ghost",onclick:()=>confirmDeleteGroup(g)},"Delete"));
-    const c=cardShell(g.label||"Panel",right);
-    const body=el("div",{style:"padding:14px 16px"});
+    const c=cardShell(g.label||"Panel",right,chosen?"ok":"main");
+    // .panelbody drives the CSS step counter on the labels below
+    const body=el("div",{class:"panelbody",style:"padding:14px 16px"});
 
     // ---- members + chair ----
     body.append(el("label",{},"Assessors"));
@@ -2477,8 +2569,8 @@ async function viewPanelAdmin(v){
     const missing=rows.filter(r=>!r.g).length;
     const unscheduled=rows.filter(r=>r.g&&!r.slot).length;
 
-    host.append(el("p",{class:"muted ui",style:"margin:0 0 12px"},
-      "Every student with their panel, chair, assessor contact details, CoC presentation time and weekly consultation time \u2014 grouped by principal supervisor."));
+    host.append(sectionHead("\u2913","Export",
+      "Every student with their panel, chair, assessor contact details, CoC presentation time and weekly consultation time \u2014 grouped by principal supervisor.","info"));
     if(missing||unscheduled) host.append(noticeBar("amber",
       [missing?missing+" student(s) are not on a panel":"",
        unscheduled?unscheduled+" have a panel but no presentation time yet":""].filter(Boolean).join(" and ")+
@@ -2496,7 +2588,8 @@ async function viewPanelAdmin(v){
       const list=byPrincipal[name];
       const done=list.filter(r=>r.slot).length;
       const c=cardShell(name,el("span",{class:"muted ui"},
-        list.length+" student"+(list.length===1?"":"s")+" \u00B7 "+done+" scheduled"));
+        list.length+" student"+(list.length===1?"":"s")+" \u00B7 "+done+" scheduled"),
+        done===list.length?"ok":"info");
       const t=el("table",{});
       t.append(el("thead",{},el("tr",{},
         ...["Student","ID","Panel","Chair","Assessors","CoC time","Consultation","Independence"].map(h=>el("th",{},h)))));
