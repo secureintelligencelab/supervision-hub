@@ -1543,6 +1543,18 @@ async function viewPanels(v){
             toast("Availability saved."); reload();
           }},label);
         btns.append(mk("Available",true,"green"),mk("Can't make it",false,"clay"));
+        /* Answering is a two-way door. Plans change, and a supervisor who
+           ticked the wrong row could previously only overwrite it with the
+           other answer \u2014 there was no way back to "haven't said yet",
+           which is what the coordinator's chase list runs on. */
+        if(mine_!==undefined) btns.append(el("button",{class:"btn xs ghost",
+          onclick:async()=>{
+            const av=JSON.parse(JSON.stringify(g.availability||{}));
+            if(av[availKey(me)]) delete av[availKey(me)][s.id];
+            try{ await saveAvailability(g.id,av); }
+            catch(err){ toast(err?.message||"Could not save.",true); return; }
+            toast("Answer cleared."); reload();
+          }},"Clear"));
         tb.append(el("tr",{},
           el("td",{},el("strong",{},sessionLabel(s))),
           el("td",{class:"muted ui",style:"font-size:13px"},
@@ -1551,6 +1563,27 @@ async function viewPanels(v){
           el("td",{},btns)));
       });
       t.append(tb); body.append(t);
+
+      /* Start again on the whole panel. Useful when the coordinator
+         re-proposes the half-days, or when a term's teaching load lands
+         after the boxes were ticked. Booking is the coordinator's to undo,
+         so this clears answers only and says so. */
+      const answered=groupSessions(g).filter(s=>availOf(g,me,s.id)!==undefined).length;
+      if(answered) body.append(el("div",{class:"row",style:"gap:8px;margin-top:10px"},
+        el("button",{class:"btn sm ghost",onclick:async()=>{
+          if(!window.confirm("Clear your answers for all "+answered+" session"+
+            (answered===1?"":"s")+" on "+(g.label||"this panel")+
+            "?\n\nThe coordinator will see you as not having replied yet."+
+            (chosen?" The booked session is not affected \u2014 only the coordinator can change that.":""))) return;
+          const av=JSON.parse(JSON.stringify(g.availability||{}));
+          delete av[availKey(me)];
+          try{ await saveAvailability(g.id,av); }
+          catch(err){ toast(err?.message||"Could not save.",true); return; }
+          toast("Your availability for "+(g.label||"the panel")+" has been reset."); reload();
+        }},"Reset my availability for this panel"),
+        el("span",{class:"muted ui",style:"font-size:12.5px;align-self:center"},
+          answered+" of "+groupSessions(g).length+" answered")));
+
       c.append(body); host.append(c);
     });
   }
@@ -1817,6 +1850,12 @@ async function viewPanelAdmin(v){
            the panel for that supervisor's students. */
         if(ms.length) acts.append(el("button",{class:"btn xs",
           onclick:()=>editMembers(null,{preset:ms,sourceUid:uid})},"Create panel"));
+        /* Nominations arrive by email and corridor as often as through the
+           app, and a supervisor on leave still needs a list. The coordinator
+           keeps the supervisor's own list, rather than working around it in
+           a panel nobody can trace back. */
+        acts.append(el("button",{class:"btn xs ghost",
+          onclick:()=>editPool(uid)},ms.length?"Edit names":"Add names"));
         acts.append(emailButton(u?.email,"MRes \u2014 CoC assessor nominations",
             "Dear "+(u?.name||"")+",\n\nCould you nominate assessors for your students' Confirmation of Candidature in the Supervision Hub? We ask for more than three names, up to "+PANEL_TARGET+
             ".\n\nThank you,\nMRes Coordination\n"));
@@ -1961,6 +2000,22 @@ async function viewPanelAdmin(v){
             onclick:()=>externalAvail(g,m)},"Enter availability"+
             (groupSessions(g).length?" ("+done+"/"+groupSessions(g).length+")":"")));
         }
+        /* When the proposed half-days change, last month's ticks are worse
+           than no answer: they read as a reply the assessor never gave.
+           This puts that member back to "awaiting reply" so the chase
+           email picks them up again. */
+        const answered=groupSessions(g).filter(s=>availOf(g,m,s.id)!==undefined).length;
+        if(answered) acts.append(el("button",{class:"btn xs ghost",onclick:async()=>{
+          if(!window.confirm("Clear "+(m.name||"this assessor")+"'s answers for all "+answered+
+            " session"+(answered===1?"":"s")+" on "+(g.label||"this panel")+
+            "?\n\nThey'll show as awaiting a reply again."+
+            (g.chosenSessionId?" The booked session is not affected.":""))) return;
+          const av=JSON.parse(JSON.stringify(g.availability||{}));
+          delete av[availKey(m)];
+          try{ await saveAvailability(g.id,av); }
+          catch(err){ toast(err?.message||"Could not save.",true); return; }
+          toast((m.name||"Assessor")+"'s availability reset."); reload();
+        }},"Reset availability"));
         acts.append(emailButton(m.email,"MRes CoC panel \u2014 "+(g.label||""),
           "Dear "+(m.name||"")+",\n\n","\u2709","btn xs ghost"));
         list.append(memberLine(m,el("div",{class:"row",style:"gap:5px"},
@@ -2312,8 +2367,10 @@ async function viewPanelAdmin(v){
       const row=el("div",{class:"pmember ext"});
       const btns=el("div",{class:"row",style:"gap:5px"});
       const paint=()=>{
+        // "" is the Clear button; picks[s.id] === undefined means unanswered
+        const cur=picks[s.id]===undefined?"":String(picks[s.id]);
         [...btns.children].forEach(b=>b.className="btn xs "+
-          (String(picks[s.id])===b.dataset.v?(b.dataset.v==="true"?"green":"clay"):"ghost"));
+          (cur===b.dataset.v?(b.dataset.v==="true"?"green":b.dataset.v==="false"?"clay":"blue"):"ghost"));
       };
       [["Available","true","green"],["Not available","false","clay"]].forEach(([lab,val])=>{
         const b=el("button",{class:"btn xs ghost","data-v":val,onclick:()=>{
@@ -2321,6 +2378,12 @@ async function viewPanelAdmin(v){
         }},lab);
         btns.append(b);
       });
+      /* Back to "not asked yet". Without this a mis-keyed answer could only
+         be swapped for the opposite one, and the coordinator's own chase
+         list counts an unanswered session, not a wrong one. */
+      btns.append(el("button",{class:"btn xs ghost","data-v":"",onclick:()=>{
+        picks[s.id]=undefined; paint();
+      }},"Clear"));
       row.append(el("div",{class:"pm-main"},
         el("div",{class:"pm-nm"},sessionLabel(s)),
         el("div",{class:"pm-sub"},"as reported by "+(m.name||"the assessor"))),btns);
@@ -2344,6 +2407,83 @@ async function viewPanelAdmin(v){
 
   /* Assessor picker. Conflicts are computed against every student already in
      the group, and shown greyed with the clashing student named. */
+  /* Add to or trim a supervisor's own nomination list, on their behalf.
+     This writes the SAME panelPool document the supervisor edits from their
+     CoC tab \u2014 not a separate admin copy \u2014 so a name added here shows up
+     as theirs, counts towards their target, and is credited to them in the
+     pooled list. `savePool` is called with that supervisor's uid and their
+     profile details, exactly as their own screen would call it.
+     Removing a name here does NOT unseat that person from any panel they
+     are already on: a seated panel is a commitment, and quietly dropping an
+     assessor from a booked session is not something to do as a side effect
+     of tidying a list. The dialog says so where it applies. */
+  function editPool(uid){
+    const u=S.supervisors.find(x=>x.id===uid);
+    let names=membersOf(poolOf(pools,uid)).map(cleanMember);
+    const load=groupLoad(groups);
+    // Who this supervisor may nominate: not themselves, not a co-supervisor
+    // on their own students, and not anyone already on their list.
+    const eligible=()=>{
+      const blocked=conflictedUidsFor(uid,students);
+      const taken=new Set(names.filter(m=>m.kind==="internal").map(m=>m.uid));
+      return S.supervisors.filter(x=>!blocked.has(x.id)&&!taken.has(x.id))
+        .sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
+    };
+
+    const listBox=el("div",{class:"pgrid"});
+    const status=el("div",{class:"muted ui",style:"font-size:13px;margin-top:6px"});
+    function paint(){
+      listBox.innerHTML="";
+      if(!names.length) listBox.append(el("p",{class:"muted",style:"margin:0"},
+        "No names on this supervisor's list yet."));
+      names.forEach(m=>{
+        const acts=el("div",{class:"row",style:"gap:5px"});
+        acts.append(loadPill(load.get(memberKey(m))||0));
+        // seated somewhere? then removal is a list change only, and says so
+        const seated=groups.filter(g=>groupMembers(g).some(x=>memberKey(x)===memberKey(m)));
+        if(seated.length) acts.append(el("span",{class:"pill blue",
+          title:"Sitting on "+seated.map(g=>g.label||"a panel").join(", ")},"Seated"));
+        if(m.kind==="external") acts.append(el("button",{class:"btn xs ghost",
+          onclick:()=>nominateExternal(m,upd=>{
+            names=names.map(x=>x.id===m.id?cleanMember(upd):x); paint();
+          })},"Edit"));
+        acts.append(el("button",{class:"btn xs ghost",onclick:()=>{
+          if(seated.length&&!window.confirm(
+            (m.name||"That assessor")+" is seated on "+seated.map(g=>g.label||"a panel").join(", ")+
+            ".\n\nTaking the name off this list does NOT remove them from that panel \u2014 use \u201CEdit assessors\u201D on the panel card for that. Remove from the list anyway?")) return;
+          names=names.filter(x=>x.id!==m.id); paint();
+        }},"Remove"));
+        listBox.append(memberLine(m,acts));
+      });
+      status.textContent=names.length+" name"+(names.length===1?"":"s")+
+        " \u2014 "+(names.length>=PANEL_MIN
+          ? "clears the minimum of more than three."
+          : "we ask for more than three, up to "+PANEL_TARGET+".");
+    }
+    paint();
+
+    modal("Nominations for "+(u?.name||supName(uid)),
+      el("div",{class:"grid"},
+        el("div",{},el("label",{},"Names this supervisor has put forward"),listBox,status),
+        el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+          el("button",{class:"btn sm",onclick:()=>nominateInternal(eligible(),m=>{
+            names=names.concat([cleanMember(m)]); paint();
+          })},"+ Add a colleague"),
+          el("button",{class:"btn ghost sm",onclick:()=>nominateExternal(null,m=>{
+            names=names.concat([cleanMember(m)]); paint();
+          })},"+ Add an external assessor")),
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          "You're editing "+(u?.name||"this supervisor")+"'s own list, the one they see on their CoC tab. "+
+          "Names you add are credited to them and count towards their target of "+PANEL_TARGET+"."))),
+      async()=>{
+        try{ await savePool(uid,u?.name||supName(uid),u?.email||"",names); }
+        catch(err){ toast(err?.message||"Could not save the nominations.",true); return false; }
+        toast("Nominations saved for "+(u?.name||supName(uid))+".");
+        await reload(); return true;
+      },"Save nominations");
+    const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+  }
+
   function editMembers(g,opts){
     const existing=g?groupMembers(g):[];
     const sids=g?groupStudents(g):[];
