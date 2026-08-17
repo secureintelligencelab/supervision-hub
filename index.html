@@ -569,7 +569,10 @@ function getFactoryAuth(){
                          }
      semesters/{id}   -> {label, weeks, units:[{id,code,name}, ...]}
      students/{id}    -> {semesterId, sid, name, email, mobile, campus, area, unitIds:[...],
-                          principalUid, coUid, principalName, coName}
+                          principalUid, coUid, principalName, coName,
+                          proposalTitle}                        // proposal / research title,
+                                                                // set by admin or the principal
+                                                                // supervisor; printed on the CoC
      timetables/{id}  -> {semesterId, unitId, supervisorUid, day, start, end,
                           room, status:'pending'|'approved'}   // class still admin-approved
      consultations/{id} -> {                                   // ONE per student per principal
@@ -602,6 +605,8 @@ function getFactoryAuth(){
                           semesterId, label, updatedAt,       // 3 assessors, up to 6 students
                           members:[ ...member shape... ],
                           chairKey,                           // availKey() of the chair
+                          meetingLink,                        // Teams link for the CoC session —
+                                                              // one meeting for the whole panel
                           studentIds:[ studentDocId ],
                           sessions:[{ id, date, start, end }],// half-days proposed by admin
                           availability:{ availKey:{ sessionId: true|false } },
@@ -645,9 +650,12 @@ function seedDemo(){
     {id:"u3",code:"RES930",name:"Thesis"}
   ]};
   const mk=(id,o)=>mem.students[id]=o;
-  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",mobile:"+61 411 111 111",campus:"NSW",area:"IT",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
-  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",mobile:"+61 422 222 222",campus:"NSW",area:"IT",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
-  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",mobile:"",campus:"ACT",area:"Business",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
+  mk("st1",{semesterId:"s2-2026",sid:"45001",name:"Aisha Khan",email:"aisha@stu.edu",mobile:"+61 411 111 111",campus:"NSW",area:"IT",
+    proposalTitle:"Federated learning for privacy-preserving intrusion detection in small enterprise networks",unitIds:["u1","u2"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
+  mk("st2",{semesterId:"s2-2026",sid:"45002",name:"Tom Reilly",email:"tom@stu.edu",mobile:"+61 422 222 222",campus:"NSW",area:"IT",
+    proposalTitle:"",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+  mk("st3",{semesterId:"s2-2026",sid:"45003",name:"Mei Lin",email:"mei@stu.edu",mobile:"",campus:"ACT",area:"Business",
+    proposalTitle:"Board diversity and ESG disclosure quality in ASX-listed mid-caps",unitIds:["u2"],principalUid:"supB",coUid:"supC",principalName:"Dr Jones",coName:"Dr Patel"});
   mem.timetables["tt1"]={semesterId:"s2-2026",unitId:"u1",supervisorUid:"supA",day:"Tuesday",start:"10:00",end:"13:00",room:"NSW Rm 4.12",status:"approved"};
   // sample consultation with a couple of weeks logged
   mem.consultations["c1"]={semesterId:"s2-2026",studentDocId:"st1",supervisorUid:"supA",
@@ -690,7 +698,7 @@ function seedDemo(){
       {id:"n1b",kind:"internal",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",mobile:"+61 400 777 888",org:"Internal"},
       {id:"n1c",kind:"external",name:"Dr Priya Raman",email:"p.raman@uow.edu.au",mobile:"+61 433 090 121",org:"University of Wollongong"}
     ],
-    chairKey:"u_supB", studentIds:["st1"],
+    chairKey:"u_supB", meetingLink:"https://teams.microsoft.com/l/meetup/coc-panel-a", studentIds:["st1"],
     sessions:[
       {id:"se1",date:"2026-09-14",start:"09:00",end:"12:30"},
       {id:"se2",date:"2026-09-14",start:"13:00",end:"16:30"},
@@ -890,6 +898,62 @@ const AREAS=["IT","Business"];
 function areaPill(a){
   if(!a) return el("span",{class:"muted"},"—");
   return el("span",{class:"pill area-"+String(a).toLowerCase().replace(/\s+/g,"-")},a);
+}
+
+/* ---- Proposal / research title ----
+   The title a student is confirming. It belongs to the student, not to a
+   panel, so it survives being moved between panels and is the same string
+   wherever it appears — the student list, the CoC screens and the export. */
+const titleOf = s => String(s?.proposalTitle||"").trim();
+// One rendering rule for a missing title, so it reads the same everywhere.
+function titleCell(s,cls){
+  const t=titleOf(s);
+  return t ? el("span",{class:cls||"",title:t},t)
+           : el("span",{class:"muted"},"Title not set yet");
+}
+
+/* Set or change one student's title without opening the whole student form.
+   The principal supervisor is usually the person who knows it, and they have
+   no access to the student form at all — so this is their way in.
+   A site whose Firestore rules only let admin write to `students` will deny
+   the save; say so plainly rather than failing with a raw error, because the
+   coordinator can always set it instead. */
+function editProposalTitle(s,done){
+  const inp=el("input",{value:titleOf(s),
+    placeholder:"e.g. Federated learning for privacy-preserving intrusion detection"});
+  modal(titleOf(s)?"Change the proposal title":"Set the proposal title",
+    el("div",{class:"grid"},
+      el("div",{},el("label",{},"Proposal / research title \u2014 "+(s.name||"student")),inp),
+      el("div",{},el("p",{class:"muted",style:"margin:0"},
+        "The title being confirmed. It appears on the CoC panel screens, in the "+
+        "the exported CoC document. It is not shown to the student. Leave it empty to clear it."))),
+    async()=>{
+      try{ await DB.update("students",s.id,{proposalTitle:inp.value.trim()}); }
+      catch(err){
+        toast(/permission/i.test(err?.message||"")
+          ? "Your account isn't allowed to edit student records \u2014 ask the coordinator to set the title."
+          : (err?.message||"Could not save the title."),true);
+        return false;
+      }
+      s.proposalTitle=inp.value.trim();   // keep the list on screen in step
+      toast(inp.value.trim()?"Title saved.":"Title cleared.");
+      done&&done(); return true;
+    },"Save title");
+}
+
+/* ---- Meeting links ----
+   People paste "teams.microsoft.com/…" as often as they paste a full URL.
+   Stored as typed; normalised only when it is turned into an href, so what
+   the coordinator sees in the field is exactly what they entered. */
+function linkHref(u){
+  const t=String(u||"").trim();
+  if(!t) return "";
+  return /^https?:\/\//i.test(t)?t:("https://"+t.replace(/^\/+/,""));
+}
+function joinLink(u,label){
+  const href=linkHref(u);
+  if(!href) return el("span",{class:"muted"},"No link set");
+  return el("a",{class:"linkpill",href,target:"_blank",rel:"noopener"},label||"Join meeting");
 }
 
 function activeSemester(){ return S.semesters.find(s=>s.id===S.activeSem)||null; }
@@ -1244,6 +1308,10 @@ async function saveGroup(g){
        record their own availability while everything else stays admin-only. */
     memberUids:members.filter(m=>m.kind==="internal"&&m.uid).map(m=>m.uid),
     chairKey:g.chairKey||"",
+    /* The CoC is one meeting for the whole panel, so the link lives on the
+       panel rather than on each student. Always written as a string — an
+       absent key and `undefined` are different things to Firestore. */
+    meetingLink:String(g.meetingLink||"").trim(),
     studentIds:(g.studentIds||[]).filter(Boolean),
     sessions:(g.sessions||[]).map(s=>({id:s.id||nomId(),date:s.date||"",
                                        start:s.start||"",end:s.end||"",
@@ -1278,15 +1346,26 @@ function exportRows(students,groups,cons){
       notIndependent:g?groupClashes(ms,[s.id],students).map(x=>x.m.name):[],
       cocDate:sess?prettyDate(sess.date):"",
       cocTime:slot?(prettyTime(slot.start)+"–"+prettyTime(slot.end)):"",
+      /* The two fields the CoC paperwork is actually built around: what the
+         student is presenting, and where the panel joins from. */
+      title:titleOf(s),
+      meetingLink:String(g?.meetingLink||"").trim(),
       consult:(c&&c.day)?(c.day+" "+c.start+"–"+c.end):""
     };
   }).sort((a,b)=>String(a.principal).localeCompare(String(b.principal))
     ||String(a.s.name).localeCompare(String(b.s.name)));
 }
 
+/* The CoC document. One row per student, carrying exactly what the
+   paperwork needs: who is presenting and how to reach them, what they are
+   presenting, where the panel meets, who is on that panel and how to reach
+   them, and when the student's slot is.
+   The weekly consultation time is deliberately NOT here — it is a
+   supervision arrangement, not part of the confirmation record. */
 function downloadPanelCSV(rows,sem){
-  const head=["principal_supervisor","student","student_id","campus","area","co_supervisor",
-    "consultation_time","panel","panel_chair",
+  const head=["student","student_email","student_id","proposal_title","meeting_link",
+    "principal_supervisor","co_supervisor","campus","area",
+    "panel","panel_chair",
     "member_1","member_1_email","member_1_mobile","member_1_type",
     "member_2","member_2_email","member_2_mobile","member_2_type",
     "member_3","member_3_email","member_3_mobile","member_3_type",
@@ -1294,8 +1373,9 @@ function downloadPanelCSV(rows,sem){
   const lines=[head.join(",")];
   rows.forEach(r=>{
     const m=[0,1,2].map(i=>r.members[i]||{});
-    const cell=[r.principal,r.s.name,r.s.sid||"",r.s.campus||"",r.s.area||"",r.s.coName||"",
-      r.consult, r.g?.label||"", r.chair?.name||"",
+    const cell=[r.s.name,r.s.email||"",r.s.sid||"",r.title,r.meetingLink,
+      r.principal,r.s.coName||"",r.s.campus||"",r.s.area||"",
+      r.g?.label||"", r.chair?.name||"",
       ...m.flatMap(x=>[x.name||"",x.email||"",x.mobile||"",
                        x.kind?(x.kind==="internal"?"internal":"external"):""]),
       r.sess?.date||"", r.slot?r.slot.start:"", r.slot?r.slot.end:"",
@@ -1537,7 +1617,7 @@ async function viewPanels(v){
       "Who is assessing them, and when they present. Set by the coordinator.","info"));
     const c=cardShell("My students' CoC",null,"info");
     const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Student","ID","My role","Panel","Chair","CoC time"].map(h=>el("th",{},h)))));
+    t.append(el("thead",{},el("tr",{},...["Student","Proposal title","My role","Panel","Chair","CoC time"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
     mine.sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(s=>{
       const g=groupOfStudent(groups,s.id), ms=groupMembers(g);
@@ -1551,13 +1631,23 @@ async function viewPanels(v){
         : sess?el("span",{class:"pill pending"},"Session set, slot pending")
              :el("span",{class:"pill pending"},"Not scheduled");
       const chair=ms.find(m=>isChair(g,m));
+      /* The title is the principal's to set, so it is editable here and
+         read-only for a co-supervisor looking at the same row. */
+      const titleBox=el("div",{},titleCell(s,"ui"));
+      if(s.principalUid===S.uid) titleBox.append(el("div",{style:"margin-top:4px"},
+        el("button",{class:"btn xs ghost",onclick:()=>editProposalTitle(s,()=>draw())},
+          titleOf(s)?"Edit":"Add the title")));
+      // The panel meets once; every student on it joins from the same link.
+      const whenCell=el("td",{},when);
+      if(g?.meetingLink) whenCell.append(el("div",{style:"margin-top:4px"},joinLink(g.meetingLink,"Join")));
       tb.append(el("tr",{},
-        el("td",{},el("strong",{},s.name)),
-        el("td",{class:"muted"},s.sid||"\u2014"),
+        el("td",{},el("strong",{},s.name),
+          el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID")),
+        el("td",{},titleBox),
         el("td",{},s.principalUid===S.uid?el("span",{class:"pill blue"},"Principal"):el("span",{class:"pill none"},"Co-supervisor")),
         el("td",{},chips),
         el("td",{class:"muted"},chair?chair.name:"\u2014"),
-        el("td",{},when)));
+        whenCell));
     });
     t.append(tb); c.append(t); host.append(c);
   }
@@ -1577,7 +1667,7 @@ async function viewPanels(v){
       host.append(c); return;
     }
     const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Student","ID","Principal","Panel","My role","Time"].map(h=>el("th",{},h)))));
+    t.append(el("thead",{},el("tr",{},...["Student","Proposal title","Principal","Panel","My role","Time"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
     asMember.forEach(g=>{
       const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
@@ -1585,14 +1675,20 @@ async function viewPanels(v){
       groupStudents(g).forEach(id=>{
         const s=students.find(x=>x.id===id); if(!s) return;
         const slot=(g.slots||[]).find(x=>x.studentDocId===id);
+        // An assessor reads this row to prepare, so the title matters as much
+        // as the time, and the link saves them hunting for the invitation.
+        const timeCell=el("td",{},sess&&slot
+          ?el("strong",{},prettyDate(sess.date)+", "+prettyTime(slot.start)+"–"+prettyTime(slot.end))
+          :el("span",{class:"pill pending"},"Not scheduled"));
+        if(g.meetingLink) timeCell.append(el("div",{style:"margin-top:4px"},joinLink(g.meetingLink,"Join")));
         tb.append(el("tr",{},
-          el("td",{},el("strong",{},s.name)),
-          el("td",{class:"muted"},s.sid||"\u2014"),
+          el("td",{},el("strong",{},s.name),
+            el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID")),
+          el("td",{},titleCell(s,"ui")),
           el("td",{class:"muted"},s.principalName||"\u2014"),
           el("td",{class:"muted"},g.label||"Panel"),
           el("td",{},isChair(g,me)?el("span",{class:"pill blue"},"Chair"):el("span",{class:"pill none"},"Member")),
-          el("td",{},sess&&slot?el("strong",{},prettyDate(sess.date)+", "+prettyTime(slot.start)+"–"+prettyTime(slot.end))
-                               :el("span",{class:"pill pending"},"Not scheduled"))));
+          timeCell));
       });
     });
     t.append(tb); c.append(t);
@@ -1913,6 +2009,29 @@ async function viewPanelAdmin(v){
     }
     body.append(sessBtns);
 
+    // ---- where the panel meets ----
+    // One link for the whole panel: the assessors sit through the whole
+    // session, so they join once and the students come and go by slot.
+    body.append(el("label",{},"Meeting link"));
+    const link=String(g.meetingLink||"").trim();
+    const linkRow=el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;margin-bottom:6px"});
+    if(link){
+      linkRow.append(joinLink(link,"Open the meeting"),
+        el("button",{class:"btn sm ghost",onclick:()=>setMeetingLink(g)},"Change the link"),
+        el("button",{class:"btn sm ghost",onclick:()=>{
+          navigator.clipboard?.writeText(link).then(()=>toast("Link copied."),
+            ()=>toast("Copy failed \u2014 select the link manually.",true));
+        }},"Copy"));
+    } else {
+      linkRow.append(el("span",{class:"pill pending"},"No link yet"),
+        el("button",{class:"btn sm",onclick:()=>setMeetingLink(g)},"Add the meeting link"));
+    }
+    body.append(linkRow);
+    body.append(link
+      ? el("p",{class:"muted ui",style:"margin:0 0 16px;font-size:12.5px;word-break:break-all"},link)
+      : el("p",{class:"muted",style:"margin:0 0 16px"},
+          "Paste the Teams meeting link for this session. It goes to the assessors, the supervisors and the students, and onto the exported CoC document."));
+
     if(chosen) body.append(timetableBlock(g,chosen,stu));
     c.append(body); return c;
   }
@@ -1978,7 +2097,7 @@ async function viewPanelAdmin(v){
       return wrap;
     }
     const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Time","Student","ID","Principal supervisor",""].map(h=>el("th",{},h)))));
+    t.append(el("thead",{},el("tr",{},...["Time","Student","Proposal title","Principal supervisor",""].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
     saved.forEach((sl,i)=>{
       const s=students.find(x=>x.id===sl.studentDocId);
@@ -1989,8 +2108,12 @@ async function viewPanelAdmin(v){
         }},"Remove"));
       tb.append(el("tr",{},
         el("td",{},el("strong",{},prettyTime(sl.start)+"\u2013"+prettyTime(sl.end))),
-        el("td",{},s?s.name:el("span",{class:"muted"},sl.studentDocId?"(student removed)":"Buffer / discussion")),
-        el("td",{class:"muted"},s?.sid||"\u2014"),
+        // ID moves under the name so the title gets a column of its own —
+        // this table is the running order read out on the day.
+        el("td",{},s?el("div",{},el("strong",{},s.name),
+                            el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID"))
+                 :el("span",{class:"muted"},sl.studentDocId?"(student removed)":"Buffer / discussion")),
+        el("td",{},s?titleCell(s,"ui"):el("span",{class:"muted"},"\u2014")),
         el("td",{class:"muted"},s?.principalName||"\u2014"),
         el("td",{},acts)));
     });
@@ -2037,6 +2160,27 @@ async function viewPanelAdmin(v){
         try{ await DB.remove("panelGroups",g.id); }catch(err){ toast(err?.message||"Could not delete.",true); return false; }
         toast("Panel deleted."); await reload(); return true;
       },"Delete");
+  }
+
+  /* The Teams link for the panel's session. Left exactly as pasted — Teams
+     URLs carry query strings that must not be "tidied" — and only turned
+     into an href when it is rendered. Clearing the box removes it. */
+  function setMeetingLink(g){
+    const inp=el("input",{value:g.meetingLink||"",
+      placeholder:"https://teams.microsoft.com/l/meetup-join/\u2026"});
+    const stu=groupStudents(g).length;
+    modal(g.meetingLink?"Change the meeting link":"Add the meeting link",
+      el("div",{class:"grid"},
+        el("div",{},el("label",{},"Meeting link"),inp),
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          "One link for the whole session \u2014 the assessors join once and the "+
+          stu+" student"+(stu===1?"":"s")+" present in their own slots. It shows on "+
+          "the supervisors' CoC tab and on the exported CoC document. Students "+
+          "never see it here \u2014 send it to them yourself when you're ready. "+
+          "Leave it empty to remove the link."))),
+      async()=>persist({...g,meetingLink:inp.value.trim()},
+        inp.value.trim()?"Meeting link saved.":"Meeting link removed."),
+      "Save link");
   }
 
   function addSession(g){
@@ -2569,12 +2713,22 @@ async function viewPanelAdmin(v){
     const missing=rows.filter(r=>!r.g).length;
     const unscheduled=rows.filter(r=>r.g&&!r.slot).length;
 
+    const untitled=rows.filter(r=>!r.title).length;
+    const nolink=rows.filter(r=>r.g&&!r.meetingLink).length;
+
     host.append(sectionHead("\u2913","Export",
-      "Every student with their panel, chair, assessor contact details, CoC presentation time and weekly consultation time \u2014 grouped by principal supervisor.","info"));
+      "The CoC document: each student with their email and proposal title, the meeting link, the panel and their contact details, and the presentation timetable \u2014 grouped by principal supervisor. The weekly consultation time is not part of it.","info"));
     if(missing||unscheduled) host.append(noticeBar("amber",
       [missing?missing+" student(s) are not on a panel":"",
        unscheduled?unscheduled+" have a panel but no presentation time yet":""].filter(Boolean).join(" and ")+
       ". They're still exported, with those columns blank."));
+    /* Two blanks the coordinator can still fix before sending the document
+       out, so they are worth naming separately rather than letting an empty
+       column speak for itself. */
+    if(untitled||nolink) host.append(noticeBar("amber",
+      [untitled?untitled+" student(s) have no proposal title \u2014 set it on the Students tab, or ask their principal supervisor to":"",
+       nolink?nolink+" panel student(s) have no meeting link \u2014 set it on the panel card under Panels & scheduling":""]
+        .filter(Boolean).join(". ")+"."));
 
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:14px"},
       el("button",{class:"btn",onclick:()=>downloadPanelCSV(rows,sem)},"\u2913 Download CSV"),
@@ -2592,20 +2746,30 @@ async function viewPanelAdmin(v){
         done===list.length?"ok":"info");
       const t=el("table",{});
       t.append(el("thead",{},el("tr",{},
-        ...["Student","ID","Panel","Chair","Assessors","CoC time","Consultation","Independence"].map(h=>el("th",{},h)))));
+        ...["Student","Proposal title","Panel","Chair","Assessors","CoC time","Meeting link","Independence"].map(h=>el("th",{},h)))));
       const tb=el("tbody",{});
       list.forEach(r=>{
-        const chips=el("div",{class:"row",style:"gap:4px"});
+        // Assessor name AND email — the document is used to contact them.
+        const chips=el("div",{class:"pgrid",style:"gap:4px"});
         if(!r.members.length) chips.append(el("span",{class:"muted"},"\u2014"));
-        else r.members.forEach(m=>chips.append(seatChip(m)));
+        else r.members.forEach(m=>chips.append(el("div",{},
+          el("strong",{class:"ui",style:"font-size:13px"},m.name||"\u2014"),
+          el("span",{class:"muted ui",style:"font-size:12.5px"}," \u00B7 "+(m.email||"no email on file")))));
         tb.append(el("tr",{},
-          el("td",{},el("strong",{},r.s.name)),
-          el("td",{class:"muted"},r.s.sid||"\u2014"),
+          // name, ID and email together: one identifiable person per row
+          el("td",{},el("strong",{},r.s.name),
+            el("div",{class:"muted ui",style:"font-size:12.5px"},
+              (r.s.sid||"no ID")+" \u00B7 "+(r.s.email||"no email on file"))),
+          el("td",{},titleCell(r.s)),
           el("td",{class:"muted"},r.g?.label||el("span",{class:"pill pending"},"None")),
           el("td",{class:"muted"},r.chair?.name||"\u2014"),
           el("td",{},chips),
           el("td",{},r.cocTime?el("strong",{},r.cocDate+", "+r.cocTime):el("span",{class:"pill pending"},"Not set")),
-          el("td",{class:"muted"},r.consult||"\u2014"),
+          // the URL in full, so it survives being printed to PDF
+          el("td",{},r.meetingLink
+            ? el("div",{},joinLink(r.meetingLink,"Join"),
+                el("div",{class:"muted ui",style:"font-size:12px;word-break:break-all"},r.meetingLink))
+            : el("span",{class:"pill pending"},"Not set")),
           el("td",{},r.notIndependent.length
             ? el("span",{class:"pill missed",title:"Supervised by "+r.notIndependent.join(", ")},"Override")
             : el("span",{class:"muted"},"\u2014"))));
@@ -3154,8 +3318,11 @@ async function viewStudents(v){
       const tb=el("tbody",{});
       list.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
         const codes=(s.unitIds||[]).map(id=>unitById(sem,id)?.code).filter(Boolean);
+        // The proposal title rides under the name rather than taking a column
+        // of its own: it is long, and this table is already wide.
         const cells=[
-          el("td",{},el("strong",{},s.name)),
+          el("td",{},el("strong",{},s.name),
+            el("div",{class:"muted ui",style:"font-size:12.5px;font-weight:500"},titleCell(s))),
           el("td",{},s.sid)
         ];
         if(mode!=="area") cells.push(el("td",{},areaPill(s.area)));
@@ -3172,6 +3339,11 @@ async function viewStudents(v){
         } else if(S.role==="supervisor"){
           // contact via email only — opens the device's mail app
           const contact=el("div",{class:"row",style:"gap:5px"});
+          // Only the principal maintains the proposal title: one owner per field.
+          if(s.principalUid===S.uid)
+            contact.append(el("button",{class:"btn xs ghost",
+              onclick:()=>editProposalTitle(s,()=>viewStudents(v))},
+              titleOf(s)?"Edit title":"Add title"));
           contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
           // if I'm the co, offer to email the principal and vice versa
           if(s.principalUid && s.principalUid!==S.uid){
@@ -3203,6 +3375,7 @@ function studentForm(existing,done){
   const f={
     sid:existing?.sid||"", name:existing?.name||"", email:existing?.email||"", mobile:existing?.mobile||"",
     campus:existing?.campus||CAMPUSES[0], area:existing?.area||AREAS[0],
+    proposalTitle:existing?.proposalTitle||"",
     principalUid:existing?.principalUid||"", coUid:existing?.coUid||"",
     unitIds:existing?.unitIds||[]
   };
@@ -3212,6 +3385,10 @@ function studentForm(existing,done){
   const sid=el("input",{value:f.sid}), name=el("input",{value:f.name}), email=el("input",{type:"email",value:f.email});
   const mobile=el("input",{type:"tel",value:f.mobile,placeholder:"e.g. +61 4xx xxx xxx"});
   const campus=el("select",{},...CAMPUSES.map(c=>el("option",{value:c,...(c===f.campus?{selected:"selected"}:{})},c)));
+  // Free text and always optional: a title arrives weeks after enrolment and
+  // is usually rewritten several times before the CoC.
+  const proposalTitle=el("input",{value:f.proposalTitle,
+    placeholder:"e.g. Federated learning for privacy-preserving intrusion detection"});
   const area=el("select",{},...AREAS.map(a=>el("option",{value:a,...(a===f.area?{selected:"selected"}:{})},a)));
   const prin=el("select",{},...supOpts(S.supervisors.filter(canBePrincipal),f.principalUid));
   const co=el("select",{},...supOpts(S.supervisors.filter(canBeCo),f.coUid));
@@ -3242,6 +3419,9 @@ function studentForm(existing,done){
       el("div",{},el("label",{},"Supervision area"),area),
       el("div",{},el("label",{},"Principal supervisor"),prin),
       el("div",{},el("label",{},"Co-supervisor"),co),
+      el("div",{style:"grid-column:1/-1"},el("label",{},"Proposal / research title (optional)"),proposalTitle,
+        el("p",{class:"muted ui",style:"margin:4px 0 0;font-size:12.5px"},
+          "Shown on the CoC panel screens and on the exported CoC document \u2014 staff only, never in the student portal. The principal supervisor can also set it from their CoC tab.")),
       el("div",{style:"grid-column:1/-1"},el("label",{},"Enrolled units"),unitsBlock)
     ),
     async()=>{
@@ -3251,7 +3431,8 @@ function studentForm(existing,done){
       const cName=S.supervisors.find(u=>u.id===co.value)?.name||S.supervisors.find(u=>u.id===co.value)?.email||"";
       const unitIds=unitBoxes.filter(lbl=>lbl.querySelector("input").checked).map(lbl=>lbl.querySelector("input").dataset.unit);
       const data={semesterId:S.activeSem,sid:sid.value.trim(),name:name.value.trim(),email:email.value.trim(),mobile:mobile.value.trim(),
-        campus:campus.value,area:area.value,unitIds,principalUid:prin.value,coUid:co.value,principalName:pName,coName:cName};
+        campus:campus.value,area:area.value,proposalTitle:proposalTitle.value.trim(),
+        unitIds,principalUid:prin.value,coUid:co.value,principalName:pName,coName:cName};
       if(existing) await DB.update("students",existing.id,data); else await DB.add("students",data);
       // keep linked consultation's denormalised supervisor names in sync
       if(existing){
@@ -3311,7 +3492,7 @@ function importCSV(done){
       el("p",{class:"muted",style:"margin-top:0"},
         "Upload a CSV or paste the allocation list per principal supervisor (copied from Excel). "+
         "Needed columns: student name, student ID, student email, principal supervisor (name), principal supervisor email, co-supervisor name, co-supervisor email. "+
-        "Supervisors are matched by email — new ones are created automatically. Optional columns: mobile, campus, units (codes separated by ; or |), area."),
+        "Supervisors are matched by email — new ones are created automatically. Optional columns: mobile, campus, units (codes separated by ; or |), area, proposal title."),
       el("div",{style:"margin-bottom:10px"},el("label",{},"Supervision area for this batch"),areaSel,
         el("p",{class:"muted",style:"margin:4px 0 0;font-size:13px"},"Applied to every imported student and any newly created supervisor. Add an \u201Carea\u201D column to mix IT and Business rows in one import.")),
       el("div",{style:"margin-bottom:8px"},el("label",{},"CSV file"),input),
@@ -3352,13 +3533,18 @@ function importCSV(done){
           semesterId:S.activeSem,sid,name:row.name.trim(),
           email:(row.email||"").trim(),mobile:(row.mobile||"").trim(),
           campus:(row.campus||"").trim()||"NSW",area:rowArea,
+          proposalTitle:(row.proposal_title||"").trim(),
           principalUid:p?.id||"",coUid:c?.id||"",
           principalName:p?.name||p?.email||"",coName:c?.name||c?.email||""
         };
         const prev=existing.find(s=>normSid(s.sid)===normSid(sid));
         if(prev){
-          // keep existing unit enrolments unless the import supplies them
-          await DB.update("students",prev.id,{...data,unitIds:unitIds.length?unitIds:(prev.unitIds||[])});
+          // keep existing unit enrolments and proposal title unless the
+          // import actually supplies them: the allocation spreadsheet the
+          // coordinator re-imports each term carries neither.
+          await DB.update("students",prev.id,{...data,
+            unitIds:unitIds.length?unitIds:(prev.unitIds||[]),
+            proposalTitle:data.proposalTitle||prev.proposalTitle||""});
           updated++;
         } else {
           await DB.add("students",{...data,unitIds});
@@ -3398,6 +3584,7 @@ function parseImport(text){
     if(k==="campus") return "campus";
     if(k==="units"||k==="unit") return "units";
     if(k==="area"||k==="supervisionarea"||k==="discipline") return "area";
+    if(/^(proposaltitle|researchtitle|thesistitle|projecttitle|title|topic|researchtopic)$/.test(k)) return "proposal_title";
     return k;
   };
   const headers=split(lines[0]).map(canon);
