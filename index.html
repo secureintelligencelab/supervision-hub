@@ -3358,6 +3358,447 @@ async function drawMain(){
 }
 
 /* ============================================================
+   5b. ALLOCATION EXPORT (admin) — Excel / CSV / PDF
+   ------------------------------------------------------------
+   The coordinator's standing request: hand the allocation list to the
+   faculty office as a spreadsheet — student, ID, principal, co-supervisor,
+   research title — either for one supervisor, for a whole discipline
+   (all IT / all Business), or for everybody in the semester.
+
+   Excel is the preferred format, so it is the primary button and it is a
+   REAL .xlsx (a zipped OOXML package written by hand below), not a CSV with
+   an .xls name: student IDs keep their leading zeros, long titles wrap
+   instead of bleeding across columns, and the header row freezes.
+   No CDN, no library — the hub still has to work from a USB stick.
+   ============================================================ */
+
+/* One flat record per student. Names are read from the denormalised
+   principalName/coName written at allocation time, falling back to the live
+   staff list if an older record only stored the uid. */
+const NO_SUP = "\u2014 No principal supervisor \u2014";
+function allocRecord(s){
+  return {
+    name : s.name || "",
+    sid  : s.sid || "",
+    prin : (s.principalName || (s.principalUid ? supName(s.principalUid) : "") || "").trim(),
+    co   : (s.coName || (s.coUid ? supName(s.coUid) : "") || "").trim(),
+    title: titleOf(s),
+    area : s.area || "",
+    campus: s.campus || ""
+  };
+}
+/* Supervisor-wise: principals A→Z, students A→Z inside each, and anyone
+   without a principal parked at the end so they're visible, not lost. */
+function allocGroups(records){
+  const m=new Map();
+  records.forEach(r=>{ const k=r.prin||NO_SUP; if(!m.has(k)) m.set(k,[]); m.get(k).push(r); });
+  return [...m.entries()]
+    .sort((a,b)=>(a[0]===NO_SUP)-(b[0]===NO_SUP) || a[0].localeCompare(b[0]))
+    .map(([name,rows])=>({name,rows:rows.sort((x,y)=>String(x.name).localeCompare(String(y.name)))}));
+}
+function allocFlat(groups){ return groups.flatMap(g=>g.rows); }
+
+/* Columns. Area rides along only when the export spans both disciplines —
+   in an IT-only or Business-only sheet it would be the same word 40 times. */
+function allocCols(withArea){
+  const c=[["Student name",26,"name"],["Student ID",15,"sid"],
+           ["Principal supervisor",24,"prin"],["Co-supervisor",24,"co"],
+           ["Research / proposal title",58,"title"]];
+  if(withArea) c.push(["Area",12,"area"]);
+  return c.map(([label,w,k])=>({label,w,k}));
+}
+
+/* ---- Minimal OOXML writer -------------------------------------------
+   Enough of the spec for a styled multi-sheet workbook and not a byte more.
+   Everything is written as an inline string so student IDs like "0041299"
+   survive the round trip as text rather than being coerced to a number. */
+function xmlEsc(v){
+  return String(v==null?"":v)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+function colLetter(i){ let s="",n=i+1; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=(n-m-1)/26|0; } return s; }
+
+function crc32(buf){
+  let T=crc32.T;
+  if(!T){ T=crc32.T=new Uint32Array(256);
+    for(let i=0;i<256;i++){ let c=i; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); T[i]=c>>>0; } }
+  let c=0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++) c=T[(c^buf[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+/* Store-only ZIP (no deflate). A few hundred rows of text is tiny, and it
+   keeps this to one readable function instead of pulling in a compressor. */
+function zipStore(files,mime){
+  const enc=new TextEncoder(), parts=[], dir=[]; let off=0;
+  const d=new Date();
+  const t=((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF;
+  const dt=(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF;
+  files.forEach(f=>{
+    const nm=enc.encode(f.name), data=f.data, crc=crc32(data);
+    const lh=new Uint8Array(30+nm.length), lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034b50,true); lv.setUint16(4,20,true); lv.setUint16(6,0x0800,true);
+    lv.setUint16(10,t,true); lv.setUint16(12,dt,true);
+    lv.setUint32(14,crc,true); lv.setUint32(18,data.length,true); lv.setUint32(22,data.length,true);
+    lv.setUint16(26,nm.length,true); lh.set(nm,30);
+    parts.push(lh,data);
+    const ch=new Uint8Array(46+nm.length), cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint16(8,0x0800,true); cv.setUint16(12,t,true); cv.setUint16(14,dt,true);
+    cv.setUint32(16,crc,true); cv.setUint32(20,data.length,true); cv.setUint32(24,data.length,true);
+    cv.setUint16(28,nm.length,true); cv.setUint32(42,off,true); ch.set(nm,46);
+    dir.push(ch);
+    off+=lh.length+data.length;
+  });
+  const cdSize=dir.reduce((n,c)=>n+c.length,0);
+  const eo=new Uint8Array(22), ev=new DataView(eo.buffer);
+  ev.setUint32(0,0x06054b50,true); ev.setUint16(8,files.length,true); ev.setUint16(10,files.length,true);
+  ev.setUint32(12,cdSize,true); ev.setUint32(16,off,true);
+  return new Blob([...parts,...dir,eo],{type:mime});
+}
+
+/* Style ids used below: 1 = header band, 2 = body cell, 3 = supervisor
+   band, 4 = title caption. Kept as a tiny fixed palette so the sheet
+   builder never has to think about the style table. */
+const XLSX_STYLES =
+  '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<fonts count="4">'+
+    '<font><sz val="11"/><name val="Calibri"/></font>'+
+    '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'+
+    '<font><b/><sz val="11"/><color rgb="FF23423F"/><name val="Calibri"/></font>'+
+    '<font><b/><sz val="14"/><color rgb="FF1E242B"/><name val="Calibri"/></font>'+
+  '</fonts>'+
+  '<fills count="4">'+
+    '<fill><patternFill patternType="none"/></fill>'+
+    '<fill><patternFill patternType="gray125"/></fill>'+
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF3F7D78"/><bgColor indexed="64"/></patternFill></fill>'+
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFE3EEEC"/><bgColor indexed="64"/></patternFill></fill>'+
+  '</fills>'+
+  '<borders count="2">'+
+    '<border><left/><right/><top/><bottom/><diagonal/></border>'+
+    '<border><left style="thin"><color rgb="FFD5DBE1"/></left><right style="thin"><color rgb="FFD5DBE1"/></right>'+
+    '<top style="thin"><color rgb="FFD5DBE1"/></top><bottom style="thin"><color rgb="FFD5DBE1"/></bottom><diagonal/></border>'+
+  '</borders>'+
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+  '<cellXfs count="5">'+
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+    '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>'+
+    '<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'+
+    '<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'+
+    '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>'+
+  '</cellXfs>'+
+  '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'+
+  '</styleSheet>';
+
+/* sheets: [{name, widths:[], rows:[{cells:[], s:styleId, h:rowHeight}],
+             freezeAt:rowNumber|0, filter:"A1:E20"|""}] */
+function xlsxBlob(sheets){
+  const enc=new TextEncoder(), U=s=>enc.encode(s);
+  const P='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const REL="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const files=[];
+
+  files.push({name:"[Content_Types].xml",data:U(P+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+    sheets.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join("")+
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+
+    '</Types>')});
+
+  files.push({name:"_rels/.rels",data:U(P+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="'+REL+'/officeDocument" Target="xl/workbook.xml"/>'+
+    '</Relationships>')});
+
+  files.push({name:"xl/workbook.xml",data:U(P+
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="'+REL+'"><sheets>'+
+    sheets.map((s,i)=>'<sheet name="'+xmlEsc(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join("")+
+    '</sheets></workbook>')});
+
+  files.push({name:"xl/_rels/workbook.xml.rels",data:U(P+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    sheets.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="'+REL+'/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join("")+
+    '<Relationship Id="rId'+(sheets.length+1)+'" Type="'+REL+'/styles" Target="styles.xml"/>'+
+    '</Relationships>')});
+
+  files.push({name:"xl/styles.xml",data:U(P+XLSX_STYLES)});
+
+  sheets.forEach((sh,i)=>{
+    const cols=(sh.widths||[]).map((w,ci)=>
+      '<col min="'+(ci+1)+'" max="'+(ci+1)+'" width="'+w+'" customWidth="1"/>').join("");
+    const body=(sh.rows||[]).map((r,ri)=>{
+      const n=ri+1;
+      const cells=(r.cells||[]).map((v,ci)=>{
+        if(v==null||v==="") return r.s?'<c r="'+colLetter(ci)+n+'" s="'+r.s+'"/>':"";
+        return '<c r="'+colLetter(ci)+n+'"'+(r.s?' s="'+r.s+'"':"")+' t="inlineStr">'+
+               '<is><t xml:space="preserve">'+xmlEsc(v)+'</t></is></c>';
+      }).join("");
+      return '<row r="'+n+'"'+(r.h?' ht="'+r.h+'" customHeight="1"':"")+'>'+cells+'</row>';
+    }).join("");
+    const freeze=sh.freezeAt
+      ? '<sheetView showGridLines="0" workbookViewId="0"><pane ySplit="'+sh.freezeAt+
+        '" topLeftCell="A'+(sh.freezeAt+1)+'" activePane="bottomLeft" state="frozen"/></sheetView>'
+      : '<sheetView showGridLines="0" workbookViewId="0"/>';
+    files.push({name:"xl/worksheets/sheet"+(i+1)+".xml",data:U(P+
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="'+REL+'">'+
+      '<sheetViews>'+freeze+'</sheetViews>'+
+      '<sheetFormatPr defaultRowHeight="15"/>'+
+      (cols?'<cols>'+cols+'</cols>':"")+
+      '<sheetData>'+body+'</sheetData>'+
+      (sh.filter?'<autoFilter ref="'+sh.filter+'"/>':"")+
+      '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'+
+      '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>'+
+      '</worksheet>')});
+  });
+
+  return zipStore(files,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+
+/* Excel caps tab names at 31 chars and bans a handful of characters; two
+   supervisors called "Dr Anne Marie Fitzgerald-Brown" would otherwise
+   collide silently and Excel would refuse to open the file. */
+function safeSheetName(raw,used){
+  let n=String(raw||"Sheet").replace(/[\\\/\?\*\[\]:]/g,"-").trim().slice(0,31)||"Sheet";
+  const base=n; let i=2;
+  while(used.has(n.toLowerCase())){ const suf=" ("+(i++)+")"; n=base.slice(0,31-suf.length)+suf; }
+  used.add(n.toLowerCase()); return n;
+}
+
+function saveBlob(blob,fname){
+  const a=el("a",{href:URL.createObjectURL(blob),download:fname});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+/* prettyDate() takes a YYYY-MM-DD string; the exports want "today" as a
+   human date, so they use this instead of hand-rolling one each time. */
+function todayLabel(){
+  return new Date().toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+}
+function exportStamp(sem,scopeLabel){
+  const bits=["allocations"];
+  if(scopeLabel) bits.push(scopeLabel);
+  if(sem?.label) bits.push(sem.label);
+  return bits.join("_").replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+}
+
+/* ---- Excel ---- */
+function downloadAllocXLSX(groups,opt,sem){
+  const cols=allocCols(opt.withArea), widths=cols.map(c=>c.w);
+  const header=cols.map(c=>c.label);
+  const sheets=[], used=new Set();
+  const caption=[opt.scopeLabel,sem?.label,"exported "+todayLabel()].filter(Boolean).join("  \u00b7  ");
+
+  const main={name:safeSheetName(opt.perSheet?"Summary":"Allocations",used),widths,rows:[],freezeAt:0,filter:""};
+  main.rows.push({cells:[opt.title],s:4,h:20});
+  main.rows.push({cells:[caption]});
+  main.rows.push({cells:[]});
+  main.rows.push({cells:header,s:1,h:26});
+  const headerRow=main.rows.length;
+
+  if(opt.grouped){
+    groups.forEach(g=>{
+      main.rows.push({cells:[g.name+"  ("+g.rows.length+(g.rows.length===1?" student)":" students)")],s:3,h:20});
+      g.rows.forEach(r=>main.rows.push({cells:cols.map(c=>r[c.k]),s:2}));
+    });
+  }else{
+    allocFlat(groups).forEach(r=>main.rows.push({cells:cols.map(c=>r[c.k]),s:2}));
+    const last=main.rows.length;
+    if(last>headerRow) main.filter="A"+headerRow+":"+colLetter(cols.length-1)+last;
+  }
+  main.freezeAt=headerRow;
+  sheets.push(main);
+
+  /* One tab per supervisor, for coordinators who forward a single tab to a
+     single supervisor rather than sending the whole list around. */
+  if(opt.perSheet){
+    groups.forEach(g=>{
+      const rows=[{cells:[g.name],s:4,h:20},{cells:[caption]},{cells:[]},{cells:header,s:1,h:26}];
+      g.rows.forEach(r=>rows.push({cells:cols.map(c=>r[c.k]),s:2}));
+      sheets.push({name:safeSheetName(g.name===NO_SUP?"Unassigned":g.name,used),widths,rows,
+        freezeAt:4,filter:"A4:"+colLetter(cols.length-1)+rows.length});
+    });
+  }
+
+  saveBlob(xlsxBlob(sheets),exportStamp(sem,opt.scopeSlug)+".xlsx");
+  toast("Excel workbook downloaded.");
+}
+
+/* ---- CSV ----
+   Deliberately flat and ungrouped whatever the layout choice: a CSV that
+   carries banner rows stops being a table the moment anyone opens it in
+   Sheets or feeds it to a mail merge. It is sorted supervisor-wise instead,
+   and the principal column does the grouping work. */
+function downloadAllocCSV(groups,opt,sem){
+  const cols=allocCols(opt.withArea);
+  const esc=x=>'"'+String(x==null?"":x).replace(/"/g,'""')+'"';
+  const lines=[cols.map(c=>esc(c.label)).join(",")];
+  allocFlat(groups).forEach(r=>lines.push(cols.map(c=>esc(r[c.k])).join(",")));
+  /* BOM so Excel reads it as UTF-8 and doesn't mangle accented names. */
+  const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  saveBlob(blob,exportStamp(sem,opt.scopeSlug)+".csv");
+  toast("CSV downloaded.");
+}
+
+/* ---- PDF ----
+   Printed from an offscreen iframe rather than window.print(), so the page
+   that reaches the printer is just the allocation table — no tab strip, no
+   toolbar, no dark-mode background eating a toner cartridge. */
+function printDocument(title,inner){
+  const f=el("iframe",{style:"position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0"});
+  document.body.append(f);
+  const doc=f.contentDocument;
+  doc.open();
+  doc.write('<!doctype html><html><head><meta charset="utf-8"><title>'+xmlEsc(title)+'</title><style>'+
+    '@page{size:A4 landscape;margin:12mm}'+
+    'body{font:12px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1e242b;margin:0;background:#fff}'+
+    'h1{font-size:18px;margin:0 0 2px}'+
+    '.sub{color:#5a6672;font-size:11px;margin:0 0 14px}'+
+    'h2{font-size:13px;margin:16px 0 6px;padding:5px 8px;background:#e3eeec;color:#23423f;border-radius:4px;'+
+      'break-after:avoid;page-break-after:avoid}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:10px}'+
+    'th{background:#3f7d78;color:#fff;font-size:10.5px;text-align:left;padding:6px 7px;'+
+      'text-transform:uppercase;letter-spacing:.04em}'+
+    'td{padding:5px 7px;border-bottom:1px solid #dfe4e9;vertical-align:top}'+
+    'tr{break-inside:avoid;page-break-inside:avoid}'+
+    'thead{display:table-header-group}'+
+    '.muted{color:#8a949e}'+
+    '.count{font-weight:400;color:#4c6f6b}'+
+    'tfoot td{border:0;padding-top:10px;color:#8a949e;font-size:10px}'+
+    '</style></head><body>'+inner+'</body></html>');
+  doc.close();
+  const go=()=>{ try{ f.contentWindow.focus(); f.contentWindow.print(); }
+                 catch(e){ toast("Couldn't open the print dialog.",true); } };
+  const bin=()=>{ if(f.isConnected) f.remove(); };
+  f.contentWindow.addEventListener("afterprint",()=>setTimeout(bin,300));
+  setTimeout(bin,120000);          // fallback for browsers with no afterprint
+  setTimeout(go,250);              // let the iframe lay out before printing
+}
+function downloadAllocPDF(groups,opt,sem){
+  const cols=allocCols(opt.withArea);
+  const cell=v=>v?"<td>"+xmlEsc(v)+"</td>":'<td class="muted">\u2014</td>';
+  const thead="<thead><tr>"+cols.map(c=>"<th>"+xmlEsc(c.label)+"</th>").join("")+"</tr></thead>";
+  const body=rows=>"<tbody>"+rows.map(r=>"<tr>"+cols.map(c=>cell(r[c.k])).join("")+"</tr>").join("")+"</tbody>";
+  const n=allocFlat(groups).length;
+  let inner="<h1>"+xmlEsc(opt.title)+"</h1><p class=\"sub\">"+
+    xmlEsc([sem?.label,opt.scopeLabel,n+(n===1?" student":" students"),
+            "generated "+todayLabel()].filter(Boolean).join("  \u00b7  "))+"</p>";
+  if(opt.grouped){
+    groups.forEach(g=>{
+      inner+="<h2>"+xmlEsc(g.name)+' <span class="count">\u00b7 '+g.rows.length+
+             (g.rows.length===1?" student":" students")+"</span></h2>"+
+             "<table>"+thead+body(g.rows)+"</table>";
+    });
+  }else{
+    inner+="<table>"+thead+body(allocFlat(groups))+"</table>";
+  }
+  printDocument(opt.title,inner);
+  toast("Opening the print dialog \u2014 choose \u201cSave as PDF\u201d.");
+}
+
+/* ---- The dialog -----------------------------------------------------
+   Scope, layout, then the three formats. Excel is the primary button
+   because it is what the faculty office asks for. */
+function allocationExportDialog(students){
+  const sem=activeSemester();
+  const sups=[...new Set(students.map(s=>(s.principalName||(s.principalUid?supName(s.principalUid):"")||"").trim())
+                                 .filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+
+  const scope=el("select",{},
+    el("option",{value:"all"},"All students"),
+    ...AREAS.map(a=>el("option",{value:"area:"+a},"All "+a+" students")),
+    ...(sups.length?[el("option",{value:"",disabled:"disabled"},"\u2014 One supervisor \u2014")]:[]),
+    ...sups.map(n=>el("option",{value:"sup:"+n},n)));
+
+  const layout=el("select",{},
+    el("option",{value:"grouped"},"Grouped by principal supervisor"),
+    el("option",{value:"flat"},"One flat list (sorted by supervisor)"));
+
+  const perSheet=el("input",{type:"checkbox",id:"allocPerSheet",style:"width:auto;margin:0"});
+  const perWrap=el("label",{for:"allocPerSheet",class:"ui",
+    style:"display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer;font-weight:400"},
+    perSheet, el("span",{},"Excel: also give each supervisor their own tab"));
+
+  const count=el("p",{class:"muted",style:"margin:10px 0 0;font-size:13px"});
+
+  /* Everything the three download functions need, recomputed on demand so
+     the dialog can never hand a stale selection to a download. */
+  function current(){
+    const v=scope.value;
+    let list=students, scopeLabel="All students", scopeSlug="all", withArea=true, title="Student allocations";
+    if(v.startsWith("area:")){
+      const a=v.slice(5);
+      list=students.filter(s=>s.area===a);
+      scopeLabel=a+" students"; scopeSlug=a; withArea=false;
+      title=a+" student allocations";
+    }else if(v.startsWith("sup:")){
+      const n=v.slice(4);
+      list=students.filter(s=>((s.principalName||(s.principalUid?supName(s.principalUid):"")||"").trim())===n);
+      scopeLabel="Principal supervisor: "+n; scopeSlug=n; withArea=true;
+      title="Student allocations \u2014 "+n;
+    }
+    const groups=allocGroups(list.map(allocRecord));
+    return {groups,opt:{grouped:layout.value==="grouped",perSheet:perSheet.checked,
+                        withArea,scopeLabel,scopeSlug,title},sem};
+  }
+  function refresh(){
+    const {groups}=current();
+    const n=groups.reduce((t,g)=>t+g.rows.length,0);
+    const named=groups.filter(g=>g.name!==NO_SUP).length;
+    const orphan=groups.find(g=>g.name===NO_SUP)?.rows.length||0;
+    const noTitle=groups.reduce((t,g)=>t+g.rows.filter(r=>!r.title).length,0);
+    const noCo=groups.reduce((t,g)=>t+g.rows.filter(r=>!r.co).length,0);
+    perSheet.disabled=layout.value!=="grouped";
+    perWrap.style.opacity=perSheet.disabled?".5":"1";
+    /* Say out loud what is thin in the data, so nobody sends the faculty
+       office a sheet with a column of blanks and finds out afterwards. */
+    count.textContent = n ? [
+      n+(n===1?" student":" students"),
+      named+(named===1?" supervisor":" supervisors"),
+      orphan?orphan+" with no principal supervisor":"",
+      noTitle?noTitle+" with no research title yet":"",
+      noCo?noCo+" with no co-supervisor":""
+    ].filter(Boolean).join(" \u00b7 ")+"." : "No students match that selection.";
+  }
+  scope.addEventListener("change",refresh);
+  layout.addEventListener("change",refresh);
+
+  const secondary=el("div",{class:"row",style:"gap:8px;margin-top:16px;flex-wrap:wrap"},
+    el("button",{class:"btn ghost",onclick:()=>{
+      const c=current(); if(!c.groups.length) return toast("Nothing to export.",true);
+      downloadAllocCSV(c.groups,c.opt,c.sem);
+    }},"\u2913 Download CSV"),
+    el("button",{class:"btn ghost",onclick:()=>{
+      const c=current(); if(!c.groups.length) return toast("Nothing to export.",true);
+      downloadAllocPDF(c.groups,c.opt,c.sem);
+    }},"\u2399 Print / save as PDF"));
+
+  modal("Export student allocations",
+    el("div",{},
+      el("p",{class:"muted",style:"margin:0 0 14px"},
+        "Student name, ID, principal supervisor, co-supervisor and research title"+
+        (sem?.label?" for "+sem.label:"")+
+        ". Students with no title set yet are still exported, with that column left blank."),
+      el("div",{class:"grid"},
+        el("div",{},el("label",{},"Include"),scope),
+        el("div",{},el("label",{},"Layout"),layout)),
+      el("div",{style:"margin-top:12px"},perWrap),
+      count,
+      secondary,
+      el("p",{class:"muted",style:"margin:12px 0 0;font-size:12px"},
+        "CSV is always a plain flat table so it can be filtered, sorted or imported elsewhere.")),
+    async()=>{
+      const c=current();
+      if(!c.groups.length){ toast("Nothing to export.",true); return false; }
+      downloadAllocXLSX(c.groups,c.opt,c.sem);
+      return true;
+    },"\u2913 Download Excel (.xlsx)");
+  refresh();
+}
+
+/* ============================================================
    6. STUDENTS TAB
    ============================================================ */
 async function viewStudents(v){
@@ -3392,6 +3833,9 @@ async function viewStudents(v){
   if(S.role==="admin"){
     bar.append(el("div",{style:"flex:1"}));
     bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Import students (CSV / paste)"),
+               // Allocation list out to the faculty office: supervisor-wise, or
+               // all IT / all Business, as Excel, CSV or PDF.
+               el("button",{class:"btn ghost",onclick:()=>allocationExportDialog(students)},"\u2913 Export allocations"),
                el("button",{class:"btn",onclick:()=>studentForm(null,()=>viewStudents(v))},"+ Add student"));
   }
   v.append(bar);
