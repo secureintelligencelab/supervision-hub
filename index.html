@@ -876,7 +876,7 @@ function seedDemo(){
     },
     chosenSessionId:"se2", slotMins:30,
     slots:[{start:"13:00",end:"13:30",studentDocId:"st1"}],
-    finalized:true, finalizedAt:dayAgo(1)};
+    finalized:true, finalizedAt:dayAgo(1), assessorsReleased:true, assessorsReleasedAt:dayAgo(1)};
   /* A second, still-draft panel that shares Dr Novak with Panel A and is
      booked over the top of it \u2014 so the demo shows both the supervisor
      gating and a real time clash without any setup. */
@@ -893,7 +893,7 @@ function seedDemo(){
     slots:[{date:"",start:"12:00",end:"12:30",studentDocId:"st2",link:""},
            {date:"2026-09-18",start:"10:00",end:"10:30",studentDocId:"st3",
             link:"https://teams.microsoft.com/l/meetup/coc-mei-lin"}],
-    finalized:false, finalizedAt:0};
+    finalized:false, finalizedAt:0, assessorsReleased:false, assessorsReleasedAt:0};
   mem.panels["pnl1"]={semesterId:"s2-2026",studentDocId:"st1",studentName:"Aisha Khan",studentSid:"45001",
     principalUid:"supA",principalName:"Dr Smith",updatedAt:dayAgo(1),members:[
       {id:"n1a",kind:"internal",uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu",mobile:"+61 400 333 444",org:"Internal"},
@@ -1446,7 +1446,19 @@ function availCounts(g,sess){
    arranged" \u2014 a half-built panel that then changes only causes emails.
    Only the Finalise / Reopen buttons on the panel card change the flag;
    nothing flips it as a side effect of some other edit. */
-const isFinal=g=>!!g?.finalized;
+/* Two audiences, two switches. A panel can be released to its ASSESSORS
+   (they learn which students they have been given, and when) without being
+   released to the students' SUPERVISORS, or the other way round \u2014 the
+   coordinator often wants the assessors briefed while the seating is still
+   being negotiated with a supervisor, and the reverse when an assessor is
+   about to be swapped. `finalized` is the supervisor switch, kept under
+   its old name so existing records read correctly; panels saved before the
+   split fall back to it for the assessors too, which is what they meant. */
+const isFinal=g=>!!g?.finalized;                       // released to supervisors
+const isAssessorReleased=g=>g?.assessorsReleased!==undefined
+  ? !!g.assessorsReleased : !!g?.finalized;
+const releaseState=g=>isFinal(g)&&isAssessorReleased(g)?"both"
+  :isFinal(g)?"supervisors":isAssessorReleased(g)?"assessors":"none";
 /* What a panel is still missing before finalising makes sense. The
    coordinator can finalise over the top of these, but is told first. */
 function finalGaps(g){
@@ -1603,6 +1615,11 @@ async function saveGroup(g){
                                  link:String(s.link||"").trim()})),
     finalized:!!g.finalized,
     finalizedAt:g.finalized?(g.finalizedAt||Date.now()):0,
+    /* Absent on a record written before the two audiences were split, and
+       there it meant "same as finalized" \u2014 so it is read that way
+       rather than being silently revoked on the next save. */
+    assessorsReleased:isAssessorReleased(g),
+    assessorsReleasedAt:isAssessorReleased(g)?(g.assessorsReleasedAt||Date.now()):0,
     updatedAt:Date.now()
   };
   if(g.id){ await DB.update("panelGroups",g.id,rec); return g.id; }
@@ -1636,7 +1653,7 @@ function exportRows(students,groups,cons){
       title:titleOf(s),
       meetingLink:slotLink(g,linkSlot||slot),
       ownLink:!!String((linkSlot||slot)?.link||"").trim(),
-      status:!g?"":isFinal(g)?"finalised":"draft",
+      status:!g?"":releaseState(g),
       consult:(c&&c.day)?(c.day+" "+c.start+"–"+c.end):""
     };
   }).sort((a,b)=>String(a.principal).localeCompare(String(b.principal))
@@ -1690,7 +1707,10 @@ function downloadPanelXLSX(rows,groups,students,timetables,sem,scope){
   const caption=[scope?.label,sem?.label,"exported "+todayLabel()].filter(Boolean).join("  \u00b7  ");
   const typeOf=x=>x.kind?(x.kind==="internal"?"Staff":"External"):"";
   const sessOf=g=>g?groupSessions(g).find(x=>x.id===g.chosenSessionId):null;
-  const statusOf=g=>!g?"":isFinal(g)?"Finalised":"Draft";
+  /* Spelled out for the spreadsheet, where "Draft" alone would not say
+     which audience is still in the dark. */
+  const statusOf=g=>!g?"":({both:"Released",assessors:"Assessors only",
+                            supervisors:"Supervisors only",none:"Draft"})[releaseState(g)];
   const clashes=allClashes(groups,timetables);
   const clashText=(g,m)=>clashes
     .filter(c=>(c.from.id===g.id||c.g?.id===g.id)&&(!m||memberKey(c.m)===memberKey(m)))
@@ -1835,6 +1855,22 @@ async function viewPanels(v){
   }catch(err){ v.append(panelRuleHelp(err)); return; }
 
   const mine=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
+  /* What to call a panel to the person sitting on it. Once released, its
+     real name \u2014 which is usually a supervisor's, and that is the point.
+     Before release, a neutral number, because the name alone would tell an
+     assessor whose students they have been given. The number is stable
+     within a render: panels are ordered by id, so "CoC panel 2" does not
+     become "CoC panel 1" when another is released. */
+  const aliasIdx=new Map();
+  function panelAlias(g){
+    if(isAssessorReleased(g)) return g.label||"Panel";
+    if(!aliasIdx.size){
+      groups.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)))
+        .forEach((x,i)=>aliasIdx.set(x.id,i+1));
+    }
+    const held=groups.filter(x=>!isAssessorReleased(x)).length;
+    return held>1?("CoC panel "+aliasIdx.get(g.id)):"A CoC panel";
+  }
   let members=membersOf(poolOf(pools,S.uid)).slice();
   const host=el("div",{}); v.append(host);
 
@@ -1891,8 +1927,8 @@ async function viewPanels(v){
       /* Drafts contribute nothing here either: a load that ticks up before
          the coordinator has released the panel is still telling the
          assessor who they have been given. */
-      statBox(asMember.filter(isFinal).reduce((n,g)=>n+groupStudents(g).length,0)
-              +(asMember.some(g=>!isFinal(g))?" +":""),"Students I assess")));
+      statBox(asMember.filter(isAssessorReleased).reduce((n,g)=>n+groupStudents(g).length,0)
+              +(asMember.some(g=>!isAssessorReleased(g))?" +":""),"Students I assess")));
   }
 
   /* ---- the availability request, first because it's time-critical ---- */
@@ -1914,18 +1950,18 @@ async function viewPanels(v){
       const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
       const stu=groupStudents(g).map(id=>students.find(x=>x.id===id)).filter(Boolean);
       const chosen=groupSessions(g).find(s=>s.id===g.chosenSessionId);
-      const c=cardShell("My availability \u00B7 "+(g.label||"Panel"),
+      const c=cardShell("My availability \u00B7 "+panelAlias(g),
         isChair(g,me)?el("span",{class:"pill blue"},"You chair this panel")
-          :el("span",{class:"muted ui"},isFinal(g)?stu.length+" students":"students to be confirmed"),
+          :el("span",{class:"muted ui"},isAssessorReleased(g)?stu.length+" students":"students to be confirmed"),
         chosen?"ok":"act");
       const body=el("div",{style:"padding:14px 16px"});
 
-      if(chosen&&isFinal(g)){
+      if(chosen&&isAssessorReleased(g)){
         body.append(noticeBar("green","Confirmed for "+sessionLabel(chosen)+
           ". Your slots are listed under \u201CStudents I'm assessing\u201D below."));
       }else if(chosen){
         body.append(noticeBar("blue","Booked for "+sessionLabel(chosen)+
-          ". The coordinator is still finalising the panel \u2014 the running order appears below once it's confirmed."));
+          ". The coordinator is still seating this panel \u2014 which students you have, and their running order, appear once it's released."));
       }
       const t=el("table",{});
       t.append(el("thead",{},el("tr",{},...["Proposed session","Panel so far","Me"].map(h=>el("th",{},h)))));
@@ -1973,14 +2009,14 @@ async function viewPanels(v){
       if(answered) body.append(el("div",{class:"row",style:"gap:8px;margin-top:10px"},
         el("button",{class:"btn sm ghost",onclick:async()=>{
           if(!window.confirm("Clear your answers for all "+answered+" session"+
-            (answered===1?"":"s")+" on "+(g.label||"this panel")+
+            (answered===1?"":"s")+" on "+panelAlias(g)+
             "?\n\nThe coordinator will see you as not having replied yet."+
             (chosen?" The booked session is not affected \u2014 only the coordinator can change that.":""))) return;
           const av=JSON.parse(JSON.stringify(g.availability||{}));
           delete av[availKey(me)];
           try{ await saveAvailability(g.id,av); }
           catch(err){ toast(err?.message||"Could not save.",true); return; }
-          toast("Your availability for "+(g.label||"the panel")+" has been reset."); reload();
+          toast("Your availability for "+panelAlias(g)+" has been reset."); reload();
         }},"Reset my availability for this panel"),
         el("span",{class:"muted ui",style:"font-size:12.5px;align-self:center"},
           answered+" of "+groupSessions(g).length+" answered")));
@@ -2103,8 +2139,8 @@ async function viewPanels(v){
     const asMember=groups.filter(g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid));
     /* Counted over released panels only \u2014 an unreleased one is not yet
        a commitment, and its size is not yet the assessor's business. */
-    const total=asMember.filter(isFinal).reduce((n,g)=>n+groupStudents(g).length,0);
-    const held=asMember.filter(g=>!isFinal(g)).length;
+    const total=asMember.filter(isAssessorReleased).reduce((n,g)=>n+groupStudents(g).length,0);
+    const held=asMember.filter(g=>!isAssessorReleased(g)).length;
     host.append(sectionHead("\u2637","Students you're assessing",
       "CoCs you have been asked to sit on, and your slot times.",
       total>PANEL_CAP?"act":""));
@@ -2123,17 +2159,18 @@ async function viewPanels(v){
       const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
       const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
       /* Until the coordinator releases the panel, who an assessor has been
-         given is not theirs to know \u2014 not the names, not the times, and
-         not the number either, since a count is still an answer to "how
-         many have I been landed with". They are told the panel exists and
-         whether they chair it, because that is what the availability
-         question hangs on. */
-      if(!isFinal(g)){
+         given is not theirs to know \u2014 not the names, not the times, not
+         the number, and not the panel's NAME either: a panel called
+         "Dr Javad's students \u2014 CoC panel" answers the question on its
+         own. So it is referred to by a neutral alias until release. They
+         are told the panel exists and whether they chair it, because that
+         is what the availability question hangs on. */
+      if(!isAssessorReleased(g)){
         tb.append(el("tr",{},
           el("td",{colspan:"3"},el("span",{class:"pill pending"},"Not released yet"),
             el("span",{class:"muted ui",style:"font-size:13px;margin-left:8px"},
-              "The coordinator is still seating this panel. Who you are assessing, and when, appears here once it is released.")),
-          el("td",{class:"muted"},g.label||"Panel"),
+              "The coordinator is still seating this panel. Which panel this is, who you are assessing and when all appear here once it is released.")),
+          el("td",{class:"muted"},panelAlias(g)),
           el("td",{},isChair(g,me)?el("span",{class:"pill blue"},"Chair"):el("span",{class:"pill none"},"Member")),
           el("td",{},sess?el("span",{class:"muted ui",style:"font-size:13px"},"Booked "+prettyDate(sess.date))
                         :el("span",{class:"pill pending"},"Not scheduled"))));
@@ -2246,7 +2283,7 @@ async function viewPanelAdmin(v){
       statBox(students.length-placed.size,"Unassigned"),
       statBox(groups.length,"Panels"),
       statBox(scheduled+" / "+placed.size,"Students scheduled"),
-      statBox(groups.filter(isFinal).length+" / "+groups.length,"Finalised")));
+      statBox(groups.filter(g=>releaseState(g)==="both").length+" / "+groups.length,"Fully released")));
     if(S.panelTab==="nominations") drawNominations();
     else if(S.panelTab==="export") drawExport();
     else drawPanels(placed);
@@ -2368,13 +2405,13 @@ async function viewPanelAdmin(v){
         el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
           "Change the time on one of the panels, or swap the assessor out."))));
 
-    const drafts=groups.filter(g=>!isFinal(g));
+    const drafts=groups.filter(g=>releaseState(g)!=="both");
     const ready=drafts.filter(g=>!finalGaps(g).length);
     if(drafts.length) host.append(noticeBar("blue",
-      drafts.length+" panel"+(drafts.length===1?" is":"s are")+" still draft \u2014 not released, so their supervisors see only \u201Cbeing arranged\u201D and their assessors don't yet know who they are assessing"+
-      (ready.length?". "+ready.length+(ready.length===1?" is":" are")+" complete and ready to finalise.":"."),
+      drafts.length+" panel"+(drafts.length===1?" is":"s are")+" not fully released \u2014 an unreleased supervisor sees only \u201Cbeing arranged\u201D, and an unreleased assessor isn't even told the panel's name, since the name would say whose students they have"+
+      (ready.length?". "+ready.length+(ready.length===1?" is":" are")+" complete and ready to go out.":"."),
       ready.length?el("button",{class:"btn sm",onclick:()=>finaliseAll(ready)},
-        "Finalise "+ready.length+" ready panel"+(ready.length===1?"":"s")):el("span",{})));
+        "Release "+ready.length+" ready panel"+(ready.length===1?"":"s")+" to both"):el("span",{})));
 
     /* Coverage read supervisor by supervisor, which is how it gets chased.
        A supervisor with more than PANEL_CAP students cannot be covered by one
@@ -2447,8 +2484,16 @@ async function viewPanelAdmin(v){
         if(!done) return el("span",{class:"pill pending"},"Not scheduled");
         return el("span",{class:"pill pending",title:(n-done)+" still to be given a time"},done+" of "+n+" scheduled");
       })(),
-      isFinal(g)?el("span",{class:"pill approved",title:"Supervisors and assessors can see this panel"},"Released")
-                :el("span",{class:"pill pending",title:"Hidden from supervisors and assessors until you finalise it"},"Draft"));
+      (()=>{
+        const st=releaseState(g);
+        if(st==="both") return el("span",{class:"pill approved",
+          title:"Both the assessors and the students' supervisors can see this panel"},"Released");
+        if(st==="assessors") return el("span",{class:"pill blue",
+          title:"The assessors can see it; the students' supervisors cannot"},"Assessors only");
+        if(st==="supervisors") return el("span",{class:"pill blue",
+          title:"The students' supervisors can see it; the assessors cannot"},"Supervisors only");
+        return el("span",{class:"pill pending",title:"Nobody outside this screen can see it yet"},"Draft");
+      })());
     /* ---- at a glance, also the summary line when the card is shut ---- */
     const chairM=ms.find(m=>isChair(g,m));
     const days=[...new Set(groupStudents(g).map(id=>slotDate(g,slotOfStudent(g,id))).filter(Boolean))].sort();
@@ -2520,15 +2565,23 @@ async function viewPanelAdmin(v){
       ", above the "+PANEL_CAP+" an assessor should normally take."));
 
     /* Visibility, stated on the card because it is the thing the
-       coordinator most often has to answer "why can't Dr X see it?" about. */
-    if(isFinal(g)) body.append(noticeBar("green",
-      "Finalised"+(g.finalizedAt?" on "+new Date(g.finalizedAt).toLocaleDateString(undefined,{day:"numeric",month:"short"}):"")+
-      " \u2014 released. The students' supervisors can see the assessors, the running order and the link, and the assessors can see which students they have been given. Anything you change now shows to them straight away; reopen the panel to hide it while you rework it."));
-    else{
+       coordinator most often has to answer "why can't Dr X see it?" about.
+       Two lines, because the two audiences are released separately. */
+    {
       const gaps=finalGaps(g);
-      body.append(noticeBar("amber",
-        "Draft \u2014 not released. The students' supervisors see nothing of it, and the assessors are not told who or how many they have been given (they can still answer the availability question). "+
-        (gaps.length?"Still needed before finalising: "+gaps.join(", ")+".":"Complete. Finalise it to let the supervisors see it.")));
+      const asOn=isAssessorReleased(g), supOn=isFinal(g);
+      body.append(noticeBar(asOn&&supOn?"green":(asOn||supOn)?"blue":"amber",
+        el("div",{},
+          el("div",{style:"font-size:13px"},
+            (asOn?"\u2713 ":"\u2022 ")+"Assessors: "+(asOn
+              ? "released \u2014 they can see which students they have and when."
+              : "not released \u2014 they aren't told the panel's name, who is on it or how many. They can still answer the availability poll.")),
+          el("div",{style:"font-size:13px;margin-top:2px"},
+            (supOn?"\u2713 ":"\u2022 ")+"Supervisors: "+(supOn
+              ? "released \u2014 the students' principal and co-supervisors can see the assessors, the running order and the link."
+              : "not released \u2014 their students' supervisors see only \u201Cbeing arranged\u201D.")),
+          gaps.length?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
+            "Still to do: "+gaps.join(", ")+"."):el("span",{}))));
     }
 
     // ---- members + chair ----
@@ -2695,11 +2748,16 @@ async function viewPanelAdmin(v){
     /* ---- the card's controls, in one place ---- */
     const gaps=finalGaps(g);
     c.append(el("div",{class:"pactions"},
-      isFinal(g)
-        ? el("button",{class:"btn sm ghost",onclick:()=>reopen(g)},"Reopen \u2014 hide again")
+      isAssessorReleased(g)
+        ? el("button",{class:"btn sm ghost",onclick:()=>setAssessorRelease(g,false)},"Hide from assessors")
         : el("button",{class:"btn sm"+(gaps.length?" ghost":""),
-            title:gaps.length?"Still to do: "+gaps.join(", "):"Release this panel to its supervisors and assessors",
-            onclick:()=>finalise(g)},"Finalise \u2014 release"),
+            title:gaps.length?"Still to do: "+gaps.join(", "):"Let the assessors see which students they have",
+            onclick:()=>setAssessorRelease(g,true)},"Release to assessors"),
+      isFinal(g)
+        ? el("button",{class:"btn sm ghost",onclick:()=>reopen(g)},"Hide from supervisors")
+        : el("button",{class:"btn sm"+(gaps.length?" ghost":""),
+            title:gaps.length?"Still to do: "+gaps.join(", "):"Let the students' supervisors see this panel",
+            onclick:()=>finalise(g)},"Release to supervisors"),
       scheduledCount(g)
         ? el("button",{class:"btn sm ghost",onclick:()=>scheduleEmailDialog({mode:"panel",groupId:g.id})},"\u2709 Email the schedule")
         : el("span",{}),
@@ -2944,6 +3002,24 @@ async function viewPanelAdmin(v){
      The only two places the flag changes. Finalising over gaps is allowed
      but named first, because "why is my student's time blank?" is the
      email that follows if it isn't. */
+  /* The assessors' switch. Kept apart from the supervisors' one because
+     the two audiences are told different things at different moments \u2014
+     the assessors need briefing early so they can prepare, the supervisors
+     are usually told once the seating has stopped moving. */
+  async function setAssessorRelease(g,on){
+    if(on){
+      const gaps=finalGaps(g);
+      if(gaps.length&&!window.confirm((g.label||"This panel")+" still has "+gaps.join(", ")+
+        ".\n\nRelease it to the assessors anyway? They will see it exactly as it stands.")) return;
+      await persist({...g,assessorsReleased:true,assessorsReleasedAt:Date.now()},
+        (g.label||"Panel")+" released to its assessors.");
+    }else{
+      if(!window.confirm("Hide "+(g.label||"this panel")+" from its assessors?\n\nThey stop seeing its name, their students and the running order, and it goes back to showing as an unnamed panel. They can still answer the availability poll.")) return;
+      await persist({...g,assessorsReleased:false,assessorsReleasedAt:0},
+        (g.label||"Panel")+" hidden from its assessors again.");
+    }
+  }
+
   async function finalise(g){
     const gaps=finalGaps(g);
     if(gaps.length&&!window.confirm((g.label||"This panel")+" still has "+gaps.join(", ")+
@@ -2952,21 +3028,22 @@ async function viewPanelAdmin(v){
     if(cl.length&&!window.confirm("There is a time clash on this panel:\n\n"+
       cl.map(c=>"  \u2022 "+(c.m.name||"?")+" \u2014 "+c.label).join("\n")+"\n\nFinalise anyway?")) return;
     await persist({...g,finalized:true,finalizedAt:Date.now()},
-      (g.label||"Panel")+" finalised \u2014 released to its supervisors and assessors.");
+      (g.label||"Panel")+" released to the students' supervisors.");
   }
   async function reopen(g){
-    if(!window.confirm("Reopen "+(g.label||"this panel")+"?\n\nIt goes back to draft: it disappears from the supervisors' CoC tab, and the assessors stop seeing which students they have been given, until you finalise it again. Nothing else changes.")) return;
-    await persist({...g,finalized:false,finalizedAt:0},(g.label||"Panel")+" reopened \u2014 hidden from supervisors again.");
+    if(!window.confirm("Hide "+(g.label||"this panel")+" from the students' supervisors?\n\nIt disappears from their CoC tab until you release it again. The assessors' side is separate and is not affected.")) return;
+    await persist({...g,finalized:false,finalizedAt:0},(g.label||"Panel")+" hidden from supervisors again.");
   }
   async function finaliseAll(list){
-    if(!window.confirm("Finalise "+list.length+" panel"+(list.length===1?"":"s")+" ("+
-      list.map(g=>g.label||"Panel").join(", ")+")?\n\nTheir supervisors will see the assessors, times and links straight away, and their assessors will see which students they have been given.")) return;
+    if(!window.confirm("Release "+list.length+" panel"+(list.length===1?"":"s")+" ("+
+      list.map(g=>g.label||"Panel").join(", ")+") to BOTH audiences?\n\nThe assessors will see which students they have been given, and the students' supervisors will see the assessors, times and links. Use the buttons on a card to release just one side.")) return;
     let n=0;
     for(const g of list){
-      try{ await saveGroup({...g,finalized:true,finalizedAt:Date.now()}); n++; }
+      try{ await saveGroup({...g,finalized:true,finalizedAt:Date.now(),
+                            assessorsReleased:true,assessorsReleasedAt:Date.now()}); n++; }
       catch(err){ toast(err?.message||"Could not finalise "+(g.label||"a panel")+".",true); break; }
     }
-    if(n) toast(n+" panel"+(n===1?"":"s")+" finalised.");
+    if(n) toast(n+" panel"+(n===1?"":"s")+" released.");
     reload();
   }
 
@@ -2987,7 +3064,7 @@ async function viewPanelAdmin(v){
     const chair=groupMembers(g).find(x=>isChair(g,x));
     return ["Dear "+groupMembers(g).map(x=>x.name).join(", ")+",","",
       "Please note the presentation time for the following Confirmation of Candidature on "+
-        (g.label||"your panel")+(semLabel?" ("+semLabel+")":"")+(isFinal(g)?"":"  (DRAFT \u2014 may still change)")+":","",
+        (g.label||"your panel")+(semLabel?" ("+semLabel+")":"")+(isAssessorReleased(g)?"":"  (DRAFT \u2014 may still change)")+":","",
       "Student:       "+s.name+(s.sid?" ("+s.sid+")":""),
       "When:          "+((sl.date||sess?.date)?prettyDate(sl.date||sess?.date)+", ":"")+prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)+
         (sl.date&&sess&&sl.date!==sess.date?"   (note: a different day from the panel's session, "+prettyDate(sess.date)+")":""),
@@ -3007,7 +3084,7 @@ async function viewPanelAdmin(v){
       const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
       const chair=groupMembers(g).find(x=>isChair(g,x));
       L.push("","\u2500\u2500 "+(g.label||"Panel")+(isChair(g,m)?" \u2014 you are the chair":"")+
-        (isFinal(g)?"":"  (DRAFT \u2014 may still change)")+" \u2500\u2500");
+        (isAssessorReleased(g)?"":"  (DRAFT \u2014 may still change)")+" \u2500\u2500");
       L.push("When:          "+(sess?sessionLabel(sess)
         :((g.slots||[]).some(sl=>sl.date)?"individual times \u2014 see the running order below":"not yet booked")));
       L.push("Chair:         "+(chair?.name||"not yet set"));
@@ -3046,7 +3123,8 @@ async function viewPanelAdmin(v){
           ["member","One assessor \u2014 every panel they sit on"],
           ["student","One student \u2014 their time, to their panel"]]
         .map(([v,l])=>el("option",{value:v,...(v===(preset.mode||"chair")?{selected:"selected"}:{})},l)));
-    const includeDraft=el("input",{type:"checkbox",...(preset.groupId&&!isFinal(groups.find(g=>g.id===preset.groupId))?{checked:"checked"}:{})});
+    const includeDraft=el("input",{type:"checkbox",
+      ...(preset.groupId&&!isAssessorReleased(groups.find(g=>g.id===preset.groupId))?{checked:"checked"}:{})});
     const who=el("select",{});
     const whoLabel=el("label",{},"Chair");
     const subject=el("input",{});
@@ -3055,7 +3133,7 @@ async function viewPanelAdmin(v){
     const warn=el("div",{});
 
     // groups eligible under the current draft setting
-    const eligible=()=>withSession.filter(g=>includeDraft.checked||isFinal(g));
+    const eligible=()=>withSession.filter(g=>includeDraft.checked||isAssessorReleased(g));
     // every distinct person across the eligible panels
     const people=gs=>{
       const seen=new Map();
@@ -3072,7 +3150,7 @@ async function viewPanelAdmin(v){
           who.append(el("option",{value:g.id,...(g.id===preset.groupId?{selected:"selected"}:{})},
             (g.label||"Panel")+" \u2014 "+
             (g.chosenSessionId?sessionLabel(groupSessions(g).find(x=>x.id===g.chosenSessionId)):"individual times")+
-            (isFinal(g)?"":" (draft)"))));
+            (isAssessorReleased(g)?"":" (draft)"))));
       }else if(mode.value==="chair"){
         whoLabel.textContent="Chair";
         people(gs).filter(m=>gs.some(g=>isChair(g,m))).forEach(m=>
@@ -3091,7 +3169,7 @@ async function viewPanelAdmin(v){
             ...(g.id===preset.groupId&&s.id===preset.studentId?{selected:"selected"}:{})},
             s.name+" \u2014 "+(g.label||"Panel")+", "+
             (slotDate(g,sl)?prettyDate(slotDate(g,sl))+" ":"")+
-            prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)+(isFinal(g)?"":" (draft)"))));
+            prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)+(isAssessorReleased(g)?"":" (draft)"))));
       }else{
         whoLabel.textContent="Assessor";
         people(gs).forEach(m=>
@@ -3143,7 +3221,7 @@ async function viewPanelAdmin(v){
       const noMail=(mode.value==="panel"||mode.value==="student")&&t.gs[0]?groupMembers(t.gs[0]).filter(m=>!m.email):[];
       if(noMail.length) warn.append(el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px;color:var(--amber-ink)"},
         noMail.map(m=>m.name).join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off."));
-      const drafts=t.gs.filter(g=>!isFinal(g));
+      const drafts=t.gs.filter(g=>!isAssessorReleased(g));
       if(drafts.length) warn.append(el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px;color:var(--amber-ink)"},
         drafts.map(g=>g.label).join(", ")+(drafts.length===1?" is":" are")+" still draft \u2014 marked as such in the message."));
       const cl=[]; t.gs.forEach(g=>{
@@ -3164,7 +3242,7 @@ async function viewPanelAdmin(v){
           el("div",{style:"flex:1;min-width:200px"},el("label",{},"Send to"),mode),
           el("div",{style:"flex:1;min-width:200px"},whoLabel,who)),
         el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer"},
-          includeDraft,el("span",{},"Include panels that aren't finalised yet"))),
+          includeDraft,el("span",{},"Include panels not yet released to their assessors"))),
         el("div",{},el("label",{},"Subject"),subject),
         el("div",{},el("label",{},"Message"),body,
           el("div",{class:"row",style:"gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap"},
@@ -3996,10 +4074,10 @@ async function viewPanelAdmin(v){
        nolink?nolink+" panel student(s) have no meeting link \u2014 set it on the panel card under Panels & scheduling":""]
         .filter(Boolean).join(". ")+"."));
 
-    const drafts=groups.filter(g=>!isFinal(g)).length;
+    const drafts=groups.filter(g=>releaseState(g)!=="both").length;
     if(drafts) host.append(noticeBar("blue",
-      drafts+" panel"+(drafts===1?" is":"s are")+" still draft. "+(drafts===1?"It is":"They are")+
-      " exported and marked as draft \u2014 finalise them under Panels & scheduling once the members and timetable are settled."));
+      drafts+" panel"+(drafts===1?" is":"s are")+" not fully released. "+(drafts===1?"It is":"They are")+
+      " exported and marked as draft \u2014 release them under Panels & scheduling once the members and timetable are settled."));
 
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:14px;flex-wrap:wrap"},
       el("button",{class:"btn",onclick:()=>panelExportDialog("xlsx")},"\u2913 Download Excel"),
@@ -4037,8 +4115,10 @@ async function viewPanelAdmin(v){
           el("td",{},titleCell(r.s)),
           el("td",{class:"muted"},r.g?.label||el("span",{class:"pill pending"},"None")),
           el("td",{},!r.g?el("span",{class:"muted"},"\u2014")
-            :isFinal(r.g)?el("span",{class:"pill approved"},"Finalised")
-            :el("span",{class:"pill pending",title:"Hidden from supervisors until finalised"},"Draft")),
+            :releaseState(r.g)==="both"?el("span",{class:"pill approved"},"Released")
+            :releaseState(r.g)==="none"?el("span",{class:"pill pending",title:"Not released to anyone yet"},"Draft")
+            :el("span",{class:"pill blue",title:"Released to one audience only"},
+                releaseState(r.g)==="assessors"?"Assessors only":"Supervisors only")),
           el("td",{class:"muted"},r.chair?.name||"\u2014"),
           el("td",{},chips),
           el("td",{},r.cocTime?el("strong",{},r.cocDate+", "+r.cocTime):el("span",{class:"pill pending"},"Not set")),
