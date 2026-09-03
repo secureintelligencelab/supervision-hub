@@ -508,6 +508,47 @@
     padding:8px 13px;background:var(--sunken);border-bottom:1px solid var(--line-strong)}
   .pickgroup .pg-nm{font-weight:600;font-size:13.5px;color:var(--ink)}
   .pickgroup .pg-sub{font-size:12px;color:var(--ink-soft);flex:1;min-width:120px}
+  /* A row that cannot be chosen at all, as opposed to one that only warns.
+     It still says WHY in its tag, because hiding it would just make the
+     coordinator hunt for a name that is on the screen in front of them. */
+  .picklist .legend{display:flex;gap:10px;flex-wrap:wrap;padding:7px 13px;
+    background:var(--sunken);border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-soft)}
+
+  /* ---- Step-by-step dialogs ----
+     Creating a panel asks four things, and they only make sense in order:
+     you cannot chair a panel with nobody on it, and the name comes from
+     the chair. Numbering them, and keeping a running summary at the top,
+     turns a stack of eight fields into a short sequence. */
+  .wizard{counter-reset:wstep;display:grid;gap:0}
+  .wstep{border-top:1px solid var(--line);padding:15px 0}
+  .wstep:first-child{border-top:none;padding-top:2px}
+  .wstep:last-child{padding-bottom:2px}
+  .wsh{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .wsh .wsn{counter-increment:wstep;flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:12px;font-weight:700;
+    display:grid;place-items:center}
+  .wsh .wsn::before{content:counter(wstep)}
+  .wstep.done .wsh .wsn{background:var(--green,#15803d)}
+  .wstep.done .wsh .wsn::before{content:"\2713"}
+  .wsh h4{margin:0;font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+  .wsh .wscount{margin-left:auto;font-size:12.5px;color:var(--ink-soft);text-align:right}
+  .wstep .whelp{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft)}
+  .wstep.locked{opacity:.55}
+  /* The running answer, so the coordinator can always see what they are
+     about to create without scrolling back up through the pickers. */
+  /* Sticky, so the answer so far stays in view while the coordinator
+     scrolls down through a long list of candidates. */
+  .wsum{position:sticky;top:0;z-index:3;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:var(--r-sm);
+    overflow:hidden;margin-bottom:4px;box-shadow:0 6px 10px -8px rgba(8,13,19,.35)}
+  .wsum > div{background:var(--sunken);padding:8px 12px;min-width:0}
+  .wsum dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+  .wsum dd{margin:2px 0 0;font-size:13.5px;font-weight:600;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wsum dd.soft{font-weight:500;color:var(--ink-soft)}
+  .wnext{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;
+    border-radius:var(--r-sm);background:var(--accent-tint);font-size:12.5px;color:var(--ink-soft)}
 
   /* A panel card answers four questions before anything else: who chairs
      it, when it sits, where it meets and whose students are on it. They
@@ -3711,8 +3752,9 @@ async function viewPanelAdmin(v){
     const suggestName=()=>chairPanelName(chairOf())||nextLabel();
     let focusUid=opts?.sourceUid||"";
     /* Optional: whose students to put first in the student picker that
-       opens next. It no longer names the panel \u2014 a panel is assessor-wise,
-       and one supervisor's students may sit across several. */
+       opens next. It does NOT name the panel \u2014 a panel is assessor-wise,
+       and one supervisor's students may sit across several \u2014 so it is
+       tucked away rather than sitting in the main run of questions. */
     const forSel=el("select",{},el("option",{value:""},"\u2014 no preference \u2014"),
       ...[...new Set(students.map(x=>x.principalUid).filter(Boolean))]
         .map(uid=>({uid,name:supName(uid)}))
@@ -3724,22 +3766,34 @@ async function viewPanelAdmin(v){
     // an existing custom name is a decision already made; an automatic one keeps following
     let nameTouched=!!g&&!labelFollowsChair(g.label,existing);
     if(!nameTouched) nameInp.value=suggestName();
-    nameInp.oninput=()=>{ nameTouched=true; paintNameHint(); };
-    const nameHint=el("span",{class:"muted ui",style:"font-size:12.5px"});
+    const nameHint=el("p",{class:"whelp"});
     const nameReset=el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
-      nameTouched=false; nameInp.value=suggestName(); paintNameHint();
-    }},"Use chair's name");
-    function paintNameHint(){
-      const auto=chairOf()?chairPanelName(chairOf()):"";
-      nameHint.textContent=nameTouched
-        ?"Custom name \u2014 it stays even if the chair changes."
-        :(auto?"Follows the chair.":"No chair yet \u2014 pick one and the name follows.");
-      nameReset.style.display=(nameTouched&&auto&&auto!==nameInp.value.trim())?"":"none";
+      nameTouched=false; nameInp.value=suggestName(); paintHead();
+    }},"Use the chair's name");
+    forSel.onchange=()=>{ focusUid=forSel.value; };
+
+    /* ---- the running summary, and the step frames ---------------------
+       Everything below is built once and refilled by paint(), so the
+       coordinator always sees the panel as it currently stands \u2014 name,
+       chair, who is on it \u2014 no matter how far down the picker they are. */
+    const sumBox=el("dl",{class:"wsum"});
+    function sumCell(term,value,soft){
+      return el("div",{},el("dt",{},term),el("dd",{class:soft?"soft":"",title:value},value));
     }
-    forSel.onchange=()=>{ focusUid=forSel.value; paint(); };
+    const stepEls={};
+    function step(key,title,help){
+      const count=el("span",{class:"wscount"});
+      const bodyEl=el("div",{});
+      const box=el("div",{class:"wstep"},
+        el("div",{class:"wsh"},el("span",{class:"wsn"}),el("h4",{},title),count),
+        bodyEl, help?el("p",{class:"whelp"},help):el("span",{}));
+      stepEls[key]={box,count};
+      return {box,bodyEl,count};
+    }
 
     const search=el("input",{placeholder:"Search name, email, institution\u2026"});
     const chipBox=el("div",{class:"row",style:"gap:6px;min-height:30px"});
+    const chairBox=el("div",{class:"picklist"});
     const listBox=el("div",{class:"picklist"});
     const status=el("div",{class:"muted ui",style:"font-size:13px"});
     const isOn=m=>chosen.some(c=>memberKey(c)===memberKey(m));
@@ -3752,9 +3806,24 @@ async function viewPanelAdmin(v){
        cannot be seated: an assessor can't sit on two panels at once. */
     const busy=g?groupBusy(g,students):[];
     const timeClash=m=>busy.flatMap(b=>memberClashes(groups,g,b,timetables,[m]));
-    function paint(){
+    /* Two halves, because typing in the name box has no bearing on the
+       candidate list and rebuilding it on every keystroke is wasted work. */
+    function paintHead(){
+      // ---- 0. the running summary
+      if(!nameTouched) nameInp.value=suggestName();
+      const chairM=chairOf();
+      sumBox.innerHTML="";
+      sumBox.append(
+        sumCell("Panel name",nameInp.value.trim()||"not named yet",!nameInp.value.trim()),
+        sumCell("Chair",chairM?chairM.name:"not chosen yet",!chairM),
+        sumCell("Assessors",chosen.length?chosen.map(m=>m.name).join(", "):"none yet",!chosen.length),
+        sumCell("Students",g?(sids.length+" already on this panel")
+                            :"chosen after you save",!g));
+
+      // ---- 1. who is on the panel
       chipBox.innerHTML="";
-      if(!chosen.length) chipBox.append(el("span",{class:"muted"},"No assessors chosen."));
+      if(!chosen.length) chipBox.append(el("span",{class:"muted"},
+        "Nobody chosen yet \u2014 tick "+PANEL_SIZE+" names in the list below."));
       chosen.forEach(m=>{
         const chip=seatChip(m,()=>{
           chosen=chosen.filter(c=>memberKey(c)!==memberKey(m));
@@ -3764,17 +3833,48 @@ async function viewPanelAdmin(v){
         if(availKey(m)===chairKey) chip.prepend(el("span",{style:"font-size:11px;font-weight:800"},"CHAIR "));
         chipBox.append(chip);
       });
+      stepEls.who.count.textContent=chosen.length+" of "+PANEL_SIZE+" chosen";
+      stepEls.who.box.classList.toggle("done",chosen.length>=PANEL_SIZE);
       status.textContent=chosen.length===PANEL_SIZE?"A full panel of "+PANEL_SIZE+"."
-        :chosen.length<PANEL_SIZE?(PANEL_SIZE-chosen.length)+" more to reach the usual panel of "+PANEL_SIZE+"."
-        :chosen.length+" members \u2014 larger than the usual "+PANEL_SIZE+".";
+        :chosen.length<PANEL_SIZE?(PANEL_SIZE-chosen.length)+" more to reach the usual panel of "+PANEL_SIZE+
+          " \u2014 you can save a short panel and add the rest later."
+        :chosen.length+" assessors \u2014 larger than the usual "+PANEL_SIZE+".";
 
-      chairSel.innerHTML="";
-      chairSel.append(el("option",{value:""},"\u2014 no chair yet \u2014"));
-      chosen.forEach(m=>chairSel.append(el("option",{value:availKey(m),
-        ...(availKey(m)===chairKey?{selected:"selected"}:{})},m.name||"?")));
-      if(!nameTouched) nameInp.value=suggestName();
-      paintNameHint();
+      // ---- 2. who chairs it. Rows, not a dropdown: a dropdown that is
+      //        empty until step 1 is done reads as a broken control.
+      chairBox.innerHTML="";
+      stepEls.chair.box.classList.toggle("locked",!chosen.length);
+      stepEls.chair.box.classList.toggle("done",!!chairM);
+      stepEls.chair.count.textContent=chairM?chairM.name:(chosen.length?"not chosen":"");
+      if(!chosen.length){
+        chairBox.append(el("div",{class:"muted",style:"padding:12px 2px;font-size:13px"},
+          "Choose the assessors first \u2014 the chair is one of them."));
+      }else{
+        chosen.forEach(m=>{
+          const on=availKey(m)===chairKey;
+          chairBox.append(el("div",{class:"pickrow"+(on?" on":""),
+            onclick:()=>{ chairKey=on?"":availKey(m); paintHead(); }},
+            el("div",{class:"tick"},on?"\u2713":""),
+            el("div",{class:"pk-main"},
+              el("div",{class:"pk-nm"},m.name||"?"),
+              el("div",{class:"pk-sub"},m.kind==="external"
+                ?"External \u2014 "+(m.org||"external assessor")
+                :"Staff \u2014 "+(m.email||"no email"))),
+            on?el("span",{class:"pill blue"},"Chairs this panel"):el("span",{})));
+        });
+      }
 
+      // ---- 3. the name
+      const auto=chairM?chairPanelName(chairM):"";
+      nameHint.textContent=nameTouched
+        ?"You've typed your own name \u2014 it stays, even if the chair changes."
+        :(auto?"Taken from the chair. Type over it for something else."
+              :"No chair yet, so a letter is standing in. Pick a chair and this becomes their name.");
+      nameReset.style.display=(nameTouched&&auto&&auto!==nameInp.value.trim())?"":"none";
+      stepEls.name.box.classList.toggle("done",!!nameInp.value.trim());
+      stepEls.name.count.textContent="";
+    }
+    function paintList(){
       listBox.innerHTML="";
       const term=search.value.trim().toLowerCase();
       const rows=cands.filter(m=>!term||[m.name,m.email,m.org].some(x=>(x||"").toLowerCase().includes(term)))
@@ -3787,27 +3887,43 @@ async function viewPanelAdmin(v){
         const on=isOn(m);
         const tags=el("div",{class:"row",style:"gap:5px"});
         const tc=timeClash(m);
-        if(clash.length) tags.append(el("span",{class:"pill missed"},"Supervises "+clash.join(", ")));
+        /* Three different things, and the row has to say which. A double
+           booking with another PANEL is a refusal \u2014 one assessor, one
+           place \u2014 so an unseated candidate is greyed out and cannot be
+           ticked. Someone already seated here can't be "blocked", so the
+           same fact is shown as the standing warning it is. Supervising a
+           student on this panel, or teaching, only warns. */
+        const panelTc=panelClashesOnly(tc), classTc=tc.filter(c=>c.kind==="class");
+        const blocked=!on&&panelTc.length>0;
+        if(blocked) tags.append(el("span",{class:"pill missed",
+          title:panelTc.map(c=>c.label).join("; ")},
+          "Busy \u2014 on "+(panelTc[0].g.label||"another panel")+" then"));
+        else if(clash.length) tags.append(el("span",{class:"pill missed",
+          title:"An assessor shouldn't sit on their own student's panel"},"Supervises "+clash.join(", ")));
         else{
-          if((m.nominators||[]).length) tags.append(el("span",{class:"pill none"},"Nominated \u00D7"+m.nominators.length));
-          else tags.append(el("span",{class:"pill none"},"Not nominated"));
+          if((m.nominators||[]).length) tags.append(el("span",{class:"pill none",
+            title:"Put forward by "+m.nominators.length+" supervisor(s)"},"Nominated \u00D7"+m.nominators.length));
+          else tags.append(el("span",{class:"pill none",title:"Nobody has nominated them; you can still use them"},"Not nominated"));
           tags.append(loadPill(n));
+          if(panelTc.length) tags.append(el("span",{class:"pill missed",title:panelTc.map(c=>c.label).join("; ")},
+            "\u26A0 Also on "+(panelTc[0].g.label||"another panel")+" then"));
+          if(classTc.length) tags.append(el("span",{class:"pill missed",title:classTc.map(c=>c.label).join("; ")},
+            "\u26A0 Teaching then"));
         }
-        if(tc.length) tags.append(el("span",{class:"pill missed",title:tc.map(c=>c.label).join("; ")},
-          "\u26A0 "+(tc[0].kind==="panel"?"On "+(tc[0].g.label||"another panel")+" then":"Teaching then")));
-        listBox.append(el("div",{class:"pickrow"+((clash.length||tc.length)?" warn":"")+(on?" on":""),
+        listBox.append(el("div",{class:"pickrow"+(blocked?" blocked":((clash.length||tc.length)?" warn":""))+(on?" on":""),
+          title:blocked?"Can't be added \u2014 already on another panel at this panel's time":"",
           onclick:()=>{
             if(on){ chosen=chosen.filter(c=>memberKey(c)!==memberKey(m)); if(chairKey===availKey(m)) chairKey=""; }
             else{
-              if(clash.length) toast((m.name||"That assessor")+" supervises "+clash.join(", ")+
-                " \u2014 allowed, but the panel is no longer independent for them.");
-              else if(panelClashesOnly(tc).length){
+              if(blocked){
                 toast((m.name||"That assessor")+" is already sitting on another panel at this panel's time \u2014 "+
                   panelClashesOnly(tc).map(c=>c.label).join("; ")+". Change one of the times first.",true);
                 return;   // a hard rule: one person, one place
               }
-              else if(tc.length) toast((m.name||"That assessor")+" is booked at this panel's time \u2014 "+
-                tc.map(c=>c.label).join("; ")+".");
+              if(clash.length) toast((m.name||"That assessor")+" supervises "+clash.join(", ")+
+                " \u2014 allowed, but the panel is no longer independent for them.");
+              else if(classTc.length) toast((m.name||"That assessor")+" teaches at this panel's time \u2014 "+
+                classTc.map(c=>c.label).join("; ")+".");
               else if(n+sids.length>PANEL_CAP) toast((m.name||"That assessor")+" has already been assigned "+n+
                 " students \u2014 this panel's "+sids.length+" would make "+(n+sids.length)+", over the usual "+PANEL_CAP+".");
               chosen=chosen.concat([cleanMember(m)]);
@@ -3817,34 +3933,65 @@ async function viewPanelAdmin(v){
           el("div",{class:"tick"},on?"\u2713":""),
           el("div",{class:"pk-main"},
             el("div",{class:"pk-nm"},m.name||"\u2014"),
-            el("div",{class:"pk-sub"},[m.email||"no email",m.org||(m.kind==="internal"?"Internal":"External")].join(" \u00B7 "))),
+            el("div",{class:"pk-sub"},[m.kind==="internal"?"Staff":"External",
+              m.email||"no email",
+              /* the org only says something when it isn't just restating the type */
+              (m.org&&!/^(internal|external)$/i.test(m.org))?m.org:""]
+              .filter(Boolean).join(" \u00B7 "))),
           tags));
       });
+      /* A key for the tags above. They are the whole basis of the ordering
+         \u2014 safest names first \u2014 and unexplained pills are guesswork. */
+      listBox.append(el("div",{class:"legend"},
+        el("span",{},"Sorted best-first \u00B7"),
+        el("span",{},"\u201CNominated\u201D = put forward by a supervisor"),
+        el("span",{},"\u201C"+PANEL_CAP+"\u201D pill = students already assessed"),
+        el("span",{},"Greyed out = on another panel at this panel's time")));
     }
-    const chairSel=el("select",{onchange:e=>{ chairKey=e.target.value; paint(); }});
-    search.oninput=paint;
+    const paint=()=>{ paintHead(); paintList(); };
+    nameInp.oninput=()=>{ nameTouched=true; paintHead(); };
+    search.oninput=paintList;
+
+    /* ---- the three questions, in the order they can be answered ---- */
+    const sWho=step("who","Who is on the panel?",
+      "Pick "+PANEL_SIZE+". Names a supervisor put forward come first, then everyone else. "+
+      "An assessor can't sit on a panel with their own student, or on two panels at the same time.");
+    sWho.bodyEl.append(chipBox,el("div",{style:"margin:8px 0 12px"},status),
+      el("label",{},"Search staff and external assessors"),search,listBox,
+      el("div",{class:"row",style:"margin-top:10px"},
+        el("button",{class:"btn ghost sm",onclick:()=>nominateExternal(null,m=>{
+          const cm=cleanMember(m);
+          cands=cands.concat([{...cm,nominators:[]}]);
+          chosen=chosen.concat([cm]); paint();
+        })},"+ Add an external assessor")));
+
+    const sChair=step("chair","Who chairs it?",
+      "The chair runs the session and is who the schedule emails are addressed to. "+
+      "You can leave it and set it from the panel card later.");
+    sChair.bodyEl.append(chairBox);
+
+    const sName=step("name","What is it called?",
+      "This is what everyone sees \u2014 the panel cards, the schedule emails and the exported CoC document.");
+    sName.bodyEl.append(nameInp,
+      el("div",{class:"row",style:"gap:8px;align-items:center;margin-top:6px"},nameReset),nameHint);
+
+    /* Out of the main run: it changes nothing about the panel, it only
+       sorts the NEXT dialog. Left open in the main flow it reads as a
+       fourth decision, which is exactly the confusion to avoid. */
+    const optional=g?el("span",{}):el("details",{class:"wstep",style:"counter-increment:none"},
+      el("summary",{style:"cursor:pointer;font-size:13px;color:var(--ink-soft)"},
+        "Optional \u2014 whose students to show first when picking students"),
+      el("div",{style:"padding-top:10px"},forSel,
+        el("p",{class:"whelp"},
+          "Only sorts the student picker. It doesn't restrict the panel or name it \u2014 a supervisor's students can be split across any number of panels.")));
 
     modal(g?"Panel \u2014 "+(g.label||"panel"):"Create a panel",
-      el("div",{class:"grid"},
-        el("div",{},el("label",{},"Chosen assessors"),chipBox,el("div",{style:"margin-top:6px"},status)),
-        el("div",{},el("label",{},"Chair"),chairSel,
-          el("p",{class:"muted",style:"margin:6px 0 0"},
-            "The chair runs the session, is who the schedule emails are addressed to, and gives the panel its name. Pick one now or set it from the panel card later.")),
-        el("div",{},el("label",{},"Panel name"),nameInp,
-          el("div",{class:"row",style:"gap:8px;align-items:center;margin-top:6px"},nameHint,nameReset)),
-        el("div",{},el("p",{class:"muted",style:"margin:0"},
-          "The name is what everyone sees on the cards, the schedule emails and the exported CoC document. It is the chair's name plus \u201CPanel\u201D unless you type something else.")),
-        el("div",{},el("label",{},"Put these students first (optional)"),forSel,
-          el("p",{class:"muted",style:"margin:6px 0 0"},
-            "Only orders the student picker that opens next. A supervisor's students can be spread across any panels.")),
-        el("div",{},el("label",{},"Search candidates"),search),
-        listBox,
-        el("div",{class:"row"},
-          el("button",{class:"btn ghost sm",onclick:()=>nominateExternal(null,m=>{
-            const cm=cleanMember(m);
-            cands=cands.concat([{...cm,nominators:[]}]);
-            chosen=chosen.concat([cm]); paint();
-          })},"+ Add an external assessor"))),
+      el("div",{},
+        sumBox,
+        el("div",{class:"wizard"},sWho.box,sChair.box,sName.box,optional),
+        g?el("span",{}):el("div",{class:"wnext"},
+          el("span",{},"\u2192"),
+          el("span",{},"Next: you'll choose which students this panel assesses, then its time and meeting link."))),
       async()=>{
         if(!chosen.length){ toast("Choose at least one assessor.",true); return false; }
         const clashes=groupClashes(chosen,sids,students);
@@ -3885,7 +4032,7 @@ async function viewPanelAdmin(v){
           if(made) setTimeout(()=>editStudents(made,{focusUid}),0);
         }
         return true;
-      },g?"Save panel":"Create panel");
+      },g?"Save panel":"Create panel \u2192 pick students");
     const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
     paint();
   }
