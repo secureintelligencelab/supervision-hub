@@ -759,8 +759,9 @@ function getFactoryAuth(){
 /* ============================================================
    2. DATA LAYER
    Firestore structure:
-     users/{uid}      -> {email,name,mobile,role:'admin'|'supervisor',
-                          supRole:'both'|'principal'|'co',
+     users/{uid}      -> {email, email2?,                  // second address; both are mailed
+                          name,mobile,role:'admin'|'supervisor'|'panellist',
+                          supRole:'both'|'principal'|'co',  // supervisors only
                           area:'IT'|'Business',            // supervision area
                           pendingLogin:true?               // profile auto-created from an
                                                            // import; no auth login yet
@@ -885,7 +886,14 @@ function seedDemo(){
     createdAt:dayAgo(2),pinned:false,readBy:{"student:45001":true}};
   // sample CoC assessor nominations + one seated panel
   mem.users["supD"]={email:"d.novak@uni.edu",name:"Dr Novak",role:"supervisor",supRole:"both",mobile:"+61 400 777 888",area:"IT"};
-  mem.users["supE"]={email:"e.wong@uni.edu",name:"Dr Wong",role:"supervisor",supRole:"both",mobile:"",area:"Business"};
+  /* Dr Wong reads two mailboxes, so the demo shows what a second address
+     does: both are listed on the Contacts row and both go on any email. */
+  mem.users["supE"]={email:"e.wong@uni.edu",email2:"emily.wong@outlook.com",name:"Dr Wong",role:"supervisor",supRole:"both",mobile:"",area:"Business"};
+  /* Two people whose only role is sitting on CoC panels \u2014 they appear in
+     every assessor picker and in no supervisor picker. Dr Ferrante has no
+     login yet, which is what an imported name looks like. */
+  mem.users["panA"]={email:"h.ibrahim@uni.edu",name:"Dr Hana Ibrahim",role:"panellist",mobile:"+61 400 121 343",area:"IT"};
+  mem.users["panB"]={email:"l.ferrante@uni.edu",name:"Dr Luca Ferrante",role:"panellist",mobile:"",area:"Business",pendingLogin:true};
   mem.panelPool["pp1"]={semesterId:"s2-2026",supervisorUid:"supA",supervisorName:"Dr Smith",
     supervisorEmail:"a.smith@uni.edu",updatedAt:dayAgo(5),members:[
       {id:"n1a",kind:"internal",uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu",mobile:"+61 400 333 444",org:"Internal"},
@@ -1062,7 +1070,9 @@ const S = { user:null, role:null, uid:null, semesters:[], activeSem:null, tab:"s
                Kept in memory so a redraw after saving doesn't shut
                everything the coordinator had just opened. */
             panelOpen:{}, panelStep:{},
-            cocStudents:[] };   // this semester's students, cached by the CoC screens
+            cocStudents:[],   // this semester's students, cached by the CoC screens
+            panellists:[],    // staff whose only role is sitting on CoC panels
+            allocCounts:{} }; // uid -> students still allocated to them
 
 const $ = s=>document.querySelector(s);
 const el = (tag,props={},...kids)=>{
@@ -1203,10 +1213,104 @@ function semUnitCodes(sem){
 function uid(){ return "u"+Math.random().toString(36).slice(2,9); }
 
 function capOf(u){ return u?.supRole||"both"; }
-function canBePrincipal(u){ return capOf(u)!=="co"; }
-function canBeCo(u){ return capOf(u)!=="principal"; }
+function canBePrincipal(u){ return isSupervisor(u)&&capOf(u)!=="co"; }
+function canBeCo(u){ return isSupervisor(u)&&capOf(u)!=="principal"; }
 function capLabel(c){ return c==="principal"?"Principal only":c==="co"?"Co-supervisor only":"Principal & co"; }
-function supName(uid){ const u=S.supervisors.find(x=>x.id===uid); return u?.name||u?.email||uid||"\u2014"; }
+function supName(uid){ const u=staffById(uid); return u?.name||u?.email||uid||"\u2014"; }
+
+/* ---- Staff roles ----
+   Three kinds of account, and the difference matters in two places: who
+   can be put on a student as principal or co-supervisor, and who can be
+   seated on a CoC assessment panel.
+     admin       — the coordinator's office; runs everything.
+     supervisor  — supervises students, AND may assess other people's.
+     panellist   — assesses CoC panels only. Never appears in a
+                   principal / co-supervisor picker, because they do not
+                   supervise anyone. This exists because a coordinator
+                   inevitably has a list of names who only ever sit on
+                   panels, and filing them as supervisors makes every
+                   allocation dropdown longer and wronger.
+   Everything reads through these helpers rather than comparing the raw
+   string, so an old record with no role set still behaves as before. */
+const ROLES=[
+  {v:"supervisor",label:"Supervisor",
+   help:"Supervises students and can also assess CoC panels."},
+  {v:"panellist", label:"Panel member",
+   help:"Sits on CoC assessment panels only — never offered as a student's principal or co-supervisor."},
+  {v:"admin",     label:"Admin",
+   help:"Runs the hub: students, allocation, timetables, panels and reports."}
+];
+const roleOf=u=>u?.role==="admin"?"admin":u?.role==="panellist"?"panellist":"supervisor";
+const isSupervisor=u=>roleOf(u)==="supervisor";
+const isPanellist =u=>roleOf(u)==="panellist";
+/* Anyone who may be seated on a panel: supervisors (subject to the
+   independence rule, checked separately) and panel members. */
+const isAssessorStaff=u=>isSupervisor(u)||isPanellist(u);
+const staffRoleLabel=u=>(ROLES.find(r=>r.v===roleOf(u))||ROLES[0]).label;
+/* The role pill wherever staff are listed. A panel member's whole point
+   is that they are NOT a supervisor, so it never shows a capability. */
+function roleTag(u){
+  if(isPanellist(u)) return el("span",{class:"pill blue",
+    title:"Assesses CoC panels only — not offered as a student's supervisor"},"Panel member");
+  if(roleOf(u)==="admin") return el("span",{class:"pill approved"},"Admin");
+  return el("span",{class:"pill "+(capOf(u)==="both"?"approved":"pending")},capLabel(capOf(u)));
+}
+/* Supervisors and panel members are loaded into the same two caches so
+   every picker can ask for exactly the group it means. */
+const staffById=id=>(S.supervisors||[]).find(x=>x.id===id)
+                  ||(S.panellists||[]).find(x=>x.id===id)||null;
+const assessorStaff=()=>(S.supervisors||[]).concat(S.panellists||[]);
+/* How many students still name this person as principal or co-supervisor,
+   across every semester. Used to warn before a supervisor is turned into
+   a panel member or an admin and quietly vanishes from the allocation
+   pickers. Counted once and cached, because the forms that need it are
+   synchronous. */
+async function refreshAllocCounts(){
+  try{
+    const all=await DB.list("students");
+    const m={}; all.forEach(s=>{
+      if(s.principalUid) m[s.principalUid]=(m[s.principalUid]||0)+1;
+      if(s.coUid&&s.coUid!==s.principalUid) m[s.coUid]=(m[s.coUid]||0)+1;
+    });
+    S.allocCounts=m;
+  }catch(e){ S.allocCounts=S.allocCounts||{}; }
+  return S.allocCounts;
+}
+const studentLoadOf=uid=>(S.allocCounts||{})[uid]||0;
+
+async function reloadStaffCaches(){
+  const all=await DB.listUsers();
+  S.supervisors=all.filter(isSupervisor);
+  S.panellists =all.filter(isPanellist);
+  return all;
+}
+
+/* ---- Email addresses ----
+   Plenty of staff read two mailboxes — a university address and a
+   personal or second-institution one — and the coordinator does not
+   know which one they actually check. So a staff record carries an
+   optional second address and everything that emails them uses BOTH.
+   One helper, so no screen can quietly drop the alternate. */
+/* A panel member record carries the address that was copied onto it when
+   they were seated, which predates any second address added later. So
+   for staff, ask the live user record; only fall back to the copy. */
+function memberEmails(m){
+  if(m?.kind==="internal"&&m.uid){
+    const u=staffById(m.uid);
+    if(u&&emailsOf(u).length) return emailsOf(u);
+  }
+  return m?.email?[String(m.email).trim()]:[];
+}
+function emailsOf(u){
+  const seen=new Set(), out=[];
+  [u?.email,u?.email2].forEach(e=>{
+    const t=String(e||"").trim(); if(!t) return;
+    const k=t.toLowerCase(); if(seen.has(k)) return;
+    seen.add(k); out.push(t);
+  });
+  return out;
+}
+const emailList=u=>emailsOf(u).join(", ");
 
 /* ---- CoC assessment panels -------------------------------------------
    Confirmation of Candidature is assessed by a small panel that has to be
@@ -1353,7 +1457,8 @@ function nominateInternal(eligible,done){
     return;
   }
   const sel=el("select",{},...eligible.map(u=>el("option",{value:u.id},
-    (u.name||u.email)+"  \u00B7  "+(u.area||"no area")+"  \u00B7  "+capLabel(capOf(u)))));
+    (u.name||u.email)+"  \u00B7  "+(u.area||"no area")+"  \u00B7  "+
+    (isPanellist(u)?"Panel member":capLabel(capOf(u))))));
   const info=el("div",{class:"muted ui",style:"font-size:13px"});
   const sync=()=>{
     const u=eligible.find(x=>x.id===sel.value);
@@ -1438,7 +1543,7 @@ const availKey=m=>memberKey(m).replace(/[^a-zA-Z0-9]/g,"_");
    unknown, so they simply don't narrow the area. A panel of two IT staff and
    one external is an IT panel. */
 const memberArea=m=>m.kind==="internal"&&m.uid
-  ? (S.supervisors.find(u=>u.id===m.uid)?.area||"") : "";
+  ? (staffById(m.uid)?.area||"") : "";
 const panelAreas=members=>[...new Set((members||[]).map(memberArea).filter(Boolean))];
 
 /* Which discipline to show first in the student picker. The supervisor whose
@@ -1447,7 +1552,7 @@ const panelAreas=members=>[...new Set((members||[]).map(memberArea).filter(Boole
    all rather than an arbitrary one. */
 function defaultArea(members,focusUid){
   if(focusUid){
-    const a=S.supervisors.find(u=>u.id===focusUid)?.area;
+    const a=staffById(focusUid)?.area;
     if(a) return a;
   }
   const counts={};
@@ -1946,7 +2051,7 @@ async function viewPanels(v){
   v.innerHTML="";
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),
-    el("h2",{},"CoC panel"))));
+    el("h2",{},S.role==="panellist"?"My CoC panels":"CoC panel"))));
 
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewPanels(v)));
   v.append(bar);
@@ -1987,7 +2092,9 @@ async function viewPanels(v){
   const eligibleStaff=()=>{
     const blocked=conflictedUidsFor(S.uid,students);
     const taken=new Set(members.filter(m=>m.kind==="internal").map(m=>m.uid));
-    return S.supervisors.filter(u=>!blocked.has(u.id)&&!taken.has(u.id))
+    /* Panel members can never be conflicted \u2014 they supervise nobody \u2014
+       but they go through the same filter so the code has one path. */
+    return assessorStaff().filter(u=>!blocked.has(u.id)&&!taken.has(u.id))
       .sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
   };
   async function commit(msg){
@@ -2007,12 +2114,16 @@ async function viewPanels(v){
     draw();
   }
 
+  /* A panel member has no students and nominates nobody, so the two
+     supervisor-facing sections are simply not drawn for them \u2014 they would
+     be permanently empty and read as something broken. */
+  const panellistOnly=S.role==="panellist";
   function draw(){
     host.innerHTML="";
     drawSummary();
     drawAvailability();
-    drawNominations();
-    drawMyStudents();
+    if(!panellistOnly) drawNominations();
+    if(!panellistOnly) drawMyStudents();
     drawAssessing();
   }
 
@@ -2030,6 +2141,13 @@ async function viewPanels(v){
       const g=groupOfStudent(groups,x.id);
       return g&&isFinal(g)&&isScheduled(g,x.id);
     }).length;
+    if(panellistOnly){
+      host.append(el("div",{class:"stat"},
+        statBox(asMember.length,"Panels I'm on"),
+        statBox(pending,"Availability to answer"),
+        statBox(asMember.reduce((n,g)=>n+groupStudents(g).length,0),"Students I assess")));
+      return;
+    }
     host.append(el("div",{class:"stat"},
       statBox(members.length+" / "+PANEL_TARGET,"Names nominated"),
       statBox(pending,"Availability to answer"),
@@ -2169,7 +2287,7 @@ async function viewPanels(v){
       members.forEach(m=>{
         const acts=el("div",{class:"row",style:"gap:5px"});
         acts.append(loadPill(load.get(memberKey(m))||0));
-        acts.append(emailButton(m.email,"MRes Confirmation of Candidature","Dear "+(m.name||"")+",\n\n","\u2709","btn xs ghost"));
+        acts.append(emailButton(memberEmails(m),"MRes Confirmation of Candidature","Dear "+(m.name||"")+",\n\n","\u2709","btn xs ghost"));
         if(m.kind==="external") acts.append(el("button",{class:"btn xs ghost",onclick:()=>nominateExternal(m,upd=>{
           members=members.map(x=>x.id===m.id?upd:x); commit("Nominee updated.");
         })},"Edit"));
@@ -2446,7 +2564,7 @@ async function viewPanelAdmin(v){
            a panel nobody can trace back. */
         acts.append(el("button",{class:"btn xs ghost",
           onclick:()=>editPool(uid)},ms.length?"Edit names":"Add names"));
-        acts.append(emailButton(u?.email,"MRes \u2014 CoC assessor nominations",
+        acts.append(emailButton(u,"MRes \u2014 CoC assessor nominations",
             "Dear "+(u?.name||"")+",\n\nCould you nominate assessors for your students' Confirmation of Candidature in the Supervision Hub? We ask for more than three names, up to "+PANEL_TARGET+
             ".\n\nThank you,\nMRes Coordination\n"));
         tb.append(el("tr",{},
@@ -2472,11 +2590,13 @@ async function viewPanelAdmin(v){
       const tb2=el("tbody",{});
       cands.forEach(m=>{
         const contact=el("div",{class:"row",style:"gap:5px"});
-        contact.append(emailButton(m.email,"MRes Confirmation of Candidature","Dear "+(m.name||"")+",\n\n"));
+        contact.append(emailButton(memberEmails(m),"MRes Confirmation of Candidature","Dear "+(m.name||"")+",\n\n"));
         contact.append(smsButton(m.mobile,"Hi "+(m.name||"")+", "));
         tb2.append(el("tr",{},
           el("td",{},el("strong",{},m.name||"\u2014")),
-          el("td",{},m.kind==="internal"?el("span",{class:"pill none"},"Staff"):el("span",{class:"pill pending"},"External")),
+          el("td",{},m.kind!=="internal"?el("span",{class:"pill pending"},"External")
+            :isPanellist(staffById(m.uid))?el("span",{class:"pill blue"},"Panel member")
+            :el("span",{class:"pill none"},"Staff")),
           el("td",{class:"muted"},m.email||"\u2014"),
           el("td",{class:"muted"},m.mobile||"\u2014"),
           el("td",{class:"muted ui",style:"font-size:13px"},m.nominators.map(u=>supName(u)).join(", ")),
@@ -2550,6 +2670,10 @@ async function viewPanelAdmin(v){
       " students \u2014 more if needed. Panels can run at the same time as each other; the only timing rule is that one assessor can't be booked in two places at once. Work down each card: assessors, students, session, timetable \u2014 then release it.","info"));
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:14px;flex-wrap:wrap"},
       el("button",{class:"btn",onclick:()=>editMembers(null)},"+ Create a panel"),
+      /* The coordinator usually has the whole allocation in a spreadsheet
+         already, so importing it is often the FIRST thing they do \u2014 it
+         sits next to the manual button rather than buried in a menu. */
+      el("button",{class:"btn ghost",onclick:()=>importPanels(()=>reload())},"\u2913 Import panels (CSV / paste)"),
       groups.length?el("button",{class:"btn ghost",onclick:()=>autoBuild()},"Fill remaining students"):el("span",{}),
       groups.some(g=>scheduledCount(g))
         ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"chair"})},"\u2709 Email the schedule")
@@ -2564,7 +2688,7 @@ async function viewPanelAdmin(v){
 
     if(!groups.length){
       host.append(emptyState("No panels yet",
-        "Create one, pick its "+PANEL_SIZE+" assessors and a chair \u2014 it takes the chair's name \u2014 or let the app build panels from the nominations."));
+        "Import the allocation from a spreadsheet (student ID, panel name, chair, member 2, member 3), create one by hand, or let the app build them from the nominations."));
       return;
     }
     groups.sort((a,b)=>String(a.label).localeCompare(String(b.label))).forEach(g=>host.append(groupCard(g)));
@@ -2737,7 +2861,7 @@ async function viewPanelAdmin(v){
           catch(err){ toast(err?.message||"Could not save.",true); return; }
           toast((m.name||"Assessor")+"'s availability reset."); reload();
         }},"Reset availability"));
-        acts.append(emailButton(m.email,"MRes CoC panel \u2014 "+(g.label||""),
+        acts.append(emailButton(memberEmails(m),"MRes CoC panel \u2014 "+(g.label||""),
           "Dear "+(m.name||"")+",\n\n","\u2709","btn xs ghost"));
         list.append(memberLine(m,el("div",{class:"row",style:"gap:5px"},
           loadPill(groupLoad(groups).get(memberKey(m))||0)),acts));
@@ -2829,7 +2953,7 @@ async function viewPanelAdmin(v){
       const waiting=ms.filter(m=>m.kind==="internal"
         &&groupSessions(g).some(s=>availOf(g,m,s.id)===undefined));
       if(waiting.length) sessBtns.append(el("button",{class:"btn sm ghost",onclick:()=>{
-        openEmail(waiting.map(m=>m.email).filter(Boolean).join(","),
+        openEmail(waiting.flatMap(memberEmails).join(","),
           "MRes CoC panel \u2014 your availability is needed",
           "Dear colleagues,\n\nPlease log in to the Supervision Hub, open the \u201CCoC panel\u201D tab and tick your availability for "+
           (g.label||"the panel")+":\n\n"+groupSessions(g).map(s=>"  \u2022 "+sessionLabel(s)).join("\n")+
@@ -3399,7 +3523,7 @@ async function viewPanelAdmin(v){
       async()=>{
         const t=target();
         if(!t.to.length){ toast("Nobody selected has an email address on file.",true); return false; }
-        openEmail(t.to.map(x=>x.email).join(","),subject.value,body.value);
+        openEmail([...new Set(t.to.flatMap(memberEmails))].join(","),subject.value,body.value);
         return false;   // stay open so the next chair / assessor can be picked
       },"\u2709 Open in mail");
     const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
@@ -3658,7 +3782,7 @@ async function viewPanelAdmin(v){
      assessor from a booked session is not something to do as a side effect
      of tidying a list. The dialog says so where it applies. */
   function editPool(uid){
-    const u=S.supervisors.find(x=>x.id===uid);
+    const u=staffById(uid);
     let names=membersOf(poolOf(pools,uid)).map(cleanMember);
     const load=groupLoad(groups);
     // Who this supervisor may nominate: not themselves, not a co-supervisor
@@ -3738,9 +3862,12 @@ async function viewPanelAdmin(v){
 
     const pooled=candidatePool();
     const pooledKeys=new Set(pooled.map(memberKey));
-    let cands=pooled.concat(S.supervisors.filter(u=>!pooledKeys.has("u:"+u.id))
+    /* Everyone on staff who may assess: supervisors, plus the people whose
+       only role is sitting on panels. */
+    let cands=pooled.concat(assessorStaff().filter(u=>!pooledKeys.has("u:"+u.id))
       .map(u=>({id:nomId(),kind:"internal",uid:u.id,name:u.name||u.email,
-                email:u.email||"",mobile:u.mobile||"",org:"Internal",nominators:[]})));
+                email:u.email||"",mobile:u.mobile||"",org:"Internal",nominators:[],
+                panellist:isPanellist(u)})));
 
     /* ---- naming ----
        A panel is named after its CHAIR \u2014 "A/Prof John Smith Panel" \u2014
@@ -3933,7 +4060,12 @@ async function viewPanelAdmin(v){
           el("div",{class:"tick"},on?"\u2713":""),
           el("div",{class:"pk-main"},
             el("div",{class:"pk-nm"},m.name||"\u2014"),
-            el("div",{class:"pk-sub"},[m.kind==="internal"?"Staff":"External",
+            el("div",{class:"pk-sub"},[
+              /* Someone whose only role is assessing is worth naming as
+                 such \u2014 it tells the coordinator why they are on the list
+                 despite supervising nobody. */
+              m.kind!=="internal"?"External"
+                :isPanellist(staffById(m.uid))?"Panel member":"Staff",
               m.email||"no email",
               /* the org only says something when it isn't just restating the type */
               (m.org&&!/^(internal|external)$/i.test(m.org))?m.org:""]
@@ -4697,7 +4829,7 @@ async function doLogin(email,password){
     seedDemo();
     const u=await DB.findUserByEmail(email);
     if(!u) throw {code:"auth/user-not-found"};
-    S.user={email}; S.uid=u.uid; S.role=u.role; S.userName=u.name;
+    S.user={email}; S.uid=u.uid; S.role=roleOf(u); S.userName=u.name;
     await afterLogin(); return;
   }
   await signInWithEmailAndPassword(auth,email,password);
@@ -4717,7 +4849,7 @@ async function afterLogin(){
     if(best) defaultSem=best.id;
   }catch(e){}
   S.activeSem=defaultSem;
-  S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+  await reloadStaffCaches();
   renderApp();
 }
 
@@ -4759,18 +4891,22 @@ function renderApp(){
     el("div",{class:"who ui"},
       el("div",{style:"text-align:right"},
         el("div",{class:"name"},S.userName||S.user.email),
-        el("div",{class:"role"},S.role)),
+        el("div",{class:"role"},S.role==="panellist"?"panel member":S.role)),
       themeButton(),
       el("button",{class:"btn ghost sm",onclick:logout},"Sign out"))
   );
   // A co-supervisor-only staff member never SETS consultation times — they
   // only view what the principal has arranged, so their tab says so.
-  const meSup=S.supervisors.find(u=>u.id===S.uid);
+  const meSup=staffById(S.uid);
   const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
+  /* A panel member supervises nobody, so every student-shaped tab would be
+     empty for them. They get the one screen that concerns them. */
   const TABS = S.role==="admin"
     ? [["students","Students"],["schedule","Week planner"],["timetables","Class timetables"],["consultations","Consultation times"],
        ["meetinglog","Attendance"],["notes","Messages"],["panels","CoC panels"],["report","Summary report"],
        ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
+    : S.role==="panellist"
+    ? [["panels","My CoC panels"]]
     : [["students","My students"],["schedule","My week"],["timetables","My class time"],
        ["consultations",coOnly?"View consultation time":"Set consultation time"],
        ["meetinglog","Attendance"],["notes","Messages"],["panels","CoC panel"]];
@@ -5398,10 +5534,10 @@ async function viewStudents(v){
       const hdrLeft=el("div",{class:"row",style:"gap:8px;align-items:center"});
       if(mode==="principal"){
         hdrLeft.append(el("strong",{class:"ui"},gkey));
-        const sup=S.supervisors.find(u=>u.id===list[0].principalUid);
+        const sup=staffById(list[0].principalUid);
         if(sup?.area) hdrLeft.append(areaPill(sup.area));
         if(S.role==="admin"&&sup?.email)
-          hdrLeft.append(emailButton(sup.email,"MRes supervision","Dear "+(sup.name||"")+",\n\n","✉ Email","btn xs ghost"));
+          hdrLeft.append(emailButton(sup,"MRes supervision","Dear "+(sup.name||"")+",\n\n","✉ Email","btn xs ghost"));
       } else if(mode==="area"){
         hdrLeft.append(el("strong",{class:"ui"},gkey+" supervision"));
       } else {
@@ -5445,11 +5581,11 @@ async function viewStudents(v){
           contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
           // if I'm the co, offer to email the principal and vice versa
           if(s.principalUid && s.principalUid!==S.uid){
-            const pEmail=S.supervisors.find(u=>u.id===s.principalUid)?.email;
+            const pEmail=staffById(s.principalUid);
             contact.append(emailButton(pEmail,"MRes supervision — "+s.name,"Dear "+(s.principalName||"")+",\n\nRegarding "+s.name+" ("+s.sid+"):\n\n","✉ Principal","btn xs ghost"));
           }
           if(s.coUid && s.coUid!==S.uid){
-            const cEmail=S.supervisors.find(u=>u.id===s.coUid)?.email;
+            const cEmail=staffById(s.coUid);
             contact.append(emailButton(cEmail,"MRes supervision — "+s.name,"Dear "+(s.coName||"")+",\n\nRegarding "+s.name+" ("+s.sid+"):\n\n","✉ Co","btn xs ghost"));
           }
           cells.push(el("td",{},contact));
@@ -5649,7 +5785,7 @@ function importCSV(done){
           added++;
         }
       }
-      S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+      await reloadStaffCaches();
       toast(`Imported ${added} new, updated ${updated} existing student${(added+updated)===1?"":"s"}.`);
       done(); return true;
     },"Import");
@@ -5668,9 +5804,18 @@ function parseImport(text){
     for(const ch of l){ if(ch==='"'){q=!q;} else if(ch===","&&!q){out.push(cur);cur="";} else cur+=ch; }
     out.push(cur); return out.map(s=>s.trim());
   };
-  // normalise a header down to letters only, then map to a canonical key
+  /* Normalise a header, then map it to a canonical key. Two forms are
+     kept: letters only (the long-standing behaviour, so "Student ID" and
+     "student-id" agree), and letters WITH digits, because the panel
+     import numbers its columns \u2014 "Member 2" and "Member 3" collapse into
+     the same thing if the digits are thrown away. */
   const canon=h=>{
     const k=h.toLowerCase().replace(/[^a-z]/g,"");
+    const kn=h.toLowerCase().replace(/[^a-z0-9]/g,"");
+    const mNum=kn.match(/^(?:panel)?(?:member|assessor)([2-5])$/);
+    if(mNum) return "member"+mNum[1];
+    const mNumE=kn.match(/^(?:panel)?(?:member|assessor)([2-5])email$/);
+    if(mNumE) return "member"+mNumE[1]+"_email";
     if(/^(studentname|name|fullname)$/.test(k)) return "name";
     if(/^(studentid|sid|id|studentno|studentnumber)$/.test(k)) return "sid";
     if(/^(studentemail|email)$/.test(k)) return "email";
@@ -5678,6 +5823,12 @@ function parseImport(text){
     if(/^(principalsupervisor|principalsupervisorname|principal|principalname|supervisor|supervisorname)$/.test(k)) return "principal_name";
     if(/^(cosupervisoremail|coemail)$/.test(k)) return "co_email";
     if(/^(cosupervisorname|cosupervisor|co|coname)$/.test(k)) return "co_name";
+    // ---- CoC panel import (student id, panel name, chair, member 2, member 3)
+    if(/^(panelname|panel|paneltitle|cocpanel|cocpanelname)$/.test(k)) return "panel_name";
+    if(/^(chairpanelmember|chair|chairname|panelchair|chairperson|convenor|convener)$/.test(k)) return "chair";
+    if(/^(chairemail|panelchairemail|chairpanelmemberemail)$/.test(k)) return "chair_email";
+    if(/^(member|panelmember|assessor)$/.test(k)) return "member1";
+    if(/^(memberemail|panelmemberemail|assessoremail)$/.test(k)) return "member1_email";
     if(k==="mobile"||k==="phone") return "mobile";
     if(k==="campus") return "campus";
     if(k==="units"||k==="unit") return "units";
@@ -5687,6 +5838,278 @@ function parseImport(text){
   };
   const headers=split(lines[0]).map(canon);
   return lines.slice(1).map(l=>{ const c=split(l); const o={}; headers.forEach((h,i)=>o[h]=c[i]??""); return o; });
+}
+
+
+/* ============================================================
+   13G. IMPORT PANELS FROM A SPREADSHEET
+   The coordinator usually works the panels out in Excel before they ever
+   open the hub, one row per student:
+
+     Student ID | Panel Name | Chair Panel Member | Member 2 | Member 3
+
+   That is the whole file. Everything else about the student — their name,
+   proposal title, principal and co-supervisor — is already on record, so
+   the import looks it up from the ID rather than asking for it twice.
+
+   Rows are grouped by panel name: five rows naming "A/Prof John Smith
+   Panel" become ONE panel with five students on it, not five panels. The
+   three assessors are matched to staff already on file (by email if a
+   column supplies one, otherwise by name); anyone unknown is created as a
+   Panel member profile, which is exactly what they are.
+
+   Nothing is written until the admin has read the preview, because a bad
+   ID column would otherwise silently produce a set of empty panels.
+   ============================================================ */
+function importPanels(done){
+  const sem=activeSemester();
+  const input=el("input",{type:"file",accept:".csv,.txt,.tsv"});
+  const paste=el("textarea",{
+    placeholder:"…or paste rows copied from Excel here (header row first).\nExample:\nStudent ID\tPanel Name\tChair Panel Member\tMember 2\tMember 3\ncihe260061\tA/Prof John Ayoade Panel\tA/Prof John Ayoade\tDr Madhumita Takalkar\tDr Priya Raman\ncihe260062\tA/Prof John Ayoade Panel\tA/Prof John Ayoade\tDr Madhumita Takalkar\tDr Priya Raman",
+    style:"min-height:130px;font-size:13px;font-family:ui-monospace,monospace"});
+  const areaSel=el("select",{},...AREAS.map(a=>el("option",{value:a},a)));
+  const modeSel=el("select",{},
+    el("option",{value:"merge"},"Add to what's already there — keep panels and students not named in the file"),
+    el("option",{value:"replace"},"Replace — delete every panel in this semester first, then import"));
+  const preview=el("div",{style:"margin-top:12px"});
+  let rows=[], plan=null;
+
+  /* ---- turn the flat rows into panels ----------------------------------
+     Resolution is deliberately forgiving on names (case, double spaces,
+     titles are kept as typed) but strict about identity: two people with
+     the same name are the same person, which is the assumption the
+     spreadsheet is already making. */
+  const nameKey=x=>String(x||"").trim().toLowerCase().replace(/\s+/g," ");
+  const panelKey=x=>nameKey(x);
+
+  function buildPlan(students,groups){
+    const byPanel=new Map();
+    const unknownSid=[], noPanel=[], seenStudent=new Map();
+    const peopleWanted=new Map();   // key -> {name,email}
+
+    const want=(name,email)=>{
+      const n=String(name||"").trim(), e=String(email||"").trim();
+      if(!n&&!e) return null;
+      const k=e?("e:"+e.toLowerCase()):("n:"+nameKey(n));
+      if(!peopleWanted.has(k)) peopleWanted.set(k,{key:k,name:n||e,email:e});
+      else{ const r=peopleWanted.get(k); if(!r.email&&e) r.email=e; if(!r.name&&n) r.name=n; }
+      return k;
+    };
+
+    rows.forEach((r,i)=>{
+      const sidRaw=String(r.sid||"").trim();
+      const label=String(r.panel_name||"").trim();
+      if(!sidRaw&&!label) return;                       // blank line
+      if(!label){ noPanel.push(sidRaw||("row "+(i+2))); return; }
+      const st=students.find(x=>normSid(x.sid)===normSid(sidRaw));
+      if(sidRaw&&!st) unknownSid.push(sidRaw);
+      const pk=panelKey(label);
+      if(!byPanel.has(pk)) byPanel.set(pk,{label,students:[],chairKey:null,memberKeys:[],rowNos:[]});
+      const P=byPanel.get(pk);
+      P.rowNos.push(i+2);
+      if(st){
+        // a student listed twice is fine; on two DIFFERENT panels is not
+        const prev=seenStudent.get(st.id);
+        if(prev&&prev!==pk) P.dupe=(P.dupe||[]).concat([st.name||sidRaw]);
+        seenStudent.set(st.id,pk);
+        if(!P.students.includes(st.id)) P.students.push(st.id);
+      }
+      /* The assessors are repeated on every row of a panel. Take them from
+         the first row that supplies them and let later rows only add. */
+      const ck=want(r.chair,r.chair_email);
+      if(ck&&!P.chairKey) P.chairKey=ck;
+      if(ck&&!P.memberKeys.includes(ck)) P.memberKeys.push(ck);
+      [1,2,3,4,5].forEach(n=>{
+        const k=want(r["member"+n],r["member"+n+"_email"]);
+        if(k&&!P.memberKeys.includes(k)) P.memberKeys.push(k);
+      });
+    });
+
+    // ---- match the wanted people to staff already on file
+    const staff=assessorStaff();
+    const resolved=new Map();
+    peopleWanted.forEach((w,k)=>{
+      let u=null;
+      if(w.email) u=staff.find(x=>emailsOf(x).some(e=>e.toLowerCase()===w.email.toLowerCase()));
+      if(!u) u=staff.find(x=>nameKey(x.name)===nameKey(w.name));
+      resolved.set(k,{...w,user:u||null});
+    });
+
+    const panels=[...byPanel.values()].map(P=>({
+      ...P,
+      existing:groups.find(g=>panelKey(g.label)===panelKey(P.label))||null,
+      people:P.memberKeys.map(k=>resolved.get(k)).filter(Boolean),
+      chair:P.chairKey?resolved.get(P.chairKey):null
+    }));
+    return {panels,unknownSid:[...new Set(unknownSid)],noPanel,
+            newPeople:[...resolved.values()].filter(r=>!r.user)};
+  }
+
+  async function refreshPreview(){
+    preview.innerHTML="";
+    if(!rows.length){ preview.append(el("p",{class:"muted",style:"margin:0"},"No rows detected yet.")); return; }
+    if(!S.activeSem){ preview.append(el("p",{class:"muted",style:"margin:0"},"Create a semester first.")); return; }
+    let students,groups;
+    try{
+      students=await DB.list("students",{semesterId:S.activeSem});
+      groups=await DB.list("panelGroups",{semesterId:S.activeSem});
+    }catch(err){ preview.append(el("p",{class:"muted",style:"margin:0"},"Couldn't read this semester: "+(err?.message||"unknown error"))); return; }
+    plan=buildPlan(students,groups);
+
+    const box=el("div",{class:"card",style:"padding:0;overflow:hidden"});
+    box.append(el("div",{style:"padding:10px 14px;background:#0000000a;border-bottom:1px solid var(--line)"},
+      el("strong",{class:"ui"},plan.panels.length+" panel"+(plan.panels.length===1?"":"s")+
+        " · "+plan.panels.reduce((n,P)=>n+P.students.length,0)+" students matched")));
+    const t=el("table",{});
+    t.append(el("thead",{},el("tr",{},...["Panel","Chair","Assessors","Students","What will happen"].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    plan.panels.forEach(P=>{
+      const people=el("div",{class:"row",style:"gap:4px;flex-wrap:wrap"});
+      P.people.forEach(r=>people.append(el("span",{
+        class:"pill "+(r.user?"none":"pending"),
+        title:r.user?(emailList(r.user)||"on file"):"Not on file — will be created as a Panel member"},
+        r.name+(r.user?"":" (new)"))));
+      const notes=[];
+      if(P.existing) notes.push("updates the panel already called this");
+      else notes.push("new panel");
+      if(P.people.length<PANEL_SIZE) notes.push("only "+P.people.length+" of "+PANEL_SIZE+" assessors");
+      if(!P.chair) notes.push("no chair named");
+      if(P.dupe) notes.push(P.dupe.length+" student(s) also listed on another panel — the last one wins");
+      tb.append(el("tr",{},
+        el("td",{},el("strong",{},P.label)),
+        el("td",{class:"muted"},P.chair?P.chair.name:"—"),
+        el("td",{},people),
+        el("td",{},String(P.students.length)),
+        el("td",{class:"muted ui",style:"font-size:12.5px"},notes.join("; "))));
+    });
+    t.append(tb); box.append(t); preview.append(box);
+
+    const flags=el("div",{style:"margin-top:10px"});
+    if(plan.newPeople.length) flags.append(noticeBar("info",
+      el("div",{},
+        el("div",{style:"font-weight:700;margin-bottom:3px"},
+          plan.newPeople.length+" name"+(plan.newPeople.length===1?"":"s")+" not on file yet"),
+        el("div",{style:"font-size:13px"},plan.newPeople.map(r=>r.name).join(", ")),
+        el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
+          "These will be created as Panel members — profile records with no login. Add a staff login with the same email later to let them sign in."))));
+    if(plan.unknownSid.length) flags.append(noticeBar("clay",
+      el("div",{},
+        el("div",{style:"font-weight:700;margin-bottom:3px"},
+          plan.unknownSid.length+" student ID"+(plan.unknownSid.length===1?"":"s")+" not found in "+(sem?.label||"this semester")),
+        el("div",{style:"font-size:13px"},plan.unknownSid.slice(0,12).join(", ")+(plan.unknownSid.length>12?" …":"")),
+        el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
+          "The panel is still created, just without them. Import the students first, or check the ID column."))));
+    if(plan.noPanel.length) flags.append(noticeBar("clay",
+      el("div",{},el("div",{style:"font-weight:700"},plan.noPanel.length+" row(s) have no panel name and will be skipped."))));
+    preview.append(flags);
+  }
+
+  input.onchange=()=>{
+    const file=input.files[0]; if(!file)return;
+    const r=new FileReader();
+    r.onload=()=>{ rows=parseImport(r.result); refreshPreview(); };
+    r.readAsText(file);
+  };
+  let pasteTimer=null;
+  paste.addEventListener("input",()=>{ clearTimeout(pasteTimer);
+    pasteTimer=setTimeout(()=>{ rows=parseImport(paste.value); refreshPreview(); },350); });
+
+  modal("Import CoC panels — CSV or paste",
+    el("div",{},
+      el("p",{class:"muted",style:"margin-top:0"},
+        "One row per student, with these columns: "),
+      el("p",{style:"margin:0 0 10px;font-family:ui-monospace,monospace;font-size:12.5px"},
+        "Student ID · Panel Name · Chair Panel Member · Member 2 · Member 3"),
+      el("p",{class:"muted",style:"margin:0 0 12px"},
+        "Rows sharing a panel name become one panel, so repeat the panel and its assessors on every student's row. "+
+        "The student's name, proposal title and supervisors are looked up from the ID — you don't need to include them. "+
+        "Assessors are matched to staff on file by name, or by email if you add \u201CChair Email\u201D / \u201CMember 2 Email\u201D columns; anyone unknown is created as a Panel member."),
+      el("div",{style:"margin-bottom:10px"},el("label",{},"If a panel already has this name"),modeSel,
+        el("p",{class:"muted",style:"margin:4px 0 0;font-size:13px"},
+          "Either way, a panel named in the file has its assessors, chair and student list set to what the file says. Times, meeting links and availability already recorded are kept.")),
+      el("div",{style:"margin-bottom:10px"},el("label",{},"Area for any new panel members"),areaSel),
+      el("div",{style:"margin-bottom:8px"},el("label",{},"CSV file"),input),
+      el("div",{},el("label",{},"Or paste rows"),paste),
+      preview),
+    async()=>{
+      if(!rows.length){ toast("Choose a CSV file or paste rows first.",true); return false; }
+      if(!S.activeSem){ toast("Create a semester first.",true); return false; }
+      if(!plan||!plan.panels.length){ toast("No panels could be read from those rows — check the panel name column.",true); return false; }
+      if(modeSel.value==="replace"&&!window.confirm(
+        "Delete every CoC panel in "+(sem?.label||"this semester")+" and rebuild from this file?\n\n"+
+        "Sessions, meeting links and recorded availability on the deleted panels go with them. This can't be undone."))
+        return false;
+
+      try{
+        // ---- 1. make sure every named assessor exists as a staff record
+        const created=[];
+        for(const w of plan.newPeople){
+          const profile={email:w.email||"",name:w.name,role:"panellist",
+                         area:areaSel.value,mobile:"",pendingLogin:true};
+          const id=await DB.add("users",profile);
+          w.user={id,...profile};
+          created.push(w.name);
+        }
+        await reloadStaffCaches();
+        // the resolved records inside each panel point at the same objects,
+        // so they now carry .user too
+
+        let live=await DB.list("panelGroups",{semesterId:S.activeSem});
+        if(modeSel.value==="replace"){
+          for(const g of live) await DB.remove("panelGroups",g.id);
+          live=[];
+        }
+
+        // ---- 2. a student may only sit on one panel, so take them off any
+        //         other panel this file moves them away from
+        const claimed=new Map();   // studentId -> panel label that claims them
+        plan.panels.forEach(P=>P.students.forEach(sid=>claimed.set(sid,panelKey(P.label))));
+
+        let made=0,updated=0;
+        for(const P of plan.panels){
+          const members=P.people.map(r=>cleanMember({
+            kind:"internal", uid:r.user.id,
+            name:r.user.name||r.name, email:emailsOf(r.user)[0]||r.email||"",
+            mobile:r.user.mobile||"", org:"Internal"
+          }));
+          const chairM=P.chair?.user
+            ? members.find(m=>m.uid===P.chair.user.id) : null;
+          const prev=P.existing?live.find(g=>g.id===P.existing.id):null;
+          const base=prev||{};
+          const rec={
+            ...base,
+            id:prev?.id,
+            label:P.label,
+            members,
+            chairKey:chairM?availKey(chairM):"",
+            studentIds:P.students,
+            /* Slots belong to students; anyone the file moved off this
+               panel loses theirs, and everything else is kept so a
+               re-import doesn't wipe a booked session. */
+            slots:(base.slots||[]).filter(sl=>!sl.studentDocId||P.students.includes(sl.studentDocId))
+          };
+          await saveGroup(rec);
+          prev?updated++:made++;
+        }
+
+        // ---- 3. drop students from panels this file didn't name, if the
+        //         file has moved them somewhere else
+        const after=await DB.list("panelGroups",{semesterId:S.activeSem});
+        for(const g of after){
+          const mine=panelKey(g.label);
+          const keep=(g.studentIds||[]).filter(sid=>!claimed.has(sid)||claimed.get(sid)===mine);
+          if(keep.length!==(g.studentIds||[]).length){
+            await saveGroup({...g,studentIds:keep,
+              slots:(g.slots||[]).filter(sl=>!sl.studentDocId||keep.includes(sl.studentDocId))});
+          }
+        }
+
+        toast("Imported "+made+" new panel"+(made===1?"":"s")+
+          (updated?", updated "+updated:"")+
+          (created.length?" · "+created.length+" panel member"+(created.length===1?"":"s")+" created":"")+".");
+        done(); return true;
+      }catch(err){ toast(err?.message||"Import failed.",true); return false; }
+    },"Import panels");
 }
 
 /* ============================================================
@@ -6079,7 +6502,7 @@ async function viewConsultations(v){
   const sem=activeSemester();
   const weeks=sem?.weeks||12;
   // capability check: a co-supervisor-only account can never set times here
-  const meSup=S.supervisors.find(u=>u.id===S.uid);
+  const meSup=staffById(S.uid);
   const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Per-student supervision · used for attendance"),
@@ -6281,7 +6704,7 @@ async function viewConsultations(v){
                        digest to everyone in BCC.
    Nothing is sent by the app itself; the user taps send.
    ------------------------------------------------------------ */
-function coSupEmail(uid){ const u=S.supervisors.find(x=>x.id===uid); return u?.email||""; }
+function coSupEmail(uid){ const u=staffById(uid); return emailsOf(u).join(",")||""; }
 
 // One student's consultation details rendered as plain text.
 // `opts.changes`  "all" | "upcoming" | "none"  — whether the one-off week
@@ -6369,7 +6792,7 @@ function emailCoSupervisors(students,cons,weeks,only){
     "Hello,\n\nHere are the current consultation arrangements for the student(s) you co-supervise. "+
     "The times below are what weekly attendance is recorded against — any week that has been moved to a different day or time is listed underneath each student. "+
     "Please let me know if any of them clash with your teaching.\n"});
-  const sign=el("input",{value:(S.supervisors.find(u=>u.id===S.uid)?.name)||"",placeholder:"Your name (sign-off)"});
+  const sign=el("input",{value:(staffById(S.uid)?.name)||"",placeholder:"Your name (sign-off)"});
   const preview=el("pre",{class:"muted ui",style:"white-space:pre-wrap;font-size:12px;max-height:190px;overflow:auto;background:rgba(127,127,127,.08);padding:10px;border-radius:8px;margin:0"});
   const note=el("p",{class:"muted",style:"margin:0"});
 
@@ -6422,7 +6845,7 @@ function emailCoSupervisors(students,cons,weeks,only){
         "Each student's day, time, mode, Teams channel link, attendance so far and changed-week timetable are added automatically. This opens your device's mail app with everything pre-filled — review and tap send there; the hub does not send email itself.")),
     async()=>{
       if(style.value==="one"){
-        const me=S.supervisors.find(u=>u.id===S.uid);
+        const me=staffById(S.uid);
         window.location.href="mailto:"+encodeURIComponent(me?.email||"")
           +"?bcc="+encodeURIComponent(withEmail.map(g=>g.email).join(","))
           +"&subject="+encodeURIComponent(subject.value||"")
@@ -7095,7 +7518,7 @@ async function bulkEmailStudents(){
       if(!recips.length){ toast("No students with an email to send to.",true); return false; }
       const emails=recips.map(s=>s.email);
       // mailto with BCC; put the supervisor's own address (if known) as the visible "to"
-      const me=S.supervisors.find(u=>u.id===S.uid);
+      const me=staffById(S.uid);
       const to=me?.email||"";
       const url="mailto:"+encodeURIComponent(to)
         +"?bcc="+encodeURIComponent(emails.join(","))
@@ -7124,15 +7547,46 @@ async function bulkEmailStudents(){
    As everywhere else in the hub, nothing is sent by the app itself:
    the admin reviews the draft in their own mail client and taps send.
    ============================================================ */
+/* The audience picker. Grouped under headings and spelled out in full,
+   because the old list ran five near-identical "supervisor" lines
+   together and left the reader to work out whether "Co-supervisors"
+   meant everyone who CAN co-supervise or only those who do nothing
+   else. Each entry now says who is in and who is out. */
 const STAFF_GROUPS=[
-  {v:"sup-all",        label:"All supervisors",                     test:u=>u.role==="supervisor"},
-  {v:"principal",      label:"Principal supervisors (incl. principal & co)", test:u=>u.role==="supervisor"&&canBePrincipal(u)},
-  {v:"co",             label:"Co-supervisors (incl. principal & co)",        test:u=>u.role==="supervisor"&&canBeCo(u)},
-  {v:"principal-only", label:"Principal only",                      test:u=>u.role==="supervisor"&&capOf(u)==="principal"},
-  {v:"co-only",        label:"Co-supervisor only",                  test:u=>u.role==="supervisor"&&capOf(u)==="co"},
-  {v:"admin",          label:"Admin staff",                         test:u=>u.role==="admin"},
-  {v:"everyone",       label:"Everyone on staff",                   test:()=>true}
+  {g:"Supervisors", v:"sup-all", label:"All supervisors",
+   hint:"Everyone whose role is Supervisor, whatever their capability.",
+   test:u=>isSupervisor(u)},
+  {g:"Supervisors", v:"principal", label:"Anyone who can be a principal supervisor",
+   hint:"Capability \u201Cprincipal & co\u201D or \u201Cprincipal only\u201D. Excludes co-supervisor-only staff.",
+   test:u=>canBePrincipal(u)},
+  {g:"Supervisors", v:"co", label:"Anyone who can be a co-supervisor",
+   hint:"Capability \u201Cprincipal & co\u201D or \u201Cco-supervisor only\u201D. Excludes principal-only staff.",
+   test:u=>canBeCo(u)},
+  {g:"Supervisors", v:"principal-only", label:"Principal-only supervisors",
+   hint:"Just the staff who never co-supervise.",
+   test:u=>isSupervisor(u)&&capOf(u)==="principal"},
+  {g:"Supervisors", v:"co-only", label:"Co-supervisor-only staff",
+   hint:"Just the staff who never take a student as principal.",
+   test:u=>isSupervisor(u)&&capOf(u)==="co"},
+
+  {g:"CoC panels", v:"panellists", label:"Panel members only",
+   hint:"Staff whose role is Panel member \u2014 they assess but don't supervise.",
+   test:u=>isPanellist(u)},
+  {g:"CoC panels", v:"assessors", label:"Everyone who can assess a panel",
+   hint:"Panel members and supervisors together \u2014 the whole assessor pool.",
+   test:u=>isAssessorStaff(u)},
+  {g:"CoC panels", v:"seated", label:"Only staff currently seated on a panel",
+   hint:"Anyone on a CoC panel this semester. Needs the panels to be built.",
+   test:u=>PANEL_SEATED_UIDS.has(u.id)},
+
+  {g:"Everyone else", v:"admin", label:"Admin staff",
+   hint:"The coordinator's office.", test:u=>roleOf(u)==="admin"},
+  {g:"Everyone else", v:"everyone", label:"Everyone with a staff record",
+   hint:"Supervisors, panel members and admins.", test:()=>true}
 ];
+/* Filled in just before the dialog opens; the "seated on a panel" group
+   is the one audience that can't be answered from the user record alone. */
+const PANEL_SEATED_UIDS=new Set();
 
 // Copy text to the clipboard, with a fallback for browsers/webviews that
 // block the async clipboard API (older Safari, some embedded views).
@@ -7151,16 +7605,32 @@ async function bulkEmailStaff(preset={}){
   if(S.role!=="admin"){ toast("Group email to staff is an admin tool.",true); return; }
   const staff=(await DB.listUsers()).sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
   if(!staff.length){ toast("No staff on file yet.",true); return; }
+  /* Work out who is actually seated on a panel this semester, so the
+     "currently seated" audience can be offered. A failure here should
+     cost that one group, not the dialog. */
+  PANEL_SEATED_UIDS.clear();
+  try{
+    (await DB.list("panelGroups",{semesterId:S.activeSem})).forEach(g=>
+      groupMembers(g).forEach(m=>{ if(m.kind==="internal"&&m.uid) PANEL_SEATED_UIDS.add(m.uid); }));
+  }catch(e){}
 
   // ---- filters ----
-  const group=el("select",{},...STAFF_GROUPS.map(g=>
-    el("option",{value:g.v,...(g.v===(preset.group||"sup-all")?{selected:"selected"}:{})},g.label)));
+  // Grouped under headings so the five supervisor variants stop reading
+  // as one indistinguishable block.
+  const group=el("select",{});
+  [...new Set(STAFF_GROUPS.map(g=>g.g))].forEach(head=>{
+    const og=el("optgroup",{label:head});
+    STAFF_GROUPS.filter(g=>g.g===head).forEach(g=>og.append(
+      el("option",{value:g.v,...(g.v===(preset.group||"sup-all")?{selected:"selected"}:{})},g.label)));
+    group.append(og);
+  });
+  const groupHint=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"});
   const areaSel=el("select",{},
     el("option",{value:"",...(preset.area?{}:{selected:"selected"})},"All areas"),
     ...AREAS.map(a=>el("option",{value:a,...(a===preset.area?{selected:"selected"}:{})},a)));
   const mode=el("select",{},
-    el("option",{value:"bcc"},"BCC — addresses hidden from each other"),
-    el("option",{value:"to"},"To — everyone sees who else got it"));
+    el("option",{value:"bcc"},"BCC \u2014 each person sees only their own address (use for anything going to the whole group)"),
+    el("option",{value:"to"},"To \u2014 everyone sees the full recipient list (use for a small, deliberate group)"));
 
   // ---- message ----
   const subject=el("input",{value:"MRes supervision — "+(activeSemester()?.label||"this semester")});
@@ -7180,14 +7650,26 @@ async function bulkEmailStaff(preset={}){
     const a=areaSel.value;
     return staff.filter(u=>g.test(u)).filter(u=>!a||u.area===a);
   }
+  /* Recipients, then the actual addresses. They are separate because one
+     person can have two mailboxes and both get the email \u2014 so "12
+     recipients" and "15 addresses" are both true and both worth saying. */
   function selected(){
     const seen=new Set();
     return pool().filter(u=>{
       if(excluded.has(u.id)) return false;
-      const e=(u.email||"").trim().toLowerCase();
-      if(!e||seen.has(e)) return false;
-      seen.add(e); return true;
+      const mine=emailsOf(u).map(e=>e.toLowerCase());
+      if(!mine.length) return false;
+      // skip only if EVERY address is already going out via someone else
+      if(mine.every(e=>seen.has(e))) return false;
+      mine.forEach(e=>seen.add(e)); return true;
     });
+  }
+  function addresses(){
+    const seen=new Set(), out=[];
+    selected().forEach(u=>emailsOf(u).forEach(e=>{
+      const k=e.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(e);
+    }));
+    return out;
   }
   function drawList(){
     listBox.innerHTML="";
@@ -7196,15 +7678,19 @@ async function bulkEmailStaff(preset={}){
       listBox.append(el("p",{class:"muted",style:"margin:6px 0"},"Nobody matches this group and area."));
     }
     p.forEach(u=>{
+      const mails=emailsOf(u);
       const cb=el("input",{type:"checkbox",...(excluded.has(u.id)?{}:{checked:"checked"}),
-        ...(u.email?{}:{disabled:"disabled"}),
+        ...(mails.length?{}:{disabled:"disabled"}),
         onchange:e=>{ e.target.checked?excluded.delete(u.id):excluded.add(u.id); refresh(); }});
       const row=el("label",{class:"row",style:"gap:8px;align-items:center;padding:3px 0;cursor:pointer"},
         cb,
-        el("strong",{style:"font-weight:600"},u.name||u.email||"—"),
-        u.role==="supervisor"?el("span",{class:"pill"},capLabel(capOf(u))):el("span",{class:"pill"},"Admin"),
+        el("strong",{style:"font-weight:600"},u.name||mails[0]||"—"),
+        roleTag(u),
         u.area?areaPill(u.area):"",
-        el("span",{class:"muted",style:"font-size:13px"},u.email||"no email on file"));
+        el("span",{class:"muted",style:"font-size:13px"},
+          mails.length?mails.join("  \u00B7  "):"no email on file"),
+        // a second address is easy to miss in a run of text, so it is labelled
+        mails.length>1?el("span",{class:"pill none",title:"Both addresses will be included"},"2 addresses"):el("span",{}));
       listBox.append(row);
     });
     refresh();
@@ -7219,14 +7705,19 @@ async function bulkEmailStaff(preset={}){
     return b;
   }
   function refresh(){
-    const recips=selected();
-    const noEmail=pool().filter(u=>!u.email).length;
+    const g=STAFF_GROUPS.find(x=>x.v===group.value)||STAFF_GROUPS[0];
+    groupHint.textContent=g.hint||"";
+    const recips=selected(), addr=addresses();
+    const noEmail=pool().filter(u=>!emailsOf(u).length).length;
+    const extra=addr.length-recips.length;
     note.textContent=recips.length
-      ? recips.length+" recipient"+(recips.length===1?"":"s")+" · "+(mode.value==="bcc"?"added to BCC":"added to To")
+      ? recips.length+" recipient"+(recips.length===1?"":"s")+" · "+addr.length+" address"+(addr.length===1?"":"es")
+        +(extra>0?" ("+extra+" second address"+(extra===1?"":"es")+" included)":"")
+        +" · "+(mode.value==="bcc"?"added to BCC":"added to To")
         +(noEmail?"  ·  "+noEmail+" skipped (no email on file)":"")
       : "No staff with an email address in this group.";
     // rough mailto length check — some mail clients truncate very long links
-    const est=(recips.map(u=>u.email).join(",")+(subject.value||"")+composedBody()).length*1.4;
+    const est=(addr.join(",")+(subject.value||"")+composedBody()).length*1.4;
     warn.textContent = est>1800
       ? "This draft is long. If your mail app opens it truncated, use “Copy addresses” and paste them in instead."
       : "";
@@ -7239,7 +7730,7 @@ async function bulkEmailStaff(preset={}){
 
   // ---- secondary actions ----
   const copyBtn=el("button",{class:"btn xs ghost",onclick:async()=>{
-    const list=selected().map(u=>u.email).join(", ");
+    const list=addresses().join(", ");
     if(!list){ toast("No addresses to copy.",true); return; }
     toast(await copyText(list)?"Addresses copied — paste them into your mail app.":"Could not copy — select the addresses manually.",false);
   }},"⧉ Copy addresses");
@@ -7250,7 +7741,7 @@ async function bulkEmailStaff(preset={}){
     if(!(navigator.canShare&&navigator.canShare({files}))){
       toast("This device can't attach files from the browser — copy the addresses and attach it in your mail app.",true); return;
     }
-    await copyText(selected().map(u=>u.email).join(", "));
+    await copyText(addresses().join(", "));
     try{
       await navigator.share({title:subject.value||"MRes supervision",text:composedBody(),files});
       toast("Addresses copied — paste them into the app you picked.");
@@ -7261,12 +7752,12 @@ async function bulkEmailStaff(preset={}){
 
   modal("Email a staff group",
     el("div",{class:"grid"},
-      el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
-        el("div",{class:"field",style:"flex:1;min-width:200px"},el("label",{},"Group"),group),
+      el("div",{class:"row",style:"gap:10px;flex-wrap:wrap;align-items:flex-start"},
+        el("div",{class:"field",style:"flex:1;min-width:230px"},el("label",{},"Who is this going to?"),group,groupHint),
         el("div",{class:"field",style:"min-width:130px"},el("label",{},"Area"),areaSel)),
-      el("div",{},el("label",{},"Recipients"),listBox),
+      el("div",{},el("label",{},"Recipients \u2014 untick anyone to leave them out"),listBox),
       note, warn,
-      el("div",{},el("label",{},"Addressing"),mode),
+      el("div",{},el("label",{},"How are the addresses added?"),mode),
       el("div",{},el("label",{},"Subject"),subject),
       el("div",{},el("label",{},"Message"),body),
       el("div",{style:"border-top:1px solid var(--line);padding-top:12px"},
@@ -7281,16 +7772,17 @@ async function bulkEmailStaff(preset={}){
       el("p",{class:"muted",style:"margin:0"},
         "“Open mail app” hands the draft to your own mail client with the addresses and text pre-filled. You review it and tap send — the hub never sends email itself.")),
     async()=>{
-      const recips=selected();
-      if(!recips.length){ toast("No staff with an email to send to.",true); return false; }
-      const emails=recips.map(u=>u.email).join(",");
+      const recips=selected(), addr=addresses();
+      if(!addr.length){ toast("No staff with an email to send to.",true); return false; }
+      const emails=addr.join(",");
       const me=S.user?.email||"";
       const url="mailto:"+encodeURIComponent(mode.value==="to"?emails:me)
         +(mode.value==="bcc"?"?bcc="+encodeURIComponent(emails)+"&":"?")
         +"subject="+encodeURIComponent(subject.value||"")
         +"&body="+encodeURIComponent(composedBody());
       window.location.href=url;
-      toast("Opening mail app with "+recips.length+" recipient"+(recips.length===1?"":"s")+".");
+      toast("Opening mail app with "+recips.length+" recipient"+(recips.length===1?"":"s")+
+        (addr.length>recips.length?" ("+addr.length+" addresses)":"")+".");
       return true;
     },"Open mail app");
 }
@@ -7593,7 +8085,7 @@ async function viewReport(v){
         el("span",{style:"flex:1"}),
         ...r.flags.map(f=>el("span",{class:"pill "+(f.startsWith("No consultation")?"pending":"missed"),style:"font-size:11.5px"},f)));
       if(r.s.principalUid)
-        line.append(emailButton(S.supervisors.find(u=>u.id===r.s.principalUid)?.email,
+        line.append(emailButton(staffById(r.s.principalUid),
           "MRes supervision — "+r.s.name,
           "Dear "+(r.s.principalName||"")+",\n\nRegarding "+r.s.name+" ("+(r.s.sid||"")+"): "+r.flags.join("; ")+".\n\n",
           "✉ Principal","btn xs ghost"));
@@ -7609,8 +8101,8 @@ async function viewReport(v){
     el("button",{class:"btn blue",onclick:()=>downloadDetailedLogCSV(rows,sem,weeks,focusName,lens)},"Download detailed week-by-week logs"),
     el("button",{class:"btn ghost",onclick:()=>window.print()},"Print / PDF"));
   if(focus!=="all"){
-    const focusUser=S.supervisors.find(u=>u.id===focus);
-    actions.append(emailButton(focusUser?.email,"MRes supervision — "+(sem?.label||""),
+    const focusUser=staffById(focus);
+    actions.append(emailButton(focusUser,"MRes supervision — "+(sem?.label||""),
       "Dear "+(focusName||"")+",\n\n","✉ Email "+(focusName||"this supervisor"),"btn amber"));
     // detailed log extraction for this one supervisor (on-screen, all weeks)
     actions.append(el("button",{class:"btn ghost",onclick:()=>showSupervisorDetail(focus,focusName,lens,rows,sem,weeks)},
@@ -7630,7 +8122,7 @@ async function viewReport(v){
         el("strong",{class:"ui"},"Principal: "+prin),
         el("div",{class:"row"},
           el("span",{class:"muted ui"},grp.length+" student"+(grp.length>1?"s":"")),
-          ...(prinUid&&prinUid!==S.uid?[emailButton(S.supervisors.find(u=>u.id===prinUid)?.email,"MRes supervision","Dear "+prin+",\n\n","✉ Email","btn xs ghost")]:[]),
+          ...(prinUid&&prinUid!==S.uid?[emailButton(staffById(prinUid),"MRes supervision","Dear "+prin+",\n\n","✉ Email","btn xs ghost")]:[]),
           el("button",{class:"btn xs ghost",onclick:()=>{viewReport._sup=prinUid;viewReport._lens="principal";viewReport(v);}},"Focus →")));
       card.append(headRow);
       card.append(buildReportTable(grp,weeks,false,v));
@@ -7668,11 +8160,11 @@ function buildReportTable(group,weeks,showRole,v){
     const contact=el("div",{class:"row",style:"gap:5px"});
     contact.append(emailButton(s.email,"MRes supervision — "+s.name,"Dear "+(s.name||"")+",\n\n","✉ Email","btn xs ghost"));
     if(s.coUid && s.coUid!==S.uid){
-      contact.append(emailButton(S.supervisors.find(u=>u.id===s.coUid)?.email,
+      contact.append(emailButton(staffById(s.coUid),
         "MRes supervision — "+s.name,"Dear "+(s.coName||"")+",\n\n","✉ Co","btn xs ghost"));
     }
     if(s.principalUid && s.principalUid!==S.uid){
-      contact.append(emailButton(S.supervisors.find(u=>u.id===s.principalUid)?.email,
+      contact.append(emailButton(staffById(s.principalUid),
         "MRes supervision — "+s.name,"Dear "+(s.principalName||"")+",\n\n","✉ Principal","btn xs ghost"));
     }
 
@@ -7856,9 +8348,19 @@ function openEmail(to,subject,body){
   window.location.href=url;
 }
 // Small reusable "Email" button that opens the mail app.
+/* `to` may be one address, a list, or a staff record — a staff record is
+   the useful case, because it carries a possible second mailbox and both
+   should be on the email. */
 function emailButton(to,subject,body,label="✉ Email",cls="btn xs ghost"){
-  return el("button",{class:cls,title:to?("Email "+to):"No email on file",...(to?{}:{disabled:"disabled"}),
-    onclick:()=>openEmail(to,subject,body)},label);
+  const list=Array.isArray(to)?to.filter(Boolean)
+           :(to&&typeof to==="object")?emailsOf(to)
+           :(to?[to]:[]);
+  const joined=list.join(",");
+  return el("button",{class:cls,
+    title:list.length?("Email "+list.join(" and ")):"No email on file",
+    ...(list.length?{}:{disabled:"disabled"}),
+    onclick:()=>openEmail(joined,subject,body)},
+    label,list.length>1?el("span",{style:"margin-left:4px;font-size:10px;opacity:.75"},"\u00D72"):"");
 }
 
 /* ---- SMS handoff ------------------------------------------------
@@ -7948,7 +8450,7 @@ async function viewContacts(v){
   function draw(){
     host.innerHTML="";
     const term=search.value.trim().toLowerCase();
-    const match=o=>!term||[o.name,o.email,o.mobile,o.sid].some(x=>(x||"").toLowerCase().includes(term))
+    const match=o=>!term||[o.name,o.email,o.email2,o.mobile,o.sid].some(x=>(x||"").toLowerCase().includes(term))
       ||(normSid(o.sid)&&normSid(o.sid).includes(normSid(term)));
 
     // ---- Staff ----
@@ -7959,16 +8461,18 @@ async function viewContacts(v){
     st.append(el("thead",{},el("tr",{},...["Name","Role","Area","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
     const stb=el("tbody",{});
     staff.filter(match).forEach(u=>{
-      const roleLabel=u.role==="admin"?"Admin":capLabel(capOf(u));
       const contact=el("div",{class:"row",style:"gap:5px"});
-      contact.append(emailButton(u.email,"MRes supervision","Dear "+(u.name||"")+",\n\n"));
+      contact.append(emailButton(u,"MRes supervision","Dear "+(u.name||"")+",\n\n"));
       contact.append(smsButton(u.mobile,"Hi "+(u.name||"")+", "));
       contact.append(el("button",{class:"btn xs ghost",onclick:()=>staffForm(u,()=>{viewContacts(v);})},"Edit"));
+      const mails=emailsOf(u);
       stb.append(el("tr",{},
         el("td",{},el("strong",{},u.name||"—")),
-        el("td",{},roleLabel),
-        el("td",{},u.role==="supervisor"?areaPill(u.area):el("span",{class:"muted"},"—")),
-        el("td",{class:"muted"},u.email||"—"),
+        el("td",{},roleTag(u)),
+        el("td",{},roleOf(u)==="admin"?el("span",{class:"muted"},"—"):areaPill(u.area)),
+        el("td",{class:"muted"},mails.length
+          ? el("div",{},...mails.map((e,i)=>el("div",{style:i?"font-size:12.5px;opacity:.8":""},e)))
+          : "—"),
         el("td",{class:"muted"},u.mobile||el("span",{class:"muted"},"—")),
         el("td",{},contact)));
     });
@@ -8044,12 +8548,18 @@ async function viewPeople(v){
   // ---- Staff ----
   const staffCard=el("div",{class:"card"});
   staffCard.append(el("div",{class:"row",style:"justify-content:space-between;margin-bottom:10px"},
-    el("h3",{},"Supervisors & admins"),
+    el("h3",{},"Supervisors, panel members & admins"),
     el("button",{class:"btn sm",onclick:()=>staffForm(null,()=>viewPeople(v))},"+ Add staff login")));
-  staffCard.append(el("p",{class:"muted",style:"margin-top:-4px;margin-bottom:10px"},
-    "Each supervisor has a supervision area (IT or Business) and a capability: principal & co, principal only, or co-supervisor only. Principals run the class, set consultation times and record attendance; co-supervisors attend the meetings and see the timetable and attendance read-only. Supervisors marked \u201CNo login yet\u201D were auto-created from a student import — add a staff login with the same email to activate them."));
+  staffCard.append(el("div",{class:"muted",style:"margin-top:-4px;margin-bottom:10px"},
+    el("p",{style:"margin:0 0 6px"},"There are three roles:"),
+    el("ul",{style:"margin:0 0 8px;padding-left:20px"},
+      ...ROLES.map(r=>el("li",{style:"margin-bottom:2px"},
+        el("strong",{style:"font-weight:600"},r.label),el("span",{}," \u2014 "+r.help)))),
+    el("p",{style:"margin:0"},
+      "Supervisors also carry a capability \u2014 principal & co, principal only, or co-supervisor only. Principals run the class, set consultation times and record attendance; co-supervisors attend and see the timetable and attendance read-only. Anyone marked \u201CNo login yet\u201D was auto-created from an import \u2014 add a staff login with the same email to activate them.")));
+  await refreshAllocCounts();
   const users=await DB.listUsers();
-  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Area","Capability",""].map(h=>el("th",{},h)))));
+  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Role","Area","Students",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
   users.forEach(u=>{
     const actions=el("div",{class:"row"});
@@ -8058,16 +8568,26 @@ async function viewPeople(v){
     const isSelf = u.id===S.uid;
     actions.append(el("button",{class:"btn danger sm",...(isSelf?{disabled:"disabled",title:"You can't delete your own account"}:{}),
       onclick:()=> isSelf ? toast("You can't delete your own account.",true)
-                         : confirmDelete("users",u.id,u.name||u.email,async()=>{ await DB.removeUser(u.id); S.supervisors=(await DB.listUsers()).filter(x=>x.role==="supervisor"); viewPeople(v); }, true)},"Delete"));
+                         : confirmDelete("users",u.id,u.name||u.email,async()=>{ await DB.removeUser(u.id); await reloadStaffCaches(); viewPeople(v); }, true)},"Delete"));
     const acct = u.pendingLogin
       ? el("span",{class:"pill pending",title:"Profile auto-created from an import — add a login with the same email to activate it"},"No login yet")
-      : el("span",{class:"pill "+(u.role==="admin"?"approved":"none")},u.role);
+      : el("span",{class:"pill "+(roleOf(u)==="admin"?"approved":"none")},"Has login");
+    const load=studentLoadOf(u.id);
+    const mails=el("td",{},el("div",{},u.email||el("span",{class:"muted"},"—")),
+      u.email2?el("div",{class:"muted ui",style:"font-size:12.5px"},
+        u.email2+" \u00B7 also mailed"):el("span",{}));
     tb.append(el("tr",{},
       el("td",{},el("strong",{},u.name||"—")),
-      el("td",{},u.email),
+      mails,
       el("td",{},acct),
-      el("td",{},u.role==="supervisor"?areaPill(u.area):el("span",{class:"muted"},"—")),
-      el("td",{},u.role==="supervisor"?el("span",{class:"pill "+(capOf(u)==="both"?"approved":"pending")},capLabel(capOf(u))):el("span",{class:"muted"},"—")),
+      el("td",{},roleTag(u)),
+      el("td",{},roleOf(u)==="admin"?el("span",{class:"muted"},"—"):areaPill(u.area)),
+      /* A panel member with students still on them is a leftover from
+         before the role existed, and needs reassigning \u2014 so it is shown
+         rather than hidden behind a dash. */
+      el("td",{},load?el("span",{class:"pill "+(isSupervisor(u)?"none":"missed"),
+          title:isSupervisor(u)?"":"This person no longer appears in the supervisor pickers — reassign these students"},String(load))
+        :el("span",{class:"muted"},"—")),
       el("td",{},actions)));
   });
   t.append(tb); staffCard.append(t);
@@ -8162,46 +8682,72 @@ function semesterForm(existing,done){
 function staffForm(existing,done){
   const editing=!!existing;
   const name=el("input",{value:existing?.name||""}), email=el("input",{type:"email",value:existing?.email||"",...(editing?{disabled:"disabled"}:{})});
+  /* The second address is a plain profile field, not the login, so unlike
+     the primary it stays editable when editing. Everything that mails
+     this person sends to both. */
+  const email2=el("input",{type:"email",value:existing?.email2||"",
+    placeholder:"e.g. their other institution or personal address"});
   const mobile=el("input",{type:"tel",value:existing?.mobile||"",placeholder:"e.g. +61 4xx xxx xxx"});
   const pass=el("input",{type:"password",placeholder:editing?"(unchanged — set in Firebase)":"Min 6 characters"});
-  const role=el("select",{},
-    el("option",{value:"supervisor",...(existing?.role==="supervisor"?{selected:"selected"}:{})},"Supervisor"),
-    el("option",{value:"admin",...(existing?.role==="admin"?{selected:"selected"}:{})},"Admin"));
+  const role=el("select",{},...ROLES.map(r=>
+    el("option",{value:r.v,...(roleOf(existing)===r.v&&existing?{selected:"selected"}:{})},r.label)));
   const cap=el("select",{},
     el("option",{value:"both",...(capOf(existing)==="both"?{selected:"selected"}:{})},"Principal & co-supervisor"),
     el("option",{value:"principal",...(capOf(existing)==="principal"?{selected:"selected"}:{})},"Principal only"),
     el("option",{value:"co",...(capOf(existing)==="co"?{selected:"selected"}:{})},"Co-supervisor only"));
   const area=el("select",{},...AREAS.map(a=>el("option",{value:a,...(a===(existing?.area||AREAS[0])?{selected:"selected"}:{})},a)));
+  const roleHelp=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"});
   const capRow=el("div",{},el("label",{},"Supervisor capability"),cap);
-  const areaRow=el("div",{},el("label",{},"Supervision area"),area);
-  const sync=()=>{ const show = role.value==="supervisor" ? "" : "none"; capRow.style.display=show; areaRow.style.display=show; };
+  const areaRow=el("div",{},el("label",{},"Area"),area);
+  const warnRow=el("p",{class:"muted",style:"margin:0;font-size:13px;color:var(--clay,#c2410c)"});
+  const sync=()=>{
+    capRow.style.display = role.value==="supervisor" ? "" : "none";
+    areaRow.style.display= role.value==="admin"      ? "none" : "";   // panel members have an area too
+    roleHelp.textContent=(ROLES.find(r=>r.v===role.value)||{}).help||"";
+    /* Demoting a supervisor who still has students would strand those
+       allocations, so say so before it is saved rather than after. */
+    const load=existing?studentLoadOf(existing.id):0;
+    warnRow.textContent=(load&&role.value!=="supervisor")
+      ? "Heads up: "+(existing.name||"this person")+" is still listed on "+load+" student"+(load===1?"":"s")+
+        " as principal or co-supervisor. Changing the role leaves those allocations pointing at someone who is no longer offered in the supervisor pickers — reassign them on the Students tab."
+      : "";
+  };
   role.onchange=sync;
 
   const fields=[
     el("div",{},el("label",{},"Full name"),name),
     el("div",{},el("label",{},"Email"),email),
+    el("div",{},el("label",{},"Second email (optional)"),email2,
+      el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},
+        "Some staff read two mailboxes. If one is here, every email the hub prepares \u2014 single or group \u2014 goes to both addresses.")),
     el("div",{},el("label",{},"Mobile (optional)"),mobile),
   ];
   if(!editing) fields.push(el("div",{},el("label",{},"Temporary password"),pass));
-  fields.push(el("div",{},el("label",{},"Account role"),role), capRow, areaRow,
+  fields.push(el("div",{},el("label",{},"Account role"),role,roleHelp), warnRow, capRow, areaRow,
     el("div",{},el("p",{class:"muted",style:"margin:0"}, editing
-      ? "Updates this staff member's profile. Email and password are managed in Firebase Authentication and aren't changed here."
-      : "Creates a login account for this person — your own session isn't affected. Capability sets whether this supervisor can be a student's principal, co-supervisor, or either.")));
+      ? "Updates this staff member's profile. The login email and password are managed in Firebase Authentication and aren't changed here."
+      : "Creates a login account for this person — your own session isn't affected.")));
 
   modal(editing?"Edit staff":"Add staff login",
     el("div",{class:"grid"},...fields),
     async()=>{
+      const alt=email2.value.trim();
+      if(alt&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(alt)){ toast("That second email doesn't look like an address.",true); return false; }
+      if(alt&&alt.toLowerCase()===(existing?.email||email.value||"").trim().toLowerCase()){
+        toast("The second email is the same as the first — leave it blank instead.",true); return false; }
       if(editing){
-        const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
+        const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim(),email2:alt};
         if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
+        else if(role.value==="panellist"){ profile.supRole=null; profile.area=area.value; }
         else { profile.supRole=null; profile.area=null; }
         await DB.updateUser(existing.id,profile);
-        S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+        await reloadStaffCaches();
         toast("Staff updated."); done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
-      const profile={email:email.value.trim(),name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
+      const profile={email:email.value.trim(),email2:alt,name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
       if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
+      else if(role.value==="panellist"){ profile.area=area.value; }
       try{
         // If an import auto-created a profile-only record for this email,
         // carry its details over and remove it once the real login exists,
@@ -8242,11 +8788,13 @@ function staffForm(existing,done){
           }
           await DB.removeUser(orphan.id);
         }
-        S.supervisors=(await DB.listUsers()).filter(u=>u.role==="supervisor");
+        await reloadStaffCaches();
         toast("Staff login created — you're still signed in."); done(); return true;
       }catch(e){ toast(e.message||"Could not create account.",true); return false; }
     });
   sync();
+  // the allocation count arrives a moment later; re-run the warning once it does
+  refreshAllocCounts().then(sync).catch(()=>{});
 }
 
 async function copyForward(fromSem,done){
@@ -8563,7 +9111,7 @@ if(DEMO){
     if(!fbUser){ renderLogin(); return; }
     const u=await DB.getUser(fbUser.uid);
     if(!u){ toast("No staff profile found for this login.",true); await signOut(auth); renderLogin(); return; }
-    S.user={email:fbUser.email}; S.uid=fbUser.uid; S.role=u.role; S.userName=u.name;
+    S.user={email:fbUser.email}; S.uid=fbUser.uid; S.role=roleOf(u); S.userName=u.name;
     await afterLogin();
   });
 }
