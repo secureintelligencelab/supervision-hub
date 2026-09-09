@@ -844,10 +844,10 @@ const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
-  mem.users["admin1"]={email:"admin@uni.edu",name:"Admin Office",role:"admin",mobile:"+61 400 000 001"};
-  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222",area:"IT"};
-  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444",area:"Business"};
-  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666",area:"IT"};
+  mem.users["admin1"]={email:"admin@uni.edu",name:"Admin Office",role:"admin",mobile:"+61 400 000 001",employment:"ft-internal"};
+  mem.users["supA"]={email:"a.smith@uni.edu",name:"Dr Smith",role:"supervisor",supRole:"both",mobile:"+61 400 111 222",area:"IT",employment:"ft-internal"};
+  mem.users["supB"]={email:"b.jones@uni.edu",name:"Dr Jones",role:"supervisor",supRole:"principal",mobile:"+61 400 333 444",area:"Business",employment:"ft-internal"};
+  mem.users["supC"]={email:"c.patel@uni.edu",name:"Dr Patel",role:"supervisor",supRole:"co",mobile:"+61 400 555 666",area:"IT",employment:"casual-internal"};
   mem.semesters["s2-2026"]={label:"S2 2026",weeks:12,start:"2026-07-13",end:"2026-10-03",backWeeks:2,units:[
     {id:"u1",code:"RES915",name:"Literature, Methodology & Proposal"},
     {id:"u2",code:"RES920",name:"Research Project"}
@@ -885,15 +885,15 @@ function seedDemo(){
     authorRole:"student",text:"Thank you both. I'll have the revised methodology ready before our Wednesday consultation.",
     createdAt:dayAgo(2),pinned:false,readBy:{"student:45001":true}};
   // sample CoC assessor nominations + one seated panel
-  mem.users["supD"]={email:"d.novak@uni.edu",name:"Dr Novak",role:"supervisor",supRole:"both",mobile:"+61 400 777 888",area:"IT"};
+  mem.users["supD"]={email:"d.novak@uni.edu",name:"Dr Novak",role:"supervisor",supRole:"both",mobile:"+61 400 777 888",area:"IT",employment:"ft-internal"};
   /* Dr Wong reads two mailboxes, so the demo shows what a second address
      does: both are listed on the Contacts row and both go on any email. */
-  mem.users["supE"]={email:"e.wong@uni.edu",email2:"emily.wong@outlook.com",name:"Dr Wong",role:"supervisor",supRole:"both",mobile:"",area:"Business"};
+  mem.users["supE"]={email:"e.wong@uni.edu",email2:"emily.wong@outlook.com",name:"Dr Wong",role:"supervisor",supRole:"both",mobile:"",area:"Business",employment:"casual-internal"};
   /* Two people whose only role is sitting on CoC panels \u2014 they appear in
      every assessor picker and in no supervisor picker. Dr Ferrante has no
      login yet, which is what an imported name looks like. */
-  mem.users["panA"]={email:"h.ibrahim@uni.edu",name:"Dr Hana Ibrahim",role:"panellist",mobile:"+61 400 121 343",area:"IT"};
-  mem.users["panB"]={email:"l.ferrante@uni.edu",name:"Dr Luca Ferrante",role:"panellist",mobile:"",area:"Business",pendingLogin:true};
+  mem.users["panA"]={email:"h.ibrahim@uni.edu",name:"Dr Hana Ibrahim",role:"panellist",mobile:"+61 400 121 343",area:"IT",employment:"casual-internal"};
+  mem.users["panB"]={email:"l.ferrante@uni.edu",name:"Dr Luca Ferrante",role:"panellist",mobile:"",area:"Business",employment:"casual-external",pendingLogin:true};
   mem.panelPool["pp1"]={semesterId:"s2-2026",supervisorUid:"supA",supervisorName:"Dr Smith",
     supervisorEmail:"a.smith@uni.edu",updatedAt:dayAgo(5),members:[
       {id:"n1a",kind:"internal",uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu",mobile:"+61 400 333 444",org:"Internal"},
@@ -1139,6 +1139,40 @@ function areaPill(a){
   if(!a) return el("span",{class:"muted"},"—");
   return el("span",{class:"pill area-"+String(a).toLowerCase().replace(/\s+/g,"-")},a);
 }
+
+/* ---- Employment status ----
+   How the person is engaged, which the office needs on every staff record
+   for workload and payment, and which the coordinator reads when seating a
+   CoC panel: a casual brought in from outside is the assessor least likely
+   to be free on a weekday afternoon, and the one whose time has to be
+   accounted for. It belongs to the PERSON, not to a semester, so it lives
+   on the staff record and reads the same on the Semesters & staff page,
+   in Contacts, on the panel screens and in the exports.
+   Read through the helpers, never off the raw field — a record saved
+   before this existed simply has no status, and shows as "Not set". */
+const EMPLOYMENTS=[
+  {v:"ft-internal",     label:"Full time (internal)", short:"Full time",    cls:"approved",
+   help:"On the payroll full time."},
+  {v:"casual-internal", label:"Casual (internal)",    short:"Casual",       cls:"pending",
+   help:"Engaged casually, but employed by us."},
+  {v:"casual-external", label:"Casual (external)",    short:"Casual (ext)", cls:"blue",
+   help:"Engaged casually from outside the institution."}
+];
+const employmentOf=u=>(EMPLOYMENTS.find(e=>e.v===u?.employment)||{}).v||"";
+const employmentMeta=u=>EMPLOYMENTS.find(e=>e.v===employmentOf(u))||null;
+const employmentLabel=u=>(employmentMeta(u)||{}).label||"";
+/* The pill wherever staff are listed. "Not set" is deliberately visible
+   rather than a dash — it is a gap the coordinator is meant to fill. */
+function employmentPill(u){
+  const m=employmentMeta(u);
+  return m?el("span",{class:"pill "+m.cls,title:m.help},m.label)
+          :el("span",{class:"pill none",
+              title:"No employment status recorded \u2014 set it on the Semesters & staff tab"},"Not set");
+}
+/* A seated panel member's status: staff read it off the live user record,
+   so it stays right after the person's engagement changes; an external
+   nomination that was never a staff login has none. */
+const memberEmployment=m=>m?.kind==="internal"&&m.uid?employmentLabel(staffById(m.uid)):"";
 
 /* ---- Proposal / research title ----
    The title a student is confirming. It belongs to the student, not to a
@@ -1426,7 +1460,8 @@ function memberLine(m,...extra){
     el("div",{class:"pm-main"},
       el("div",{class:"pm-nm"},m.name||"\u2014"),
       el("div",{class:"pm-sub"},[m.email||"no email on file",m.mobile||"no mobile on file",
-        m.org||(m.kind==="internal"?"Internal":"External")].join(" \u00B7 "))),
+        m.org||(m.kind==="internal"?"Internal":"External"),
+        memberEmployment(m)].filter(Boolean).join(" \u00B7 "))),
     ...extra);
 }
 function seatChip(m,onRemove){
@@ -2003,10 +2038,10 @@ function downloadPanelXLSX(rows,groups,students,timetables,sem,scope){
     const ct=clashText(g,m); if(ct) r.clash.add((g.label||"Panel")+": "+ct);
   }));
   sheet("Assessors",
-    ["Assessor","Type","Email","Mobile","Organisation","Panels","Chairs","Students assessed","Over the usual "+PANEL_CAP+"?","Time clashes"],
-    [22,9,28,16,26,24,8,10,12,60],
+    ["Assessor","Type","Employment","Email","Mobile","Organisation","Panels","Chairs","Students assessed","Over the usual "+PANEL_CAP+"?","Time clashes"],
+    [22,9,18,28,16,26,24,8,10,12,60],
     [...byKey.values()].sort((a,b)=>String(a.m.name).localeCompare(String(b.m.name))).map(r=>[
-      r.m.name||"",typeOf(r.m),r.m.email||"",r.m.mobile||"",r.m.org||"",r.panels.join(", "),
+      r.m.name||"",typeOf(r.m),memberEmployment(r.m),r.m.email||"",r.m.mobile||"",r.m.org||"",r.panels.join(", "),
       String(r.chairs),String(r.students),r.students>PANEL_CAP?"Yes":"",[...r.clash].join("; ")]));
 
   const fname=("coc_panels_"+[scope?.slug,(sem?.label||"export")].filter(Boolean).join("_"))
@@ -2892,6 +2927,11 @@ async function viewPanelAdmin(v){
         const acts=el("div",{class:"row",style:"gap:5px"});
         acts.append(el("button",{class:"btn xs "+(timed?"ghost":""),onclick:()=>editStudentTime(g,s.id)},
           timed?"Change time":"Set time"));
+        /* Only offered once there is a time to take back, so a student who
+           has never been timetabled shows one button, not two. */
+        if(timed) acts.append(el("button",{class:"btn xs ghost",
+          title:"Take this student off the running order \u2014 nobody else's slot moves",
+          onclick:()=>clearStudentTime(g,s.id)},"Clear time"));
         acts.append(el("button",{class:"btn xs ghost",
           title:own?"This student has their own meeting link":lk?"Uses the panel's meeting link":"No meeting link yet",
           onclick:()=>editStudentLink(g,s.id)},own?"Change link":lk?"Own link":"Add link"));
@@ -2910,8 +2950,16 @@ async function viewPanelAdmin(v){
               +" \u00B7 "+(own?"own meeting link":lk?"panel meeting link":"no meeting link"))),
           acts));
       });
-    sBox.append(stuBox,el("div",{class:"row",style:"margin-bottom:6px"},
-      el("button",{class:"btn sm ghost",onclick:()=>editStudents(g)},"Assign students")));
+    sBox.append(stuBox,el("div",{class:"row",style:"margin-bottom:6px;gap:8px;flex-wrap:wrap"},
+      el("button",{class:"btn sm ghost",onclick:()=>editStudents(g)},"Assign students"),
+      /* The same reset as the timetable section, put where the times are
+         actually read. Shown whenever anyone on the panel has a time,
+         including students sitting on their own day with nothing booked. */
+      ...((g.slots||[]).some(x=>x.start)
+        ? [el("button",{class:"btn sm ghost",
+            title:"Clear every student's time on this panel and start again",
+            onclick:()=>resetTimetable(g)},"Clear all times")]
+        : [])));
 
     // ---- timing: one section, whether you polled for it or just set it ----
     const tBox=step("session","CoC session",
@@ -2960,6 +3008,14 @@ async function viewPanelAdmin(v){
           "\n\nWe can only book a session that suits all "+ms.length+" assessors.\n\nThank you,\nMRes Coordination\n");
       }},"\u2709 Chase "+waiting.length+" for availability"));
     }
+    /* The same reset, reachable from the timing section \u2014 which is where a
+       coordinator looks when the whole arrangement has fallen over, and the
+       only place it can be reached at all when times exist but nothing is
+       booked (so the Presentation timetable section below is not shown). */
+    if(chosen||groupSessions(g).length||(g.slots||[]).some(x=>x.start))
+      sessBtns.append(el("button",{class:"btn sm ghost",
+        title:"Clear the running order, the booking or the proposed sessions",
+        onclick:()=>resetTimetable(g)},"Reset the timetable"));
     tBox.append(sessBtns);
 
     // ---- where the panel meets ----
@@ -3077,6 +3133,12 @@ async function viewPanelAdmin(v){
       mins,
       el("button",{class:"btn sm",onclick:()=>regenerate(g,Number(mins.value))},
         saved.length?"Regenerate timetable":"Generate timetable"));
+    /* Regenerate keeps the decisions inside the timetable; Reset is for when
+       none of them are worth keeping. Offered only once there is something
+       to clear, so the empty state stays a single obvious button. */
+    if(saved.some(sl=>sl.start)) ctl.append(
+      el("button",{class:"btn sm ghost",title:"Clear the running order and start again",
+        onclick:()=>resetTimetable(g)},"Reset timetable"));
     wrap.append(ctl);
 
     if(built.unplaced.length) wrap.append(noticeBar("amber",
@@ -3581,6 +3643,103 @@ async function viewPanelAdmin(v){
       (keepOwnDay.length?" "+keepOwnDay.length+" student"+(keepOwnDay.length===1?"":"s")+" on their own day left as set.":""));
   }
 
+  /* Start again from nothing. Regenerate lays the SAME students out afresh
+     and protects the decisions inside the timetable; this is the other
+     thing a coordinator asks for, when the panel has been rearranged, the
+     session has moved and half the slots were hand-edited, and the honest
+     answer is "clear it and start over".
+     Three depths, because "reset the timetable" means different things on
+     a Monday and a Friday:
+       slots   — the running order only; the session stays booked, so
+                 Generate puts everyone back straight away.
+       session — the running order and the booking, so a different one of
+                 the proposed sessions can be booked from the availability
+                 already collected.
+       all     — the proposed sessions and the availability replies too:
+                 back to a panel that has its people and its students and
+                 no times at all.
+     Students' own meeting links are decisions rather than layout, so by
+     default they survive on timeless placeholder slots — the same thing
+     Regenerate does with them — and the box can be unticked to drop them.
+     Nothing here touches the panel's own link, its assessors or its
+     students. */
+  function resetTimetable(g){
+    const slots=(g.slots||[]);
+    const timed=slots.filter(x=>x.start);
+    const links=slots.filter(x=>x.studentDocId&&String(x.link||"").trim());
+    const ownDay=timed.filter(x=>x.date&&x.date!==groupSessions(g).find(s=>s.id===g.chosenSessionId)?.date);
+    const nSess=groupSessions(g).length;
+    const nReplies=Object.keys(g.availability||{}).length;
+    const booked=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+
+    const radios=[];
+    const opt=(val,label,sub,checked)=>{
+      const r=el("input",{type:"radio",name:"cocreset",value:val,
+        ...(checked?{checked:"checked"}:{}),style:"margin-top:3px"});
+      radios.push(r);
+      return el("label",{class:"row",
+        style:"gap:10px;align-items:flex-start;cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:10px"},
+        r,el("div",{style:"flex:1"},
+          el("div",{style:"font-weight:600"},label),
+          el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},sub)));
+    };
+    const depth=()=>(radios.find(r=>r.checked)||{}).value||"slots";
+    /* Start on the shallowest reset that would actually do something: with
+       no slots to clear, "clear the running order" is a dead option and
+       preselecting it only invites an error message. */
+    const dflt=timed.length?"slots":booked?"session":"all";
+    const keepLinks=el("input",{type:"checkbox",...(links.length?{checked:"checked"}:{}),
+      ...(links.length?{}:{disabled:"disabled"})});
+    const keepLabel=links.length===1
+      ? "Keep 1 student's own meeting link"
+      : "Keep "+(links.length||"any")+" students' own meeting links";
+
+    modal("Reset the timetable \u2014 "+(g.label||"panel"),
+      el("div",{class:"grid"},
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          timed.length
+            ? "This panel has "+timed.length+" slot"+(timed.length===1?"":"s")+
+              (ownDay.length?", "+ownDay.length+" of them on a student's own day":"")+
+              (booked?", inside the session booked for "+sessionLabel(booked):"")+"."
+            : "This panel has no slots yet.")),
+        el("div",{class:"grid",style:"gap:8px"},
+          opt("slots","Clear every student's time",
+            timed.length
+              ? "All "+timed.length+" slot"+(timed.length===1?"":"s")+" go, including buffers and any student sitting on their own day. Every student goes back to \u201Cno time yet\u201D. The session stays booked, so Generate can lay them out again."
+              : "There are no slots to clear on this panel.",dflt==="slots"),
+          opt("session","Clear the running order and unbook the session",
+            booked
+              ? "As above, and "+sessionLabel(booked)+" is no longer the booked session. The "+nSess+" proposed session"+(nSess===1?"":"s")+" and the availability replies are kept, so you can book a different one."
+              : "As above. Nothing is booked at the moment, so this is the same as clearing the times.",dflt==="session"),
+          opt("all","Clear everything back to no times",
+            "The running order, the booking, the "+nSess+" proposed session"+(nSess===1?"":"s")+
+            " and "+(nReplies?nReplies+" assessor "+(nReplies===1?"reply":"replies"):"the availability replies")+
+            " all go. The panel keeps its assessors, its students and its meeting link.",dflt==="all")),
+        el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer"},
+          keepLinks,el("span",{},keepLabel))),
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          links.length
+            ? "Their own links are held aside and reapplied when the timetable is generated again. Untick to drop them and put everyone back on the panel's link."
+            : "No student on this panel has a meeting link of their own, so there is nothing to keep.")),
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          "Assessors and supervisors who have already been emailed a time will not hear about this automatically \u2014 send the schedule again once the new times are set."))),
+      async()=>{
+        const d=depth();
+        if(!timed.length&&d==="slots"){ toast("There is no timetable to clear.",true); return false; }
+        const keep=keepLinks.checked&&links.length
+          ? [...new Map(links.map(x=>[x.studentDocId,
+              {date:"",start:"",end:"",studentDocId:x.studentDocId,link:String(x.link).trim()}])).values()]
+          : [];
+        const next={...g,slots:keep};
+        if(d==="session"||d==="all") next.chosenSessionId="";
+        if(d==="all"){ next.sessions=[]; next.availability={}; }
+        const what=d==="all"?"Timetable, booking and sessions cleared."
+                 :d==="session"?"Timetable cleared and the session unbooked."
+                 :"Timetable cleared.";
+        return persist(next,what+(keep.length?" "+keep.length+" own meeting link"+(keep.length===1?"":"s")+" kept.":""));
+      },"Reset");
+  }
+
   /* Set ONE student's time by name, creating their slot if the generator
      never ran or they were added later. Checks the two things worth
      checking \u2014 outside the booked session, and on top of another
@@ -3622,6 +3781,42 @@ async function viewPanelAdmin(v){
       },"Save link");
   }
 
+  /* Take ONE student off the timetable, leaving every other slot where it
+     is. The reverse of "Set time", and the piece that was missing: a time
+     could be changed but never taken back, so a student pulled from a
+     session had to be removed from the panel altogether or left sitting in
+     the running order at a time nobody meant. Their own meeting link is a
+     separate decision and survives on a timeless placeholder slot, exactly
+     as it does through Regenerate and Reset. */
+  function clearStudentTime(g,sid){
+    const st=students.find(x=>x.id===sid);
+    const saved=(g.slots||[]).slice();
+    const i=saved.findIndex(x=>x.studentDocId===sid&&x.start);
+    if(i<0){ toast((st?.name||"That student")+" has no time set.",true); return; }
+    const cur=saved[i], link=String(cur.link||"").trim();
+    const day=slotDate(g,cur);
+    modal("Clear "+(st?.name||"this student")+"'s time?",
+      el("div",{class:"grid"},
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          "Their slot \u2014 "+prettyTime(cur.start)+"\u2013"+prettyTime(cur.end)+
+          (day?" on "+prettyDate(day):"")+" \u2014 comes out of the running order and they go back to "+
+          "\u201Cno time yet\u201D. Everyone else on this panel keeps their slot, and this student "+
+          "stays on the panel and can be given a new time whenever you like.")),
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          link?"Their own meeting link is kept. Clear that separately with Change link."
+              :"Nothing else about this student changes.")),
+        el("div",{},el("p",{class:"muted",style:"margin:0"},
+          "If this time has already gone out to the assessors or the supervisors, they won't hear about it "+
+          "automatically \u2014 send the schedule again once the new time is set."))),
+      async()=>{
+        const next=link
+          ? saved.map((x,j)=>j===i?{date:"",start:"",end:"",studentDocId:sid,link}:x)
+          : saved.filter((_,j)=>j!==i);
+        return persist({...g,slots:next},
+          (st?.name||"Student")+" taken off the timetable."+(link?" Their own meeting link is kept.":""));
+      },"Clear the time");
+  }
+
   function editStudentTime(g,sid){
     const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
     const st=students.find(x=>x.id===sid);
@@ -3636,17 +3831,51 @@ async function viewPanelAdmin(v){
     const date=el("input",{type:"date",value:i>=0?(saved[i].date||""):""});
     const start=el("input",{type:"time",value:(i>=0&&saved[i].start)||last?.end||sess?.start||"13:00"});
     const end=el("input",{type:"time",value:(i>=0&&saved[i].end)||hhmm(minsOf(last?.end||sess?.start||"13:00")+per)});
+    const hadTime=i>=0&&!!saved[i].start;
+    /* Emptying both boxes is how a time is taken back, so the dialog says so
+       and offers a button that does the emptying \u2014 a coordinator should not
+       have to guess that a blank field is a command. */
+    const clearBtn=el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
+      start.value=""; end.value=""; syncClear();
+    }},"Clear the time");
+    const clearNote=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"});
+    const syncClear=()=>{
+      const blank=!start.value&&!end.value;
+      clearBtn.style.display=blank?"none":"";
+      clearNote.textContent=blank
+        ? "Both boxes are empty \u2014 saving now takes "+(st?.name||"this student")+
+          " off the timetable and back to \u201Cno time yet\u201D."+
+          (String(saved[i]?.link||"").trim()?" Their own meeting link is kept.":"")
+        : "";
+    };
+    start.addEventListener("change",syncClear); end.addEventListener("change",syncClear);
     modal("Presentation time \u2014 "+(st?.name||"student"),
       el("div",{class:"grid"},
         el("div",{},el("label",{},sess?"Day \u2014 leave blank for the panel's session day ("+prettyDate(sess.date)+")":"Day"),date),
         el("div",{class:"row",style:"gap:10px"},
           el("div",{style:"flex:1"},el("label",{},"From"),start),
           el("div",{style:"flex:1"},el("label",{},"To"),end)),
+        el("div",{},
+          hadTime?el("div",{class:"row",style:"gap:8px;align-items:center"},clearBtn):el("span",{}),
+          clearNote),
         el("div",{},el("p",{class:"muted",style:"margin:0"},
           (sess?"The panel's session runs "+sessionLabel(sess)+". A different day here books this student apart from it \u2014 the assessors are told which day in every schedule email and export. "
                :"This panel has no booked session, so each student's time carries its own day. ")+
           "Use \u2709 on the student's row afterwards to tell the panel."))),
       async()=>{
+        /* Blank on both sides means "no time", not "midnight". It removes the
+           slot outright, or keeps a timeless placeholder when this student has
+           a meeting link of their own to hold on to. */
+        if(!start.value&&!end.value){
+          if(i<0||!saved[i].start){ toast((st?.name||"This student")+" has no time to clear.",true); return false; }
+          const link=String(saved[i].link||"").trim();
+          const next=link
+            ? saved.map((x,j)=>j===i?{date:"",start:"",end:"",studentDocId:sid,link}:x)
+            : saved.filter((_,j)=>j!==i);
+          return persist({...g,slots:next},
+            (st?.name||"Student")+" taken off the timetable."+(link?" Their own meeting link is kept.":""));
+        }
+        if(!start.value||!end.value){ toast("Fill in both times, or empty both to clear the time.",true); return false; }
         if(minsOf(end.value)<=minsOf(start.value)){ toast("The finish time must be after the start.",true); return false; }
         if(!date.value&&!sess){ toast("Pick a day \u2014 this panel has no booked session to inherit one from.",true); return false; }
         const effDate=date.value||sess?.date||"";
@@ -8450,7 +8679,7 @@ async function viewContacts(v){
   function draw(){
     host.innerHTML="";
     const term=search.value.trim().toLowerCase();
-    const match=o=>!term||[o.name,o.email,o.email2,o.mobile,o.sid].some(x=>(x||"").toLowerCase().includes(term))
+    const match=o=>!term||[o.name,o.email,o.email2,o.mobile,o.sid,employmentLabel(o)].some(x=>(x||"").toLowerCase().includes(term))
       ||(normSid(o.sid)&&normSid(o.sid).includes(normSid(term)));
 
     // ---- Staff ----
@@ -8458,7 +8687,7 @@ async function viewContacts(v){
     sCard.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line)"},
       el("strong",{class:"ui"},"Staff")));
     const st=el("table",{});
-    st.append(el("thead",{},el("tr",{},...["Name","Role","Area","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
+    st.append(el("thead",{},el("tr",{},...["Name","Role","Employment","Area","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
     const stb=el("tbody",{});
     staff.filter(match).forEach(u=>{
       const contact=el("div",{class:"row",style:"gap:5px"});
@@ -8469,6 +8698,7 @@ async function viewContacts(v){
       stb.append(el("tr",{},
         el("td",{},el("strong",{},u.name||"—")),
         el("td",{},roleTag(u)),
+        el("td",{},employmentPill(u)),
         el("td",{},roleOf(u)==="admin"?el("span",{class:"muted"},"—"):areaPill(u.area)),
         el("td",{class:"muted"},mails.length
           ? el("div",{},...mails.map((e,i)=>el("div",{style:i?"font-size:12.5px;opacity:.8":""},e)))
@@ -8556,10 +8786,15 @@ async function viewPeople(v){
       ...ROLES.map(r=>el("li",{style:"margin-bottom:2px"},
         el("strong",{style:"font-weight:600"},r.label),el("span",{}," \u2014 "+r.help)))),
     el("p",{style:"margin:0"},
-      "Supervisors also carry a capability \u2014 principal & co, principal only, or co-supervisor only. Principals run the class, set consultation times and record attendance; co-supervisors attend and see the timetable and attendance read-only. Anyone marked \u201CNo login yet\u201D was auto-created from an import \u2014 add a staff login with the same email to activate them.")));
+      "Supervisors also carry a capability \u2014 principal & co, principal only, or co-supervisor only. Principals run the class, set consultation times and record attendance; co-supervisors attend and see the timetable and attendance read-only. Anyone marked \u201CNo login yet\u201D was auto-created from an import \u2014 add a staff login with the same email to activate them."),
+    el("p",{style:"margin:6px 0 0"},
+      "Every account also carries an employment status \u2014 "+
+      EMPLOYMENTS.map(e=>e.label).join(", ")+" \u2014 which shows here, in Contacts, "+
+      "beside the person on the CoC panel screens and in the panel export. Records saved before "+
+      "this show as \u201CNot set\u201D until you edit them; nothing depends on it being filled in.")));
   await refreshAllocCounts();
   const users=await DB.listUsers();
-  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Role","Area","Students",""].map(h=>el("th",{},h)))));
+  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","Role","Employment","Area","Students",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
   users.forEach(u=>{
     const actions=el("div",{class:"row"});
@@ -8581,6 +8816,7 @@ async function viewPeople(v){
       mails,
       el("td",{},acct),
       el("td",{},roleTag(u)),
+      el("td",{},employmentPill(u)),
       el("td",{},roleOf(u)==="admin"?el("span",{class:"muted"},"—"):areaPill(u.area)),
       /* A panel member with students still on them is a leftover from
          before the role existed, and needs reassigning \u2014 so it is shown
@@ -8696,6 +8932,21 @@ function staffForm(existing,done){
     el("option",{value:"principal",...(capOf(existing)==="principal"?{selected:"selected"}:{})},"Principal only"),
     el("option",{value:"co",...(capOf(existing)==="co"?{selected:"selected"}:{})},"Co-supervisor only"));
   const area=el("select",{},...AREAS.map(a=>el("option",{value:a,...(a===(existing?.area||AREAS[0])?{selected:"selected"}:{})},a)));
+  /* Employment status is asked of EVERY account — admins included — so it
+     sits with the name and email rather than under a role. Blank is a real
+     answer while the office catches up on older records, so it stays an
+     option and is never forced. */
+  const emp=el("select",{},
+    el("option",{value:"",...(employmentOf(existing)?{}:{selected:"selected"})},"\u2014 not set \u2014"),
+    ...EMPLOYMENTS.map(e=>el("option",{value:e.v,
+      ...(employmentOf(existing)===e.v?{selected:"selected"}:{})},e.label)));
+  const empHelp=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"});
+  const syncEmp=()=>{
+    const m=EMPLOYMENTS.find(e=>e.v===emp.value);
+    empHelp.textContent=m?m.help
+      :"Shown as \u201CNot set\u201D on the staff list, in Contacts and beside their name on the CoC panel screens.";
+  };
+  emp.onchange=syncEmp; syncEmp();
   const roleHelp=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"});
   const capRow=el("div",{},el("label",{},"Supervisor capability"),cap);
   const areaRow=el("div",{},el("label",{},"Area"),area);
@@ -8721,6 +8972,7 @@ function staffForm(existing,done){
       el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},
         "Some staff read two mailboxes. If one is here, every email the hub prepares \u2014 single or group \u2014 goes to both addresses.")),
     el("div",{},el("label",{},"Mobile (optional)"),mobile),
+    el("div",{},el("label",{},"Employment status"),emp,empHelp),
   ];
   if(!editing) fields.push(el("div",{},el("label",{},"Temporary password"),pass));
   fields.push(el("div",{},el("label",{},"Account role"),role,roleHelp), warnRow, capRow, areaRow,
@@ -8736,7 +8988,8 @@ function staffForm(existing,done){
       if(alt&&alt.toLowerCase()===(existing?.email||email.value||"").trim().toLowerCase()){
         toast("The second email is the same as the first — leave it blank instead.",true); return false; }
       if(editing){
-        const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim(),email2:alt};
+        const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim(),email2:alt,
+                       employment:emp.value};
         if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
         else if(role.value==="panellist"){ profile.supRole=null; profile.area=area.value; }
         else { profile.supRole=null; profile.area=null; }
@@ -8745,7 +8998,8 @@ function staffForm(existing,done){
         toast("Staff updated."); done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
-      const profile={email:email.value.trim(),email2:alt,name:name.value.trim(),role:role.value,mobile:mobile.value.trim()};
+      const profile={email:email.value.trim(),email2:alt,name:name.value.trim(),role:role.value,
+                     mobile:mobile.value.trim(),employment:emp.value};
       if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
       else if(role.value==="panellist"){ profile.area=area.value; }
       try{
@@ -8758,6 +9012,7 @@ function staffForm(existing,done){
           profile.name=profile.name||orphan.name;
           profile.area=profile.area||orphan.area;
           profile.supRole=profile.supRole||orphan.supRole;
+          profile.employment=profile.employment||orphan.employment||"";
         }
         let newUid;
         if(DEMO){
