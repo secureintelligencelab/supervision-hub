@@ -514,6 +514,17 @@
   .picklist .legend{display:flex;gap:10px;flex-wrap:wrap;padding:7px 13px;
     background:var(--sunken);border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-soft)}
 
+  /* ---- Presentation timetable ----
+     Times are records, so they are set in mono and never wrap. The
+     deliberation row is the panel's own time and sits on the recessed
+     surface; unallocated time is quiet, so a gap is visible without
+     looking like a problem. */
+  table.tt td.t{font-family:var(--mono);font-size:13px;white-space:nowrap;letter-spacing:-.02em}
+  table.tt tr.tt-delib td{background:var(--sunken)}
+  table.tt tr.tt-delib td:first-child{box-shadow:inset 3px 0 0 var(--ink-soft)}
+  table.tt tr.tt-free td{color:var(--ink-soft);font-style:italic}
+  table.tt input[type=date],table.tt input[type=time]{padding:7px 9px;font-size:14px}
+
   /* ---- Step-by-step dialogs ----
      Creating a panel asks four things, and they only make sense in order:
      you cannot chair a panel with nobody on it, and the name comes from
@@ -639,6 +650,11 @@
   .panelbody label::before{content:counter(pstep);flex:0 0 auto;width:22px;height:22px;
     border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;
     font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:0}
+  /* A form label inside a step (the timetable's minute boxes) is a field
+     name, not a step: it keeps the plain label look and takes no number. */
+  .panelbody label.field{counter-increment:none;display:block;font-size:13px;color:var(--ink-soft);
+    border-top:none;padding-top:0;margin:0 0 6px}
+  .panelbody label.field::before{content:none}
 
   /* ---- Phone ---- */
   @media (max-width:640px){
@@ -811,8 +827,12 @@ function getFactoryAuth(){
                           sessions:[{ id, date, start, end }],// half-days proposed by admin
                           availability:{ availKey:{ sessionId: true|false } },
                           chosenSessionId, slotMins,
-                          slots:[{ date?, start, end, studentDocId,
-                                   link? }],                  // date/link optional per student:
+                          presMins, qaMins, delibMins,        // presentation / Q&A per student and
+                                                              // the deliberation at the session end
+                                                              // (defaults 10 / 10 / 60)
+                          slots:[{ date?, start, qaStart, end, studentDocId,
+                                   link? }],                  // qaStart = presentation ends, Q&A begins
+                                                              // date/link optional per student:
                                                               // blank = the panel's session day
                                                               // and the panel meeting link
                           finalized:bool, finalizedAt          // DRAFT until the admin finalises;
@@ -924,8 +944,8 @@ function seedDemo(){
       u_supD:{se1:true, se2:true, se3:true, se4:true, se5:false},
       e_p_raman_uow_edu_au:{se1:false,se2:true,se3:true,se4:true,se5:true}
     },
-    chosenSessionId:"se2", slotMins:30,
-    slots:[{start:"13:00",end:"13:30",studentDocId:"st1"}],
+    chosenSessionId:"se2", slotMins:20, presMins:10, qaMins:10, delibMins:60,
+    slots:[{start:"13:00",qaStart:"13:10",end:"13:20",studentDocId:"st1"}],
     finalized:true, finalizedAt:dayAgo(1), assessorsReleased:true, assessorsReleasedAt:dayAgo(1)};
   /* A second, still-draft panel. It shares Dr Novak and Dr Raman with the
      first, so it sits on a different afternoon \u2014 one assessor can't be on
@@ -940,9 +960,9 @@ function seedDemo(){
     chairKey:"u_supE", meetingLink:"", studentIds:["st2","st3"],
     sessions:[{id:"se6",date:"2026-09-16",start:"13:00",end:"16:30",direct:true}],
     availability:{},
-    chosenSessionId:"se6", slotMins:30,
-    slots:[{date:"",start:"13:00",end:"13:30",studentDocId:"st2",link:""},
-           {date:"2026-09-18",start:"10:00",end:"10:30",studentDocId:"st3",
+    chosenSessionId:"se6", slotMins:20, presMins:10, qaMins:10, delibMins:60,
+    slots:[{date:"",start:"13:00",qaStart:"13:10",end:"13:20",studentDocId:"st2",link:""},
+           {date:"2026-09-18",start:"10:00",qaStart:"10:10",end:"10:20",studentDocId:"st3",
             link:"https://teams.microsoft.com/l/meetup/coc-mei-lin"}],
     finalized:false, finalizedAt:0, assessorsReleased:false, assessorsReleasedAt:0};
   mem.panels["pnl1"]={semesterId:"s2-2026",studentDocId:"st1",studentName:"Aisha Khan",studentSid:"45001",
@@ -1559,16 +1579,74 @@ function nominateExternal(existing,done){
      sessions: [ {id,date,start,end} ],          // half-days the admin proposes
      availability: { [availKey]: { [sessionId]: true|false } },
      chosenSessionId,                            // the agreed half-day
-     slotMins,                                   // presentation length
-     slots: [ {start,end,studentDocId} ]         // generated timetable
+     slotMins, presMins, qaMins, delibMins,      // slot = presentation + Q&A; deliberation last
+     slots: [ {start,qaStart,end,studentDocId} ] // generated timetable
    }
 
    The independence rule now reads across the whole group: a member may not
    assess ANY student in it, so adding a student and adding a member both
    have to check the other side.
    ============================================================ */
-const PANEL_SLOT_MINS=30;    // default presentation length
-const PANEL_BUFFER_MINS=30;  // tail kept for panel discussion
+/* ---- The shape of a CoC session ---------------------------------------
+   Every student gets one slot: a presentation, then questions from the
+   panel. The last hour of every session belongs to the panel alone, for
+   deliberation. So a session of 9:00–12:00 with six students reads:
+     9:00–9:20   student 1   (presentation 9:00–9:10, Q&A 9:10–9:20)
+     …
+     10:40–11:00 student 6
+     11:00–12:00 panel deliberation
+   The three lengths are defaults. Each panel can carry its own, and any
+   one student's slot can still be hand-edited afterwards. */
+const PANEL_PRES_MINS=10;    // presentation
+const PANEL_QA_MINS=10;      // questions & answers
+const PANEL_SLOT_MINS=PANEL_PRES_MINS+PANEL_QA_MINS;  // one student's slot
+const PANEL_DELIB_MINS=60;   // the last hour of the session: panel deliberation
+const PANEL_BUFFER_MINS=PANEL_DELIB_MINS;             // older name, same thing
+
+const numOr=(v,d)=>{ const n=Number(v); return (v===""||v==null||!Number.isFinite(n)||n<0)?d:Math.round(n); };
+/* A panel's own timing, falling back to the defaults. A record saved before
+   the split has only `slotMins`; it simply picks up the new defaults. */
+const timingOf=g=>({
+  presMins:Math.max(1,numOr(g?.presMins,PANEL_PRES_MINS)),
+  qaMins:numOr(g?.qaMins,PANEL_QA_MINS),
+  delibMins:numOr(g?.delibMins,PANEL_DELIB_MINS)});
+const slotMinsOf=g=>{ const t=timingOf(g); return t.presMins+t.qaMins; };
+/* Where one student's presentation ends and their Q&A begins. Stored on the
+   slot once set; a slot saved before that (or hand-edited to an odd length)
+   is split in the panel's presentation : Q&A proportion. */
+function slotParts(g,sl){
+  if(!sl?.start||!sl?.end||!sl.studentDocId) return null;
+  const a=minsOf(sl.start), b=minsOf(sl.end), t=timingOf(g);
+  let q=sl.qaStart?minsOf(sl.qaStart):a+Math.round((b-a)*t.presMins/Math.max(1,t.presMins+t.qaMins));
+  q=Math.min(Math.max(q,a),b);
+  return {start:sl.start,qaStart:hhmm(q),end:sl.end,presMins:q-a,qaMins:b-q};
+}
+/* The deliberation block: the last `delibMins` of the booked session. */
+function deliberationOf(g,sess){
+  if(!sess?.start||!sess?.end) return null;
+  const d=Math.min(timingOf(g).delibMins,sessionMins(sess));
+  return d>0?{start:hhmm(minsOf(sess.end)-d),end:sess.end,mins:d}:null;
+}
+/* The finish time that seats `n` students and still leaves the deliberation. */
+const fitEnd=(start,n,t)=>hhmm(minsOf(start)+Math.max(0,n)*(t.presMins+t.qaMins)+t.delibMins);
+/* "9:00 AM" — the clock format the office's timetable uses. */
+function clockTime(t){
+  if(!t) return "";
+  const m=minsOf(t), h=Math.floor(m/60), mm=m%60;
+  return (h%12===0?12:h%12)+":"+pad2(mm)+" "+(h<12?"AM":"PM");
+}
+const clockRange=(a,b)=>a&&b?clockTime(a)+"\u2013"+clockTime(b):"";
+/* "19 Oct 2026" and "Monday", for the same timetable. */
+function longDate(d){
+  const dt=new Date(String(d||"")+"T00:00:00");
+  // spelled out rather than locale-formatted: some browsers write "Sept"
+  return isNaN(dt)?String(d||""):dt.getDate()+" "+
+    ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()]+" "+dt.getFullYear();
+}
+/* One line describing a student's slot split, for tables and emails. */
+const partsLine=(g,sl)=>{ const p=slotParts(g,sl); return p
+  ? "Presentation "+clockRange(p.start,p.qaStart)+(p.qaMins?" \u00B7 Q&A "+clockRange(p.qaStart,p.end):"")
+  : ""; };
 
 /* Firestore map keys can't hold arbitrary punctuation safely, and memberKey
    carries an email. Flatten it for use as a key inside `availability`. */
@@ -1810,20 +1888,61 @@ function prettyDate(d){
 const sessionLabel=s=>prettyDate(s?.date)+", "+prettyTime(s?.start)+"–"+prettyTime(s?.end);
 const sessionMins=s=>Math.max(0,minsOf(s?.end)-minsOf(s?.start));
 
-/* Lay the students out back to back from the session start, keeping a buffer
-   at the end for the panel's own discussion. Returns the slots plus what had
-   to be left out, so the caller can say so instead of silently truncating. */
-function buildSlots(session,studentIds,slotMins){
-  const per=Math.max(5,slotMins||PANEL_SLOT_MINS);
+/* Lay the students out back to back from the session start — presentation,
+   then Q&A — keeping the last `delibMins` of the session for the panel's
+   deliberation. `timing` is a panel (its own lengths are read) or a plain
+   {presMins,qaMins,delibMins}. Returns the slots plus what had to be left
+   out, so the caller can say so instead of silently truncating. */
+function buildSlots(session,studentIds,timing){
+  const t=timingOf(timing);
+  const per=Math.max(5,t.presMins+t.qaMins);
   const total=sessionMins(session);
-  const usable=Math.max(0,total-PANEL_BUFFER_MINS);
+  const delib=Math.min(t.delibMins,total);
+  const usable=Math.max(0,total-delib);
   const fits=Math.floor(usable/per);
-  const slots=[]; let t=minsOf(session.start);
+  const slots=[]; let m=minsOf(session.start);
   studentIds.slice(0,fits).forEach(sid=>{
-    slots.push({start:hhmm(t),end:hhmm(t+per),studentDocId:sid}); t+=per;
+    slots.push({start:hhmm(m),qaStart:hhmm(m+Math.min(t.presMins,per)),end:hhmm(m+per),studentDocId:sid}); m+=per;
   });
   return {slots,unplaced:studentIds.slice(fits),
-          bufferStart:hhmm(t),bufferEnd:session.end,capacity:fits};
+          bufferStart:hhmm(m),bufferEnd:session.end,
+          delibStart:hhmm(minsOf(session.end)-delib),delibEnd:session.end,
+          capacity:fits,timing:t,
+          fitEnd:fitEnd(session.start,studentIds.length,t)};
+}
+/* The order students go in when a timetable is laid out again: whoever
+   already has a time on the session day keeps their place in the queue,
+   then everyone else in the order they were put on the panel. So swapping
+   two students, then changing the session time, keeps the swap. */
+function runningOrder(g,sessDate,ids){
+  const list=ids||groupStudents(g);
+  const at=new Map();
+  (g?.slots||[]).forEach(sl=>{
+    if(!sl.start||!sl.studentDocId) return;
+    if(sl.date&&sessDate&&sl.date!==sessDate) return;
+    if(!at.has(sl.studentDocId)) at.set(sl.studentDocId,minsOf(sl.start));
+  });
+  return list.map((id,i)=>({id,i,t:at.has(id)?at.get(id):9e9}))
+    .sort((a,b)=>a.t-b.t||a.i-b.i).map(x=>x.id);
+}
+/* Lay a panel out inside `sess`, the way Regenerate always has: a student on
+   their own day keeps their slot untouched, and a student's own meeting link
+   survives the move. Used by booking, setting the time and regenerating, so
+   none of them can quietly drop a decision the others keep. */
+function layOutPanel(g,sess,timing){
+  const old=(g?.slots||[]);
+  const keepOwnDay=old.filter(sl=>sl.date&&sl.date!==sess.date&&sl.start);
+  const kept=new Set(keepOwnDay.map(sl=>sl.studentDocId).filter(Boolean));
+  const linkOf=id=>old.find(x=>x.studentDocId===id&&String(x.link||"").trim())?.link||"";
+  const order=runningOrder(g,sess.date,groupStudents(g).filter(id=>!kept.has(id)));
+  const built=buildSlots(sess,order,timing||g);
+  // an unplaced student with their own link keeps it on a timeless placeholder
+  const heldLinks=built.unplaced.filter(id=>linkOf(id))
+    .map(id=>({date:"",start:"",qaStart:"",end:"",studentDocId:id,link:linkOf(id)}));
+  const slots=built.slots.map(sl=>({...sl,date:"",link:linkOf(sl.studentDocId)}))
+    .concat(keepOwnDay,heldLinks)
+    .sort((a,b)=>String(a.date||sess.date).localeCompare(String(b.date||sess.date))||minsOf(a.start)-minsOf(b.start));
+  return {...built,slots,keptOwnDay:keepOwnDay.length};
 }
 
 /* Write ONLY the availability map. saveGroup() rewrites every field, which
@@ -1858,8 +1977,16 @@ async function saveGroup(g){
                                        direct:!!s.direct})),   // direct = set by admin, not polled
     availability:g.availability||{},
     chosenSessionId:g.chosenSessionId||"",
-    slotMins:g.slotMins||PANEL_SLOT_MINS,
-    slots:(g.slots||[]).map(s=>({date:s.date||"",start:s.start||"",end:s.end||"",
+    /* Presentation, Q&A and deliberation lengths for this panel. slotMins is
+       kept (= presentation + Q&A) so anything still reading it sees the
+       right slot length. */
+    presMins:timingOf(g).presMins, qaMins:timingOf(g).qaMins, delibMins:timingOf(g).delibMins,
+    slotMins:slotMinsOf(g),
+    slots:(g.slots||[]).map(s=>({date:s.date||"",start:s.start||"",
+                                 // where the presentation hands over to Q&A; blank on a
+                                 // discussion slot or a link-only placeholder
+                                 qaStart:(s.studentDocId&&s.start&&s.end)?(slotParts(g,s)?.qaStart||""):"",
+                                 end:s.end||"",
                                  studentDocId:s.studentDocId||"",
                                  link:String(s.link||"").trim()})),
     finalized:!!g.finalized,
@@ -1897,6 +2024,8 @@ function exportRows(students,groups,cons){
       notIndependent:g?groupClashes(ms,[s.id],students).map(x=>x.m.name):[],
       cocDate:(slot?.date||sess?.date)?prettyDate(slot?.date||sess?.date):"",
       cocTime:slot?(prettyTime(slot.start)+"–"+prettyTime(slot.end)):"",
+      /* The slot split in two: presentation, then questions. */
+      parts:g&&slot?slotParts(g,slot):null,
       /* The two fields the CoC paperwork is actually built around: what the
          student is presenting, and where the panel joins from. */
       title:titleOf(s),
@@ -1922,7 +2051,7 @@ function downloadPanelCSV(rows,sem,scope){
     "member_1","member_1_email","member_1_mobile","member_1_type",
     "member_2","member_2_email","member_2_mobile","member_2_type",
     "member_3","member_3_email","member_3_mobile","member_3_type",
-    "coc_date","coc_start","coc_end","panel_status","independence"];
+    "coc_date","coc_start","coc_end","presentation","qa","panel_status","independence"];
   const lines=[head.join(",")];
   rows.forEach(r=>{
     const m=[0,1,2].map(i=>r.members[i]||{});
@@ -1931,7 +2060,8 @@ function downloadPanelCSV(rows,sem,scope){
       r.g?.label||"", r.chair?.name||"",
       ...m.flatMap(x=>[x.name||"",x.email||"",x.mobile||"",
                        x.kind?(x.kind==="internal"?"internal":"external"):""]),
-      (r.slot?.date||r.sess?.date||""), r.slot?r.slot.start:"", r.slot?r.slot.end:"", r.status,
+      (r.slot?.date||r.sess?.date||""), r.slot?r.slot.start:"", r.slot?r.slot.end:"",
+      r.parts?clockRange(r.parts.start,r.parts.qaStart):"", r.parts&&r.parts.qaMins?clockRange(r.parts.qaStart,r.parts.end):"", r.status,
       r.notIndependent.length?("override: supervised by "+r.notIndependent.join(", ")):"ok"];
     lines.push(cell.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(","));
   });
@@ -1941,6 +2071,62 @@ function downloadPanelCSV(rows,sem,scope){
   const a=el("a",{href:URL.createObjectURL(blob),download:fname});
   document.body.append(a); a.click(); a.remove();
   toast("Panel export downloaded.");
+}
+
+/* The presentation timetable in the office's own layout \u2014 one row per
+   student slot, then one for the panel's deliberation:
+     A | 19 Oct 2026 | Monday | 9:00 AM\u201312:00 PM | 9:00 AM\u20139:20 AM |
+       9:00 AM\u20139:10 AM | 9:10 AM\u20139:20 AM | Aashish Raut | cihe251306
+     \u2026
+     A | 19 Oct 2026 | Monday | 9:00 AM\u201312:00 PM | 11:00 AM\u201312:00 PM | | | Panel deliberation |
+   The first nine columns are that layout exactly; the rest are what the
+   running order is read out with on the day. A student sitting on their own
+   day carries that date and no session. Built once, so the Excel tab and
+   the CSV download can never disagree. */
+const TIMETABLE_HEAD=["Panel","Date","Day","Session","Slot","Presentation","Q&A","Student","Student ID"];
+const TIMETABLE_EXTRA_HEAD=["Proposal title","Principal supervisor","Co-supervisor","Chair","Meeting link","Status"];
+function timetableRows(gs,students){
+  const out=[];
+  gs.forEach(g=>{
+    const se=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    const chair=groupMembers(g).find(x=>isChair(g,x))?.name||"";
+    const timed=(g.slots||[]).filter(sl=>sl.start&&sl.end&&(sl.date||se?.date))
+      .slice().sort((a,b)=>String(a.date||se?.date).localeCompare(String(b.date||se?.date))||minsOf(a.start)-minsOf(b.start));
+    if(!timed.length&&!se) return;
+    const sessCell=d=>se&&d===se.date?clockRange(se.start,se.end):"";
+    timed.forEach(sl=>{
+      const d=sl.date||se?.date||"";
+      const s=students.find(x=>x.id===sl.studentDocId);
+      const p=slotParts(g,sl);
+      out.push({g,kind:s?"student":"other",studentDocId:sl.studentDocId||"",cells:[g.label||"",longDate(d),weekdayOf(d),sessCell(d),
+        clockRange(sl.start,sl.end),
+        p?clockRange(p.start,p.qaStart):"", p&&p.qaMins?clockRange(p.qaStart,p.end):"",
+        s?s.name:(sl.studentDocId?"(student removed)":"Panel discussion"), s?.sid||""],
+        extra:[s?titleOf(s):"",s?(s.principalName||supName(s.principalUid)):"",s?.coName||"",chair,slotLink(g,sl)]});
+    });
+    const dl=deliberationOf(g,se);
+    if(se?.date&&dl) out.push({g,kind:"deliberation",cells:[g.label||"",longDate(se.date),weekdayOf(se.date),
+      clockRange(se.start,se.end),clockRange(dl.start,dl.end),"","","Panel deliberation",""],
+      extra:["","","",chair,String(g.meetingLink||"").trim()]});
+  });
+  return out;
+}
+/* `onlyIds`, when given, keeps just those students' rows \u2014 a file for one
+   supervisor that doesn't carry other students' names and titles. */
+function downloadCocTimetableCSV(gs,students,sem,scope,onlyIds){
+  const rows=timetableRows(gs.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label))),students)
+    .filter(r=>!onlyIds||(r.kind==="student"&&onlyIds.has(r.studentDocId)));
+  if(!rows.length){ toast("No panel in that selection has a session or a timed student yet.",true); return; }
+  const q=x=>`"${String(x??"").replace(/"/g,'""')}"`;
+  const lines=[TIMETABLE_HEAD.concat(TIMETABLE_EXTRA_HEAD).map(q).join(",")]
+    .concat(rows.map(r=>r.cells.concat(r.extra,[({both:"Released",assessors:"Assessors only",
+      supervisors:"Supervisors only",none:"Draft"})[releaseState(r.g)]]).map(q).join(",")));
+  // BOM so Excel reads the en dash in "9:00 AM\u201312:00 PM" correctly
+  const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const fname=("coc_timetable_"+[scope?.slug,(sem?.label||"export")].filter(Boolean).join("_"))
+    .replace(/\s+/g,"_")+".csv";
+  saveBlob(blob,fname);
+  toast("Timetable downloaded.");
 }
 
 /* The same CoC record as an Excel workbook, on four tabs, because the one
@@ -1978,14 +2164,15 @@ function downloadPanelXLSX(rows,groups,students,timetables,sem,scope){
      "Panel","Panel status","Chair",
      "Assessor 1","Assessor 1 email","Assessor 1 type","Assessor 2","Assessor 2 email","Assessor 2 type",
      "Assessor 3","Assessor 3 email","Assessor 3 type",
-     "CoC date","Start","End","Meeting link","Independence"],
-    [22,22,12,26,44,18,10,10,10,12,18,20,26,10,20,26,10,20,26,10,12,8,8,40,30],
+     "CoC date","Start","End","Presentation","Q&A","Meeting link","Independence"],
+    [22,22,12,26,44,18,10,10,10,12,18,20,26,10,20,26,10,20,26,10,12,8,8,20,20,40,30],
     rows.map(r=>{
       const m=[0,1,2].map(i=>r.members[i]||{});
       return [r.principal,r.s.name,r.s.sid||"",r.s.email||"",r.title,r.s.coName||"",r.s.campus||"",r.s.area||"",
         r.g?.label||"",statusOf(r.g),r.chair?.name||"",
         ...m.flatMap(x=>[x.name||"",x.email||"",typeOf(x)]),
-        (r.slot?.date||r.sess?.date||""),r.slot?r.slot.start:"",r.slot?r.slot.end:"",r.meetingLink,
+        (r.slot?.date||r.sess?.date||""),r.slot?r.slot.start:"",r.slot?r.slot.end:"",
+        r.parts?clockRange(r.parts.start,r.parts.qaStart):"",r.parts&&r.parts.qaMins?clockRange(r.parts.qaStart,r.parts.end):"",r.meetingLink,
         r.notIndependent.length?"Override: supervised by "+r.notIndependent.join(", "):"OK"];
     }));
 
@@ -2003,29 +2190,13 @@ function downloadPanelXLSX(rows,groups,students,timetables,sem,scope){
         String(g.meetingLink||"").trim(),clashText(g)];
     }));
 
-  // 3. the running order, one row per slot. A slot may carry its own
-  // date (a student presenting on a different day), so the date is read
-  // per row, and a panel with dated slots but no booked session still
-  // makes it in.
-  const tt=[];
-  sorted.forEach(g=>{
-    const se=sessOf(g);
-    if(!se&&!(g.slots||[]).some(sl=>sl.date)) return;
-    const chair=groupMembers(g).find(x=>isChair(g,x))?.name||"";
-    (g.slots||[]).forEach(sl=>{
-      const s=students.find(x=>x.id===sl.studentDocId);
-      tt.push([g.label||"",statusOf(g),sl.date||se?.date||"",sl.start,sl.end,
-        s?s.name:"Panel discussion",s?.sid||"",s?titleOf(s):"",
-        s?(s.principalName||supName(s.principalUid)):"",s?.coName||"",chair,slotLink(g,sl)]);
-    });
-    const onDay=(g.slots||[]).filter(sl=>!sl.date||sl.date===se?.date);
-    const last=onDay[onDay.length-1];
-    if(se&&last&&minsOf(last.end)<minsOf(se.end))
-      tt.push([g.label||"",statusOf(g),se.date,last.end,se.end,"Panel discussion","","","","",chair,String(g.meetingLink||"").trim()]);
-  });
-  sheet("Timetable",
-    ["Panel","Status","Date","Start","End","Student","Student ID","Proposal title","Principal supervisor","Co-supervisor","Chair","Meeting link"],
-    [12,11,12,8,8,24,12,44,22,18,18,40],tt);
+  // 3. the running order, one row per slot, in the office's timetable
+  // layout: panel, date, day, session, slot, presentation, Q&A, student,
+  // ID \u2014 then the panel's own deliberation hour as the last row.
+  const tt=timetableRows(sorted,students);
+  sheet("Timetable",TIMETABLE_HEAD.concat(TIMETABLE_EXTRA_HEAD),
+    [18,13,11,20,20,20,20,24,13,44,22,18,18,40,12],
+    tt.map(r=>r.cells.concat(r.extra.concat([statusOf(r.g)]))));
 
   // 4. one row per assessor, load counted across every panel they sit on
   const byKey=new Map();
@@ -2383,6 +2554,7 @@ async function viewPanels(v){
           titleOf(s)?"Edit":"Add the title")));
       // The panel meets once; every student on it joins from the same link.
       const whenCell=el("td",{},when);
+      if(slot&&day&&partsLine(g,slot)) whenCell.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(g,slot)));
       const myLink=g?slotLink(g,slot):"";
       if(myLink) whenCell.append(el("div",{style:"margin-top:4px"},joinLink(myLink,"Join")));
       tb.append(el("tr",{},
@@ -2447,6 +2619,7 @@ async function viewPanels(v){
         const timeCell=el("td",{},isScheduled(g,id)
           ?el("strong",{},prettyDate(slotDate(g,slot))+", "+prettyTime(slot.start)+"–"+prettyTime(slot.end))
           :el("span",{class:"pill pending"},"Not scheduled"));
+        if(isScheduled(g,id)&&partsLine(g,slot)) timeCell.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(g,slot)));
         const jl=slotLink(g,slot);
         if(jl) timeCell.append(el("div",{style:"margin-top:4px"},joinLink(jl,"Join")));
         tb.append(el("tr",{},
@@ -2705,6 +2878,9 @@ async function viewPanelAdmin(v){
       " students \u2014 more if needed. Panels can run at the same time as each other; the only timing rule is that one assessor can't be booked in two places at once. Work down each card: assessors, students, session, timetable \u2014 then release it.","info"));
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:14px;flex-wrap:wrap"},
       el("button",{class:"btn",onclick:()=>editMembers(null)},"+ Create a panel"),
+      /* Setting the CoC days for every panel at once \u2014 the finish time
+         and each running order follow from the students on each panel. */
+      groups.length?el("button",{class:"btn ghost",onclick:()=>setSessionsBulk()},"\u23F2 Set session times"):el("span",{}),
       /* The coordinator usually has the whole allocation in a spreadsheet
          already, so importing it is often the FIRST thing they do \u2014 it
          sits next to the manual button rather than buried in a menu. */
@@ -2712,6 +2888,11 @@ async function viewPanelAdmin(v){
       groups.length?el("button",{class:"btn ghost",onclick:()=>autoBuild()},"Fill remaining students"):el("span",{}),
       groups.some(g=>scheduledCount(g))
         ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"chair"})},"\u2709 Email the schedule")
+        :el("span",{}),
+      /* Supervisors get their own students' times, across every panel
+         those students sit on, rather than one panel at a time. */
+      groups.some(g=>scheduledCount(g))
+        ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"supervisor"})},"\u2709 Share timetable with supervisors")
         :el("span",{}),
       /* Whole-list control, because opening eleven panels one at a time to
          find the one you want is the thing collapsing was meant to fix. */
@@ -2937,14 +3118,15 @@ async function viewPanelAdmin(v){
           onclick:()=>editStudentLink(g,s.id)},own?"Change link":lk?"Own link":"Add link"));
         if(lk) acts.append(joinLink(lk,"Join"));
         if(timed) acts.append(el("button",{class:"btn xs ghost",
-          title:"Email this student's time to the panel and chair",
+          title:"Email this student's time to the panel and the student's supervisors",
           onclick:()=>scheduleEmailDialog({mode:"student",groupId:g.id,studentId:s.id})},"\u2709"));
         stuBox.append(el("div",{class:"pmember"},
           el("div",{class:"pm-main"},
             el("div",{class:"pm-nm"},s.name+(s.sid?" ("+s.sid+")":"")),
             el("div",{class:"pm-sub"},(timed
-              ? prettyTime(timed.start)+"\u2013"+prettyTime(timed.end)
+              ? clockRange(timed.start,timed.end)
                 +(slotDate(g,timed)?" \u00B7 "+prettyDate(slotDate(g,timed)):"")
+                +(slotParts(g,timed)?" \u00B7 "+slotParts(g,timed).presMins+" min presentation + "+slotParts(g,timed).qaMins+" min Q&A":"")
                 +(timed.date&&chosen&&timed.date!==chosen.date?" \u2014 own day":"")
               : "no time yet")
               +" \u00B7 "+(own?"own meeting link":lk?"panel meeting link":"no meeting link"))),
@@ -2967,6 +3149,7 @@ async function viewPanelAdmin(v){
     if(chosen){
       tBox.append(noticeBar(sessionWorks(g,chosen)?"green":"amber",
         "Booked for "+sessionLabel(chosen)+
+        (deliberationOf(g,chosen)?" \u2014 deliberation "+clockRange(deliberationOf(g,chosen).start,deliberationOf(g,chosen).end):"")+
         (sessionWorks(g,chosen)
           ? " \u2014 suits every assessor."
           : " \u2014 you set this over the availability replies. Tell the assessors it has moved.")));
@@ -2989,13 +3172,13 @@ async function viewPanelAdmin(v){
     }
     if(!groupSessions(g).length){
       tBox.append(el("p",{class:"muted",style:"margin:0 0 10px"},
-        "Set the time directly if you already know it. Or propose a few half-days and let the assessors tick what suits \u2014 you can still book any of them. And each student can be given their own time, even on a different day, straight from the Students list above."));
+        "Set the session if you already know it: give the date and start, and each student's presentation and Q&A is laid out for you, with the last hour kept for the panel's deliberation. Or propose a few half-days and let the assessors tick what suits \u2014 you can still book any of them. Any student's time can be changed or cleared afterwards from the Students list above."));
     }else{
       tBox.append(availabilityTable(g));
     }
     const sessBtns=el("div",{class:"row",style:"gap:8px;margin-bottom:6px"},
       el("button",{class:"btn sm",onclick:()=>setTimeDirect(g)},
-        chosen?"Change the time":"Set the time directly"),
+        chosen?"Change the session":"Set the session"),
       el("button",{class:"btn sm ghost",onclick:()=>addSession(g)},"+ Propose a session"));
     if(groupSessions(g).length){
       const waiting=ms.filter(m=>m.kind==="internal"
@@ -3063,7 +3246,8 @@ async function viewPanelAdmin(v){
             title:gaps.length?"Still to do: "+gaps.join(", "):"Let the students' supervisors see this panel",
             onclick:()=>finalise(g)},"Release to supervisors"),
       scheduledCount(g)
-        ? el("button",{class:"btn sm ghost",onclick:()=>scheduleEmailDialog({mode:"panel",groupId:g.id})},"\u2709 Email the schedule")
+        ? el("button",{class:"btn sm ghost",title:"Email the running order to the assessors, the students' supervisors, or both",
+            onclick:()=>scheduleEmailDialog({mode:"panel",groupId:g.id,recipients:"both"})},"\u2709 Email panel & supervisors")
         : el("span",{}),
       el("span",{class:"spacer"}),
       el("button",{class:"btn sm ghost",onclick:()=>editMembers(g)},"Edit name & assessors"),
@@ -3120,61 +3304,133 @@ async function viewPanelAdmin(v){
     return wrap;
   }
 
-  function timetableBlock(g,chosen,stu){
-    const built=buildSlots(chosen,groupStudents(g),g.slotMins||PANEL_SLOT_MINS);
-    const saved=(g.slots||[]);
-    const wrap=el("div",{style:"margin-top:6px"});
-    wrap.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin-bottom:8px"},
-      "Session: "+sessionLabel(chosen)));
+  /* Three small number boxes \u2014 presentation, Q&A, deliberation \u2014 used
+     wherever a session is set, so the lengths are always changed the same way. */
+  function timingInputs(t,onInput){
+    const mk=(v,min,label)=>el("input",{type:"number",min:String(min),max:"240",step:"1",
+      value:String(v),inputmode:"numeric","aria-label":label});
+    const pres=mk(t.presMins,1,"Presentation minutes"), qa=mk(t.qaMins,0,"Q&A minutes"),
+          delib=mk(t.delibMins,0,"Deliberation minutes");
+    [pres,qa,delib].forEach(x=>x.addEventListener("input",()=>onInput&&onInput()));
+    const field=(label,inp)=>el("div",{style:"flex:1;min-width:110px"},el("label",{class:"field"},label),inp);
+    return {node:el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+        field("Presentation (min)",pres),field("Q&A (min)",qa),field("Deliberation (min)",delib)),
+      read:()=>timingOf({presMins:pres.value,qaMins:qa.value,delibMins:delib.value})};
+  }
 
-    const mins=el("select",{},...[15,20,30,45,60].map(n=>
-      el("option",{value:String(n),...(Number(g.slotMins||PANEL_SLOT_MINS)===n?{selected:"selected"}:{})},n+" min each")));
-    const ctl=el("div",{class:"row",style:"gap:8px;margin-bottom:10px"},
-      mins,
-      el("button",{class:"btn sm",onclick:()=>regenerate(g,Number(mins.value))},
-        saved.length?"Regenerate timetable":"Generate timetable"));
-    /* Regenerate keeps the decisions inside the timetable; Reset is for when
-       none of them are worth keeping. Offered only once there is something
-       to clear, so the empty state stays a single obvious button. */
-    if(saved.some(sl=>sl.start)) ctl.append(
-      el("button",{class:"btn sm ghost",title:"Clear the running order and start again",
-        onclick:()=>resetTimetable(g)},"Reset timetable"));
-    wrap.append(ctl);
+  /* The running order as the panel will read it on the day: each student's
+     slot split into presentation and Q&A, any unallocated time, then the
+     deliberation. Used read-only in the session dialog's preview. */
+  function runningOrderPreview(g,sess,lay){
+    const t=lay.timing, dl=deliberationOf(t,sess);
+    const tb=el("tbody",{});
+    const onDay=lay.slots.filter(sl=>sl.start&&(!sl.date||sl.date===sess.date));
+    onDay.forEach(sl=>{
+      const st=students.find(x=>x.id===sl.studentDocId), pp=slotParts(t,sl);
+      tb.append(el("tr",{},
+        el("td",{class:"t"},clockRange(sl.start,sl.end)),
+        el("td",{class:"t"},pp?clockRange(pp.start,pp.qaStart):""),
+        el("td",{class:"t"},pp&&pp.qaMins?clockRange(pp.qaStart,pp.end):"\u2014"),
+        el("td",{},st?st.name+(st.sid?" ("+st.sid+")":""):"Panel discussion")));
+    });
+    const lastEnd=onDay.length?Math.max(...onDay.map(x=>minsOf(x.end))):minsOf(sess.start);
+    const freeTo=dl?minsOf(dl.start):minsOf(sess.end);
+    if(lastEnd<freeTo) tb.append(el("tr",{class:"tt-free"},
+      el("td",{class:"t"},clockRange(hhmm(lastEnd),hhmm(freeTo))),el("td",{colspan:"3"},"Not allocated \u2014 "+(freeTo-lastEnd)+" min")));
+    if(dl) tb.append(el("tr",{class:"tt-delib"},
+      el("td",{class:"t"},clockRange(dl.start,dl.end)),el("td",{colspan:"3"},"Panel deliberation")));
+    return el("div",{class:"scroll-x"},el("table",{class:"tt"},
+      el("thead",{},el("tr",{},...["Slot","Presentation","Q&A","Student"].map(h=>el("th",{},h)))),tb));
+  }
+
+  function timetableBlock(g,chosen,stu){
+    const t=timingOf(g);
+    const saved=(g.slots||[]);
+    const dl=deliberationOf(g,chosen);
+    const built=buildSlots(chosen,groupStudents(g),g);
+    const wrap=el("div",{style:"margin-top:6px"});
+    wrap.append(el("p",{class:"muted ui",style:"font-size:12.5px;margin:0 0 10px"},
+      prettyDate(chosen.date)+", "+clockRange(chosen.start,chosen.end)+". Each student has "+
+      t.presMins+" min to present and "+t.qaMins+" min of questions"+
+      (dl?"; the last "+dl.mins+" min are the panel's deliberation.":".")));
+
+    /* Change a length and press Regenerate: every student on the session
+       day is laid out again in their current order. */
+    const ti=timingInputs(t);
+    const hasTimes=saved.some(sl=>sl.start);
+    const btns=el("div",{class:"row",style:"gap:8px"},
+      el("button",{class:"btn sm",onclick:()=>regenerate(g,ti.read())},
+        hasTimes?"Regenerate timetable":"Generate timetable"));
+    if(hasTimes) btns.append(el("button",{class:"btn sm ghost",title:"Clear the running order and start again",
+      onclick:()=>resetTimetable(g)},"Reset timetable"));
+    wrap.append(el("div",{class:"row",style:"gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px"},
+      el("div",{style:"flex:1;min-width:300px"},ti.node),btns));
 
     if(built.unplaced.length) wrap.append(noticeBar("amber",
       built.unplaced.length+(built.unplaced.length===1?" student doesn't":" students don't")+
-      " fit in this session at "+(g.slotMins||PANEL_SLOT_MINS)+" minutes each (room for "+built.capacity+
-      ", keeping "+PANEL_BUFFER_MINS+" minutes for panel discussion). Shorten the slots, extend the session, or move someone to another panel."));
+      " fit before the deliberation at "+slotMinsOf(g)+" minutes each (room for "+built.capacity+
+      "). Finish the session at "+clockTime(built.fitEnd)+", shorten the slots, or move someone to another panel.",
+      el("button",{class:"btn sm",onclick:()=>extendSession(g,built.fitEnd)},"Finish at "+clockTime(built.fitEnd))));
 
-    if(!saved.some(sl=>sl.start)){
+    if(!hasTimes){
       wrap.append(el("p",{class:"muted",style:"margin:0"},
-        "Nothing generated yet \u2014 press Generate to allocate the "+stu.length+" students into slots."));
+        "Nothing generated yet \u2014 press Generate to lay the "+stu.length+" students out."));
       return wrap;
     }
-    const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Time","Student","Proposal title","Principal supervisor","Meeting link",""].map(h=>el("th",{},h)))));
+
+    const timed=saved.map((sl,i)=>({sl,i})).filter(x=>x.sl.start);
+    const sameDay=x=>!x.sl.date||x.sl.date===chosen.date;
+    const dayRows=timed.filter(sameDay).sort((a,b)=>minsOf(a.sl.start)-minsOf(b.sl.start));
+    const ownRows=timed.filter(x=>!sameDay(x));
+    const movable=dayRows.filter(x=>x.sl.studentDocId);
+
+    // anyone running into the deliberation is worth saying out loud
+    if(dl){
+      const into=dayRows.filter(x=>minsOf(x.sl.end)>minsOf(dl.start));
+      if(into.length) wrap.append(noticeBar("amber",
+        into.map(x=>students.find(y=>y.id===x.sl.studentDocId)?.name||"A slot").join(", ")+
+        (into.length===1?" runs":" run")+" into the panel deliberation ("+clockRange(dl.start,dl.end)+
+        "). Move the time, finish the session later, or shorten the slots and regenerate."));
+    }
+
+    const t2=el("table",{class:"tt"});
+    t2.append(el("thead",{},el("tr",{},...["Slot","Presentation","Q&A","Student","Proposal title","Principal supervisor","Meeting link",""].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
-    saved.forEach((sl,i)=>{
-      if(!sl.start) return;   // link-only placeholder, shown in the Students list above
+    const row=({sl,i},own)=>{
       const s=students.find(x=>x.id===sl.studentDocId);
-      const acts=el("div",{class:"row",style:"gap:5px"},
+      const pp=slotParts(g,sl);
+      const k=movable.findIndex(x=>x.i===i);
+      const acts=el("div",{class:"row",style:"gap:5px;flex-wrap:nowrap"});
+      if(!own&&k>=0){
+        acts.append(
+          el("button",{class:"btn xs ghost",title:"Move earlier \u2014 swaps with the student before",
+            "aria-label":"Move earlier",...(k===0?{disabled:"disabled"}:{}),
+            onclick:()=>swapSlots(g,movable[k].i,movable[k-1].i)},"\u2191"),
+          el("button",{class:"btn xs ghost",title:"Move later \u2014 swaps with the student after",
+            "aria-label":"Move later",...(k===movable.length-1?{disabled:"disabled"}:{}),
+            onclick:()=>swapSlots(g,movable[k].i,movable[k+1].i)},"\u2193"));
+      }
+      acts.append(
         el("button",{class:"btn xs ghost",onclick:()=>editSlot(g,i)},"Edit"),
-        el("button",{class:"btn xs ghost",onclick:()=>{
-          persist({...g,slots:saved.filter((_,j)=>j!==i)},"Slot removed.");
-        }},"Remove"));
+        el("button",{class:"btn xs ghost",title:s?"Clear this student's time \u2014 nobody else moves":"Remove this slot",
+          onclick:()=>{
+            const link=String(sl.link||"").trim();
+            const next=link&&sl.studentDocId
+              ? saved.map((x,j)=>j===i?{date:"",start:"",qaStart:"",end:"",studentDocId:sl.studentDocId,link}:x)
+              : saved.filter((_,j)=>j!==i);
+            persist({...g,slots:next},s?s.name+"'s time cleared.":"Slot removed.");
+          }},"Clear"));
       tb.append(el("tr",{},
-        el("td",{},el("strong",{},prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)),
-          sl.date&&sl.date!==chosen.date
-            ?el("div",{},el("span",{class:"pill blue",title:"This student presents on a different day from the panel's session"},prettyDate(sl.date)))
-            :el("span",{})),
-        // ID moves under the name so the title gets a column of its own —
-        // this table is the running order read out on the day.
+        el("td",{class:"t"},el("strong",{},clockRange(sl.start,sl.end)),
+          own?el("div",{},el("span",{class:"pill blue",title:"This student presents on a different day from the panel's session"},prettyDate(sl.date))):el("span",{})),
+        el("td",{class:"t"},pp?clockRange(pp.start,pp.qaStart):el("span",{class:"muted"},"\u2014")),
+        el("td",{class:"t"},pp&&pp.qaMins?clockRange(pp.qaStart,pp.end):el("span",{class:"muted"},"\u2014")),
+        // ID under the name so the title gets a column of its own
         el("td",{},s?el("div",{},el("strong",{},s.name),
                             el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID"))
-                 :el("span",{class:"muted"},sl.studentDocId?"(student removed)":"Buffer / discussion")),
+                 :el("span",{class:"muted"},sl.studentDocId?"(student removed)":"Panel discussion")),
         el("td",{},s?titleCell(s,"ui"):el("span",{class:"muted"},"\u2014")),
         el("td",{class:"muted"},s?.principalName||"\u2014"),
-        // whose link this student joins from \u2014 their own, or the panel's
         el("td",{},(()=>{
           const lk=slotLink(g,sl);
           if(!lk) return el("span",{class:"pill pending"},"None");
@@ -3184,20 +3440,27 @@ async function viewPanelAdmin(v){
           return box;
         })()),
         el("td",{},acts)));
-    });
-    const onDay=saved.filter(sl=>sl.start&&(!sl.date||sl.date===chosen.date));
-    const last=onDay[onDay.length-1];
-    if(last&&minsOf(last.end)<minsOf(chosen.end)) tb.append(el("tr",{},
-      el("td",{},el("strong",{},prettyTime(last.end)+"\u2013"+prettyTime(chosen.end))),
-      el("td",{class:"muted",colspan:"5"},"Buffer / panel discussion")));
-    t.append(tb); wrap.append(t);
+    };
+    dayRows.forEach(x=>row(x,false));
+    const lastEnd=dayRows.length?Math.max(...dayRows.map(x=>minsOf(x.sl.end))):minsOf(chosen.start);
+    const freeTo=dl?minsOf(dl.start):minsOf(chosen.end);
+    if(lastEnd<freeTo) tb.append(el("tr",{class:"tt-free"},
+      el("td",{class:"t"},clockRange(hhmm(lastEnd),hhmm(freeTo))),
+      el("td",{colspan:"7"},"Not allocated \u2014 "+(freeTo-lastEnd)+" min free before "+(dl?"the deliberation":"the session ends"))));
+    if(dl) tb.append(el("tr",{class:"tt-delib"},
+      el("td",{class:"t"},el("strong",{},clockRange(dl.start,dl.end))),
+      el("td",{colspan:"6"},el("strong",{},"Panel deliberation"),
+        el("span",{class:"muted ui",style:"font-size:12.5px;margin-left:8px"},"last "+dl.mins+" min of the session")),
+      el("td",{},el("button",{class:"btn xs ghost",onclick:()=>setTimeDirect(g)},"Change"))));
+    ownRows.forEach(x=>row(x,true));
+    t2.append(tb); wrap.append(el("div",{class:"scroll-x"},t2));
 
     // who has a panel but no slot on it \u2014 easy to create by hand-editing
     const placed=new Set(saved.filter(x=>x.start).map(x=>x.studentDocId).filter(Boolean));
     const off=groupStudents(g).filter(id=>!placed.has(id))
       .map(id=>students.find(x=>x.id===id)).filter(Boolean);
     if(off.length) wrap.append(noticeBar("amber",
-      off.map(x=>x.name).join(", ")+(off.length===1?" is":" are")+" on this panel but not in the timetable."));
+      off.map(x=>x.name).join(", ")+(off.length===1?" is":" are")+" on this panel but not in the timetable. Use Set time on the Students list, or Regenerate."));
 
     wrap.append(el("div",{class:"row",style:"gap:8px;margin-top:10px"},
       el("button",{class:"btn sm ghost",onclick:()=>editSlot(g,-1)},"+ Add a slot")));
@@ -3295,9 +3558,9 @@ async function viewPanelAdmin(v){
         ".\n\nThe panel will be told this is the booked time.")) return;
     }
     if(!confirmNoClash(g,s)) return;
-    const built=buildSlots(s,groupStudents(g),g.slotMins||PANEL_SLOT_MINS);
-    persist({...g,chosenSessionId:s.id,slots:built.slots},
-      "Booked for "+sessionLabel(s)+" \u2014 timetable generated.");
+    const lay=layOutPanel({...g,chosenSessionId:s.id},s,g);
+    persist({...g,chosenSessionId:s.id,slots:lay.slots},
+      "Booked for "+sessionLabel(s)+" \u2014 running order laid out."+layoutNote(lay));
   }
   /* The one question asked before any time is set: is anyone on this panel
      already committed elsewhere then? Two answers:
@@ -3381,97 +3644,235 @@ async function viewPanelAdmin(v){
      office sends it three ways: to each chair (who circulates it to
      their panel), to everyone on one panel, or to one assessor with
      everything they sit on \u2014 which is what someone who is on three
-     panels actually wants. Draft panels are held back unless asked for,
-     and are marked as draft when included, so nothing goes out that the
-     coordinator has not yet stood behind. */
-  /* One student's time, addressed to their whole panel. This is the message
-     that follows an individual reshuffle \u2014 the full schedule went out
-     already, and re-sending all of it to move one slot buries the change. */
-  function studentSlotText(s,g,sl,semLabel){
+     panels actually wants. A whole panel's schedule, or one student's
+     time, can go to the panel members, the students' supervisors, or both
+     at once (panel on To, supervisors on Cc). Draft panels are held back
+     unless asked for, and are marked as draft when included, so nothing
+     goes out that the coordinator has not yet stood behind. */
+  /* Who an email about a panel can go to. The assessors are the panel's
+     members; the supervisors are the principal and co-supervisors of the
+     students it covers (one student, or everyone on the panel). Each entry
+     is {name, emails[]} so a staff member's second mailbox comes along. */
+  function supervisorsOf(stuList){
+    const seen=new Map();
+    const add=(uid,name)=>{
+      if(!uid&&!name) return;
+      const u=uid?staffById(uid):null;
+      const k=uid?"u:"+uid:"n:"+String(name).toLowerCase();
+      if(seen.has(k)) return;
+      seen.set(k,{name:u?.name||name||"",emails:u?emailsOf(u):[]});
+    };
+    stuList.forEach(st=>{ add(st.principalUid,st.principalName); add(st.coUid,st.coName); });
+    return [...seen.values()];
+  }
+  const assessorsOf=g=>groupMembers(g).map(m=>({name:m.name||"",emails:memberEmails(m)}));
+  /* "Dear …" for whoever is on the message. */
+  function greeting(audience,panelists,sups){
+    if(audience==="both") return "Dear panel members and supervisors,";
+    const names=(audience==="supervisors"?sups:panelists).map(x=>x.name).filter(Boolean);
+    return "Dear "+(names.length?names.join(", "):"colleagues")+",";
+  }
+  /* Draft marking follows the audience: a panel not yet released to its
+     assessors is draft to them, and one not released to supervisors is
+     draft to those. Sent to both, either one makes it draft. */
+  const draftFor=(g,audience)=>audience==="supervisors"?!isFinal(g)
+    :audience==="both"?!(isFinal(g)&&isAssessorReleased(g)):!isAssessorReleased(g);
+  const pad20=x=>String(x).padEnd(19," ");
+  const CONT="                     ";   // continuation lines line up under the name
+
+  /* One student's time. This is the message that follows an individual
+     reshuffle \u2014 the full schedule went out already, and re-sending all
+     of it to move one slot buries the change. */
+  function studentSlotText(s,g,sl,semLabel,opts={}){
+    const audience=opts.audience||"assessors";
     const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
     const chair=groupMembers(g).find(x=>isChair(g,x));
-    return ["Dear "+groupMembers(g).map(x=>x.name).join(", ")+",","",
+    const pp=slotParts(g,sl);
+    const day=sl.date||sess?.date;
+    return [opts.dear||greeting(audience,assessorsOf(g),supervisorsOf([s])),"",
       "Please note the presentation time for the following Confirmation of Candidature on "+
-        (g.label||"your panel")+(semLabel?" ("+semLabel+")":"")+(isAssessorReleased(g)?"":"  (DRAFT \u2014 may still change)")+":","",
+        (g.label||"the panel")+(semLabel?" ("+semLabel+")":"")+(draftFor(g,audience)?"  (DRAFT \u2014 may still change)":"")+":","",
       "Student:       "+s.name+(s.sid?" ("+s.sid+")":""),
-      "When:          "+((sl.date||sess?.date)?prettyDate(sl.date||sess?.date)+", ":"")+prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)+
+      "When:          "+(day?weekdayOf(day)+" "+longDate(day)+", ":"")+clockRange(sl.start,sl.end)+
         (sl.date&&sess&&sl.date!==sess.date?"   (note: a different day from the panel's session, "+prettyDate(sess.date)+")":""),
+      ...(pp?["Presentation:  "+clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)",
+              ...(pp.qaMins?["Q&A:           "+clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)"]:[])]:[]),
       ...(titleOf(s)?["Title:         \u201C"+titleOf(s)+"\u201D"]:[]),
       "Supervisors:   "+(s.principalName||supName(s.principalUid))+(s.coName?" \u00B7 "+s.coName:""),
+      "Panel:         "+groupMembers(g).map(x=>x.name).join(", "),
       "Chair:         "+(chair?.name||"not yet set"),
       "Meeting link:  "+(slotLink(g,sl)||"to follow")+
         (String(sl.link||"").trim()?"   (this student's own link, not the panel's)":""),"",
       "Please let us know as soon as possible if this time doesn't work.","",
       "Kind regards,","MRes Coordination"].join("\n");
   }
-  function scheduleText(m,gs,semLabel){
-    const L=["Dear "+(m.name||"colleague")+",",""];
-    L.push("Here is the Confirmation of Candidature presentation schedule for the panel"+
-      (gs.length===1?"":"s")+" you are sitting on"+(semLabel?" in "+semLabel:"")+".");
-    gs.forEach(g=>{
-      const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
-      const chair=groupMembers(g).find(x=>isChair(g,x));
-      L.push("","\u2500\u2500 "+(g.label||"Panel")+(isChair(g,m)?" \u2014 you are the chair":"")+
-        (isAssessorReleased(g)?"":"  (DRAFT \u2014 may still change)")+" \u2500\u2500");
-      L.push("When:          "+(sess?sessionLabel(sess)
-        :((g.slots||[]).some(sl=>sl.date)?"individual times \u2014 see the running order below":"not yet booked")));
-      L.push("Chair:         "+(chair?.name||"not yet set"));
-      L.push("Assessors:     "+groupMembers(g).map(x=>x.name).join(", "));
-      L.push("Meeting link:  "+(String(g.meetingLink||"").trim()||"to follow"));
-      const slots=(g.slots||[]);
-      if(!slots.length){ L.push("Running order: to follow"); return; }
-      L.push("","Running order:");
-      slots.forEach(sl=>{
-        const s=students.find(x=>x.id===sl.studentDocId);
-        L.push("  "+(sl.date&&sl.date!==sess?.date?prettyDate(sl.date)+", ":"")+
-          prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)+"   "+
-          (s?(s.name+(s.sid?" ("+s.sid+")":"")+
-              (titleOf(s)?"\n              \u201C"+titleOf(s)+"\u201D":"")+
-              "\n              Principal supervisor: "+(s.principalName||supName(s.principalUid))+
-              (s.coName?" \u00B7 Co-supervisor: "+s.coName:"")+
-              (String(sl.link||"").trim()?"\n              Own meeting link: "+sl.link.trim():""))
-            :"Panel discussion"));
-      });
-      const onDay=slots.filter(sl=>!sl.date||sl.date===sess?.date);
-      const last=onDay[onDay.length-1];
-      if(sess&&last&&minsOf(last.end)<minsOf(sess.end))
-        L.push("  "+prettyTime(last.end)+"\u2013"+prettyTime(sess.end)+"   Panel discussion");
-    });
+  /* The schedule for one or more panels. `m` is the assessor it is addressed
+     to in the per-person modes; opts.dear / opts.intro replace the opening
+     when it goes to a whole panel or to supervisors. */
+  /* One panel's block of a schedule message: when, who, the link, and the
+     running order with each student's presentation and Q&A, then the
+     deliberation. `m` marks the reader's own chair; `audience` decides
+     whether it is marked draft. */
+  function panelLines(L,g,audience,m){
+    const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    const chair=groupMembers(g).find(x=>isChair(g,x));
+    const t=timingOf(g), dl=deliberationOf(g,sess);
+    L.push("","\u2500\u2500 "+(g.label||"Panel")+(m&&isChair(g,m)?" \u2014 you are the chair":"")+
+      (draftFor(g,audience)?"  (DRAFT \u2014 may still change)":"")+" \u2500\u2500");
+    L.push("When:          "+(sess?weekdayOf(sess.date)+" "+longDate(sess.date)+", "+clockRange(sess.start,sess.end)
+      :((g.slots||[]).some(sl=>sl.date)?"individual times \u2014 see the running order below":"not yet booked")));
+    L.push("Chair:         "+(chair?.name||"not yet set"));
+    L.push("Assessors:     "+groupMembers(g).map(x=>x.name).join(", "));
+    L.push("Meeting link:  "+(String(g.meetingLink||"").trim()||"to follow"));
+    const slots=(g.slots||[]).filter(sl=>sl.start)
+      .slice().sort((a,b)=>String(a.date||sess?.date||"").localeCompare(String(b.date||sess?.date||""))||minsOf(a.start)-minsOf(b.start));
+    if(!slots.length){ L.push("Running order: to follow"); return; }
+    L.push("","Running order \u2014 each student presents for "+t.presMins+" min, then takes "+t.qaMins+" min of questions:");
+    const line=sl=>{
+      const st=students.find(x=>x.id===sl.studentDocId);
+      const pp=slotParts(g,sl);
+      const own=sl.date&&sl.date!==sess?.date;
+      L.push("  "+pad20(clockRange(sl.start,sl.end))+
+        (st?(st.name+(st.sid?" ("+st.sid+")":"")+(own?"  \u2014 on "+weekdayOf(sl.date)+" "+longDate(sl.date):"")+
+            (pp?"\n"+CONT+"Presentation "+clockRange(pp.start,pp.qaStart)+(pp.qaMins?" \u00B7 Q&A "+clockRange(pp.qaStart,pp.end):""):"")+
+            (titleOf(st)?"\n"+CONT+"\u201C"+titleOf(st)+"\u201D":"")+
+            "\n"+CONT+"Principal supervisor: "+(st.principalName||supName(st.principalUid))+
+            (st.coName?" \u00B7 Co-supervisor: "+st.coName:"")+
+            (String(sl.link||"").trim()?"\n"+CONT+"Own meeting link: "+sl.link.trim():""))
+          :"Panel discussion"));
+    };
+    const onDay=slots.filter(sl=>!sl.date||sl.date===sess?.date);
+    onDay.forEach(line);
+    if(sess&&dl) L.push("  "+pad20(clockRange(dl.start,dl.end))+"Panel deliberation");
+    slots.filter(sl=>!onDay.includes(sl)).forEach(line);
+  }
+  /* The schedule for one or more panels. `m` is the assessor it is addressed
+     to in the per-person modes; opts.dear / opts.intro replace the opening
+     when it goes to a whole panel or to supervisors. */
+  function scheduleText(m,gs,semLabel,opts={}){
+    const audience=opts.audience||"assessors";
+    const L=[opts.dear||("Dear "+(m?.name||"colleague")+","),""];
+    L.push(opts.intro||("Here is the Confirmation of Candidature presentation schedule for the panel"+
+      (gs.length===1?"":"s")+" you are sitting on"+(semLabel?" in "+semLabel:"")+"."));
+    gs.forEach(g=>panelLines(L,g,audience,m));
     L.push("","Please let us know as soon as possible if anything needs to change.","","Kind regards,","MRes Coordination");
     return L.join("\n");
   }
+
+  /* ---- sharing the timetable with supervisors ----
+     A supervisor's students are often spread over several panels, so a
+     panel-by-panel email makes them assemble their own picture. This builds
+     it for them: every student they supervise (as principal or co), each
+     with their panel, day, slot, presentation and Q&A times and the link,
+     in time order. Built from the panels passed in, so the release filter
+     in the dialog decides what a supervisor can be told. */
+  function supervisorRoster(gs){
+    const map=new Map();
+    gs.forEach(g=>groupStudents(g).forEach(id=>{
+      const st=students.find(x=>x.id===id); if(!st) return;
+      [["principal",st.principalUid,st.principalName],["co",st.coUid,st.coName]].forEach(([role,uid,nm])=>{
+        if(!uid) return;
+        const u=staffById(uid);
+        if(!map.has(uid)) map.set(uid,{uid,name:u?.name||nm||"",emails:u?emailsOf(u):[],items:[]});
+        const rec=map.get(uid);
+        if(!rec.items.some(x=>x.st.id===st.id)) rec.items.push({st,g,role});
+      });
+    }));
+    const when=x=>{ const sl=slotOfStudent(x.g,x.st.id); const d=sl?slotDate(x.g,sl):"";
+      return sl&&d?d+" "+sl.start:"9999"; };
+    return [...map.values()].map(r=>({...r,items:r.items.sort((a,b)=>when(a).localeCompare(when(b))||String(a.st.name).localeCompare(String(b.st.name)))}))
+      .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  }
+  function supervisorText(sup,semLabel,opts={}){
+    const n=sup.items.length;
+    const L=["Dear "+(sup.name||"colleague")+",",""];
+    L.push("Here "+(n===1?"is the":"are the")+" Confirmation of Candidature presentation time"+(n===1?"":"s")+
+      " for "+(n===1?"your student":"your "+n+" students")+(semLabel?" in "+semLabel:"")+
+      ". Each student presents, then takes questions from the panel.");
+    sup.items.forEach(({st,g,role})=>{
+      const sl=slotOfStudent(g,st.id), day=sl?slotDate(g,sl):"", pp=sl?slotParts(g,sl):null;
+      const ms=groupMembers(g);
+      L.push("","\u2500\u2500 "+st.name+(st.sid?" ("+st.sid+")":"")+" \u2014 you are "+
+        (role==="principal"?"principal supervisor":"co-supervisor")+
+        (draftFor(g,"supervisors")?"  (DRAFT \u2014 may still change)":"")+" \u2500\u2500");
+      if(titleOf(st)) L.push("Title:         \u201C"+titleOf(st)+"\u201D");
+      L.push("Panel:         "+(g.label||"Panel"));
+      if(sl&&day){
+        L.push("When:          "+weekdayOf(day)+" "+longDate(day)+", "+clockRange(sl.start,sl.end));
+        if(pp){
+          L.push("Presentation:  "+clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)");
+          if(pp.qaMins) L.push("Q&A:           "+clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)");
+        }
+      }else L.push("When:          to be confirmed");
+      L.push("Assessors:     "+(ms.length?ms.map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", "):"to be confirmed"));
+      L.push("Meeting link:  "+(slotLink(g,sl)||"to follow"));
+    });
+    if(opts.full){
+      const gs=[...new Map(sup.items.map(x=>[x.g.id,x.g])).values()];
+      L.push("","","Full running order for "+(gs.length===1?"that panel":"those panels")+":");
+      gs.forEach(g=>panelLines(L,g,"supervisors"));
+    }
+    if(sup.items.every(x=>isFinal(x.g)))
+      L.push("","You can also see these times in the Supervision Hub, on the CoC panel tab.");
+    L.push("","Please let us know as soon as possible if any of these times doesn't work.","","Kind regards,","MRes Coordination");
+    return L.join("\n");
+  }
+
   function scheduleEmailDialog(preset={}){
     const semLabel=activeSemester()?.label||"";
     const withSession=groups.filter(g=>scheduledCount(g));
     if(!withSession.length){ toast("No panel has a booked session or a dated slot yet.",true); return; }
 
     const mode=el("select",{},
-      ...[["chair","Each panel chair \u2014 their panel's schedule"],
-          ["panel","Everyone on one panel"],
-          ["member","One assessor \u2014 every panel they sit on"],
-          ["student","One student \u2014 their time, to their panel"]]
+      ...[["chair","Each panel chair"],
+          ["panel","One whole panel"],
+          ["member","One assessor (all their panels)"],
+          ["student","One student's time"],
+          ["supervisor","Supervisors \u2014 their students' times"]]
         .map(([v,l])=>el("option",{value:v,...(v===(preset.mode||"chair")?{selected:"selected"}:{})},l)));
-    const includeDraft=el("input",{type:"checkbox",
-      ...(preset.groupId&&!isAssessorReleased(groups.find(g=>g.id===preset.groupId))?{checked:"checked"}:{})});
+    const presetG=preset.groupId?groups.find(g=>g.id===preset.groupId):null;
+    /* Who a panel or student message goes to. Both is the usual choice once
+       the panel is released to supervisors; before that the supervisors
+       can't see it in the hub, so assessors-only is the starting point. */
+    const recipients=el("select",{},
+      ...[["both","Panel & supervisors"],["assessors","Panel members only"],["supervisors","Supervisors only"]]
+        .map(([v,l])=>el("option",{value:v,
+          ...(v===(preset.recipients||(presetG&&isFinal(presetG)?"both":"assessors"))?{selected:"selected"}:{})},l)));
+    const recipBox=el("div",{style:"flex:1;min-width:200px"},el("label",{},"Recipients"),recipients);
+    const includeDraft=el("input",{type:"checkbox",style:"width:auto;margin:0",
+      ...(presetG&&!isAssessorReleased(presetG)?{checked:"checked"}:{})});
+    const draftLabel=el("span",{},"Include panels not yet released to their assessors");
+    /* Supervisor messages list only the supervisor's own students unless
+       this is ticked; then each of their panels' full running order follows. */
+    const fullOrder=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+    const fullBox=el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+      fullOrder,el("span",{},"Add the full running order of each of their panels (other students' names and titles included)")));
     const who=el("select",{});
     const whoLabel=el("label",{},"Chair");
     const subject=el("input",{});
     const body=el("textarea",{style:"min-height:260px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.45"});
     const recip=el("div",{class:"muted ui",style:"font-size:13px"});
     const warn=el("div",{});
+    const nextBtn=el("button",{class:"btn xs ghost",type:"button"},"Next in the list");
 
-    // groups eligible under the current draft setting
-    const eligible=()=>withSession.filter(g=>includeDraft.checked||isAssessorReleased(g));
-    // every distinct person across the eligible panels
+    const isSup=()=>mode.value==="supervisor";
+    /* The release switch that matters depends on who is being told. */
+    const released=g=>isSup()?isFinal(g):isAssessorReleased(g);
+    const eligible=()=>withSession.filter(g=>includeDraft.checked||released(g));
     const people=gs=>{
       const seen=new Map();
       gs.forEach(g=>groupMembers(g).forEach(m=>{ if(!seen.has(memberKey(m))) seen.set(memberKey(m),m); }));
       return [...seen.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));
     };
+    const groupWide=()=>mode.value==="panel"||mode.value==="student";
     let edited=false;   // once the coordinator types in the body, stop regenerating it
 
     function fillWho(){
       const gs=eligible(); who.innerHTML="";
+      recipBox.style.display=groupWide()?"":"none";
+      fullBox.style.display=isSup()?"":"none";
+      draftLabel.textContent=isSup()?"Include panels not yet released to supervisors"
+                                    :"Include panels not yet released to their assessors";
       if(mode.value==="panel"){
         whoLabel.textContent="Panel";
         gs.sort((a,b)=>String(a.label).localeCompare(String(b.label))).forEach(g=>
@@ -3489,15 +3890,24 @@ async function viewPanelAdmin(v){
         const opts=[];
         gs.forEach(g=>(g.slots||[]).forEach(sl=>{
           if(!sl.start) return;   // link-only placeholder, no time to send yet
-          const s=students.find(x=>x.id===sl.studentDocId); if(!s) return;
-          opts.push({g,sl,s});
+          const st=students.find(x=>x.id===sl.studentDocId); if(!st) return;
+          opts.push({g,sl,st});
         }));
-        opts.sort((a,b)=>String(a.s.name).localeCompare(String(b.s.name))).forEach(({g,sl,s})=>
-          who.append(el("option",{value:g.id+"|"+s.id,
-            ...(g.id===preset.groupId&&s.id===preset.studentId?{selected:"selected"}:{})},
-            s.name+" \u2014 "+(g.label||"Panel")+", "+
+        opts.sort((a,b)=>String(a.st.name).localeCompare(String(b.st.name))).forEach(({g,sl,st})=>
+          who.append(el("option",{value:g.id+"|"+st.id,
+            ...(g.id===preset.groupId&&st.id===preset.studentId?{selected:"selected"}:{})},
+            st.name+" \u2014 "+(g.label||"Panel")+", "+
             (slotDate(g,sl)?prettyDate(slotDate(g,sl))+" ":"")+
-            prettyTime(sl.start)+"\u2013"+prettyTime(sl.end)+(isAssessorReleased(g)?"":" (draft)"))));
+            clockRange(sl.start,sl.end)+(isAssessorReleased(g)?"":" (draft)"))));
+      }else if(isSup()){
+        whoLabel.textContent="Supervisor";
+        const roster=supervisorRoster(gs);
+        if(roster.length>1) who.append(el("option",{value:"__all__"},
+          "All "+roster.length+" supervisors \u2014 one email, Bcc"));
+        roster.forEach(r=>who.append(el("option",{value:r.uid,...(r.uid===preset.supervisorUid?{selected:"selected"}:{})},
+          (r.name||"?")+" \u2014 "+r.items.length+" student"+(r.items.length===1?"":"s"))));
+        // start on the first person, not the group email, unless asked
+        if(!preset.supervisorUid&&who.options.length>1&&who.options[0].value==="__all__") who.selectedIndex=1;
       }else{
         whoLabel.textContent="Assessor";
         people(gs).forEach(m=>
@@ -3506,71 +3916,164 @@ async function viewPanelAdmin(v){
       }
       if(!who.children.length) who.append(el("option",{value:""},"\u2014 nobody matches \u2014"));
     }
-    /* Who receives it and which panels it covers, for the current picks. */
+    /* Who receives it and which panels it covers, for the current picks.
+       `to`, `cc` and `bcc` are {name, emails[]} lists: a panel sent to both
+       audiences has the panel on To and the supervisors on Cc; the
+       all-supervisors message keeps every address on Bcc. */
     function target(){
       const gs=eligible();
+      const aud=groupWide()?recipients.value:isSup()?"supervisors":"assessors";
+      const none={to:[],cc:[],bcc:[],gs:[],named:"",aud};
+      const split=(panelists,sups)=>aud==="supervisors"?{to:sups,cc:[],bcc:[]}
+        :aud==="both"?{to:panelists,cc:sups,bcc:[]}:{to:panelists,cc:[],bcc:[]};
       if(mode.value==="panel"){
         const g=gs.find(x=>x.id===who.value);
-        return g?{to:groupMembers(g).filter(m=>m.email),gs:[g],named:g.label||"Panel"}:{to:[],gs:[],named:""};
+        if(!g) return none;
+        const pan=assessorsOf(g), sups=supervisorsOf(groupStudents(g).map(id=>students.find(x=>x.id===id)).filter(Boolean));
+        return {...split(pan,sups),pan,sups,gs:[g],named:g.label||"Panel",aud};
       }
       if(mode.value==="student"){
         const [gid,sid]=String(who.value||"").split("|");
-        const g=gs.find(x=>x.id===gid), s=students.find(x=>x.id===sid);
-        const sl=g?(g.slots||[]).find(x=>x.studentDocId===sid):null;
-        return (g&&s&&sl)?{to:groupMembers(g).filter(m=>m.email),gs:[g],named:s.name,student:s,slot:sl}
-                         :{to:[],gs:[],named:""};
+        const g=gs.find(x=>x.id===gid), st=students.find(x=>x.id===sid);
+        const sl=g?(g.slots||[]).find(x=>x.studentDocId===sid&&x.start):null;
+        if(!(g&&st&&sl)) return none;
+        const pan=assessorsOf(g), sups=supervisorsOf([st]);
+        return {...split(pan,sups),pan,sups,gs:[g],named:st.name,student:st,slot:sl,aud};
+      }
+      if(isSup()){
+        const roster=supervisorRoster(gs);
+        if(who.value==="__all__"){
+          const used=[...new Map(roster.flatMap(r=>r.items.map(x=>[x.g.id,x.g]))).values()]
+            .sort((a,b)=>String(a.label).localeCompare(String(b.label)));
+          return {to:[],cc:[],bcc:roster.map(r=>({name:r.name,emails:r.emails})),gs:used,named:"all supervisors",all:roster,aud};
+        }
+        const r=roster.find(x=>x.uid===who.value);
+        if(!r) return none;
+        return {to:[{name:r.name,emails:r.emails}],cc:[],bcc:[],
+          gs:[...new Map(r.items.map(x=>[x.g.id,x.g])).values()],named:r.name,sup:r,aud};
       }
       const m=people(gs).find(x=>memberKey(x)===who.value);
-      if(!m) return {to:[],gs:[],named:""};
+      if(!m) return none;
       const mine=gs.filter(g=>mode.value==="chair"?isChair(g,m):groupMembers(g).some(x=>memberKey(x)===memberKey(m)));
-      return {to:m.email?[m]:[],gs:mine,named:m.name||"?",m};
+      return {to:[{name:m.name||"",emails:memberEmails(m)}],cc:[],bcc:[],gs:mine,named:m.name||"?",m,aud};
     }
+    const emailsIn=list=>[...new Map(list.flatMap(x=>x.emails).map(e=>[e.toLowerCase(),e])).values()];
+    const addrs=t=>{
+      const toE=emailsIn(t.to);
+      const seen=new Set(toE.map(e=>e.toLowerCase()));
+      const ccE=emailsIn(t.cc).filter(e=>!seen.has(e.toLowerCase())); ccE.forEach(e=>seen.add(e.toLowerCase()));
+      const bccE=emailsIn(t.bcc).filter(e=>!seen.has(e.toLowerCase()));
+      return {toE,ccE,bccE};
+    };
     function regen(){
       const t=target();
       subject.value=mode.value==="student"&&t.student
         ? "MRes Confirmation of Candidature \u2014 "+t.student.name+"'s presentation time"+(semLabel?" ("+semLabel+")":"")
+        : t.sup
+          ? "MRes Confirmation of Candidature \u2014 your student"+(t.sup.items.length===1?"'s presentation time":"s' presentation times")+(semLabel?" ("+semLabel+")":"")
+        : t.all
+          ? "MRes Confirmation of Candidature \u2014 presentation timetable"+(semLabel?" ("+semLabel+")":"")
         : "MRes Confirmation of Candidature \u2014 presentation schedule"+
           (t.gs.length===1?" for "+(t.gs[0].label||"the panel"):"")+(semLabel?" ("+semLabel+")":"");
       if(!edited){
         if(mode.value==="student"&&t.student){
-          body.value=studentSlotText(t.student,t.gs[0],t.slot,semLabel);
+          body.value=studentSlotText(t.student,t.gs[0],t.slot,semLabel,
+            {audience:t.aud,dear:greeting(t.aud,t.pan,t.sups)});
         }else if(mode.value==="panel"&&t.gs[0]){
-          // one message for the whole panel: address it to all of them
-          const txt=scheduleText({name:"colleagues"},t.gs,semLabel)
-            .replace(/^Dear colleagues,/,"Dear "+groupMembers(t.gs[0]).map(x=>x.name).join(", ")+",")
-            .replace(/the panel you are sitting on/,"your panel");
-          body.value=txt;
+          const g=t.gs[0];
+          const stuN=groupStudents(g).length;
+          body.value=scheduleText(null,t.gs,semLabel,{audience:t.aud,
+            dear:greeting(t.aud,t.pan,t.sups),
+            intro:t.aud==="assessors"
+              ? "Here is the Confirmation of Candidature presentation schedule for your panel"+(semLabel?" in "+semLabel:"")+"."
+              : t.aud==="supervisors"
+                ? "Here is the Confirmation of Candidature presentation schedule for "+(g.label||"the panel")+
+                  (semLabel?" in "+semLabel:"")+", where your student"+(t.sups.length&&stuN>1?"s":"")+" will present."
+                : "Here is the Confirmation of Candidature presentation schedule for "+(g.label||"the panel")+
+                  (semLabel?" in "+semLabel:"")+". Panel members are addressed directly; the students' supervisors are copied in."});
+        }else if(t.sup){
+          body.value=supervisorText(t.sup,semLabel,{full:fullOrder.checked});
+        }else if(t.all){
+          body.value=scheduleText(null,t.gs,semLabel,{audience:"supervisors",dear:"Dear supervisors,",
+            intro:"Here is the Confirmation of Candidature presentation timetable"+(semLabel?" for "+semLabel:"")+
+              ". Your students are listed by name under their panel; each presents, then takes questions from the panel."});
         }else body.value=t.m?scheduleText(t.m,t.gs,semLabel):"";
       }
-      recip.textContent=t.to.length
-        ? "To: "+t.to.map(x=>(x.name||"")+" <"+x.email+">").join(", ")
-        : "Nobody selected has an email address on file.";
+      const {toE,ccE,bccE}=addrs(t);
+      const fmt=list=>list.filter(x=>x.emails.length).map(x=>(x.name||"")+" <"+x.emails.join(", ")+">").join(", ");
+      recip.innerHTML="";
+      if(!toE.length&&!ccE.length&&!bccE.length) recip.append("Nobody selected has an email address on file.");
+      else{
+        if(toE.length) recip.append(el("div",{},"To: "+fmt(t.to)));
+        if(ccE.length) recip.append(el("div",{},"Cc: "+fmt(t.cc)));
+        if(bccE.length) recip.append(el("div",{},"Bcc ("+bccE.length+" address"+(bccE.length===1?"":"es")+"): "+fmt(t.bcc)));
+      }
       warn.innerHTML="";
-      const noMail=(mode.value==="panel"||mode.value==="student")&&t.gs[0]?groupMembers(t.gs[0]).filter(m=>!m.email):[];
-      if(noMail.length) warn.append(el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px;color:var(--amber-ink)"},
-        noMail.map(m=>m.name).join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off."));
-      const drafts=t.gs.filter(g=>!isAssessorReleased(g));
-      if(drafts.length) warn.append(el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px;color:var(--amber-ink)"},
-        drafts.map(g=>g.label).join(", ")+(drafts.length===1?" is":" are")+" still draft \u2014 marked as such in the message."));
-      const cl=[]; t.gs.forEach(g=>{
-        const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
-        memberClashes(groups,g,sess,timetables,t.m?[t.m]:undefined).forEach(c=>cl.push((c.m.name||"?")+" on "+(g.label||"Panel")+" "+(c.kind==="panel"?"overlaps ":"")+c.label));
-      });
-      if(cl.length) warn.append(el("p",{style:"margin:6px 0 0;font-size:13px;font-weight:700;color:var(--clay-ink,#9a3412)"},
-        "Time clash \u2014 "+[...new Set(cl)].join("; ")+". Consider fixing the time before sending."));
+      const say=(txt,strong)=>warn.append(el("p",{class:"muted",
+        style:"margin:6px 0 0;font-size:13px;"+(strong?"font-weight:700;color:var(--clay-ink,#9a3412)":"color:var(--amber-ink)")},txt));
+      const noMail=[...t.to,...t.cc,...t.bcc].filter(x=>!x.emails.length).map(x=>x.name||"Someone");
+      if(noMail.length) say(noMail.join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off.");
+      if(isSup()){
+        /* Say what the release filter left out, so a missing student is
+           a decision the coordinator can see rather than a silent gap. */
+        if(!includeDraft.checked){
+          const heldAll=supervisorRoster(withSession.filter(g=>!isFinal(g)));
+          const held=t.sup?heldAll.find(r=>r.uid===t.sup.uid):null;
+          const n=t.sup?(held?.items.length||0)
+            :new Set(heldAll.flatMap(r=>r.items.map(x=>x.st.id))).size;
+          if(n) say((t.sup?n+" of "+(t.sup.name||"this supervisor")+"'s students":n+" student"+(n===1?"":"s"))+
+            " "+(n===1?"is on a panel":"are on panels")+" not yet released to supervisors and left out. Tick the box above to include them as draft.");
+        }else{
+          const drafts=t.gs.filter(g=>!isFinal(g));
+          if(drafts.length) say(drafts.map(g=>g.label).join(", ")+(drafts.length===1?" is":" are")+
+            " not yet released to supervisors \u2014 marked as draft in the message.");
+        }
+        const tbc=t.sup?t.sup.items.filter(x=>!isScheduled(x.g,x.st.id)).length:0;
+        if(tbc) say(tbc+" of these students "+(tbc===1?"has":"have")+" no time yet and "+(tbc===1?"is":"are")+" listed as to be confirmed.");
+        if(t.all) say("Everyone is on Bcc, so supervisors don't see each other's addresses \u2014 but they all see the whole timetable, including other students' names and titles.");
+      }else{
+        if(t.aud!=="assessors"&&groupWide()&&!(t.sups||[]).length) say("No supervisors are recorded for "+(mode.value==="student"?"this student":"the students on this panel")+".");
+        const draftsA=t.gs.filter(g=>!isAssessorReleased(g));
+        if(t.aud!=="supervisors"&&draftsA.length) say(draftsA.map(g=>g.label).join(", ")+(draftsA.length===1?" is":" are")+
+          " not yet released to the assessors \u2014 marked as draft in the message.");
+        const draftsS=t.gs.filter(g=>!isFinal(g));
+        if(t.aud!=="assessors"&&groupWide()&&draftsS.length) say(draftsS.map(g=>g.label).join(", ")+(draftsS.length===1?" is":" are")+
+          " not yet released to supervisors, so they can't see it in the hub \u2014 the message is marked as draft. Release it first if the times are settled.");
+        const cl=[]; t.gs.forEach(g=>{
+          const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+          memberClashes(groups,g,sess,timetables,t.m?[t.m]:undefined).forEach(c=>cl.push((c.m.name||"?")+" on "+(g.label||"Panel")+" "+(c.kind==="panel"?"overlaps ":"")+c.label));
+        });
+        if(cl.length) say("Time clash \u2014 "+[...new Set(cl)].join("; ")+". Consider fixing the time before sending.",true);
+      }
+      /* A mail link carries the whole message in its address, and some mail
+         apps cut long ones short. Past this length, point at the copy button. */
+      if(body.value.length>1800) say("This message is long. If it arrives cut short in your mail app, use Copy message and paste it in.");
+      // "Next in the list" only where there is someone after this one
+      const i=who.selectedIndex, rest=[...who.options].slice(i+1).filter(o=>o.value&&o.value!=="__all__");
+      nextBtn.style.display=(["chair","member","supervisor"].includes(mode.value)&&who.value!=="__all__"&&rest.length)?"":"none";
     }
+    nextBtn.onclick=()=>{
+      for(let k=who.selectedIndex+1;k<who.options.length;k++){
+        if(who.options[k].value&&who.options[k].value!=="__all__"){ who.selectedIndex=k; break; }
+      }
+      edited=false; regen();
+    };
     mode.onchange=()=>{ edited=false; fillWho(); regen(); };
+    recipients.onchange=()=>{ edited=false; regen(); };
     includeDraft.onchange=()=>{ edited=false; fillWho(); regen(); };
+    fullOrder.onchange=()=>{ edited=false; regen(); };
     who.onchange=()=>{ edited=false; regen(); };
     body.oninput=()=>{ edited=true; };
 
     modal("Email the presentation schedule",
       el("div",{class:"grid"},
-        el("div",{class:"row",style:"gap:10px"},
-          el("div",{style:"flex:1;min-width:200px"},el("label",{},"Send to"),mode),
-          el("div",{style:"flex:1;min-width:200px"},whoLabel,who)),
-        el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer"},
-          includeDraft,el("span",{},"Include panels not yet released to their assessors"))),
+        el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+          el("div",{style:"flex:1;min-width:200px"},el("label",{},"Send"),mode),
+          el("div",{style:"flex:1;min-width:200px"},whoLabel,who),
+          recipBox),
+        el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+          includeDraft,draftLabel)),
+        fullBox,
         el("div",{},el("label",{},"Subject"),subject),
         el("div",{},el("label",{},"Message"),body,
           el("div",{class:"row",style:"gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap"},
@@ -3578,71 +4081,286 @@ async function viewPanelAdmin(v){
             el("button",{class:"btn xs ghost",onclick:async()=>{
               (await copyText(body.value))?toast("Message copied."):toast("Copy failed \u2014 select the text manually.",true);
             }},"Copy message"),
-            recip),
+            nextBtn),
+          el("div",{style:"margin-top:6px"},recip),
           warn),
         el("div",{},el("p",{class:"muted",style:"margin:0"},
-          "Opens your mail app with the message filled in; you press send there. For several chairs, pick each in turn \u2014 the message is rebuilt for each one."))),
+          "Opens your mail app with the message filled in; you press send there. To send one at a time, open it in mail, then use Next in the list \u2014 the message is rebuilt for each person."))),
       async()=>{
         const t=target();
-        if(!t.to.length){ toast("Nobody selected has an email address on file.",true); return false; }
-        openEmail([...new Set(t.to.flatMap(memberEmails))].join(","),subject.value,body.value);
-        return false;   // stay open so the next chair / assessor can be picked
+        const {toE,ccE,bccE}=addrs(t);
+        if(!toE.length&&!ccE.length&&!bccE.length){ toast("Nobody selected has an email address on file.",true); return false; }
+        // with no panel member reachable, the supervisors move up to To
+        if(toE.length) openEmail(toE.join(","),subject.value,body.value,ccE.join(","),bccE.join(","));
+        else if(ccE.length) openEmail(ccE.join(","),subject.value,body.value,"",bccE.join(","));
+        else openEmail("",subject.value,body.value,"",bccE.join(","));
+        return false;   // stay open so the next person can be picked
       },"\u2709 Open in mail");
     const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
     fillWho(); regen();
   }
 
-  /* Skip the poll entirely. This is the "we agreed it on the phone" path, and
-     it is the shortest route from nothing to a finished timetable. */
+  /* The session a direct time-setting books. An admin-set session is edited
+     in place, so repeated changes don't leave a trail of dead rows in the
+     availability matrix; a polled one is left alone and a new direct session
+     is added beside it \u2014 unless nothing about the time actually changed. */
+  function sessionFor(g,date,start,end){
+    const cur=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    if(cur&&cur.date===date&&cur.start===start&&cur.end===end) return {sess:cur,sessions:groupSessions(g)};
+    const reuse=cur&&cur.direct;
+    const sess=reuse?{...cur,date,start,end}:{id:nomId(),date,start,end,direct:true};
+    const sessions=reuse?groupSessions(g).map(x=>x.id===cur.id?sess:x):groupSessions(g).concat([sess]);
+    return {sess,sessions};
+  }
+  /* The panel as it will be once `sess` is booked with `timing`, laid out. */
+  function panelWithSession(g,date,start,end,timing){
+    const t=timingOf(timing||g);
+    const {sess,sessions}=sessionFor(g,date,start,end);
+    const base={...g,...t,slotMins:t.presMins+t.qaMins,sessions,chosenSessionId:sess.id};
+    const lay=layOutPanel(base,sess,t);
+    return {next:{...base,slots:lay.slots},sess,lay};
+  }
+  const layoutNote=lay=>
+    (lay.unplaced.length?" "+lay.unplaced.length+" student"+(lay.unplaced.length===1?" doesn't":"s don't")+" fit before the deliberation \u2014 finish at "+clockTime(lay.fitEnd)+" to seat everyone.":"")+
+    (lay.keptOwnDay?" "+lay.keptOwnDay+" student"+(lay.keptOwnDay===1?"":"s")+" on their own day left as set.":"");
+
+  /* Set a panel's session. The admin gives the date and the start; the finish
+     follows the number of students (presentation + Q&A each, then the
+     deliberation hour) until they type a finish of their own. The running
+     order is previewed as they go, and laid out on save. Availability replies
+     are left on record but not enforced \u2014 this is the "we agreed it" path. */
   function setTimeDirect(g){
     const cur=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    const n=groupStudents(g).length;
+    const startDefault=cur?.start||"09:00";
     const date=el("input",{type:"date",value:cur?.date||""});
-    const start=el("input",{type:"time",value:cur?.start||"13:00"});
-    const end=el("input",{type:"time",value:cur?.end||"16:30"});
-    modal(cur?"Change the CoC time":"Set the CoC time",
+    const start=el("input",{type:"time",value:startDefault});
+    const end=el("input",{type:"time",value:cur?.end||fitEnd(startDefault,n,timingOf(g))});
+    /* A new booking's finish follows the students. An existing one's is a
+       decision already made, so moving the start moves it too, keeping the
+       length \u2014 until "Fit" hands it back to the students. */
+    let endFollows=!cur, lastStart=start.value;
+    const ti=timingInputs(timingOf(g),()=>{ if(endFollows&&start.value) end.value=fitEnd(start.value,n,ti.read()); paint(); });
+    const dayTxt=el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px;min-height:1em"});
+    const fitBtn=el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
+      if(!start.value){ toast("Set the start time first.",true); return; }
+      endFollows=true; end.value=fitEnd(start.value,n,ti.read()); paint();
+    }},"Fit to "+n+" student"+(n===1?"":"s"));
+    const preview=el("div",{});
+    start.addEventListener("input",()=>{
+      if(start.value&&endFollows) end.value=fitEnd(start.value,n,ti.read());
+      else if(start.value&&lastStart&&end.value) end.value=hhmm(Math.max(0,minsOf(end.value)+minsOf(start.value)-minsOf(lastStart)));
+      if(start.value) lastStart=start.value;
+      paint();
+    });
+    end.addEventListener("input",()=>{ endFollows=false; paint(); });
+    date.addEventListener("input",paint);
+
+    function paint(){
+      dayTxt.textContent=date.value?weekdayOf(date.value)+", "+longDate(date.value):"";
+      preview.innerHTML="";
+      if(!start.value||!end.value){ preview.append(el("p",{class:"muted",style:"margin:0"},"Enter a start and finish to see the running order.")); return; }
+      if(minsOf(end.value)<=minsOf(start.value)){ preview.append(noticeBar("clay","The finish time must be after the start.")); return; }
+      const t=ti.read();
+      const {sess,lay}=panelWithSession(g,date.value||"preview",start.value,end.value,t);
+      const dl=deliberationOf(t,sess);
+      preview.append(el("p",{class:"muted ui",style:"font-size:12.5px;margin:0 0 8px"},
+        n?(n+" student"+(n===1?"":"s")+" \u00D7 "+(t.presMins+t.qaMins)+" min ("+t.presMins+" presentation + "+t.qaMins+" Q&A)"+
+           (dl?", then "+dl.mins+" min deliberation from "+clockTime(dl.start)+".":"."))
+         :"No students on this panel yet \u2014 only the deliberation is booked. Assign students and they are laid out from the start time."));
+      if(lay.unplaced.length) preview.append(noticeBar("amber",
+        lay.unplaced.map(id=>students.find(x=>x.id===id)?.name||"A student").join(", ")+
+        (lay.unplaced.length===1?" doesn't":" don't")+" fit before the deliberation. Finish at "+clockTime(lay.fitEnd)+" to seat everyone.",
+        el("button",{class:"btn sm",type:"button",onclick:()=>fitBtn.click()},"Finish at "+clockTime(lay.fitEnd))));
+      if(date.value){
+        const cl=memberClashes(groups,g,sess,timetables);
+        const hard=panelClashesOnly(cl);
+        if(hard.length) preview.append(noticeBar("clay",
+          "Can't book this: "+hard.map(c=>(c.m.name||"An assessor")+" \u2014 "+c.label).join("; ")+"."));
+        else if(cl.length) preview.append(noticeBar("amber",
+          "Teaching clash: "+cl.map(c=>(c.m.name||"An assessor")+" \u2014 "+c.label).join("; ")+". You'll be asked to confirm."));
+      }
+      preview.append(runningOrderPreview(g,sess,lay));
+      if((g.slots||[]).some(x=>x.start)) preview.append(el("p",{class:"muted ui",style:"font-size:12.5px;margin:8px 0 0"},
+        "Saving lays the running order out again from the start, keeping the current order of students. Students on their own day and their own meeting links are kept."));
+    }
+
+    modal(cur?"Change the CoC session \u2014 "+(g.label||"panel"):"Set the CoC session \u2014 "+(g.label||"panel"),
       el("div",{class:"grid"},
-        el("div",{},el("label",{},"Date"),date),
-        el("div",{class:"row",style:"gap:10px"},
-          el("div",{style:"flex:1"},el("label",{},"From"),start),
-          el("div",{style:"flex:1"},el("label",{},"To"),end)),
-        el("div",{},el("p",{class:"muted",style:"margin:0"},
-          "Books the panel straight away and lays out the timetable. Availability replies are left on record but not enforced \u2014 use this when the time has already been agreed."))),
+        el("div",{class:"row",style:"gap:10px;flex-wrap:wrap;align-items:flex-start"},
+          el("div",{style:"flex:1.3;min-width:160px"},el("label",{},"Date"),date,dayTxt),
+          el("div",{style:"flex:1;min-width:120px"},el("label",{},"Start"),start),
+          el("div",{style:"flex:1;min-width:120px"},el("label",{},"Finish"),end,
+            el("div",{style:"margin-top:4px"},fitBtn))),
+        ti.node,
+        el("div",{},el("label",{},"Running order"),preview)),
       async()=>{
         if(!date.value){ toast("Pick a date.",true); return false; }
+        if(!start.value||!end.value){ toast("Set the start and finish.",true); return false; }
         if(minsOf(end.value)<=minsOf(start.value)){ toast("The finish time must be after the start.",true); return false; }
-        // edit the booked session in place when it was also admin-set, so
-        // repeated changes don't leave a trail of dead rows in the matrix
-        const reuse=cur&&cur.direct;
-        const sess=reuse
-          ? {...cur,date:date.value,start:start.value,end:end.value}
-          : {id:nomId(),date:date.value,start:start.value,end:end.value,direct:true};
-        const sessions=reuse
-          ? groupSessions(g).map(x=>x.id===cur.id?sess:x)
-          : groupSessions(g).concat([sess]);
+        const {next,sess,lay}=panelWithSession(g,date.value,start.value,end.value,ti.read());
         if(!confirmNoClash(g,sess)) return false;
-        const built=buildSlots(sess,groupStudents(g),g.slotMins||PANEL_SLOT_MINS);
-        return persist({...g,sessions,chosenSessionId:sess.id,slots:built.slots},
-          "Booked for "+sessionLabel(sess)+".");
-      },"Book this time");
-  }
-  /* Regenerating lays the students out again from the session start, but a
-     student's own meeting link and own day are decisions, not layout \u2014
-     they survive. A student sitting on their own day keeps their slot
-     untouched rather than being dragged back onto the session. */
-  function regenerate(g,slotMins){
-    const s=groupSessions(g).find(x=>x.id===g.chosenSessionId);
-    if(!s) return;
-    const old=(g.slots||[]);
-    const keepOwnDay=old.filter(sl=>sl.date&&sl.date!==s.date&&sl.start);
-    const kept=new Set(keepOwnDay.map(sl=>sl.studentDocId).filter(Boolean));
-    const linkOf=id=>old.find(x=>x.studentDocId===id&&String(x.link||"").trim())?.link||"";
-    const built=buildSlots(s,groupStudents(g).filter(id=>!kept.has(id)),slotMins);
-    const slots=built.slots.map(sl=>({...sl,link:linkOf(sl.studentDocId)})).concat(keepOwnDay)
-      .sort((a,b)=>String(a.date||s.date).localeCompare(String(b.date||s.date))||minsOf(a.start)-minsOf(b.start));
-    persist({...g,slotMins,slots},"Timetable regenerated."+
-      (keepOwnDay.length?" "+keepOwnDay.length+" student"+(keepOwnDay.length===1?"":"s")+" on their own day left as set.":""));
+        return persist(next,"Booked for "+sessionLabel(sess)+" \u2014 running order laid out."+layoutNote(lay));
+      },"Book and lay out");
+    const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+    paint();
   }
 
+  /* "Finish at 12:40 PM": stretch the booked session so everyone fits. */
+  function extendSession(g,newEnd){
+    const cur=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    if(!cur) return;
+    const {next,sess,lay}=panelWithSession(g,cur.date,cur.start,newEnd,g);
+    if(!confirmNoClash(g,sess)) return;
+    persist(next,"Session now finishes at "+clockTime(newEnd)+"."+layoutNote(lay));
+  }
+
+  /* Swap two students' places in the running order. The slots stay where
+     they are \u2014 times, presentation / Q&A split \u2014 and the students
+     trade places, each taking their own meeting link with them. */
+  function swapSlots(g,i,j){
+    const saved=(g.slots||[]).slice();
+    const a=saved[i], b=saved[j];
+    if(!a||!b) return;
+    saved[i]={...a,studentDocId:b.studentDocId,link:b.link||""};
+    saved[j]={...b,studentDocId:a.studentDocId,link:a.link||""};
+    const na=students.find(x=>x.id===a.studentDocId)?.name||"Student";
+    const nb=students.find(x=>x.id===b.studentDocId)?.name||"student";
+    persist({...g,slots:saved},na+" and "+nb+" swapped.");
+  }
+
+  /* Regenerate with the lengths from the timetable's boxes. Students on the
+     session day are laid out again in their current order; a student's own
+     day and own meeting link survive. */
+  function regenerate(g,timing){
+    const s=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    if(!s) return;
+    const t=timingOf(timing||g);
+    const base={...g,...t,slotMins:t.presMins+t.qaMins};
+    const lay=layOutPanel(base,s,t);
+    persist({...base,slots:lay.slots},"Timetable regenerated."+layoutNote(lay));
+  }
+
+  /* Every panel's session on one screen. The office usually fixes the CoC
+     days for the whole semester in one sitting, and opening each card to do
+     it was the slow part. Give a date and a start per panel; the finish
+     follows the students, the running orders are laid out on save, and a
+     panel that would put an assessor in two places at once is held back
+     and named. */
+  function setSessionsBulk(){
+    if(!groups.length){ toast("Create a panel first.",true); return; }
+    const sorted=groups.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label)));
+    const t0=timingOf(sorted.find(g=>g.presMins!=null)||{});
+    const ti=timingInputs(t0,()=>{ rows.forEach(r=>{ if(r.endFollows&&r.start.value) r.end.value=fitEnd(r.start.value,r.n,ti.read()); }); paintAll(); });
+    const allDate=el("input",{type:"date"});
+    const allStart=el("input",{type:"time",value:"09:00"});
+    const rows=sorted.map(g=>{
+      const cur=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+      const n=groupStudents(g).length;
+      const r={g,n,cur,endFollows:!cur,
+        date:el("input",{type:"date",value:cur?.date||"","aria-label":"Date for "+(g.label||"panel")}),
+        start:el("input",{type:"time",value:cur?.start||"","aria-label":"Start for "+(g.label||"panel")}),
+        end:el("input",{type:"time",value:cur?.end||"","aria-label":"Finish for "+(g.label||"panel")}),
+        out:el("div",{class:"ui",style:"font-size:12.5px"}),day:el("div",{class:"muted ui",style:"font-size:11.5px;margin-top:2px"})};
+      r.start.addEventListener("input",()=>{ if(r.endFollows&&r.start.value) r.end.value=fitEnd(r.start.value,n,ti.read()); paintAll(); });
+      r.end.addEventListener("input",()=>{ r.endFollows=false; paintAll(); });
+      r.date.addEventListener("input",paintAll);
+      return r;
+    });
+    const complete=r=>r.date.value&&r.start.value&&r.end.value&&minsOf(r.end.value)>minsOf(r.start.value);
+    const timingChanged=g=>{ const a=timingOf(g), b=ti.read(); return a.presMins!==b.presMins||a.qaMins!==b.qaMins||a.delibMins!==b.delibMins; };
+    const changed=r=>complete(r)&&(!r.cur||r.cur.date!==r.date.value||r.cur.start!==r.start.value||r.cur.end!==r.end.value||timingChanged(r.g));
+    /* Every panel as it would stand if this screen were saved, so a clash
+       between two rows on this screen is caught before either is written. */
+    function plan(){
+      const t=ti.read();
+      const built=new Map();
+      rows.forEach(r=>{ if(changed(r)) built.set(r.g.id,panelWithSession(r.g,r.date.value,r.start.value,r.end.value,t)); });
+      const working=groups.map(g=>built.has(g.id)?built.get(g.id).next:g);
+      return rows.map(r=>{
+        const b=built.get(r.g.id);
+        if(!b) return {r};
+        const cl=memberClashes(working,b.next,b.sess,timetables);
+        return {r,...b,cl,hard:panelClashesOnly(cl)};
+      });
+    }
+    function paintAll(){
+      plan().forEach(x=>{
+        const r=x.r; r.out.innerHTML="";
+        r.day.textContent=r.date.value?weekdayOf(r.date.value):"";
+        if(!r.date.value&&!r.start.value){ r.out.append(el("span",{class:"muted"},r.cur?"":"Not set")); return; }
+        if(!complete(r)){ r.out.append(el("span",{class:"muted"},r.end.value&&r.start.value&&minsOf(r.end.value)<=minsOf(r.start.value)?"Finish is before the start":"Needs a date, start and finish")); return; }
+        if(!x.lay){ r.out.append(el("span",{class:"pill approved"},"Unchanged")); return; }
+        const dl=deliberationOf(ti.read(),x.sess);
+        r.out.append(el("div",{},r.n+" student"+(r.n===1?"":"s")+
+          (dl?" \u00B7 deliberation "+clockRange(dl.start,dl.end):"")));
+        if(x.lay.unplaced.length) r.out.append(el("div",{style:"color:var(--amber-ink);margin-top:2px"},
+          x.lay.unplaced.length+" won't fit \u2014 finish at "+clockTime(x.lay.fitEnd)));
+        if(x.hard.length) r.out.append(el("div",{style:"color:var(--clay-ink,#9a3412);font-weight:600;margin-top:2px"},
+          "Clash: "+x.hard.map(c=>(c.m.name||"assessor")+" \u2014 "+c.label).join("; ")));
+        else if(x.cl.length) r.out.append(el("div",{style:"color:var(--amber-ink);margin-top:2px"},
+          "Teaching: "+x.cl.map(c=>(c.m.name||"assessor")+" "+c.label).join("; ")));
+      });
+    }
+    const tb=el("tbody",{});
+    rows.forEach(r=>{
+      const chair=groupMembers(r.g).find(m=>isChair(r.g,m));
+      tb.append(el("tr",{},
+        el("td",{},el("strong",{},r.g.label||"Panel"),
+          el("div",{class:"muted ui",style:"font-size:12px"},r.n+" student"+(r.n===1?"":"s")+(chair?" \u00B7 "+chair.name:""))),
+        el("td",{style:"min-width:150px"},r.date,r.day),
+        el("td",{style:"min-width:118px"},r.start),
+        el("td",{style:"min-width:118px"},r.end),
+        el("td",{style:"min-width:190px"},r.out)));
+    });
+    modal("Set session times",
+      el("div",{class:"grid"},
+        el("p",{class:"muted",style:"margin:0"},
+          "Give each panel a date and a start. The finish fills itself in \u2014 each student's presentation and Q&A, then the deliberation \u2014 and changes to follow the students until you type your own. Only panels you change are saved, and each one's running order is laid out on save."),
+        ti.node,
+        el("div",{class:"row",style:"gap:10px;align-items:flex-end;flex-wrap:wrap;padding:10px 12px;background:var(--sunken);border-radius:var(--r-sm)"},
+          el("div",{style:"flex:1;min-width:150px"},el("label",{},"Same date for every panel"),allDate),
+          el("div",{style:"flex:1;min-width:120px"},el("label",{},"Same start"),allStart),
+          el("button",{class:"btn sm ghost",type:"button",onclick:()=>{
+            rows.forEach(r=>{
+              if(allDate.value) r.date.value=allDate.value;
+              if(allStart.value){ r.start.value=allStart.value; r.endFollows=true; r.end.value=fitEnd(allStart.value,r.n,ti.read()); }
+            });
+            paintAll();
+          }},"Apply to all panels")),
+        el("div",{class:"scroll-x"},el("table",{class:"tt"},
+          el("thead",{},el("tr",{},...["Panel","Date","Start","Finish","Result"].map(h=>el("th",{},h)))),tb))),
+      async()=>{
+        const p=plan().filter(x=>x.lay);
+        if(!p.length){ toast("Nothing to save \u2014 no panel's session has changed.",true); return false; }
+        const hard=p.filter(x=>x.hard.length);
+        const ok=p.filter(x=>!x.hard.length);
+        if(hard.length){
+          const why=hard.map(x=>x.r.g.label||"Panel").join(", ")+" can't"+
+            " be booked \u2014 an assessor would be on two panels at once:\n\n"+
+            hard.flatMap(x=>x.hard.map(c=>"  \u2022 "+(x.r.g.label||"Panel")+": "+(c.m.name||"?")+" \u2014 "+c.label)).join("\n");
+          if(!ok.length){ window.alert(why+"\n\nChange one of the times, or swap the assessor."); return false; }
+          if(!window.confirm(why+"\n\nSave the other "+ok.length+" panel"+(ok.length===1?"":"s")+
+            " and leave "+(hard.length===1?"that one":"those")+" as "+(hard.length===1?"it was":"they were")+"?")) return false;
+        }
+        const soft=ok.filter(x=>x.cl.length);
+        if(soft.length&&!window.confirm("These times double-book assessors with teaching:\n\n"+
+          soft.flatMap(x=>x.cl.map(c=>"  \u2022 "+(x.r.g.label||"Panel")+": "+(c.m.name||"?")+" \u2014 "+c.label)).join("\n")+
+          "\n\nGo ahead anyway? The clash stays flagged on the panel card.")) return false;
+        let saved=0, short=0;
+        for(const x of ok){
+          try{ await saveGroup(x.next); saved++; if(x.lay.unplaced.length) short++; }
+          catch(err){ toast((x.r.g.label||"Panel")+": "+(err?.message||"could not save."),true); }
+        }
+        await reload();
+        toast(saved+" panel"+(saved===1?"":"s")+" booked and laid out."+
+          (short?" "+short+" still "+(short===1?"has":"have")+" students who don't fit \u2014 see the card.":"")+
+          (hard.length?" "+hard.length+" held back for a clash.":""));
+        return true;
+      },"Save sessions");
+    const mm=document.querySelectorAll(".modal"); if(mm.length){ mm[mm.length-1].classList.add("wide"); mm[mm.length-1].style.maxWidth="980px"; }
+    paintAll();
+  }
   /* Start again from nothing. Regenerate lays the SAME students out afresh
      and protects the decisions inside the timetable; this is the other
      thing a coordinator asks for, when the panel has been rearranged, the
@@ -3817,107 +4535,169 @@ async function viewPanelAdmin(v){
       },"Clear the time");
   }
 
+  /* The three time boxes a student's slot is edited with \u2014 start, where
+     the presentation hands over to Q&A, finish \u2014 plus a line saying how
+     that splits. Moving the start carries the other two with it, keeping
+     both lengths, so retiming a slot is one change, not three. */
+  function slotTimeFields(g,init){
+    const tm=timingOf(g);
+    const start=el("input",{type:"time",value:init.start||""});
+    const qa=el("input",{type:"time",value:init.qaStart||""});
+    const end=el("input",{type:"time",value:init.end||""});
+    const note=el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:6px;min-height:1em"});
+    let prev=start.value;
+    const sync=()=>{
+      if(!start.value||!end.value){ note.textContent=""; return; }
+      const a=minsOf(start.value), b=minsOf(end.value), q=qa.value?minsOf(qa.value):null;
+      if(b<=a){ note.textContent="The finish must be after the start."; return; }
+      if(q!=null&&(q<=a||q>b)){ note.textContent="Q&A must start after the presentation begins and no later than the finish."; return; }
+      const pm=q==null?Math.round((b-a)*tm.presMins/Math.max(1,tm.presMins+tm.qaMins)):q-a;
+      note.textContent="Presentation "+pm+" min \u00B7 Q&A "+((b-a)-pm)+" min \u00B7 "+(b-a)+" min in all";
+    };
+    start.addEventListener("input",()=>{
+      if(start.value&&prev&&end.value){
+        const d=minsOf(start.value)-minsOf(prev);
+        if(qa.value) qa.value=hhmm(Math.max(0,minsOf(qa.value)+d));
+        if(end.value) end.value=hhmm(Math.max(0,minsOf(end.value)+d));
+      }else if(start.value&&!end.value){
+        qa.value=hhmm(minsOf(start.value)+tm.presMins); end.value=hhmm(minsOf(start.value)+tm.presMins+tm.qaMins);
+      }
+      if(start.value) prev=start.value;
+      sync();
+    });
+    qa.addEventListener("input",sync); end.addEventListener("input",sync);
+    sync();
+    return {start,qa,end,note,sync,
+      node:el("div",{},el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+        el("div",{style:"flex:1;min-width:110px"},el("label",{},"Presentation starts"),start),
+        el("div",{style:"flex:1;min-width:110px"},el("label",{},"Q&A starts"),qa),
+        el("div",{style:"flex:1;min-width:110px"},el("label",{},"Finishes"),end)),note),
+      /* null = fine; otherwise the message to show */
+      problem(){
+        if(!start.value||!end.value) return "Fill in the start and finish.";
+        if(minsOf(end.value)<=minsOf(start.value)) return "The finish time must be after the start.";
+        if(qa.value&&(minsOf(qa.value)<=minsOf(start.value)||minsOf(qa.value)>minsOf(end.value)))
+          return "Q&A must start after the presentation begins and no later than the finish.";
+        return null;
+      },
+      qaValue(){ return qa.value||hhmm(minsOf(start.value)+Math.round((minsOf(end.value)-minsOf(start.value))*tm.presMins/Math.max(1,tm.presMins+tm.qaMins))); }};
+  }
+  /* Ask before a same-day slot lands outside the session or in the
+     deliberation. Only asks \u2014 an overrun can be deliberate. */
+  function confirmInSession(g,sess,a,b){
+    if(!sess) return true;
+    if(minsOf(a)<minsOf(sess.start)||minsOf(b)>minsOf(sess.end))
+      return window.confirm("That time falls outside the booked session ("+clockRange(sess.start,sess.end)+").\n\nSave it anyway?");
+    const dl=deliberationOf(g,sess);
+    if(dl&&minsOf(b)>minsOf(dl.start)&&minsOf(a)<minsOf(dl.end))
+      return window.confirm("That runs into the panel deliberation ("+clockRange(dl.start,dl.end)+").\n\nSave it anyway?");
+    return true;
+  }
+
   function editStudentTime(g,sid){
     const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
     const st=students.find(x=>x.id===sid);
     const saved=(g.slots||[]).slice();
     const i=saved.findIndex(x=>x.studentDocId===sid);
-    const last=saved.filter((_,j)=>j!==i).sort((a,b)=>minsOf(a.start)-minsOf(b.start)).pop();
-    const per=g.slotMins||PANEL_SLOT_MINS;
+    const tm=timingOf(g), per=tm.presMins+tm.qaMins;
+    // the next free time on the session day, after the last student
+    const last=saved.filter((x,j)=>j!==i&&x.start&&x.studentDocId&&(!x.date||x.date===sess?.date))
+      .sort((a,b)=>minsOf(a.start)-minsOf(b.start)).pop();
+    const hadTime=i>=0&&!!saved[i].start;
+    const s0=hadTime?saved[i].start:(last?.end||sess?.start||"09:00");
     /* No prerequisite: a student's presentation may sit on a different day
        from the rest of the panel, or the panel may have no common session
        at all. Left blank, the date follows the booked session; filled in,
        it is that student's own day and moves with nothing. */
     const date=el("input",{type:"date",value:i>=0?(saved[i].date||""):""});
-    const start=el("input",{type:"time",value:(i>=0&&saved[i].start)||last?.end||sess?.start||"13:00"});
-    const end=el("input",{type:"time",value:(i>=0&&saved[i].end)||hhmm(minsOf(last?.end||sess?.start||"13:00")+per)});
-    const hadTime=i>=0&&!!saved[i].start;
-    /* Emptying both boxes is how a time is taken back, so the dialog says so
-       and offers a button that does the emptying \u2014 a coordinator should not
-       have to guess that a blank field is a command. */
+    const f=slotTimeFields(g,{start:s0,
+      qaStart:hadTime?slotParts(g,saved[i])?.qaStart:hhmm(minsOf(s0)+tm.presMins),
+      end:hadTime?saved[i].end:hhmm(minsOf(s0)+per)});
+    /* Emptying the boxes is how a time is taken back, so the dialog says so
+       and offers a button that does the emptying. */
     const clearBtn=el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
-      start.value=""; end.value=""; syncClear();
+      f.start.value=""; f.qa.value=""; f.end.value=""; syncClear(); f.sync();
     }},"Clear the time");
     const clearNote=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"});
     const syncClear=()=>{
-      const blank=!start.value&&!end.value;
+      const blank=!f.start.value&&!f.end.value;
       clearBtn.style.display=blank?"none":"";
       clearNote.textContent=blank
-        ? "Both boxes are empty \u2014 saving now takes "+(st?.name||"this student")+
+        ? "The boxes are empty \u2014 saving now takes "+(st?.name||"this student")+
           " off the timetable and back to \u201Cno time yet\u201D."+
           (String(saved[i]?.link||"").trim()?" Their own meeting link is kept.":"")
         : "";
     };
-    start.addEventListener("change",syncClear); end.addEventListener("change",syncClear);
+    f.start.addEventListener("input",syncClear); f.end.addEventListener("input",syncClear);
+    const dl=deliberationOf(g,sess);
     modal("Presentation time \u2014 "+(st?.name||"student"),
       el("div",{class:"grid"},
         el("div",{},el("label",{},sess?"Day \u2014 leave blank for the panel's session day ("+prettyDate(sess.date)+")":"Day"),date),
-        el("div",{class:"row",style:"gap:10px"},
-          el("div",{style:"flex:1"},el("label",{},"From"),start),
-          el("div",{style:"flex:1"},el("label",{},"To"),end)),
+        f.node,
         el("div",{},
           hadTime?el("div",{class:"row",style:"gap:8px;align-items:center"},clearBtn):el("span",{}),
           clearNote),
         el("div",{},el("p",{class:"muted",style:"margin:0"},
-          (sess?"The panel's session runs "+sessionLabel(sess)+". A different day here books this student apart from it \u2014 the assessors are told which day in every schedule email and export. "
+          (sess?"The panel's session runs "+prettyDate(sess.date)+", "+clockRange(sess.start,sess.end)+
+                (dl?", with deliberation "+clockRange(dl.start,dl.end):"")+". A different day here books this student apart from it. "
                :"This panel has no booked session, so each student's time carries its own day. ")+
-          "Use \u2709 on the student's row afterwards to tell the panel."))),
+          "Use \u2709 on the student's row afterwards to tell the panel and supervisors."))),
       async()=>{
-        /* Blank on both sides means "no time", not "midnight". It removes the
-           slot outright, or keeps a timeless placeholder when this student has
-           a meeting link of their own to hold on to. */
-        if(!start.value&&!end.value){
+        /* Blank means "no time", not "midnight". It removes the slot outright,
+           or keeps a timeless placeholder holding this student's own link. */
+        if(!f.start.value&&!f.end.value){
           if(i<0||!saved[i].start){ toast((st?.name||"This student")+" has no time to clear.",true); return false; }
           const link=String(saved[i].link||"").trim();
           const next=link
-            ? saved.map((x,j)=>j===i?{date:"",start:"",end:"",studentDocId:sid,link}:x)
+            ? saved.map((x,j)=>j===i?{date:"",start:"",qaStart:"",end:"",studentDocId:sid,link}:x)
             : saved.filter((_,j)=>j!==i);
           return persist({...g,slots:next},
             (st?.name||"Student")+" taken off the timetable."+(link?" Their own meeting link is kept.":""));
         }
-        if(!start.value||!end.value){ toast("Fill in both times, or empty both to clear the time.",true); return false; }
-        if(minsOf(end.value)<=minsOf(start.value)){ toast("The finish time must be after the start.",true); return false; }
+        const bad=f.problem(); if(bad){ toast(bad,true); return false; }
         if(!date.value&&!sess){ toast("Pick a day \u2014 this panel has no booked session to inherit one from.",true); return false; }
+        const a=f.start.value, b=f.end.value;
         const effDate=date.value||sess?.date||"";
-        // Same-day checks only: a slot on its own day has no session bounds
-        // and can't overlap slots on another day.
-        if(!date.value&&sess&&(minsOf(start.value)<minsOf(sess.start)||minsOf(end.value)>minsOf(sess.end))
-          &&!window.confirm("That time falls outside the booked session ("+prettyTime(sess.start)+"\u2013"+prettyTime(sess.end)+
-            ").\n\nSave it anyway?")) return false;
+        // same-day checks only: a slot on its own day has no session bounds
+        if(!date.value&&!confirmInSession(g,sess,a,b)) return false;
         const overlap=saved.filter((x,j)=>j!==i&&x.studentDocId&&x.start
           &&(x.date||sess?.date||"")===effDate
-          &&minsOf(start.value)<minsOf(x.end)&&minsOf(x.start)<minsOf(end.value))
+          &&minsOf(a)<minsOf(x.end)&&minsOf(x.start)<minsOf(b))
           .map(x=>{ const o=students.find(y=>y.id===x.studentDocId);
-                    return (o?.name||"another student")+" ("+prettyTime(x.start)+"\u2013"+prettyTime(x.end)+")"; });
+                    return (o?.name||"another student")+" ("+clockRange(x.start,x.end)+")"; });
         if(overlap.length&&!window.confirm("That overlaps "+overlap.join(", ")+
           ".\n\nSave it anyway?")) return false;
         /* The whole panel sits for this student, so every assessor has
            to be free of other panels then \u2014 whichever day it is on. */
-        if(!confirmNoClash(g,{date:effDate,start:start.value,end:end.value},
-            (st?.name||"This student")+" at "+prettyTime(start.value)+" on "+prettyDate(effDate),sid)) return false;
-        const slot={date:date.value||"",start:start.value,end:end.value,studentDocId:sid,
+        if(!confirmNoClash(g,{date:effDate,start:a,end:b},
+            (st?.name||"This student")+" at "+clockTime(a)+" on "+prettyDate(effDate),sid)) return false;
+        const slot={date:date.value||"",start:a,qaStart:f.qaValue(),end:b,studentDocId:sid,
                     link:i>=0?(saved[i].link||""):""};
         const next=i>=0?saved.map((x,j)=>j===i?slot:x):saved.concat([slot]);
-        next.sort((a,b)=>String(a.date||sess?.date||"").localeCompare(String(b.date||sess?.date||""))
-          ||minsOf(a.start)-minsOf(b.start));
+        next.sort((x,y)=>String(x.date||sess?.date||"").localeCompare(String(y.date||sess?.date||""))
+          ||minsOf(x.start)-minsOf(y.start));
         return persist({...g,slots:next},(st?.name||"Student")+"'s time saved.");
       },"Save time");
+    syncClear();
   }
 
   /* Hand-edit one slot: retime it, put a different student in it, or leave it
-     empty as extra discussion time. Index -1 appends. Nothing here is checked
-     against the session bounds or the other slots on purpose \u2014 the
-     coordinator sometimes needs a 15-minute gap or an overrun, and the
-     generated grid is only ever a starting point. */
+     empty as extra discussion time. Index -1 appends. The generated grid is
+     only ever a starting point \u2014 gaps and overruns are the coordinator's
+     call, so the checks here ask rather than refuse. */
   function editSlot(g,i){
     const saved=(g.slots||[]);
     const cur=i>=0?saved[i]:null;
     const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
-    const last=saved[saved.length-1];
-    const start=el("input",{type:"time",value:cur?.start||last?.end||sess?.start||"13:00"});
-    const end=el("input",{type:"time",value:cur?.end||hhmm(minsOf(last?.end||sess?.start||"13:00")+(g.slotMins||PANEL_SLOT_MINS))});
+    const tm=timingOf(g), per=tm.presMins+tm.qaMins;
+    const last=saved.filter(x=>x.start&&(!x.date||x.date===sess?.date))
+      .sort((a,b)=>minsOf(a.start)-minsOf(b.start)).pop();
+    const s0=cur?.start||last?.end||sess?.start||"09:00";
+    const f=slotTimeFields(g,{start:s0,
+      qaStart:cur&&cur.studentDocId?slotParts(g,cur)?.qaStart:hhmm(minsOf(s0)+tm.presMins),
+      end:cur?.end||hhmm(minsOf(s0)+per)});
     const who=el("select",{});
-    who.append(el("option",{value:""},"\u2014 buffer / discussion \u2014"));
+    who.append(el("option",{value:""},"\u2014 panel discussion (no student) \u2014"));
     groupStudents(g).forEach(id=>{
       const st=students.find(x=>x.id===id); if(!st) return;
       who.append(el("option",{value:id,...(cur?.studentDocId===id?{selected:"selected"}:{})},
@@ -3927,23 +4707,23 @@ async function viewPanelAdmin(v){
     modal(i>=0?"Edit slot":"Add a slot",
       el("div",{class:"grid"},
         el("div",{},el("label",{},sess?"Day \u2014 leave blank for the session day ("+prettyDate(sess.date)+")":"Day"),date),
-        el("div",{class:"row",style:"gap:10px"},
-          el("div",{style:"flex:1"},el("label",{},"From"),start),
-          el("div",{style:"flex:1"},el("label",{},"To"),end)),
         el("div",{},el("label",{},"Student"),who),
+        f.node,
         el("div",{},el("p",{class:"muted",style:"margin:0"},
-          "Times are yours to set \u2014 nothing is forced back onto the half-hour grid, and a slot can sit on its own day. Regenerating the timetable will overwrite hand edits."))),
+          "Times are yours to set, and a slot can sit on its own day. A slot with no student ignores the Q&A time. Regenerating the timetable lays everyone out again."))),
       async()=>{
-        if(minsOf(end.value)<=minsOf(start.value)){ toast("The finish time must be after the start.",true); return false; }
+        const bad=f.problem(); if(bad){ toast(bad,true); return false; }
         if(!date.value&&!sess){ toast("Pick a day \u2014 this panel has no booked session to inherit one from.",true); return false; }
+        const a=f.start.value, b=f.end.value;
         const effDate=date.value||sess?.date||"";
-        if(!confirmNoClash(g,{date:effDate,start:start.value,end:end.value},
-            "A slot at "+prettyTime(start.value)+" on "+prettyDate(effDate),who.value||undefined)) return false;
-        const slot={date:date.value||"",start:start.value,end:end.value,studentDocId:who.value||"",
+        if(!date.value&&who.value&&!confirmInSession(g,sess,a,b)) return false;
+        if(!confirmNoClash(g,{date:effDate,start:a,end:b},
+            "A slot at "+clockTime(a)+" on "+prettyDate(effDate),who.value||undefined)) return false;
+        const slot={date:date.value||"",start:a,qaStart:who.value?f.qaValue():"",end:b,studentDocId:who.value||"",
                     link:cur?.link||""};
         const next=i>=0?saved.map((x,j)=>j===i?slot:x):saved.concat([slot]);
-        next.sort((a,b)=>String(a.date||sess?.date||"").localeCompare(String(b.date||sess?.date||""))
-          ||minsOf(a.start)-minsOf(b.start));
+        next.sort((x,y)=>String(x.date||sess?.date||"").localeCompare(String(y.date||sess?.date||""))
+          ||minsOf(x.start)-minsOf(y.start));
         return persist({...g,slots:next},i>=0?"Slot updated.":"Slot added.");
       },"Save slot");
   }
@@ -4541,15 +5321,17 @@ async function viewPanelAdmin(v){
         const keep=(g.slots||[]).filter(sl=>!sl.studentDocId||chosen.includes(sl.studentDocId));
         const seated=new Set(keep.map(sl=>sl.studentDocId).filter(Boolean));
         const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
-        let slots=keep, overrun=0;
+        let slots=keep, overrun=0, intoDelib=false;
         if(sess){
           const extra=chosen.filter(id=>!seated.has(id));
           /* Continue from the last timed slot on the SESSION day \u2014 a student
              on their own day, or a link-only placeholder, is not a time. */
           const onDay=keep.filter(sl=>sl.start&&(!sl.date||sl.date===sess.date));
           let t=onDay.length?Math.max(...onDay.map(sl=>minsOf(sl.end))):minsOf(sess.start);
-          const per=g.slotMins||PANEL_SLOT_MINS;
-          extra.forEach(id=>{ slots=slots.concat([{start:hhmm(t),end:hhmm(t+per),studentDocId:id}]); t+=per; });
+          const tm=timingOf(g), per=tm.presMins+tm.qaMins;
+          extra.forEach(id=>{ slots=slots.concat([{start:hhmm(t),qaStart:hhmm(t+tm.presMins),end:hhmm(t+per),studentDocId:id}]); t+=per; });
+          const dl=deliberationOf(g,sess);
+          if(extra.length&&dl&&t>minsOf(dl.start)) intoDelib=true;
           slots.sort((a,b)=>String(a.date||sess.date).localeCompare(String(b.date||sess.date))||minsOf(a.start)-minsOf(b.start));
           /* A bigger panel than the session was booked for simply runs
              on \u2014 allowed, but the extra time must not land the assessors
@@ -4563,7 +5345,8 @@ async function viewPanelAdmin(v){
         }
         const ok=await persist({...g,studentIds:chosen,slots},
           "Students updated."+(moved.length?" "+moved.length+" moved from another panel.":"")+
-          (overrun?" The running order now goes past the session end by "+overrun+" min \u2014 change the session time to match.":""));
+          (overrun?" The running order now goes past the session end by "+overrun+" min \u2014 change the session time to match."
+            :intoDelib?" The new students run into the deliberation \u2014 use \u201CFinish at\u201D on the timetable to make room.":""));
         return ok;
       },"Save students");
     const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
@@ -4682,27 +5465,36 @@ async function viewPanelAdmin(v){
       const gs=groups.filter(g=>groupStudents(g).some(id=>ids.has(id)));
       return {list,gs,label,slug:slug.replace(/[^\w]+/g,"_").replace(/^_+|_+$/g,"")};
     }
+    const onlyMine=el("input",{type:"checkbox",checked:"checked",style:"width:auto;margin:0"});
+    const onlyBox=el("div",{style:"display:none"},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+      onlyMine,el("span",{},"Only these students' rows \u2014 leave out other students on the same panels, and the deliberation")));
     function sync(){
       const sc=scoped();
       info.textContent=sc.list.length+" student"+(sc.list.length===1?"":"s")+
         ", "+sc.gs.length+" panel"+(sc.gs.length===1?"":"s")+" \u2014 "+(sc.label||"the whole semester")+".";
+      onlyBox.style.display=kind==="timetable"&&which.value!=="all"?"":"none";
     }
     which.onchange=sync; sync();
 
-    modal("Download "+(kind==="xlsx"?"Excel workbook":"CSV"),
+    modal("Download "+(kind==="xlsx"?"Excel workbook":kind==="timetable"?"presentation timetable":"CSV"),
       el("div",{class:"grid"},
         el("div",{},el("label",{},"Include"),which),
         el("div",{},info),
+        onlyBox,
         el("div",{},el("p",{class:"muted",style:"margin:0"},
           kind==="xlsx"
             ? "A panel that includes any of these students is exported whole, so its running order stays complete even when it mixes areas or supervisors. The workbook's caption and filename name the scope."
-            : "One row per included student. The filename names the scope."))),
+            : kind==="timetable"
+              ? "One row per student slot \u2014 panel, date, day, session, slot, presentation, Q&A, student, student ID \u2014 then each panel's deliberation. Choose one supervisor's students to make a file you can send to that supervisor."
+              : "One row per included student. The filename names the scope."))),
       async()=>{
         const sc=scoped();
         if(!sc.list.length){ toast("Nobody matches that choice.",true); return false; }
         const rows=exportRows(sc.list,groups,cons);
         const scope=sc.label?{label:sc.label,slug:sc.slug}:null;
         if(kind==="xlsx") downloadPanelXLSX(rows,sc.gs,students,timetables,sem,scope);
+        else if(kind==="timetable") downloadCocTimetableCSV(sc.gs,students,sem,scope,
+          which.value!=="all"&&onlyMine.checked?new Set(sc.list.map(x=>x.id)):null);
         else downloadPanelCSV(rows,sem,scope);
         return true;
       },"\u2913 Download");
@@ -4739,9 +5531,13 @@ async function viewPanelAdmin(v){
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:14px;flex-wrap:wrap"},
       el("button",{class:"btn",onclick:()=>panelExportDialog("xlsx")},"\u2913 Download Excel"),
       el("button",{class:"btn ghost",onclick:()=>panelExportDialog("csv")},"\u2913 Download CSV"),
+      el("button",{class:"btn ghost",onclick:()=>panelExportDialog("timetable")},"\u2913 Presentation timetable (CSV)"),
+      groups.some(g=>scheduledCount(g))
+        ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"supervisor"})},"\u2709 Share timetable with supervisors")
+        :el("span",{}),
       el("button",{class:"btn ghost",onclick:()=>window.print()},"\u2399 Print / save as PDF")));
     host.append(el("p",{class:"muted ui",style:"margin:-6px 0 14px;font-size:12.5px"},
-      "Both downloads ask who to include first \u2014 everyone, one area, or one supervisor's students. The Excel workbook has four tabs: the student document, one row per panel, the running order slot by slot, and each assessor's load and any time clashes."));
+      "Both downloads ask who to include first \u2014 everyone, one area, or one supervisor's students. The Excel workbook has four tabs: the student document, one row per panel, the running order slot by slot (presentation, Q&A and deliberation), and each assessor's load and any time clashes. The presentation timetable CSV is that running order on its own."));
 
     if(!rows.length){ host.append(emptyState("Nothing to export","Add students to this semester first.")); return; }
 
@@ -4778,7 +5574,9 @@ async function viewPanelAdmin(v){
                 releaseState(r.g)==="assessors"?"Assessors only":"Supervisors only")),
           el("td",{class:"muted"},r.chair?.name||"\u2014"),
           el("td",{},chips),
-          el("td",{},r.cocTime?el("strong",{},r.cocDate+", "+r.cocTime):el("span",{class:"pill pending"},"Not set")),
+          el("td",{},r.cocTime?el("div",{},el("strong",{},r.cocDate+", "+r.cocTime),
+              r.parts?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(r.g,r.slot)):el("span",{}))
+            :el("span",{class:"pill pending"},"Not set")),
           // the URL in full, so it survives being printed to PDF
           el("td",{},r.meetingLink
             ? el("div",{},joinLink(r.meetingLink,"Join"),
@@ -8568,10 +9366,12 @@ function downloadTimetableCSV(rows,sem){
    taps send. Mobile numbers are stored as a contact record (no SMS
    sending without a backend gateway).
    ============================================================ */
-function openEmail(to,subject,body){
-  if(!to){ toast("No email on file for this person.",true); return; }
-  const url="mailto:"+encodeURIComponent(to)+
+function openEmail(to,subject,body,cc,bcc){
+  if(!to&&!bcc){ toast("No email on file for this person.",true); return; }
+  const url="mailto:"+encodeURIComponent(to||"")+
     "?subject="+encodeURIComponent(subject||"")+
+    (cc?"&cc="+encodeURIComponent(cc):"")+
+    (bcc?"&bcc="+encodeURIComponent(bcc):"")+
     "&body="+encodeURIComponent(body||"");
   // location assignment triggers the OS mail handler on web & mobile
   window.location.href=url;
