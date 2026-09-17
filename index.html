@@ -1729,17 +1729,27 @@ function availCounts(g,sess){
    arranged" \u2014 a half-built panel that then changes only causes emails.
    Only the Finalise / Reopen buttons on the panel card change the flag;
    nothing flips it as a side effect of some other edit. */
-/* Two audiences, two switches. A panel can be released to its ASSESSORS
+/* Three audiences, three switches. A panel can be released to its ASSESSORS
    (they learn which students they have been given, and when) without being
    released to the students' SUPERVISORS, or the other way round \u2014 the
    coordinator often wants the assessors briefed while the seating is still
    being negotiated with a supervisor, and the reverse when an assessor is
    about to be swapped. `finalized` is the supervisor switch, kept under
    its old name so existing records read correctly; panels saved before the
-   split fall back to it for the assessors too, which is what they meant. */
+   split fall back to it for the assessors too, which is what they meant.
+   The third switch is the STUDENTS', added last and falling back to
+   nothing, because it is the only one whose audience reads the hub without
+   a staff login \u2014 see isStudentReleased below. */
 const isFinal=g=>!!g?.finalized;                       // released to supervisors
 const isAssessorReleased=g=>g?.assessorsReleased!==undefined
   ? !!g.assessorsReleased : !!g?.finalized;
+/* A third switch, and the only one a STUDENT can act on: with it on, the
+   students of this panel see their own time when they look themselves up
+   by student ID, and the office can mail it to them. It does not fall back
+   to `finalized` the way the assessors' switch does — panels finalised
+   before this existed were released to staff, not to students, and nothing
+   should reach a student because a flag was reused. */
+const isStudentReleased=g=>!!g?.studentsReleased;
 const releaseState=g=>isFinal(g)&&isAssessorReleased(g)?"both"
   :isFinal(g)?"supervisors":isAssessorReleased(g)?"assessors":"none";
 /* What a panel is still missing before finalising makes sense. The
@@ -1996,6 +2006,11 @@ async function saveGroup(g){
        rather than being silently revoked on the next save. */
     assessorsReleased:isAssessorReleased(g),
     assessorsReleasedAt:isAssessorReleased(g)?(g.assessorsReleasedAt||Date.now()):0,
+    /* The students' switch. Unlike the assessors' one it has no fallback:
+       a record written before it existed is simply not released to its
+       students, which is what the coordinator would have meant. */
+    studentsReleased:isStudentReleased(g),
+    studentsReleasedAt:isStudentReleased(g)?(g.studentsReleasedAt||Date.now()):0,
     updatedAt:Date.now()
   };
   if(g.id){ await DB.update("panelGroups",g.id,rec); return g.id; }
@@ -2244,7 +2259,13 @@ function panelRuleHelp(err){
       }},"Copy rules"),
       el("button",{class:"btn ghost sm",onclick:()=>drawMain()},"Retry")),
     el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
-      "That is the permissive version, matching how the rest of the app is secured \u2014 use it to confirm the tab works. The tighter rules are in the firestore.rules file supplied with this app."));
+      "That is the permissive version, matching how the rest of the app is secured \u2014 use it to confirm the tab works. The tighter rules are in the firestore.rules file supplied with this app."),
+    /* The students look themselves up without signing in, so the rule above
+       (auth != null) hides their own CoC from them. Worth saying here, where
+       the coordinator is already editing rules, rather than leaving them to
+       puzzle over a portal that says "still being arranged" after release. */
+    el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:12.5px"},
+      "Note: students look themselves up by student ID without signing in, so the rule above also stops them seeing their own CoC time once you release a panel to them. To turn that on, panelGroups needs a read rule that doesn't require a login \u2014 the same way the students and notes collections are already reachable from the student view."));
   return card;
 }
 
@@ -2557,6 +2578,14 @@ async function viewPanels(v){
       if(slot&&day&&partsLine(g,slot)) whenCell.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(g,slot)));
       const myLink=g?slotLink(g,slot):"";
       if(myLink) whenCell.append(el("div",{style:"margin-top:4px"},joinLink(myLink,"Join")));
+      /* Whether the student already knows. The supervisor is the person
+         they ask, so it belongs on the row the supervisor reads. */
+      if(slot&&day) whenCell.append(el("div",{style:"margin-top:4px"},
+        isStudentReleased(g)
+          ? el("span",{class:"pill approved",style:"font-size:11.5px",
+              title:s.name+" can see this time by looking up their student ID"},"Student can see it")
+          : el("span",{class:"pill none",style:"font-size:11.5px",
+              title:"The coordinator hasn't released this to the students yet — "+(s.name||"they")+" is still told it is being arranged"},"Student not told yet")));
       tb.append(el("tr",{},
         el("td",{},el("strong",{},s.name),
           el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID")),
@@ -2721,7 +2750,8 @@ async function viewPanelAdmin(v){
       statBox(students.length-placed.size,"Unassigned"),
       statBox(groups.length,"Panels"),
       statBox(scheduled+" / "+placed.size,"Students scheduled"),
-      statBox(groups.filter(g=>releaseState(g)==="both").length+" / "+groups.length,"Fully released")));
+      statBox(groups.filter(g=>releaseState(g)==="both").length+" / "+groups.length,"Released to staff"),
+      statBox(groups.filter(isStudentReleased).length+" / "+groups.length,"Released to students")));
     if(S.panelTab==="nominations") drawNominations();
     else if(S.panelTab==="export") drawExport();
     else drawPanels(placed);
@@ -2853,6 +2883,17 @@ async function viewPanelAdmin(v){
       ready.length?el("button",{class:"btn sm",onclick:()=>finaliseAll(ready)},
         "Release "+ready.length+" ready panel"+(ready.length===1?"":"s")+" to both"):el("span",{})));
 
+    /* Released to the staff but not to the students is the normal resting
+       state for a day or two, so this is a reminder rather than a warning —
+       and the students are the audience most likely to be forgotten, since
+       nobody chases the office on their behalf. */
+    const staffOnly=groups.filter(g=>releaseState(g)==="both"&&!isStudentReleased(g)&&scheduledCount(g));
+    if(staffOnly.length) host.append(noticeBar("blue",
+      staffOnly.length+" panel"+(staffOnly.length===1?" is":"s are")+" released to the staff but not to the students — "+
+      "their students are told “still being arranged” when they look up their student ID.",
+      el("button",{class:"btn sm",onclick:()=>releaseStudentsAll(staffOnly)},
+        "Release "+staffOnly.length+" to students")));
+
     /* Coverage read supervisor by supervisor, which is how it gets chased.
        Panels are built assessor-wise, so a supervisor's students may be
        spread over several panels \u2014 this only says who is still waiting. */
@@ -2893,6 +2934,11 @@ async function viewPanelAdmin(v){
          those students sit on, rather than one panel at a time. */
       groups.some(g=>scheduledCount(g))
         ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"supervisor"})},"\u2709 Share timetable with supervisors")
+        :el("span",{}),
+      /* And the students themselves, panel by panel \u2014 the audience that
+         has to be in the room and had been hearing it second-hand. */
+      groups.some(g=>scheduledCount(g))
+        ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"students"})},"\u2709 Send times to students")
         :el("span",{}),
       /* Whole-list control, because opening eleven panels one at a time to
          find the one you want is the thing collapsing was meant to fix. */
@@ -2945,7 +2991,14 @@ async function viewPanelAdmin(v){
         if(st==="supervisors") return el("span",{class:"pill blue",
           title:"The students' supervisors can see it; the assessors cannot"},"Supervisors only");
         return el("span",{class:"pill pending",title:"Nobody outside this screen can see it yet"},"Draft");
-      })());
+      })(),
+      /* The students' switch is shown on its own, because it is the only
+         one whose audience reads the hub without a staff login. */
+      isStudentReleased(g)
+        ? el("span",{class:"pill approved",
+            title:"Each student sees their own time when they look up their student ID"},"Students can see it")
+        : el("span",{class:"pill none",
+            title:"Students looking up their ID are told their CoC is still being arranged"},"Students: not yet"));
     /* ---- at a glance, also the summary line when the card is shut ---- */
     const chairM=ms.find(m=>isChair(g,m));
     const days=[...new Set(groupStudents(g).map(id=>slotDate(g,slotOfStudent(g,id))).filter(Boolean))].sort();
@@ -3018,11 +3071,11 @@ async function viewPanelAdmin(v){
 
     /* Visibility, stated on the card because it is the thing the
        coordinator most often has to answer "why can't Dr X see it?" about.
-       Two lines, because the two audiences are released separately. */
+       One line per audience, because each is released separately. */
     {
       const gaps=finalGaps(g);
-      const asOn=isAssessorReleased(g), supOn=isFinal(g);
-      body.append(noticeBar(asOn&&supOn?"green":(asOn||supOn)?"blue":"amber",
+      const asOn=isAssessorReleased(g), supOn=isFinal(g), stuOn=isStudentReleased(g);
+      body.append(noticeBar(asOn&&supOn&&stuOn?"green":(asOn||supOn||stuOn)?"blue":"amber",
         el("div",{},
           el("div",{style:"font-size:13px"},
             (asOn?"\u2713 ":"\u2022 ")+"Assessors: "+(asOn
@@ -3032,6 +3085,10 @@ async function viewPanelAdmin(v){
             (supOn?"\u2713 ":"\u2022 ")+"Supervisors: "+(supOn
               ? "released \u2014 the students' principal and co-supervisors can see the assessors, the running order and the link."
               : "not released \u2014 their students' supervisors see only \u201Cbeing arranged\u201D.")),
+          el("div",{style:"font-size:13px;margin-top:2px"},
+            (stuOn?"\u2713 ":"\u2022 ")+"Students: "+(stuOn
+              ? "released \u2014 each student sees their own time, panel and link when they look up their student ID."
+              : "not released \u2014 a student looking up their ID is told their CoC is still being arranged.")),
           gaps.length?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
             "Still to do: "+gaps.join(", ")+"."):el("span",{}))));
     }
@@ -3120,6 +3177,12 @@ async function viewPanelAdmin(v){
         if(timed) acts.append(el("button",{class:"btn xs ghost",
           title:"Email this student's time to the panel and the student's supervisors",
           onclick:()=>scheduleEmailDialog({mode:"student",groupId:g.id,studentId:s.id})},"\u2709"));
+        /* The same slot, addressed to the student instead of about them. */
+        if(timed) acts.append(el("button",{class:"btn xs ghost",
+          title:String(s.email||"").trim()
+            ?"Email this time to "+(s.name||"the student")+" directly"
+            :"No email address on file for this student",
+          onclick:()=>scheduleEmailDialog({mode:"students",groupId:g.id,studentId:s.id})},"\u2709 Student"));
         stuBox.append(el("div",{class:"pmember"},
           el("div",{class:"pm-main"},
             el("div",{class:"pm-nm"},s.name+(s.sid?" ("+s.sid+")":"")),
@@ -3245,9 +3308,26 @@ async function viewPanelAdmin(v){
         : el("button",{class:"btn sm"+(gaps.length?" ghost":""),
             title:gaps.length?"Still to do: "+gaps.join(", "):"Let the students' supervisors see this panel",
             onclick:()=>finalise(g)},"Release to supervisors"),
+      /* The students' own switch: it is what they read by student ID. */
+      isStudentReleased(g)
+        ? el("button",{class:"btn sm ghost",onclick:()=>setStudentRelease(g,false)},"Hide from students")
+        : el("button",{class:"btn sm"+(gaps.length||!isFinal(g)?" ghost":""),
+            title:gaps.length?"Still to do: "+gaps.join(", ")
+                 :!isFinal(g)?"Usually released to the supervisors first"
+                 :"Let each student see their own time when they look up their student ID",
+            onclick:()=>setStudentRelease(g,true)},"Release to students"),
       scheduledCount(g)
         ? el("button",{class:"btn sm ghost",title:"Email the running order to the assessors, the students' supervisors, or both",
             onclick:()=>scheduleEmailDialog({mode:"panel",groupId:g.id,recipients:"both"})},"\u2709 Email panel & supervisors")
+        : el("span",{}),
+      /* The students on this panel, told directly \u2014 one at a time or all
+         at once. The email and the release switch are the same act seen from
+         two sides, so this sits next to "Release to students". */
+      scheduledCount(g)
+        ? el("button",{class:"btn sm ghost",
+            title:isStudentReleased(g)?"Email their own presentation times to the students on this panel"
+                            :"Release this panel to students first \u2014 or send it to them marked as draft",
+            onclick:()=>scheduleEmailDialog({mode:"students",groupId:g.id})},"\u2709 Email students")
         : el("span",{}),
       el("span",{class:"spacer"}),
       el("button",{class:"btn sm ghost",onclick:()=>editMembers(g)},"Edit name & assessors"),
@@ -3611,6 +3691,30 @@ async function viewPanelAdmin(v){
     }
   }
 
+  /* Releasing to the students is the last switch to throw and the one that
+     leaves the building: they read it themselves by student ID, and it is
+     what the office's email to them refers to. So the checks are the
+     strictest — a student looking up their own CoC and finding a time that
+     then moves is the failure this guards against. */
+  async function setStudentRelease(g,on){
+    if(on){
+      const gaps=finalGaps(g);
+      const untimed=groupStudents(g).filter(id=>!isScheduled(g,id)).length;
+      if(gaps.length&&!window.confirm((g.label||"This panel")+" still has "+gaps.join(", ")+
+        ".\n\nRelease it to the students anyway?"+
+        (untimed?"\n\nStudents with no time yet will be told their time is still being arranged.":"")+
+        "\n\nEach student sees only their own slot when they look themselves up by student ID.")) return;
+      if(!isFinal(g)&&!window.confirm((g.label||"This panel")+" has not been released to the students' supervisors yet.\n\n"+
+        "Release it to the students anyway? They would see a time their own supervisors can't.")) return;
+      await persist({...g,studentsReleased:true,studentsReleasedAt:Date.now()},
+        (g.label||"Panel")+" released to its students.");
+    }else{
+      if(!window.confirm("Hide "+(g.label||"this panel")+" from its students?\n\nLooking up their student ID will show their CoC as still being arranged. Anything already emailed to them has of course already been sent.")) return;
+      await persist({...g,studentsReleased:false,studentsReleasedAt:0},
+        (g.label||"Panel")+" hidden from its students again.");
+    }
+  }
+
   async function finalise(g){
     const gaps=finalGaps(g);
     if(gaps.length&&!window.confirm((g.label||"This panel")+" still has "+gaps.join(", ")+
@@ -3637,16 +3741,32 @@ async function viewPanelAdmin(v){
     if(n) toast(n+" panel"+(n===1?"":"s")+" released.");
     reload();
   }
+  /* The same, for the students' switch. Kept separate from finaliseAll so
+     that releasing to the staff never releases to the students as a side
+     effect — the office usually wants a gap between the two. */
+  async function releaseStudentsAll(list){
+    if(!window.confirm("Release "+list.length+" panel"+(list.length===1?"":"s")+" ("+
+      list.map(g=>g.label||"Panel").join(", ")+") to their students?\n\nEach student will see their own time — and only their own — when they look themselves up by student ID. Sending them the email is a separate step.")) return;
+    let n=0;
+    for(const g of list){
+      try{ await saveGroup({...g,studentsReleased:true,studentsReleasedAt:Date.now()}); n++; }
+      catch(err){ toast(err?.message||"Could not release "+(g.label||"a panel")+".",true); break; }
+    }
+    if(n) toast(n+" panel"+(n===1?"":"s")+" released to students.");
+    reload();
+  }
 
   /* ---- the presentation schedule by email ----
      The hub can't send mail itself, so this composes the message and
-     hands it to the mail app. Three ways to address it, because the
-     office sends it three ways: to each chair (who circulates it to
+     hands it to the mail app. Three ways to address it to staff, because
+     the office sends it three ways: to each chair (who circulates it to
      their panel), to everyone on one panel, or to one assessor with
      everything they sit on \u2014 which is what someone who is on three
      panels actually wants. A whole panel's schedule, or one student's
      time, can go to the panel members, the students' supervisors, or both
-     at once (panel on To, supervisors on Cc). Draft panels are held back
+     at once (panel on To, supervisors on Cc). Then the students of one
+     panel, who get their own wording: one of them with their own slot, or
+     all of them on Bcc with the running order. Draft panels are held back
      unless asked for, and are marked as draft when included, so nothing
      goes out that the coordinator has not yet stood behind. */
   /* Who an email about a panel can go to. The assessors are the panel's
@@ -3668,6 +3788,7 @@ async function viewPanelAdmin(v){
   const assessorsOf=g=>groupMembers(g).map(m=>({name:m.name||"",emails:memberEmails(m)}));
   /* "Dear …" for whoever is on the message. */
   function greeting(audience,panelists,sups){
+    if(audience==="students") return "Dear students,";
     if(audience==="both") return "Dear panel members and supervisors,";
     const names=(audience==="supervisors"?sups:panelists).map(x=>x.name).filter(Boolean);
     return "Dear "+(names.length?names.join(", "):"colleagues")+",";
@@ -3675,7 +3796,10 @@ async function viewPanelAdmin(v){
   /* Draft marking follows the audience: a panel not yet released to its
      assessors is draft to them, and one not released to supervisors is
      draft to those. Sent to both, either one makes it draft. */
-  const draftFor=(g,audience)=>audience==="supervisors"?!isFinal(g)
+  /* Each audience is marked draft by its own switch — the students by the
+     one that also decides whether they can look the time up for themselves. */
+  const draftFor=(g,audience)=>audience==="students"?!isStudentReleased(g)
+    :audience==="supervisors"?!isFinal(g)
     :audience==="both"?!(isFinal(g)&&isAssessorReleased(g)):!isAssessorReleased(g);
   const pad20=x=>String(x).padEnd(19," ");
   const CONT="                     ";   // continuation lines line up under the name
@@ -3706,6 +3830,79 @@ async function viewPanelAdmin(v){
       "Please let us know as soon as possible if this time doesn't work.","",
       "Kind regards,","MRes Coordination"].join("\n");
   }
+
+  /* ---- telling the students themselves ----
+     The students on a panel are the one audience the schedule never reached:
+     it went to the assessors, to the chairs and to the supervisors, and the
+     student heard it second-hand from their principal supervisor. These two
+     messages close that gap. They are deliberately student-facing: no
+     proposal titles (those are staff-facing everywhere else in the app), no
+     draft panels unless the coordinator asks for them, and the practical
+     lines a presenter actually needs — when to join, how long they have,
+     who will be in the room, and who to tell if the time is wrong. */
+  function studentsOf(g,onlyId){
+    const out=[];
+    (g.slots||[]).filter(sl=>sl.start&&(!onlyId||sl.studentDocId===onlyId)).forEach(sl=>{
+      const st=students.find(x=>x.id===sl.studentDocId);
+      if(st&&!out.some(x=>x.st.id===st.id)) out.push({st,sl});
+    });
+    return out.sort((a,b)=>String(slotDate(g,a.sl)||"").localeCompare(String(slotDate(g,b.sl)||""))
+      ||minsOf(a.sl.start)-minsOf(b.sl.start));
+  }
+  const studentAddr=st=>({name:st.name||"",emails:[String(st.email||"").trim()].filter(Boolean)});
+
+  /* One student's own presentation time, written to the student. */
+  function studentOwnText(s,g,sl,semLabel,opts={}){
+    const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+    const chair=groupMembers(g).find(x=>isChair(g,x));
+    const pp=slotParts(g,sl), t=timingOf(g);
+    const day=sl.date||sess?.date;
+    const L=[opts.dear||("Dear "+(s.name||"student")+","),""];
+    L.push("Your Confirmation of Candidature presentation"+(semLabel?" in "+semLabel:"")+
+      " has been scheduled"+(draftFor(g,"students")?"  (DRAFT — this may still change)":"")+
+      ". Your details are below.","");
+    L.push("Student:       "+s.name+(s.sid?" ("+s.sid+")":""));
+    L.push("When:          "+(day?weekdayOf(day)+" "+longDate(day)+", ":"")+clockRange(sl.start,sl.end));
+    if(pp){
+      L.push("Presentation:  "+clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)");
+      if(pp.qaMins) L.push("Q&A:           "+clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)");
+    }
+    L.push("Panel:         "+(g.label||"your panel"));
+    L.push("Chair:         "+(chair?.name||"to be confirmed"));
+    L.push("Assessors:     "+(groupMembers(g).length?groupMembers(g).map(x=>x.name||"?").join(", "):"to be confirmed"));
+    L.push("Meeting link:  "+(slotLink(g,sl)||"to follow"));
+    L.push("Supervisors:   "+(s.principalName||supName(s.principalUid))+(s.coName?" · "+s.coName:""));
+    L.push("","Please join the meeting five minutes before your slot with your slides ready to share. "+
+      "You present for "+t.presMins+" minutes"+(t.qaMins?", then take "+t.qaMins+" minutes of questions from the panel":"")+".");
+    if(opts.roster){
+      L.push("","The full running order for your panel is below, so you can see who is on before and after you.");
+      panelLines(L,g,"students",null,{hideOwnLinks:true});
+    }
+    if(isStudentReleased(g))
+      L.push("","You can check this any time in the Supervision Hub — open the student view and enter your student ID.");
+    L.push("","If this time does not work for you, tell your principal supervisor and the MRes office as soon as possible.");
+    L.push("","Kind regards,","MRes Coordination");
+    return L.join("\n");
+  }
+
+  /* The whole panel's running order, written to its students at once. */
+  function panelStudentsText(g,semLabel,opts={}){
+    const t=timingOf(g);
+    const L=[opts.dear||"Dear students,",""];
+    L.push("Here is the Confirmation of Candidature presentation timetable for "+(g.label||"your panel")+
+      (semLabel?" in "+semLabel:"")+(draftFor(g,"students")?"  (DRAFT — this may still change)":"")+
+      ". Find your name in the running order below — you present for "+t.presMins+" minutes"+
+      (t.qaMins?", then take "+t.qaMins+" minutes of questions from the panel":"")+".");
+    panelLines(L,g,"students");
+    L.push("","Please join the meeting five minutes before your own slot with your slides ready to share. "+
+      "You are welcome to stay for the other presentations on your panel.");
+    if(isStudentReleased(g))
+      L.push("","You can check your own time any time in the Supervision Hub — open the student view and enter your student ID.");
+    L.push("","If your time does not work for you, tell your principal supervisor and the MRes office as soon as possible.");
+    L.push("","Kind regards,","MRes Coordination");
+    return L.join("\n");
+  }
+
   /* The schedule for one or more panels. `m` is the assessor it is addressed
      to in the per-person modes; opts.dear / opts.intro replace the opening
      when it goes to a whole panel or to supervisors. */
@@ -3713,7 +3910,7 @@ async function viewPanelAdmin(v){
      running order with each student's presentation and Q&A, then the
      deliberation. `m` marks the reader's own chair; `audience` decides
      whether it is marked draft. */
-  function panelLines(L,g,audience,m){
+  function panelLines(L,g,audience,m,lineOpts={}){
     const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
     const chair=groupMembers(g).find(x=>isChair(g,x));
     const t=timingOf(g), dl=deliberationOf(g,sess);
@@ -3735,15 +3932,22 @@ async function viewPanelAdmin(v){
       L.push("  "+pad20(clockRange(sl.start,sl.end))+
         (st?(st.name+(st.sid?" ("+st.sid+")":"")+(own?"  \u2014 on "+weekdayOf(sl.date)+" "+longDate(sl.date):"")+
             (pp?"\n"+CONT+"Presentation "+clockRange(pp.start,pp.qaStart)+(pp.qaMins?" \u00B7 Q&A "+clockRange(pp.qaStart,pp.end):""):"")+
-            (titleOf(st)?"\n"+CONT+"\u201C"+titleOf(st)+"\u201D":"")+
+            /* Proposal titles are staff-facing \u2014 they are kept off anything
+               addressed to the students themselves. */
+            (audience!=="students"&&titleOf(st)?"\n"+CONT+"\u201C"+titleOf(st)+"\u201D":"")+
             "\n"+CONT+"Principal supervisor: "+(st.principalName||supName(st.principalUid))+
             (st.coName?" \u00B7 Co-supervisor: "+st.coName:"")+
-            (String(sl.link||"").trim()?"\n"+CONT+"Own meeting link: "+sl.link.trim():""))
+            /* A classmate's personal meeting link is of no use to the reader,
+               so it is dropped when one student is being shown the order. */
+            (!lineOpts.hideOwnLinks&&String(sl.link||"").trim()?"\n"+CONT+"Own meeting link: "+sl.link.trim():""))
           :"Panel discussion"));
     };
     const onDay=slots.filter(sl=>!sl.date||sl.date===sess?.date);
     onDay.forEach(line);
-    if(sess&&dl) L.push("  "+pad20(clockRange(dl.start,dl.end))+"Panel deliberation");
+    /* Students see the deliberation so the day's shape makes sense, but it
+       is the assessors' closed session and is labelled as one. */
+    if(sess&&dl) L.push("  "+pad20(clockRange(dl.start,dl.end))+"Panel deliberation"+
+      (audience==="students"?" (assessors only — students do not attend)":""));
     slots.filter(sl=>!onDay.includes(sl)).forEach(line);
   }
   /* The schedule for one or more panels. `m` is the assessor it is addressed
@@ -3827,8 +4031,9 @@ async function viewPanelAdmin(v){
       ...[["chair","Each panel chair"],
           ["panel","One whole panel"],
           ["member","One assessor (all their panels)"],
-          ["student","One student's time"],
-          ["supervisor","Supervisors \u2014 their students' times"]]
+          ["student","One student's time \u2014 to staff"],
+          ["supervisor","Supervisors \u2014 their students' times"],
+          ["students","Students on one panel"]]
         .map(([v,l])=>el("option",{value:v,...(v===(preset.mode||"chair")?{selected:"selected"}:{})},l)));
     const presetG=preset.groupId?groups.find(g=>g.id===preset.groupId):null;
     /* Who a panel or student message goes to. Both is the usual choice once
@@ -3839,14 +4044,32 @@ async function viewPanelAdmin(v){
         .map(([v,l])=>el("option",{value:v,
           ...(v===(preset.recipients||(presetG&&isFinal(presetG)?"both":"assessors"))?{selected:"selected"}:{})},l)));
     const recipBox=el("div",{style:"flex:1;min-width:200px"},el("label",{},"Recipients"),recipients);
+    /* Opened from a card, the tick starts on when that card would otherwise
+       be filtered out of its own dialog — by the assessor switch normally,
+       by the supervisor switch when the students are the audience. */
     const includeDraft=el("input",{type:"checkbox",style:"width:auto;margin:0",
-      ...(presetG&&!isAssessorReleased(presetG)?{checked:"checked"}:{})});
+      ...(presetG&&!(preset.mode==="students"?isStudentReleased(presetG):isAssessorReleased(presetG))?{checked:"checked"}:{})});
     const draftLabel=el("span",{},"Include panels not yet released to their assessors");
     /* Supervisor messages list only the supervisor's own students unless
        this is ticked; then each of their panels' full running order follows. */
     const fullOrder=el("input",{type:"checkbox",style:"width:auto;margin:0"});
     const fullBox=el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
       fullOrder,el("span",{},"Add the full running order of each of their panels (other students' names and titles included)")));
+    /* ---- the students' own message ----
+       Picking the panel is only half the choice: the office either writes to
+       one student about their own slot, or to the whole panel's students at
+       once. Both go out from the same place, so the second select sits beside
+       the panel rather than hiding behind another mode. */
+    const stuPick=el("select",{});
+    const stuBox=el("div",{style:"flex:1;min-width:200px"},el("label",{},"Send to"),stuPick);
+    const stuRoster=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+    const stuRosterBox=el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+      stuRoster,el("span",{},"Add the panel's full running order (the other students' names and times)")));
+    /* Supervisors are usually the ones who told the student a time was coming,
+       so copying them keeps everyone on the same message. */
+    const stuCc=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+    const stuCcBox=el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+      stuCc,el("span",{},"Copy in the students' supervisors")));
     const who=el("select",{});
     const whoLabel=el("label",{},"Chair");
     const subject=el("input",{});
@@ -3856,8 +4079,9 @@ async function viewPanelAdmin(v){
     const nextBtn=el("button",{class:"btn xs ghost",type:"button"},"Next in the list");
 
     const isSup=()=>mode.value==="supervisor";
+    const isStu=()=>mode.value==="students";
     /* The release switch that matters depends on who is being told. */
-    const released=g=>isSup()?isFinal(g):isAssessorReleased(g);
+    const released=g=>isStu()?isStudentReleased(g):isSup()?isFinal(g):isAssessorReleased(g);
     const eligible=()=>withSession.filter(g=>includeDraft.checked||released(g));
     const people=gs=>{
       const seen=new Map();
@@ -3867,12 +4091,46 @@ async function viewPanelAdmin(v){
     const groupWide=()=>mode.value==="panel"||mode.value==="student";
     let edited=false;   // once the coordinator types in the body, stop regenerating it
 
+    /* The second select in students mode: the whole panel's students, or one
+       of them. Rebuilt whenever the panel changes, keeping the pick if the
+       same student is still there. */
+    function fillStudents(){
+      const g=eligible().find(x=>x.id===who.value);
+      const keep=stuPick.value;
+      stuPick.innerHTML="";
+      const list=g?studentsOf(g):[];
+      if(!list.length){ stuPick.append(el("option",{value:""},"— nobody with a time —")); return; }
+      if(list.length>1) stuPick.append(el("option",{value:"__all__"},
+        "All "+list.length+" students on this panel — one email, Bcc"));
+      list.forEach(({st,sl})=>stuPick.append(el("option",{value:st.id,
+        ...(st.id===preset.studentId?{selected:"selected"}:{})},
+        (st.name||"?")+(st.sid?" ("+st.sid+")":"")+" — "+
+        (slotDate(g,sl)?prettyDate(slotDate(g,sl))+" ":"")+clockRange(sl.start,sl.end)+
+        (String(st.email||"").trim()?"":"  (no email)"))));
+      if(keep&&[...stuPick.options].some(o=>o.value===keep)) stuPick.value=keep;
+    }
     function fillWho(){
       const gs=eligible(); who.innerHTML="";
       recipBox.style.display=groupWide()?"":"none";
       fullBox.style.display=isSup()?"":"none";
+      stuBox.style.display=isStu()?"":"none";
+      stuRosterBox.style.display=isStu()?"":"none";
+      stuCcBox.style.display=isStu()?"":"none";
       draftLabel.textContent=isSup()?"Include panels not yet released to supervisors"
+        :isStu()?"Include panels not yet released to the students (they would be sent a draft time they can't look up)"
                                     :"Include panels not yet released to their assessors";
+      if(isStu()){
+        whoLabel.textContent="Panel";
+        gs.filter(g=>studentsOf(g).length)
+          .sort((a,b)=>String(a.label).localeCompare(String(b.label))).forEach(g=>
+            who.append(el("option",{value:g.id,...(g.id===preset.groupId?{selected:"selected"}:{})},
+              (g.label||"Panel")+" — "+studentsOf(g).length+" student"+(studentsOf(g).length===1?"":"s")+", "+
+              (g.chosenSessionId?sessionLabel(groupSessions(g).find(x=>x.id===g.chosenSessionId)):"individual times")+
+              (isStudentReleased(g)?"":" (not released to students)"))));
+        if(!who.children.length) who.append(el("option",{value:""},"— no panel matches —"));
+        fillStudents();
+        return;
+      }
       if(mode.value==="panel"){
         whoLabel.textContent="Panel";
         gs.sort((a,b)=>String(a.label).localeCompare(String(b.label))).forEach(g=>
@@ -3922,8 +4180,25 @@ async function viewPanelAdmin(v){
        all-supervisors message keeps every address on Bcc. */
     function target(){
       const gs=eligible();
-      const aud=groupWide()?recipients.value:isSup()?"supervisors":"assessors";
+      const aud=isStu()?"students":groupWide()?recipients.value:isSup()?"supervisors":"assessors";
       const none={to:[],cc:[],bcc:[],gs:[],named:"",aud};
+      if(isStu()){
+        const g=gs.find(x=>x.id===who.value);
+        if(!g) return none;
+        const list=studentsOf(g);
+        if(stuPick.value==="__all__"){
+          const sups=stuCc.checked?supervisorsOf(list.map(x=>x.st)):[];
+          /* Every student on Bcc: they are classmates, not a mailing list,
+             and nobody's address needs to travel to the others. */
+          return {to:[],cc:sups,bcc:list.map(x=>studentAddr(x.st)),
+                  gs:[g],named:(g.label||"Panel")+"'s students",stuAll:list,aud};
+        }
+        const pick=list.find(x=>x.st.id===stuPick.value);
+        if(!pick) return none;
+        const sups=stuCc.checked?supervisorsOf([pick.st]):[];
+        return {to:[studentAddr(pick.st)],cc:sups,bcc:[],
+                gs:[g],named:pick.st.name,stu:pick.st,slot:pick.sl,aud};
+      }
       const split=(panelists,sups)=>aud==="supervisors"?{to:sups,cc:[],bcc:[]}
         :aud==="both"?{to:panelists,cc:sups,bcc:[]}:{to:panelists,cc:[],bcc:[]};
       if(mode.value==="panel"){
@@ -3967,7 +4242,13 @@ async function viewPanelAdmin(v){
     };
     function regen(){
       const t=target();
-      subject.value=mode.value==="student"&&t.student
+      // the whole-panel message already IS the running order
+      stuRosterBox.style.display=(isStu()&&stuPick.value&&stuPick.value!=="__all__")?"":"none";
+      subject.value=t.stu
+        ? "MRes Confirmation of Candidature \u2014 your presentation time"+(semLabel?" ("+semLabel+")":"")
+        : t.stuAll
+          ? "MRes Confirmation of Candidature \u2014 presentation times for "+(t.gs[0]?.label||"your panel")+(semLabel?" ("+semLabel+")":"")
+        : mode.value==="student"&&t.student
         ? "MRes Confirmation of Candidature \u2014 "+t.student.name+"'s presentation time"+(semLabel?" ("+semLabel+")":"")
         : t.sup
           ? "MRes Confirmation of Candidature \u2014 your student"+(t.sup.items.length===1?"'s presentation time":"s' presentation times")+(semLabel?" ("+semLabel+")":"")
@@ -3976,7 +4257,11 @@ async function viewPanelAdmin(v){
         : "MRes Confirmation of Candidature \u2014 presentation schedule"+
           (t.gs.length===1?" for "+(t.gs[0].label||"the panel"):"")+(semLabel?" ("+semLabel+")":"");
       if(!edited){
-        if(mode.value==="student"&&t.student){
+        if(t.stu){
+          body.value=studentOwnText(t.stu,t.gs[0],t.slot,semLabel,{roster:stuRoster.checked});
+        }else if(t.stuAll){
+          body.value=panelStudentsText(t.gs[0],semLabel);
+        }else if(mode.value==="student"&&t.student){
           body.value=studentSlotText(t.student,t.gs[0],t.slot,semLabel,
             {audience:t.aud,dear:greeting(t.aud,t.pan,t.sups)});
         }else if(mode.value==="panel"&&t.gs[0]){
@@ -4013,7 +4298,32 @@ async function viewPanelAdmin(v){
         style:"margin:6px 0 0;font-size:13px;"+(strong?"font-weight:700;color:var(--clay-ink,#9a3412)":"color:var(--amber-ink)")},txt));
       const noMail=[...t.to,...t.cc,...t.bcc].filter(x=>!x.emails.length).map(x=>x.name||"Someone");
       if(noMail.length) say(noMail.join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off.");
-      if(isSup()){
+      if(isStu()){
+        /* The students are the last audience to be told and the one that
+           can't check the hub for itself, so every gap is named here. */
+        const g=t.gs[0];
+        if(g&&!isStudentReleased(g)) say((g.label||"This panel")+" is not released to its students — the message is "+
+          "marked as draft, and they won't find the time by looking up their student ID. "+
+          "Use “Release to students” on the panel card first if the times are settled.",true);
+        else if(g&&!isFinal(g)) say((g.label||"This panel")+" is released to its students but not to their supervisors, "+
+          "so the students can see a time their own supervisors can't.");
+        if(g&&!includeDraft.checked){
+          const heldN=withSession.filter(x=>!isStudentReleased(x)).reduce((n,x)=>n+studentsOf(x).length,0);
+          if(heldN) say(heldN+" student"+(heldN===1?"":"s")+" on panels not yet released to students "+
+            (heldN===1?"is":"are")+" not in the panel list above. Tick the box to include them as draft.");
+        }
+        if(g){
+          const untimed=groupStudents(g).filter(id=>!studentsOf(g).some(x=>x.st.id===id)).length;
+          if(untimed) say(untimed+" student"+(untimed===1?"":"s")+" on this panel "+(untimed===1?"has":"have")+
+            " no time yet and "+(untimed===1?"is":"are")+" left out — set their time first.");
+          if(!String(g.meetingLink||"").trim()&&!(g.slots||[]).some(sl=>String(sl.link||"").trim()))
+            say("This panel has no meeting link yet, so the students are told it is to follow.");
+        }
+        if(t.stuAll) say("Every student is on Bcc, so they don't see each other's addresses — but the running order "+
+          "names the other students on the panel and their times. Proposal titles are left out.");
+        if(t.stu&&stuRoster.checked) say("The running order names the other students on this panel and their times.");
+        if(stuCc.checked&&!(t.cc||[]).length) say("No supervisors are recorded for "+(t.stuAll?"these students":"this student")+", so nobody is copied in.");
+      }else if(isSup()){
         /* Say what the release filter left out, so a missing student is
            a decision the coordinator can see rather than a silent gap. */
         if(!includeDraft.checked){
@@ -4048,13 +4358,17 @@ async function viewPanelAdmin(v){
       /* A mail link carries the whole message in its address, and some mail
          apps cut long ones short. Past this length, point at the copy button. */
       if(body.value.length>1800) say("This message is long. If it arrives cut short in your mail app, use Copy message and paste it in.");
-      // "Next in the list" only where there is someone after this one
-      const i=who.selectedIndex, rest=[...who.options].slice(i+1).filter(o=>o.value&&o.value!=="__all__");
-      nextBtn.style.display=(["chair","member","supervisor"].includes(mode.value)&&who.value!=="__all__"&&rest.length)?"":"none";
+      // "Next in the list" only where there is someone after this one.
+      // In students mode it walks the panel's students, not the panels.
+      const sel=isStu()?stuPick:who;
+      const rest=[...sel.options].slice(sel.selectedIndex+1).filter(o=>o.value&&o.value!=="__all__");
+      nextBtn.style.display=(["chair","member","supervisor","students"].includes(mode.value)&&
+        sel.value!=="__all__"&&rest.length)?"":"none";
     }
     nextBtn.onclick=()=>{
-      for(let k=who.selectedIndex+1;k<who.options.length;k++){
-        if(who.options[k].value&&who.options[k].value!=="__all__"){ who.selectedIndex=k; break; }
+      const sel=isStu()?stuPick:who;
+      for(let k=sel.selectedIndex+1;k<sel.options.length;k++){
+        if(sel.options[k].value&&sel.options[k].value!=="__all__"){ sel.selectedIndex=k; break; }
       }
       edited=false; regen();
     };
@@ -4062,7 +4376,11 @@ async function viewPanelAdmin(v){
     recipients.onchange=()=>{ edited=false; regen(); };
     includeDraft.onchange=()=>{ edited=false; fillWho(); regen(); };
     fullOrder.onchange=()=>{ edited=false; regen(); };
-    who.onchange=()=>{ edited=false; regen(); };
+    stuRoster.onchange=()=>{ edited=false; regen(); };
+    stuCc.onchange=()=>{ edited=false; regen(); };
+    stuPick.onchange=()=>{ edited=false; regen(); };
+    // changing the panel in students mode rebuilds the list of its students
+    who.onchange=()=>{ edited=false; if(isStu()) fillStudents(); regen(); };
     body.oninput=()=>{ edited=true; };
 
     modal("Email the presentation schedule",
@@ -4070,10 +4388,10 @@ async function viewPanelAdmin(v){
         el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
           el("div",{style:"flex:1;min-width:200px"},el("label",{},"Send"),mode),
           el("div",{style:"flex:1;min-width:200px"},whoLabel,who),
-          recipBox),
+          recipBox,stuBox),
         el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
           includeDraft,draftLabel)),
-        fullBox,
+        fullBox,stuCcBox,stuRosterBox,
         el("div",{},el("label",{},"Subject"),subject),
         el("div",{},el("label",{},"Message"),body,
           el("div",{class:"row",style:"gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap"},
@@ -5534,6 +5852,9 @@ async function viewPanelAdmin(v){
       el("button",{class:"btn ghost",onclick:()=>panelExportDialog("timetable")},"\u2913 Presentation timetable (CSV)"),
       groups.some(g=>scheduledCount(g))
         ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"supervisor"})},"\u2709 Share timetable with supervisors")
+        :el("span",{}),
+      groups.some(g=>scheduledCount(g))
+        ?el("button",{class:"btn ghost",onclick:()=>scheduleEmailDialog({mode:"students"})},"\u2709 Send times to students")
         :el("span",{}),
       el("button",{class:"btn ghost",onclick:()=>window.print()},"\u2399 Print / save as PDF")));
     host.append(el("p",{class:"muted ui",style:"margin:-6px 0 14px;font-size:12.5px"},
@@ -10009,6 +10330,9 @@ async function renderStudentView(sid,enrolments,sems){
     card.append(el("p",{class:"muted ui",style:"margin:12px 0 0;font-size:13px"},
       "Consultations are held in your Team classroom, in your own channel — use the Join button above at the shown time. Attendance is recorded against these meetings. To contact your supervisor, email them directly."));
 
+    // ---- My Confirmation of Candidature ----
+    await studentCocBlock(card,en);
+
     // ---- Messages with my supervisors ----
     await studentNotesBlock(card,en);
 
@@ -10035,6 +10359,62 @@ async function renderStudentView(sid,enrolments,sems){
       col.insertBefore(bar,col.children[1]||null);
     }
   }catch(e){ console.warn("messages banner unavailable:",e?.message||e); }
+}
+
+/* ---- Student-side view of their own CoC -------------------------------
+   The student's half of the release switch on the panel card. A panel the
+   coordinator has not released to students does not appear here at all,
+   and neither does the fact that it exists: until the times are settled,
+   "still being arranged" is both the truth and all a student can act on.
+   Only this student's own slot is shown — never the panel's running
+   order, which carries their classmates' names and times. */
+async function studentCocBlock(card,en){
+  const head=()=>card.append(el("div",{style:"font-weight:600;margin:16px 0 4px",class:"ui"},
+    "My Confirmation of Candidature"));
+  let groups;
+  try{ groups=await DB.list("panelGroups",{semesterId:en.semesterId}); }
+  catch(err){
+    head();
+    card.append(el("p",{class:"muted",style:"margin:2px 0"},
+      "Your Confirmation of Candidature details can't be loaded right now. Please let your supervisor know — "+
+      "the site's database rules need to allow the “panelGroups” collection."));
+    return;
+  }
+  const g=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(en.id));
+  head();
+  if(!g){
+    card.append(el("p",{class:"muted",style:"margin:2px 0"},
+      "Your Confirmation of Candidature is still being arranged. Your time will be emailed to you and will appear here once it is set."));
+    return;
+  }
+  const sl=slotOfStudent(g,en.id), day=sl?slotDate(g,sl):"";
+  if(!(sl&&day)){
+    card.append(el("p",{style:"margin:2px 0"},"You are on "+(g.label||"a panel")+"."),
+      el("p",{class:"muted",style:"margin:2px 0"},
+        "Your presentation time is still being arranged. It will appear here once it is set."));
+    return;
+  }
+  const pp=slotParts(g,sl), t=timingOf(g);
+  const chair=groupMembers(g).find(m=>isChair(g,m));
+  const line=(lbl,val)=>card.append(el("p",{style:"margin:2px 0"},
+    el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
+  line("When:",weekdayOf(day)+" "+longDate(day)+", "+clockRange(sl.start,sl.end));
+  if(pp){
+    line("Presentation:",clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)");
+    if(pp.qaMins) line("Q&A:",clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)");
+  }
+  line("Panel:",g.label||"Panel");
+  line("Chair:",chair?.name||"to be confirmed");
+  const ms=groupMembers(g);
+  line("Assessors:",ms.length?ms.map(m=>m.name||"?").join(", "):"to be confirmed");
+  const lk=slotLink(g,sl);
+  if(lk) card.append(el("div",{style:"margin:6px 0 2px"},
+    el("a",{class:"linkpill",href:lk,target:"_blank",rel:"noopener"},"Join my CoC")));
+  else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Meeting link to follow."));
+  card.append(el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:13px"},
+    "Join five minutes before your slot with your slides ready to share. You present for "+t.presMins+" minutes"+
+    (t.qaMins?", then take "+t.qaMins+" minutes of questions from the panel":"")+
+    ". If this time does not work for you, tell your principal supervisor as soon as possible."));
 }
 
 /* Student-side view of the shared supervision thread: read everything
