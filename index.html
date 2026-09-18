@@ -1453,6 +1453,23 @@ function joinLink(u,label){
 }
 
 function activeSemester(){ return S.semesters.find(s=>s.id===S.activeSem)||null; }
+
+/* ---- Admin switches --------------------------------------------------
+   Kept as plain fields on the SEMESTER document, deliberately. A separate
+   settings collection would need its own security rule, and a rules edit
+   is the one kind of change an office cannot make from inside the app —
+   so a feature meant to save the coordinator time would start by costing
+   them a trip to the Firebase console. The semester document is already
+   world-readable and admin-writable, which is exactly the shape a switch
+   like this needs, and a setting that lasts one semester is usually what
+   is wanted anyway: messaging off while the CoC round is run, on again
+   next semester, without anyone having to remember to undo it.
+
+   Both default to OFF-means-normal, so a semester saved before these
+   existed behaves exactly as it always has. */
+const messagesOff      = sem => !!sem?.messagesOff;
+const clashWarningsOff = sem => !!sem?.clashWarningsOff;
+const messagesOn       = () => !messagesOff(activeSemester());
 function semOf(id){ return S.semesters.find(s=>s.id===id)||null; }
 function unitsOf(sem){ return Array.isArray(sem?.units)?sem.units:[]; }
 function unitById(sem,unitId){ return unitsOf(sem).find(u=>u.id===unitId)||null; }
@@ -2050,7 +2067,18 @@ function memberClashes(groups,g,sess,timetables,members,ignoreStudentId){
             (b.date!==sess.date?" on "+prettyDate(b.date):"")});
       });
     });
-    if(m.kind==="internal"&&m.uid){
+    /* A class timetable is a WEEKLY slot, not a list of dates, so on its own
+       it matches every Tuesday there has ever been. Teaching stops at the
+       semester's end date, and CoC presentations are usually deliberately
+       scheduled after it — so without this the app reports a clash with a
+       class that has already finished for the year, on exactly the dates
+       the office most wants to use. The teaching period is the semester's
+       own start and end dates; with no end date recorded it is derived from
+       the teaching weeks, and with no dates at all nothing can be ruled out
+       and the check behaves as it always did. */
+    const semNow=activeSemester();
+    const teaching=classRunsOn(semNow,sess.date);
+    if(m.kind==="internal"&&m.uid&&teaching&&!clashWarningsOff(semNow)){
       const day=weekdayOf(sess.date);
       (timetables||[]).forEach(tt=>{
         if(tt.supervisorUid!==m.uid||tt.status!=="approved"||tt.day!==day) return;
@@ -6531,6 +6559,38 @@ function classSlotsFor(tts,myStudents){
   );
 }
 
+/* ---- When is teaching actually running? ------------------------------
+   Week 1 starts on the Monday of the week containing the start date, and
+   teaching ends on the end date — or, when none was recorded, after the
+   semester's number of teaching weeks. Returned as real dates so a single
+   presentation date can be tested against them. */
+function teachingRange(sem){
+  if(!sem?.start) return null;
+  const s=new Date(sem.start+"T00:00:00");
+  if(isNaN(s.getTime())) return null;
+  const mon=new Date(s); mon.setDate(s.getDate()-((s.getDay()+6)%7));
+  let end=null;
+  if(sem.end){
+    const e=new Date(sem.end+"T00:00:00");
+    if(!isNaN(e.getTime())) end=e;
+  }
+  if(!end){ end=new Date(mon); end.setDate(mon.getDate()+((sem.weeks||12)*7)-1); }
+  return {from:mon,to:end};
+}
+/* True when classes are still running on this date. With no dates on
+   record this cannot be answered, and the honest answer is "assume they
+   are" — better a warning the office can dismiss than a silent clash. */
+function classRunsOn(sem,date){
+  const r=teachingRange(sem); if(!r) return true;
+  const d=new Date(String(date||"")+"T00:00:00");
+  if(isNaN(d.getTime())) return true;
+  return d>=r.from && d<=r.to;
+}
+const teachingRangeLabel=sem=>{
+  const r=teachingRange(sem);
+  return r?longDate(r.from.toISOString().slice(0,10))+" – "+longDate(r.to.toISOString().slice(0,10)):"";
+};
+
 // Current teaching week, derived from the semester's (optional) start date.
 // Week 1 begins on the Monday of the week containing the start date.
 // Returns null when no start date is set or we're outside the teaching weeks.
@@ -6632,6 +6692,12 @@ async function loadNotes(semesterId,studentIds){
 async function postNote(stu,text,pinned){
   const t=(text||"").trim();
   if(!t) { toast("Write something first.",true); return false; }
+  /* Checked here as well as in the screens, because this is the one place
+     every post passes through — a stale tab left open before the switch
+     was thrown must not still be able to write. */
+  if(messagesOff(S.semesters.find(x=>x.id===(stu.semesterId||S.activeSem)))){
+    toast("Messaging is switched off for this semester.",true); return false;
+  }
   const meId=noteMeId();
   await DB.add("notes",{
     semesterId:stu.semesterId||S.activeSem, studentDocId:stu.id,
@@ -6938,6 +7004,10 @@ async function studentLookup(sid){
     // message board key off one consistent value however it was typed
     const canonical=matches[0].sid||typed;
     const sems=await DB.list("semesters");
+    /* The portal never signs in, so this cache is empty here. The switches
+       that live on a semester document are read through it, so fill it
+       before drawing anything that consults one. */
+    S.semesters=sems;
     document.body.innerHTML="";
     await renderStudentView(canonical,matches,sems);
   }catch(e){
@@ -6977,13 +7047,15 @@ function renderApp(){
      empty for them. They get the one screen that concerns them. */
   const TABS = S.role==="admin"
     ? [["students","Students"],["schedule","Week planner"],["timetables","Class timetables"],["consultations","Consultation times"],
-       ["meetinglog","Attendance"],["notes","Messages"],["panels","CoC panels"],["report","Summary report"],
-       ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"]]
+       ["meetinglog","Attendance"],...(messagesOn()?[["notes","Messages"]]:[]),
+       ["panels","CoC panels"],["report","Summary report"],
+       ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"],["settings","Settings"]]
     : S.role==="panellist"
     ? [["panels","My CoC panels"]]
     : [["students","My students"],["schedule","My week"],["timetables","My class time"],
        ["consultations",coOnly?"View consultation time":"Set consultation time"],
-       ["meetinglog","Attendance"],["notes","Messages"],["panels","CoC panel"]];
+       ["meetinglog","Attendance"],...(messagesOn()?[["notes","Messages"]]:[]),
+       ["panels","CoC panel"]];
   // guard FIRST: if current tab not in this role's set, default to the first,
   // so the tab strip below is built with the correct button highlighted.
   if(!TABS.some(t=>t[0]===S.tab)) S.tab=TABS[0][0];
@@ -7010,6 +7082,7 @@ function renderApp(){
 
 /* Unread count on the Messages tab, refreshed after any note action. */
 async function refreshUnreadBadge(){
+  if(!messagesOn()) return;
   try{
     const b=S.notesTabBtn; if(!b||!b.isConnected) return;
     const students=await myNoteStudents();
@@ -7028,6 +7101,7 @@ async function refreshUnreadBadge(){
    user hunt for it. Appears once per session, above the tab content. */
 async function showInboxBanner(){
   if(S.bannerShown) return; S.bannerShown=true;
+  if(!messagesOn()) return;
   try{
     const students=await myNoteStudents();
     const notes=await loadNotes(S.activeSem,students.map(s=>s.id));
@@ -7079,6 +7153,120 @@ async function drawMain(){
   if(S.tab==="export") return viewExport(v);
   if(S.tab==="contacts") return viewContacts(v);
   if(S.tab==="people") return viewPeople(v);
+  if(S.tab==="settings") return viewSettings(v);
+}
+
+/* ============================================================
+   16. SETTINGS (admin) — per-semester switches
+   Things the coordinator turns on and off for a semester, gathered in one
+   place instead of being spread through the screens they affect. Each one
+   is a field on the semester document, so nothing here touches panels,
+   attendance or any other record — turning a switch changes what the app
+   SHOWS and what it lets people do, never what is already stored. Switch
+   it back and everything returns exactly as it was.
+   ============================================================ */
+async function viewSettings(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Admin only · one semester at a time"),
+    el("h2",{},"Settings"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewSettings(v)));
+  v.append(bar);
+  const sem=activeSemester();
+  if(!sem){ v.append(emptyState("No semester selected","Add a semester on the Semesters & staff tab first.")); return; }
+
+  v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
+    "These apply to “"+(sem.label||"this semester")+"” only, and none of them deletes or changes anything on record. "+
+    "Panels, consultation times and the attendance register are untouched by every switch here — turn one back on and "+
+    "everything reappears exactly as it was."));
+
+  /* One switch, drawn the same way each time: what it does, what it does
+     NOT do, and the consequence of the state it is in now. */
+  function toggleCard(opts){
+    const card=el("div",{class:"card",style:"margin-bottom:14px"});
+    const on=opts.value;
+    const btn=el("button",{class:on?"btn":"btn ghost"},on?opts.onLabel:opts.offLabel);
+    const state=el("span",{class:"pill "+(on?"approved":"none"),style:"font-size:11.5px"},
+      on?opts.onState:opts.offState);
+    btn.onclick=async()=>{
+      if(opts.confirm&&!on&&!window.confirm(opts.confirm)) return;
+      btn.disabled=true; btn.textContent="Saving…";
+      try{
+        /* `on` is whether the FEATURE is on; the stored field is its
+           negation ("messagesOff", "clashWarningsOff"), so that a semester
+           saved before these switches existed reads as false and behaves
+           normally. Flipping the feature to !on therefore writes `on` into
+           the field. Spelled out because getting this backwards silently
+           saves the state the button just said it was leaving. */
+        await DB.update("semesters",sem.id,{[opts.field]:on});
+        S.semesters=await DB.list("semesters");
+        S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
+        toast(opts.toast(!on));
+        /* The tab strip itself can change, so the whole shell is redrawn
+           rather than just this pane. */
+        renderApp();
+        S.tab="settings"; drawMain();
+      }catch(e){
+        btn.disabled=false; btn.textContent=on?opts.onLabel:opts.offLabel;
+        toast(e?.message||"Could not save that setting.",true);
+      }
+    };
+    card.append(
+      el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"},
+        el("div",{style:"flex:1;min-width:240px"},
+          el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap"},
+            el("h3",{style:"margin:0"},opts.title),state),
+          el("p",{class:"muted",style:"margin:6px 0 0"},opts.body)),
+        el("div",{},btn)));
+    if(opts.detail) card.append(el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},opts.detail));
+    return card;
+  }
+
+  // ---- Messages ----
+  const msgOn=!messagesOff(sem);
+  v.append(toggleCard({
+    field:"messagesOff", value:msgOn,
+    title:"Supervision messages",
+    onState:"On", offState:"Off",
+    onLabel:"Turn messaging off", offLabel:"Turn messaging on",
+    body:msgOn
+      ? "The Messages tab is open: supervisors, the admin office and students share one thread per student, and unread counts appear on sign-in."
+      : "Messaging is off for this semester. The Messages tab is hidden from supervisors, the thread is hidden from the student portal, and nobody can post — including the office.",
+    confirm:null,
+    detail:"Nothing is deleted. Every message already posted stays in the database and comes back the moment this is switched on again. "+
+      "Use it when the office needs a quiet week — during a CoC round, say — rather than as a way to close a conversation.",
+    toast:off=>off?"Messaging turned off for this semester.":"Messaging turned back on."
+  }));
+
+  // ---- Teaching clash warnings ----
+  const clashOn=!clashWarningsOff(sem);
+  const range=teachingRangeLabel(sem);
+  v.append(toggleCard({
+    field:"clashWarningsOff", value:clashOn,
+    title:"Teaching clash warnings",
+    onState:"On", offState:"Off",
+    onLabel:"Turn clash warnings off", offLabel:"Turn clash warnings on",
+    body:clashOn
+      ? "When a CoC session lands on top of a class one of its assessors teaches, the app says so before you book it."
+      : "Teaching clashes are not reported for this semester. Panel clashes still are — an assessor cannot be put on two panels at the same time whatever this says.",
+    detail:(range
+        ? "Classes are only counted inside the teaching period, "+range+". A presentation booked after the last teaching day "+
+          "no longer reports a clash with a class that has already finished."
+        : "This semester has no start and end dates, so the app cannot tell when teaching stops and treats every class as "+
+          "running all year. Add the dates on Semesters & staff and the check becomes accurate on its own.")+
+      "  Panel-against-panel clashes are a separate, harder check and are never turned off here.",
+    toast:off=>off?"Teaching clash warnings turned off.":"Teaching clash warnings turned back on."
+  }));
+
+  // ---- What is deliberately NOT here ----
+  v.append(el("div",{class:"card"},
+    el("h3",{style:"margin:0 0 6px"},"Not settings"),
+    el("p",{class:"muted",style:"margin:0 0 6px"},
+      "Three things people look for here and will not find, because they belong where the work happens:"),
+    el("ul",{class:"muted",style:"margin:0;padding-left:20px;font-size:14px"},
+      el("li",{style:"margin-bottom:4px"},"Teaching dates and weeks — Semesters & staff, on the semester itself."),
+      el("li",{style:"margin-bottom:4px"},"How far back supervisors may record attendance — also on the semester, next to the dates."),
+      el("li",{},"Who can see a CoC panel — the release buttons on each panel card, so the decision sits with the panel it concerns."))));
 }
 
 /* ============================================================
@@ -9869,6 +10057,19 @@ async function bulkEmailStaff(preset={}){
    ============================================================ */
 async function viewNotes(v){
   v.innerHTML="";
+  if(!messagesOn()){
+    v.append(el("div",{class:"section-title"},el("div",{},
+      el("div",{class:"eyebrow ui"},"Shared supervision thread"),
+      el("h2",{},"Messages"))));
+    const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewNotes(v)));
+    v.append(bar);
+    v.append(noticeBar("blue",
+      "Messaging is switched off for "+(activeSemester()?.label||"this semester")+
+      ". Nothing has been deleted \u2014 every message is still on record and returns when it is switched back on."+
+      (S.role==="admin"?"":" Ask the MRes office if you need it opened."),
+      S.role==="admin"?el("button",{class:"btn sm",onclick:()=>{ S.tab="settings"; renderApp(); }},"Open Settings"):null));
+    return;
+  }
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Shared supervision thread"),
     el("h2",{},"Messages"))));
@@ -11740,6 +11941,7 @@ async function renderStudentView(sid,enrolments,sems){
     const meId=noteMeId();
     let unread=0;
     for(const en of enrolments){
+      if(messagesOff(sems.find(x=>x.id===en.semesterId))) continue;
       const ns=await loadNotes(en.semesterId,[en.id]);
       unread+=ns.filter(n=>isUnread(n,meId)).length;
     }
@@ -12078,6 +12280,17 @@ async function studentCocBlock(card,en){
 /* Student-side view of the shared supervision thread: read everything
    the supervisors have posted, and reply into the same thread. */
 async function studentNotesBlock(card,en){
+  /* The student portal reads its own semester's setting rather than the
+     admin's currently selected one — a student looking up an old semester
+     should see that semester's arrangement, not today's. */
+  const semOf=S.semesters.find(x=>x.id===en.semesterId)||null;
+  if(messagesOff(semOf)){
+    card.append(el("div",{style:"font-weight:600;margin:16px 0 6px",class:"ui"},"Messages with my supervisors"),
+      el("p",{class:"muted",style:"margin:0"},
+        "The message board is closed for this semester. To reach your supervisors, email them directly — "+
+        "their addresses are on your enrolment record with the MRes office."));
+    return;
+  }
   const meId=noteMeId();
   let notes;
   try{ notes=await loadNotes(en.semesterId,[en.id]); }
