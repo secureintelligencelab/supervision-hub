@@ -3848,6 +3848,20 @@ async function viewPanelAdmin(v){
       await persist({...g,assessorsReleased:false,assessorsReleasedAt:0},
         (g.label||"Panel")+" hidden from its assessors again.");
     }
+    await refreshPinViews();
+  }
+
+  /* A release switch decides WHO MAY SEE a panel, and the read-only PIN
+     view is served from a snapshot. If the snapshot were left alone, hiding
+     a panel from its assessors would take it off their signed-in screen
+     while their PIN carried on showing it — the one direction in which
+     staleness leaks rather than merely lags. So every release change
+     republishes, and the withdrawal takes effect at once. Ordinary edits to
+     times and running orders do not: those are picked up by "Refresh what
+     the PINs show", which is cheap to press and costs nothing to defer. */
+  async function refreshPinViews(){
+    try{ await publishSignInKeys({quiet:true,onlyIfInUse:true}); }
+    catch(err){ console.warn("could not refresh the PIN views",err); }
   }
 
   /* Releasing to the students is the last switch to throw and the one that
@@ -3883,10 +3897,12 @@ async function viewPanelAdmin(v){
       cl.map(c=>"  \u2022 "+(c.m.name||"?")+" \u2014 "+c.label).join("\n")+"\n\nFinalise anyway?")) return;
     await persist({...g,finalized:true,finalizedAt:Date.now()},
       (g.label||"Panel")+" released to the students' supervisors.");
+    await refreshPinViews();
   }
   async function reopen(g){
     if(!window.confirm("Hide "+(g.label||"this panel")+" from the students' supervisors?\n\nIt disappears from their CoC tab until you release it again. The assessors' side is separate and is not affected.")) return;
     await persist({...g,finalized:false,finalizedAt:0},(g.label||"Panel")+" hidden from supervisors again.");
+    await refreshPinViews();
   }
   async function finaliseAll(list){
     if(!window.confirm("Release "+list.length+" panel"+(list.length===1?"":"s")+" ("+
@@ -3898,6 +3914,7 @@ async function viewPanelAdmin(v){
       catch(err){ toast(err?.message||"Could not finalise "+(g.label||"a panel")+".",true); break; }
     }
     if(n) toast(n+" panel"+(n===1?"":"s")+" released.");
+    if(n) await refreshPinViews();
     reload();
   }
   /* The same, for the students' switch. Kept separate from finaliseAll so
@@ -10607,6 +10624,12 @@ function pinEmailBody(u,pin){
    rather than claiming success it did not have. */
 async function publishSignInKeys(opts={}){
   const users=await DB.listUsers();
+  /* `onlyIfInUse` is for the automatic refreshes fired when a panel's
+     release changes. An office that has never issued a PIN should not pay
+     for a rebuild it has no use for, so this does nothing until somebody
+     actually has one. */
+  if(opts.onlyIfInUse && !users.some(u=>String(u.pin||"").trim()
+      ||(Array.isArray(u.signInKeys)&&u.signInKeys.length))) return {written:0,cleared:0,failed:0,skipped:true};
   const sems =await DB.list("semesters");
   /* Read the whole semester's records ONCE and slice them per person,
      rather than re-reading them for every member of staff. */
@@ -11396,7 +11419,14 @@ async function pinBlocksFor(u,sems,preload){
     });
 
     const stus=myStudents.map(s=>{
-      const g=groups.find(x=>groupStudents(x).includes(s.id)&&(isFinal(x)||meIn(x)));
+      /* Strictly the supervisors' release switch, with no exception for a
+         reader who happens to also assess this panel. It matches what the
+         signed-in "Your students' CoC" screen does exactly — a PIN must
+         never show a supervisor something their own login would withhold.
+         An assessor on an unreleased panel still sees nothing here; once it
+         is released to its ASSESSORS, the panel appears in the section
+         above, which is where an assessor's view of it belongs. */
+      const g=groups.find(x=>groupStudents(x).includes(s.id)&&isFinal(x));
       let coc=null;
       if(g){
         const sl=slotOfStudent(g,s.id), d=sl?slotDate(g,sl):"", pp=sl?slotParts(g,sl):null;
