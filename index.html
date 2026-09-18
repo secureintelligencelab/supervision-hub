@@ -865,7 +865,7 @@ function getFactoryAuth(){
    ============================================================ */
 
 const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, notes:{},
-              panelPool:{}, panels:{}, panelGroups:{} };
+              panelPool:{}, panels:{}, panelGroups:{}, staffKeys:{} };
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
@@ -1023,6 +1023,12 @@ function uniquePin(taken,len){
 /* Five wrong PINs and the box closes for a while. A PIN is shorter than a
    password, so the one thing it must not allow is unlimited guessing. Kept
    in this browser only — it slows a person down, it is not a server lock. */
+/* The two kinds of sign-in key, named so the document ID is the thing the
+   person already has to know. Anything that can't sit in a Firestore
+   document ID is folded away. */
+const pinKeyOf  = p => "pin:"+normPin(p);
+const mailKeyOf = e => "mail:"+String(e||"").trim().toLowerCase().replace(/[^a-z0-9@._+-]/g,"_");
+
 const PIN_TRIES=5, PIN_LOCK_MS=10*60*1000;
 function pinGate(){
   try{
@@ -1083,6 +1089,39 @@ const DB = {
       const d=all.docs.find(x=>hit(x.data()));
       return d?{uid:d.id,id:d.id,...d.data()}:null;
     }catch(err){ console.warn("user scan failed",err); return null; }
+  },
+  /* ---- Sign-in keys ----------------------------------------------------
+     Both new sign-in routes have to identify somebody BEFORE anyone is
+     signed in, and Firestore will not let a signed-out page read the staff
+     list — nor should it, since that list carries every address, mobile
+     and PIN in the department.
+
+     So the lookup lives in its own collection, `staffKeys`, whose document
+     ID *is* the thing you have to know already: "pin:418205", or
+     "mail:a.smith@uni.edu". The rule that goes with it allows `get` and
+     forbids `list`, which is the whole trick — you can fetch the document
+     whose name you can already say, and you cannot ask what documents
+     exist. Guessing a PIN is the only way in, and the login box counts
+     wrong guesses.
+
+     A PIN document also carries a SNAPSHOT of that person's own timetable,
+     so the read-only view needs nothing else: panelGroups stays closed to
+     the public, exactly as its rule intends. Each document holds one
+     person's own data and nobody else's. */
+  async getStaffKey(key){
+    if(DEMO){ mem.staffKeys=mem.staffKeys||{}; return mem.staffKeys[key]||null; }
+    try{
+      const s=await getDoc(doc(db,"staffKeys",String(key)));
+      return s.exists()?s.data():null;
+    }catch(err){ console.warn("sign-in key unavailable",err); return null; }
+  },
+  async setStaffKey(key,data){
+    if(DEMO){ mem.staffKeys=mem.staffKeys||{}; mem.staffKeys[key]={...data}; return; }
+    await setDoc(doc(db,"staffKeys",String(key)),data);
+  },
+  async removeStaffKey(key){
+    if(DEMO){ mem.staffKeys=mem.staffKeys||{}; delete mem.staffKeys[key]; return; }
+    await deleteDoc(doc(db,"staffKeys",String(key)));
   },
   /* PIN sign-in. The PIN is matched on the normalised form so spaces and
      capitals typed into the box don't matter. Firestore's "==" is
@@ -6665,10 +6704,20 @@ async function doLogin(email,password){
     const retryable=c.includes("invalid-cred")||c.includes("user-not-found")
                   ||c.includes("wrong-password")||c.includes("invalid-email");
     if(!retryable) throw e;
-    let u=null;
-    try{ u=await DB.findUserByAnyEmail(email); }
-    catch(err){ console.warn("alternate-address lookup failed",err); }
-    const primary=String(u?.email||"").trim();
+    /* The key document first — it works without the staff list being
+       readable to a signed-out page. It holds nothing but the address to
+       sign in with. */
+    let primary="";
+    try{
+      const key=await DB.getStaffKey(mailKeyOf(email));
+      if(key&&key.kind==="mail") primary=String(key.email||"").trim();
+    }catch(err){ console.warn("address key unavailable",err); }
+    if(!primary){
+      let u=null;
+      try{ u=await DB.findUserByAnyEmail(email); }
+      catch(err){ console.warn("alternate-address lookup failed",err); }
+      primary=String(u?.email||"").trim();
+    }
     if(!primary||primary.toLowerCase()===String(email||"").trim().toLowerCase()) throw e;
     await signInWithEmailAndPassword(auth,primary,password);
     toast("Signed in. Your login address is "+primary+" — either of your addresses works here.");
@@ -6691,6 +6740,17 @@ async function staffPinLookup(pin){
   }
   if(DEMO) seedDemo();
   try{
+    /* First the key document, which is the route that works without
+       opening the staff list or the panels to public reads. */
+    const key=await DB.getStaffKey(pinKeyOf(typed));
+    if(key&&key.kind==="pin"&&key.who){
+      pinGateClear();
+      document.body.innerHTML="";
+      renderStaffPinView(key.who,key.blocks||[],{at:key.at||0});
+      return;
+    }
+    /* Otherwise fall back to reading the records live, for an office that
+       has opened its rules instead. */
     const u=await DB.findUserByPin(typed);
     if(!u){
       const st=pinGateFail();
@@ -6705,8 +6765,9 @@ async function staffPinLookup(pin){
        raw id on someone else's panel row. */
     try{ await reloadStaffCaches(); }catch(err){ console.warn("staff cache unavailable",err); }
     const sems=await DB.list("semesters");
+    const blocks=await pinBlocksFor(u,sems);
     document.body.innerHTML="";
-    await renderStaffPinView(u,sems);
+    renderStaffPinView(pinWhoOf(u),blocks);
   }catch(e){
     console.error("PIN lookup failed",e);
     if(!document.body.querySelector(".auth-card") && !document.body.querySelector(".card")) renderLogin();
@@ -10532,28 +10593,110 @@ function pinEmailBody(u,pin){
    code that is plainly sitting in the table above it. Said here, with the
    rule to paste, because that is the one failure the office cannot
    diagnose from the screen. */
+/* ---- publishing the sign-in keys --------------------------------------
+   Writes one document per PIN and one per staff address, each named after
+   the thing the holder already knows. A PIN document carries that person's
+   own timetable with it, so the read-only view reads nothing else and the
+   panelGroups rule can stay shut.
+
+   Called after any PIN change, and from the "Refresh" button whenever the
+   timetable itself has moved — a snapshot is only as current as the last
+   publish, and the screen it draws says so out loud.
+
+   Returns {written, cleared, failed, at} so the caller can report honestly
+   rather than claiming success it did not have. */
+async function publishSignInKeys(opts={}){
+  const users=await DB.listUsers();
+  const sems =await DB.list("semesters");
+  /* Read the whole semester's records ONCE and slice them per person,
+     rather than re-reading them for every member of staff. */
+  const preload={students:[],groups:[],cons:[]};
+  try{ preload.students=await DB.list("students"); }catch(e){ console.warn("students unavailable",e); }
+  try{ preload.groups  =await DB.list("panelGroups"); }catch(e){ console.warn("panels unavailable",e); }
+  try{ preload.cons    =await DB.list("consultations"); }catch(e){ console.warn("consultations unavailable",e); }
+
+  const at=Date.now();
+  let written=0, cleared=0, failed=0;
+  for(const u of users){
+    const pin=String(u.pin||"").trim();
+    const wantPinKey=pin?pinKeyOf(pin):"";
+    const wantMailKeys=emailsOf(u).map(mailKeyOf);
+    const hadKeys=Array.isArray(u.signInKeys)?u.signInKeys:[];
+    const wantKeys=[wantPinKey,...wantMailKeys].filter(Boolean);
+
+    // drop keys this person no longer owns — an old PIN must stop working
+    for(const k of hadKeys){
+      if(wantKeys.includes(k)) continue;
+      try{ await DB.removeStaffKey(k); cleared++; }
+      catch(e){ console.warn("could not clear "+k,e); failed++; }
+    }
+    if(!wantKeys.length){
+      if(hadKeys.length){ try{ await DB.updateUser(u.id,{signInKeys:[]}); }catch(e){} }
+      continue;
+    }
+    const who=pinWhoOf(u);
+    let blocks=[];
+    if(pin){
+      try{ blocks=await pinBlocksFor(u,sems,preload); }
+      catch(e){ console.warn("could not build the view for "+(u.name||u.id),e); }
+    }
+    try{
+      if(wantPinKey) await DB.setStaffKey(wantPinKey,{kind:"pin",uid:u.id,who,blocks,at});
+      /* An address key holds only the primary address to sign in with —
+         no name, no timetable. Knowing somebody's email is not a secret,
+         so it must not unlock anything that is. */
+      for(const k of wantMailKeys) await DB.setStaffKey(k,{kind:"mail",uid:u.id,email:u.email||""});
+      written+=wantKeys.length;
+      await DB.updateUser(u.id,{signInKeys:wantKeys,keysPublishedAt:at});
+    }catch(e){
+      console.warn("could not publish keys for "+(u.name||u.id),e);
+      failed++;
+    }
+  }
+  if(!opts.quiet){
+    if(failed) toast(written+" sign-in key"+(written===1?"":"s")+" published, "+failed+
+      " failed — check the database rules (PIN access → the help button).",true);
+    else toast(written?("Published "+written+" sign-in key"+(written===1?"":"s")+
+      (cleared?", removed "+cleared+" old one"+(cleared===1?"":"s"):"")+"."):"Nothing to publish yet.");
+  }
+  return {written,cleared,failed,at};
+}
+
 function pinRuleHelp(){
   const p=(t,st="")=>el("p",{style:"margin:0 0 9px;font-size:14px;line-height:1.5"+(st?";"+st:"")},t);
   const h=t=>el("div",{class:"ui",style:"font-weight:700;margin:14px 0 5px"},t);
   const code=t=>el("pre",{style:"white-space:pre-wrap;font-size:12px;background:rgba(127,127,127,.1);padding:10px;border-radius:8px;margin:0 0 9px;overflow:auto"},t);
   modal("PIN sign-in isn't finding anyone",
     el("div",{style:"max-height:60vh;overflow:auto"},
-      p("Two things to check, in this order."),
-      h("1. Is the PIN actually on the record?"),
-      p("The PIN column on the staff list shows what is stored. If it is blank, nothing was issued — use the PIN button beside their name. Capitals, spaces and hyphens are ignored when it is typed, so “100 002” finds 100002."),
-      h("2. Can the page read the staff list while signed out?"),
-      p("This is the usual answer. To recognise a PIN — or to accept a second email address at the normal login — the page has to look the person up BEFORE anyone is signed in. If your Firestore rules only allow reading “users” to a signed-in account, the lookup comes back empty and every PIN is reported as not recognised, even a correct one."),
-      p("The rule needs to allow reading the users collection, while still allowing only signed-in staff to write to it:"),
+      p("Almost always the database rules. A PIN has to be recognised BEFORE anyone is signed in, and by default Firestore lets a signed-out page read nothing it would need. Add this one block to your rules:"),
+      code(
+        "match /staffKeys/{key} {\n"+
+        "  allow get: if true;      // fetch the one document you can already name\n"+
+        "  allow list: if false;    // but never ask what documents exist\n"+
+        "  allow write: if isAdmin();\n"+
+        "}"),
+      p("Then open PIN access and press “Refresh what the PINs show”. That is the whole fix."),
+      h("Why that is safe"),
+      p("Each document in staffKeys is NAMED after the thing its holder already knows — “pin:418205”, or “mail:a.smith@uni.edu”. `get` lets the page fetch a document whose name it can say; `list` is what would let anyone ask for all of them, and it is off. So there is no way to read out the PINs, and no way to discover one except by guessing it, which the sign-in box allows five times before locking for ten minutes."),
+      p("A PIN's document carries a copy of that one person's own timetable, and nothing about anyone else. Your users, students and panelGroups rules are untouched: the staff list stays readable only to signed-in accounts, and panelGroups stays closed to the public exactly as its own comment intends."),
+      h("The catch, stated plainly"),
+      p("What a PIN opens is a SNAPSHOT, taken when you last pressed Refresh. Change a session time, a running order or a release and the PIN keeps showing the old one until you publish again. The page tells its reader when it was published and to ask you if anything has moved, but the responsibility to refresh is yours — so make it the last step whenever you send the timetable out."),
+      h("The other way, if you would rather have it live"),
+      p("You can instead let signed-out pages read the records directly. That means two rule changes, not one:"),
       code(
         "match /users/{uid} {\n"+
-        "  allow read: if true;            // needed for PIN and second-address sign-in\n"+
-        "  allow write: if request.auth != null;\n"+
+        "  allow read: if true;     // exposes every address, mobile AND every PIN\n"+
+        "  allow write: if isAdmin() || request.auth.uid == uid;\n"+
+        "}\n"+
+        "match /panelGroups/{id} {\n"+
+        "  allow read: if true;     // publishes every panel's membership\n"+
+        "  ...\n"+
         "}"),
-      p("Be clear-eyed about what that means: anything on a staff record — names, both email addresses, mobile numbers and the PINs themselves — becomes readable by anyone who knows the site address and how to query it. That is already true of this site's students, semesters, panels and consultations, which the student portal reads the same way; the PIN does not create the exposure, it joins it.",
+      p("Be clear-eyed about it. Opening users publishes the PINs themselves, which makes the PIN pointless as a secret; opening panelGroups is the thing your own rules file warns in writing not to do. The app works either way — it tries the key document first and falls back to reading live — but the block at the top of this dialog is the one to use.",
         "color:var(--clay-ink,#9a3412)"),
-      h("If that trade is not acceptable"),
-      p("Keep the rule as it is and don't use PIN sign-in. Staff then reach the hub with their email and password as before, and a forgotten password is reset from the Firebase console — Authentication → the person → Reset password. The second-address login needs the same read rule, so it is the same decision."),
-      p("The sturdier version of all this is a small Cloud Function that checks a PIN server-side and hands back a sign-in token, so nothing sensitive is readable from the page at all. That is a real piece of work, not a setting — worth it if PINs are going to be permanent rather than a way through this semester.",
+      h("If neither appeals"),
+      p("Leave the rules alone and don't use PIN sign-in. Staff then reach the hub with their email and password as before, and a forgotten password is reset from the Firebase console — Authentication → the person → Reset password. Signing in with a second address needs staffKeys too, so it is the same decision."),
+      p("The sturdiest version of all this is a small Cloud Function that checks a PIN server-side and hands back a real sign-in token, so the view is live AND nothing is readable from the page. That is a genuine piece of work rather than a setting — worth it if PINs become permanent rather than a way through this semester.",
         "color:var(--muted,#777)")),
     async()=>true,"Close");
 }
@@ -10605,14 +10748,25 @@ function staffPinForm(u,allUsers,done){
       if(v&&(allUsers||[]).some(x=>x.id!==u.id&&normPin(x.pin)===normPin(v))){
         toast("That PIN already belongs to someone else.",true); return false; }
       await DB.updateUser(u.id,{pin:v,pinSetAt:v?Date.now():0});
-      toast(v?(cur?"PIN updated.":"PIN issued."):"PIN removed."); done(); return true;
+      toast(v?(cur?"PIN updated.":"PIN issued."):"PIN removed.");
+      /* A PIN is only any use once its key document exists, so publishing
+         is part of saving rather than a step to remember. The old key is
+         cleared in the same pass, so a replaced PIN stops working. */
+      await publishSignInKeys({quiet:true});
+      done(); return true;
     },"Save PIN");
 }
 
 /* The whole list at once: give everyone who is missing one a PIN, read the
    sheet back, and send them out. */
 async function pinBulkDialog(done){
-  const users=(await DB.listUsers()).sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
+  const byName=(a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email));
+  /* Publishing writes back to the staff records, so the list is re-read
+     afterwards rather than redrawn from the copy taken on opening —
+     otherwise the dialog keeps reporting PINs as unpublished after it has
+     just published them. */
+  let users=(await DB.listUsers()).sort(byName);
+  const reload=async()=>{ users=(await DB.listUsers()).sort(byName); };
   const scope=el("select",{},
     el("option",{value:"missing"},"Only staff without a PIN"),
     el("option",{value:"all"},"Everyone — replace existing PINs too"));
@@ -10623,6 +10777,7 @@ async function pinBulkDialog(done){
     ...AREAS.map(a=>el("option",{value:"area:"+a},a+" staff only")));
   const list=el("div",{style:"max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:10px"});
   const note=el("p",{class:"muted",style:"margin:0;font-size:13px"});
+  const freshness=el("p",{class:"muted ui",style:"margin:0;font-size:12.5px"});
   const inScope=()=>users.filter(u=>{
     if(who.value==="sup"&&!isSupervisor(u)) return false;
     if(who.value==="pan"&&!isPanellist(u)) return false;
@@ -10652,6 +10807,17 @@ async function pinBulkDialog(done){
         +(scope.value==="all"?"  Their current PINs stop working the moment this is saved.":"")
       : "Nobody matches — everyone selected already has a PIN.";
     if(noMail) note.textContent+="  "+noMail+" of the PINs on file can't be emailed (no address on record) — read those out instead.";
+    /* Say when the PINs were last published and whether any are unpublished
+       — an issued PIN that was never published simply does not open. */
+    const withPin=users.filter(x=>String(x.pin||"").trim());
+    const unpublished=withPin.filter(x=>!(Array.isArray(x.signInKeys)&&x.signInKeys.includes(pinKeyOf(x.pin))));
+    const last=Math.max(0,...users.map(x=>x.keysPublishedAt||0));
+    freshness.textContent=!withPin.length ? ""
+      : unpublished.length
+        ? unpublished.length+" issued PIN"+(unpublished.length===1?"":"s")+" "+
+          (unpublished.length===1?"has":"have")+" not been published yet and will not open anything — press Refresh."
+        : "What the PINs show was published "+(last?relTime(last):"at some point")+
+          ". Refresh it after you change a session time, a running order or a release.";
   }
   scope.onchange=draw; who.onchange=draw; draw();
 
@@ -10665,9 +10831,21 @@ async function pinBulkDialog(done){
       await DB.updateUser(u.id,{pin:p,pinSetAt:Date.now()});
       u.pin=p;
     }
-    toast(targets.length+" PIN"+(targets.length===1?"":"s")+" issued.");
+    await publishSignInKeys({quiet:true});
+    await reload();
+    toast(targets.length+" PIN"+(targets.length===1?"":"s")+" issued and published.");
     draw();
   }},"⚿ Issue PINs to the selection");
+  /* The snapshot each PIN opens is made when it is published, so after the
+     timetable moves the office refreshes it. One button, said plainly,
+     because a stale timetable that looks current is the failure mode. */
+  const republish=el("button",{class:"btn ghost sm",type:"button",onclick:async()=>{
+    republish.disabled=true; republish.textContent="Refreshing…";
+    await publishSignInKeys();
+    await reload();
+    republish.disabled=false; republish.textContent="↻ Refresh what the PINs show";
+    draw();
+  }},"↻ Refresh what the PINs show");
   const copyAll=el("button",{class:"btn ghost sm",type:"button",onclick:async()=>{
     const rows=users.filter(u=>String(u.pin||"").trim())
       .map(u=>[u.name||"",emailsOf(u).join(" / "),String(u.pin).trim()].join("\t"));
@@ -10697,8 +10875,8 @@ async function pinBulkDialog(done){
       el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
         el("div",{style:"flex:1;min-width:190px"},el("label",{},"Issue to"),who),
         el("div",{style:"flex:1;min-width:190px"},el("label",{},"Which of them"),scope)),
-      el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},issue,copyAll,mailAll),
-      note,
+      el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},issue,republish,copyAll,mailAll),
+      note,freshness,
       el("div",{},el("label",{},"Every staff member"),list),
       el("p",{class:"muted",style:"margin:0;font-size:12.5px"},
         "PINs are stored on the staff record and shown here so you can read one back to whoever rings up. "+
@@ -11136,102 +11314,195 @@ async function renderStudentView(sid,enrolments,sems){
     }
   }catch(e){ console.warn("messages banner unavailable:",e?.message||e); }
 }
-
 /* ============================================================
    13b. STAFF PIN VIEW — read-only, no password
-   What a supervisor or panel member can see with nothing but the PIN the
+   What a supervisor or panel member sees with nothing but the PIN the
    coordinator gave them: the panels they sit on, their own students' CoC
-   times, and those students' consultation times. Everything here is a
-   read: no form, no save, no message board. Anyone who needs to change
-   something signs in properly with their email and password, and the page
-   says so.
+   times, and those students' consultation times. Every field is a read;
+   there is no form, no save and no message board. Anyone who needs to
+   change something signs in properly, and the page says so.
+
+   The screen is deliberately split in two:
+
+     pinBlocksFor()      gathers the data and boils it down to a plain
+                         view-model — labels and strings, nothing live;
+     renderStaffPinView() draws that view-model and knows nothing else.
+
+   That split is what lets the same screen be served two ways. An office
+   that has opened its database rules to public reads gets it built live,
+   from the current records. An office that has NOT — and most should not,
+   because opening panelGroups publishes every panel's membership to anyone
+   who asks — gets the identical screen built from a SNAPSHOT the
+   coordinator published into that person's own PIN document. Same code,
+   same page; only where the numbers came from differs.
    ============================================================ */
-async function renderStaffPinView(u,sems){
-  const wrap=el("div",{class:"auth-wrap",style:"align-items:flex-start;padding-top:30px"});
-  const col=el("div",{style:"width:100%;max-width:820px"});
-  const roleTxt=roleOf(u)==="admin"?"Admin"
-    :roleOf(u)==="panellist"?"Panel member"
-    :"Supervisor"+(capOf(u)==="principal"?" (principal only)":capOf(u)==="co"?" (co-supervisor only)":"");
-  col.append(el("div",{class:"card",style:"border-top:4px solid var(--blue);margin-bottom:16px"},
-    el("div",{class:"eyebrow ui",style:"color:var(--blue)"},"Read-only PIN view"),
-    el("h1",{style:"font-size:24px;margin:2px 0"},u.name||u.email||"Staff"),
-    el("p",{class:"muted",style:"margin:0"},roleTxt+(u.area?" · "+u.area:"")+
-      (emailsOf(u).length?" · "+emailsOf(u).join(" / "):"")),
-    el("div",{class:"row",style:"margin-top:10px;gap:8px;flex-wrap:wrap"},
-      el("button",{class:"btn ghost sm",onclick:()=>renderLogin()},"← Back"),
-      el("button",{class:"btn ghost sm",onclick:()=>window.print()},"⎙ Print"),
-      el("span",{style:"flex:1"}), themeButton())));
 
-  const ordered=[...(sems||[])].sort((a,b)=>(a.label>b.label?-1:1));
-  let anything=false;
-
-  for(const sem of ordered){
+/* Everything the PIN screen shows, as plain data. Safe to store: no
+   functions, no ids the reader has no business holding. */
+async function pinBlocksFor(u,sems,preload){
+  const out=[];
+  const mine=emailsOf(u).map(e=>e.toLowerCase());
+  for(const sem of [...(sems||[])].sort((a,b)=>(a.label>b.label?-1:1))){
     const weeks=sem?.weeks||12;
     let students=[],groups=[],cons=[];
-    try{ students=await DB.list("students",{semesterId:sem.id}); }catch(e){ console.warn("students unavailable",e); }
-    try{ groups  =await DB.list("panelGroups",{semesterId:sem.id}); }catch(e){ console.warn("panels unavailable",e); }
-    try{ cons    =await DB.list("consultations",{semesterId:sem.id}); }catch(e){ console.warn("consultations unavailable",e); }
-
-    /* Am I on this panel? Staff are matched on their account id; a panel
-       member typed in by hand before they had an account is matched on
-       either of their addresses, so an older record still finds them. */
-    const mine=emailsOf(u).map(e=>e.toLowerCase());
+    if(preload){
+      students=(preload.students||[]).filter(s=>s.semesterId===sem.id);
+      groups  =(preload.groups  ||[]).filter(g=>g.semesterId===sem.id);
+      cons    =(preload.cons    ||[]).filter(c=>c.semesterId===sem.id);
+    }else{
+      try{ students=await DB.list("students",{semesterId:sem.id}); }catch(e){ console.warn("students unavailable",e); }
+      try{ groups  =await DB.list("panelGroups",{semesterId:sem.id}); }catch(e){ console.warn("panels unavailable",e); }
+      try{ cons    =await DB.list("consultations",{semesterId:sem.id}); }catch(e){ console.warn("consultations unavailable",e); }
+    }
+    /* Am I on this panel? Staff match on their account id; a panel member
+       typed in by hand before they had an account matches on either of
+       their addresses, so an older record still finds them. */
     const meIn=g=>groupMembers(g).find(m=>
       (m.kind==="internal"&&m.uid&&m.uid===u.id)
       ||(!!m.email&&mine.includes(String(m.email).trim().toLowerCase())));
     const assessing=groups.filter(g=>meIn(g)&&isAssessorReleased(g));
-    const myStudents=students.filter(s=>s.principalUid===u.id||s.coUid===u.id);
+    const myStudents=students.filter(s=>s.principalUid===u.id||s.coUid===u.id)
+      .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
     if(!assessing.length&&!myStudents.length) continue;
-    anything=true;
 
+    const panels=assessing.map(g=>{
+      const me=meIn(g), sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+      const chair=groupMembers(g).find(m=>isChair(g,m));
+      const rows=(g.slots||[]).filter(sl=>sl.start)
+        .slice().sort((a,b)=>String(slotDate(g,a)||"").localeCompare(String(slotDate(g,b)||""))
+          ||minsOf(a.start)-minsOf(b.start))
+        .map(sl=>{
+          const st=students.find(x=>x.id===sl.studentDocId);
+          const pp=slotParts(g,sl), d=slotDate(g,sl);
+          return {
+            time:(d&&sess&&d!==sess.date?prettyDate(d)+" ":"")+clockRange(sl.start,sl.end),
+            name:st?(st.name||"?"):"", sid:st?(st.sid||""):"",
+            title:st?titleOf(st):"",
+            parts:pp?clockRange(pp.start,pp.qaStart)+(pp.qaMins?" · "+clockRange(pp.qaStart,pp.end):""):"",
+            sups:st?((st.principalName||supName(st.principalUid)||"—")+(st.coName?" / "+st.coName:"")):""
+          };
+        });
+      return {
+        label:g.label||"Panel",
+        youChair:!!(me&&isChair(g,me)),
+        draft:!isFinal(g),
+        when:sess?weekdayOf(sess.date)+" "+longDate(sess.date)+", "+clockRange(sess.start,sess.end)
+          :"individual times — see the running order",
+        chair:chair?.name||"not yet set",
+        assessors:groupMembers(g).map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", ")||"to be confirmed",
+        link:String(g.meetingLink||"").trim(),
+        rows
+      };
+    });
+
+    const stus=myStudents.map(s=>{
+      const g=groups.find(x=>groupStudents(x).includes(s.id)&&(isFinal(x)||meIn(x)));
+      let coc=null;
+      if(g){
+        const sl=slotOfStudent(g,s.id), d=sl?slotDate(g,sl):"", pp=sl?slotParts(g,sl):null;
+        coc={
+          panel:(g.label||"Panel")+(isFinal(g)?"":"  (draft — may still change)"),
+          when:sl&&d?weekdayOf(d)+" "+longDate(d)+", "+clockRange(sl.start,sl.end):"to be confirmed",
+          pres:pp?clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)":"",
+          qa:pp&&pp.qaMins?clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)":"",
+          assessors:groupMembers(g).map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", ")||"to be confirmed",
+          link:slotLink(g,sl)||""
+        };
+      }
+      const c=cons.find(x=>x.studentDocId===s.id);
+      let con=null;
+      if(c){
+        const stx=consultStats(c,weeks);
+        const changed=[];
+        for(let w=1;w<=weeks;w++){
+          const et=weekTime(c,w);
+          if(et.overridden) changed.push({w,text:et.day+" "+et.start+"–"+et.end+(et.mode?" · "+et.mode:"")});
+        }
+        con={
+          time:c.day?c.day+" "+c.start+"–"+c.end+(c.mode?" · "+c.mode:""):"no fixed weekly time",
+          link:String(c.meetingLink||"").trim(),
+          attendance:stx&&stx.held
+            ? stx.attended+" of "+stx.held+" meetings attended"+(stx.missed?", "+stx.missed+" missed":"")
+            : "nothing recorded yet",
+          changed
+        };
+      }
+      return {name:s.name||"Student", sid:s.sid||"", title:titleOf(s),
+              role:s.principalUid===u.id?"principal supervisor":"co-supervisor",
+              coc, con};
+    });
+
+    out.push({label:sem.label||"Semester", panels, students:stus});
+  }
+  return out;
+}
+
+/* Who the page is for, as plain data. */
+function pinWhoOf(u){
+  return {
+    name:u.name||u.email||"Staff",
+    role:roleOf(u)==="admin"?"Admin"
+      :roleOf(u)==="panellist"?"Panel member"
+      :"Supervisor"+(capOf(u)==="principal"?" (principal only)":capOf(u)==="co"?" (co-supervisor only)":""),
+    area:u.area||"",
+    emails:emailsOf(u)
+  };
+}
+
+/* Draws the view-model. `opts.at` is when a snapshot was published, so a
+   reader can see for themselves how fresh the page is rather than trusting
+   it; live pages have none and say nothing. */
+function renderStaffPinView(who,blocks,opts={}){
+  const wrap=el("div",{class:"auth-wrap",style:"align-items:flex-start;padding-top:30px"});
+  const col=el("div",{style:"width:100%;max-width:820px"});
+  col.append(el("div",{class:"card",style:"border-top:4px solid var(--blue);margin-bottom:16px"},
+    el("div",{class:"eyebrow ui",style:"color:var(--blue)"},"Read-only PIN view"),
+    el("h1",{style:"font-size:24px;margin:2px 0"},who.name),
+    el("p",{class:"muted",style:"margin:0"},who.role+(who.area?" · "+who.area:"")+
+      ((who.emails||[]).length?" · "+who.emails.join(" / "):"")),
+    el("div",{class:"row",style:"margin-top:10px;gap:8px;flex-wrap:wrap"},
+      el("button",{class:"btn ghost sm",onclick:()=>renderLogin()},"← Back"),
+      el("button",{class:"btn ghost sm",onclick:()=>window.print()},"⎙ Print"),
+      el("span",{style:"flex:1"}), themeButton())));
+  if(opts.at) col.append(el("p",{class:"muted ui",style:"margin:-8px 0 14px;font-size:12.5px"},
+    "Showing the timetable as the MRes office last published it, "+relTime(opts.at)+
+    ". If something has changed since, ask them to refresh it."));
+
+  (blocks||[]).forEach(bl=>{
     const card=el("div",{class:"card",style:"margin-bottom:14px"});
     card.append(el("div",{class:"eyebrow ui"},"Semester"),
-      el("h3",{style:"margin-top:2px"},sem.label||"Semester"));
+      el("h3",{style:"margin-top:2px"},bl.label));
 
-    // ---- Panels I am assessing ----
-    if(assessing.length){
+    if((bl.panels||[]).length){
       card.append(el("div",{style:"font-weight:600;margin:14px 0 4px",class:"ui"},
-        "Panels you are sitting on ("+assessing.length+")"));
-      assessing.forEach(g=>{
-        const me=meIn(g), chair=groupMembers(g).find(m=>isChair(g,m));
-        const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+        "Panels you are sitting on ("+bl.panels.length+")"));
+      bl.panels.forEach(p=>{
         const box=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0"});
         const head=el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"},
-          el("strong",{class:"ui"},g.label||"Panel"));
-        if(me&&isChair(g,me)) head.append(el("span",{class:"pill blue",style:"font-size:11px"},"You chair this panel"));
-        if(!isFinal(g)) head.append(el("span",{class:"pill pending",style:"font-size:11px",
+          el("strong",{class:"ui"},p.label));
+        if(p.youChair) head.append(el("span",{class:"pill blue",style:"font-size:11px"},"You chair this panel"));
+        if(p.draft) head.append(el("span",{class:"pill pending",style:"font-size:11px",
           title:"Not yet released to supervisors — the time may still change"},"Draft"));
         box.append(head);
         const line=(lbl,val)=>box.append(el("p",{style:"margin:2px 0"},
           el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
-        line("When:",sess?weekdayOf(sess.date)+" "+longDate(sess.date)+", "+clockRange(sess.start,sess.end)
-          :"individual times — see the running order");
-        line("Chair:",chair?.name||"not yet set");
-        line("Assessors:",groupMembers(g).map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", ")||"to be confirmed");
-        const lk=String(g.meetingLink||"").trim();
-        if(lk) box.append(el("div",{style:"margin:6px 0 2px"},
-          el("a",{class:"linkpill",href:lk,target:"_blank",rel:"noopener"},"Join the panel")));
-        const slots=(g.slots||[]).filter(sl=>sl.start);
-        if(slots.length){
+        line("When:",p.when); line("Chair:",p.chair); line("Assessors:",p.assessors);
+        if(p.link) box.append(el("div",{style:"margin:6px 0 2px"},
+          el("a",{class:"linkpill",href:p.link,target:"_blank",rel:"noopener"},"Join the panel")));
+        if((p.rows||[]).length){
           const t=el("table",{style:"width:100%;font-size:13px;margin-top:8px"});
           t.append(el("thead",{},el("tr",{},...["Time","Student","Presentation · Q&A","Supervisors"]
             .map(h=>el("th",{style:"font-size:11.5px"},h)))));
           const tb=el("tbody",{});
-          slots.slice().sort((a,b)=>String(slotDate(g,a)||"").localeCompare(String(slotDate(g,b)||""))
-            ||minsOf(a.start)-minsOf(b.start)).forEach(sl=>{
-            const st=students.find(x=>x.id===sl.studentDocId);
-            const pp=slotParts(g,sl), d=slotDate(g,sl);
-            tb.append(el("tr",{},
-              el("td",{style:"white-space:nowrap"},(d&&sess&&d!==sess.date?prettyDate(d)+" ":"")+clockRange(sl.start,sl.end)),
-              el("td",{},st?el("div",{},el("strong",{},st.name||"?"),
-                  st.sid?el("span",{class:"muted ui",style:"font-size:12px"}," ("+st.sid+")"):el("span",{}),
-                  titleOf(st)?el("div",{class:"muted",style:"font-size:12.5px"},"“"+titleOf(st)+"”"):el("span",{}))
-                :el("span",{class:"muted"},"Panel discussion")),
-              el("td",{class:"muted",style:"white-space:nowrap;font-size:12.5px"},
-                pp?clockRange(pp.start,pp.qaStart)+(pp.qaMins?" · "+clockRange(pp.qaStart,pp.end):""):"—"),
-              el("td",{class:"muted",style:"font-size:12.5px"},
-                st?((st.principalName||supName(st.principalUid)||"—")+(st.coName?" / "+st.coName:"")):"—")));
-          });
+          p.rows.forEach(r=>tb.append(el("tr",{},
+            el("td",{style:"white-space:nowrap"},r.time),
+            el("td",{},r.name
+              ? el("div",{},el("strong",{},r.name),
+                  r.sid?el("span",{class:"muted ui",style:"font-size:12px"}," ("+r.sid+")"):el("span",{}),
+                  r.title?el("div",{class:"muted",style:"font-size:12.5px"},"“"+r.title+"”"):el("span",{}))
+              : el("span",{class:"muted"},"Panel discussion")),
+            el("td",{class:"muted",style:"white-space:nowrap;font-size:12.5px"},r.parts||"—"),
+            el("td",{class:"muted",style:"font-size:12.5px"},r.sups||"—"))));
           t.append(tb);
           box.append(el("div",{style:"overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px"},t));
         }else box.append(el("p",{class:"muted",style:"margin:6px 0 0"},"Running order to follow."));
@@ -11239,72 +11510,53 @@ async function renderStaffPinView(u,sems){
       });
     }
 
-    // ---- My students ----
-    if(myStudents.length){
+    if((bl.students||[]).length){
       card.append(el("div",{style:"font-weight:600;margin:16px 0 4px",class:"ui"},
-        "Your students ("+myStudents.length+")"));
-      myStudents.sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(s=>{
-        const role=s.principalUid===u.id?"principal supervisor":"co-supervisor";
+        "Your students ("+bl.students.length+")"));
+      bl.students.forEach(s=>{
         const box=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0"});
         box.append(el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"},
-          el("strong",{class:"ui"},s.name||"Student"),
+          el("strong",{class:"ui"},s.name),
           s.sid?el("span",{class:"muted ui",style:"font-size:12px"},s.sid):el("span",{}),
-          el("span",{class:"pill none",style:"font-size:11px"},"You are "+role)));
-        if(titleOf(s)) box.append(el("p",{class:"muted",style:"margin:2px 0;font-size:12.5px"},"“"+titleOf(s)+"”"));
+          el("span",{class:"pill none",style:"font-size:11px"},"You are "+s.role)));
+        if(s.title) box.append(el("p",{class:"muted",style:"margin:2px 0;font-size:12.5px"},"“"+s.title+"”"));
         const line=(lbl,val)=>box.append(el("p",{style:"margin:2px 0"},
           el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
-
-        // Confirmation of Candidature
-        const g=groups.find(x=>groupStudents(x).includes(s.id)&&(isFinal(x)||meIn(x)));
         box.append(el("div",{class:"muted ui",style:"font-weight:600;font-size:12px;margin:8px 0 2px"},
           "CONFIRMATION OF CANDIDATURE"));
-        if(!g){
+        if(!s.coc){
           box.append(el("p",{class:"muted",style:"margin:2px 0"},
             "Still being arranged — the time appears here once the office releases it."));
         }else{
-          const sl=slotOfStudent(g,s.id), d=sl?slotDate(g,sl):"", pp=sl?slotParts(g,sl):null;
-          line("Panel:",(g.label||"Panel")+(isFinal(g)?"":"  (draft — may still change)"));
-          line("When:",sl&&d?weekdayOf(d)+" "+longDate(d)+", "+clockRange(sl.start,sl.end):"to be confirmed");
-          if(pp){
-            line("Presentation:",clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)");
-            if(pp.qaMins) line("Q&A:",clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)");
-          }
-          line("Assessors:",groupMembers(g).map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", ")||"to be confirmed");
-          const lk=slotLink(g,sl);
-          if(lk) box.append(el("div",{style:"margin:6px 0 2px"},
-            el("a",{class:"linkpill",href:lk,target:"_blank",rel:"noopener"},"Join this CoC")));
+          line("Panel:",s.coc.panel); line("When:",s.coc.when);
+          if(s.coc.pres) line("Presentation:",s.coc.pres);
+          if(s.coc.qa)   line("Q&A:",s.coc.qa);
+          line("Assessors:",s.coc.assessors);
+          if(s.coc.link) box.append(el("div",{style:"margin:6px 0 2px"},
+            el("a",{class:"linkpill",href:s.coc.link,target:"_blank",rel:"noopener"},"Join this CoC")));
         }
-
-        // Consultation
-        const c=cons.find(x=>x.studentDocId===s.id);
         box.append(el("div",{class:"muted ui",style:"font-weight:600;font-size:12px;margin:10px 0 2px"},
           "WEEKLY CONSULTATION"));
-        if(!c){
+        if(!s.con){
           box.append(el("p",{class:"muted",style:"margin:2px 0"},"No consultation time set yet."));
         }else{
-          line("Usual time:",c.day?c.day+" "+c.start+"–"+c.end+(c.mode?" · "+c.mode:""):"no fixed weekly time");
-          if(c.meetingLink) box.append(el("div",{style:"margin:6px 0 2px"},
-            el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Join the consultation")));
-          const stx=consultStats(c,weeks);
-          line("Attendance:",stx&&stx.held
-            ? stx.attended+" of "+stx.held+" meetings attended"+(stx.missed?", "+stx.missed+" missed":"")
-            : "nothing recorded yet");
-          const changed=[];
-          for(let w=1;w<=weeks;w++){ const et=weekTime(c,w); if(et.overridden) changed.push({w,et}); }
-          if(changed.length){
+          line("Usual time:",s.con.time);
+          if(s.con.link) box.append(el("div",{style:"margin:6px 0 2px"},
+            el("a",{class:"linkpill",href:s.con.link,target:"_blank",rel:"noopener"},"Join the consultation")));
+          line("Attendance:",s.con.attendance);
+          if((s.con.changed||[]).length){
             box.append(el("p",{class:"muted ui",style:"margin:6px 0 2px;font-size:12px"},"CHANGED WEEKS"));
-            changed.forEach(({w,et})=>box.append(el("p",{style:"margin:2px 0;font-size:13px"},
-              el("span",{class:"pill blue",style:"font-size:11px;margin-right:6px"},"Week "+w),
-              et.day+" "+et.start+"–"+et.end+(et.mode?" · "+et.mode:""))));
+            s.con.changed.forEach(ch=>box.append(el("p",{style:"margin:2px 0;font-size:13px"},
+              el("span",{class:"pill blue",style:"font-size:11px;margin-right:6px"},"Week "+ch.w),ch.text)));
           }
         }
         card.append(box);
       });
     }
     col.append(card);
-  }
+  });
 
-  if(!anything) col.append(el("div",{class:"card"},
+  if(!(blocks||[]).length) col.append(el("div",{class:"card"},
     el("p",{style:"margin:0"},"Nothing is recorded against you yet."),
     el("p",{class:"muted",style:"margin:6px 0 0"},
       "No panel has been released to its assessors and no students are allocated to you in any semester. "+
@@ -11320,7 +11572,6 @@ async function renderStaffPinView(u,sems){
   wrap.append(col);
   document.body.append(wrap, toastNode());
 }
-
 /* ---- Student-side view of their own CoC -------------------------------
    The student's half of the release switch on the panel card. A panel the
    coordinator has not released to students does not appear here at all,
