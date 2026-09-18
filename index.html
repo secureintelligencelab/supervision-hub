@@ -1241,6 +1241,45 @@ const DB = {
     return s.exists()?{id,...s.data()}:null;
   },
   async remove(coll,id){ if(DEMO){ delete mem[coll][id]; return; } await deleteDoc(doc(db,coll,id)); }
+  ,
+  /* Many small writes in ONE round trip.
+     A write to Firestore costs a network round trip, and awaiting them one
+     after another spends that cost once per document: forty writes is forty
+     trips, which is the difference between a screen that responds and one
+     that appears to hang. A batch sends them together and applies them
+     atomically — either the whole set lands or none of it does, which is
+     also what you want when the writes are halves of one change, such as
+     moving a profile to a new id.
+
+     `ops` is [{type:'set'|'update'|'delete', coll, id, data}]. Firestore
+     caps a batch at 500 operations, so this chunks at 450 and commits the
+     chunks in sequence. A `set` merges by default, so it doubles as a
+     create; `update` on a document that has since vanished would fail the
+     whole chunk, which is why the callers here prefer set. */
+  async batchWrite(ops){
+    const list=(ops||[]).filter(Boolean);
+    if(!list.length) return 0;
+    if(DEMO){
+      list.forEach(o=>{
+        mem[o.coll]=mem[o.coll]||{};
+        if(o.type==="delete") delete mem[o.coll][o.id];
+        else mem[o.coll][o.id]={...(mem[o.coll][o.id]||{}),...o.data};
+      });
+      return list.length;
+    }
+    for(let i=0;i<list.length;i+=450){
+      const chunk=list.slice(i,i+450);
+      const b=writeBatch(db);
+      chunk.forEach(o=>{
+        const ref=doc(db,o.coll,o.id);
+        if(o.type==="delete") b.delete(ref);
+        else if(o.type==="update") b.update(ref,o.data);
+        else b.set(ref,o.data,{merge:o.merge!==false});
+      });
+      await b.commit();
+    }
+    return list.length;
+  }
 };
 
 /* ============================================================
@@ -10714,31 +10753,48 @@ async function publishSignInKeys(opts={}){
      actually has one. */
   if(opts.onlyIfInUse && !users.some(u=>String(u.pin||"").trim()
       ||(Array.isArray(u.signInKeys)&&u.signInKeys.length))) return {written:0,cleared:0,failed:0,skipped:true};
-  const sems =await DB.list("semesters");
-  /* Read the whole semester's records ONCE and slice them per person,
-     rather than re-reading them for every member of staff. */
-  const preload={students:[],groups:[],cons:[]};
-  try{ preload.students=await DB.list("students"); }catch(e){ console.warn("students unavailable",e); }
-  try{ preload.groups  =await DB.list("panelGroups"); }catch(e){ console.warn("panels unavailable",e); }
-  try{ preload.cons    =await DB.list("consultations"); }catch(e){ console.warn("consultations unavailable",e); }
+
+  /* `only` narrows the work to one person. Saving one staff record used to
+     rebuild and rewrite the keys for everybody, which is most of why that
+     save felt slow: the cost grew with the size of the department instead
+     of with the size of the change. Issuing a PIN, creating a login or
+     editing one person now touches that person alone. The office-wide
+     rebuild is still what "Refresh what the PINs show" and a release change
+     do, because those genuinely change what everyone sees. */
+  const scope=opts.only?users.filter(u=>u.id===opts.only):users;
+  if(!scope.length) return {written:0,cleared:0,failed:0,skipped:true};
+
+  /* The timetable is only read when somebody in scope actually has a PIN.
+     An address key carries no snapshot, so creating a login for someone
+     without a PIN should not pull down every student, panel and
+     consultation in the database \u2014 which it used to. */
+  const needSnapshot=scope.some(u=>String(u.pin||"").trim());
+  let sems=[], preload={students:[],groups:[],cons:[]};
+  if(needSnapshot){
+    /* Four independent reads, so they go together rather than one after
+       another. */
+    const safe=p=>p.catch(e=>{ console.warn("collection unavailable",e); return []; });
+    const [s,st,gr,co]=await Promise.all([
+      safe(DB.list("semesters")), safe(DB.list("students")),
+      safe(DB.list("panelGroups")), safe(DB.list("consultations"))]);
+    sems=s; preload={students:st,groups:gr,cons:co};
+  }
 
   const at=Date.now();
-  let written=0, cleared=0, failed=0;
-  for(const u of users){
+  const ops=[]; let written=0, cleared=0, failed=0;
+  for(const u of scope){
     const pin=String(u.pin||"").trim();
     const wantPinKey=pin?pinKeyOf(pin):"";
     const wantMailKeys=emailsOf(u).map(mailKeyOf);
     const hadKeys=Array.isArray(u.signInKeys)?u.signInKeys:[];
     const wantKeys=[wantPinKey,...wantMailKeys].filter(Boolean);
 
-    // drop keys this person no longer owns — an old PIN must stop working
-    for(const k of hadKeys){
-      if(wantKeys.includes(k)) continue;
-      try{ await DB.removeStaffKey(k); cleared++; }
-      catch(e){ console.warn("could not clear "+k,e); failed++; }
-    }
+    // drop keys this person no longer owns \u2014 an old PIN must stop working
+    hadKeys.filter(k=>!wantKeys.includes(k)).forEach(k=>{
+      ops.push({type:"delete",coll:"staffKeys",id:k}); cleared++;
+    });
     if(!wantKeys.length){
-      if(hadKeys.length){ try{ await DB.updateUser(u.id,{signInKeys:[]}); }catch(e){} }
+      if(hadKeys.length) ops.push({type:"set",coll:"users",id:u.id,data:{signInKeys:[]}});
       continue;
     }
     const who=pinWhoOf(u);
@@ -10747,22 +10803,23 @@ async function publishSignInKeys(opts={}){
       try{ blocks=await pinBlocksFor(u,sems,preload); }
       catch(e){ console.warn("could not build the view for "+(u.name||u.id),e); }
     }
-    try{
-      if(wantPinKey) await DB.setStaffKey(wantPinKey,{kind:"pin",uid:u.id,who,blocks,at});
-      /* An address key holds only the primary address to sign in with —
-         no name, no timetable. Knowing somebody's email is not a secret,
-         so it must not unlock anything that is. */
-      for(const k of wantMailKeys) await DB.setStaffKey(k,{kind:"mail",uid:u.id,email:u.email||""});
-      written+=wantKeys.length;
-      await DB.updateUser(u.id,{signInKeys:wantKeys,keysPublishedAt:at});
-    }catch(e){
-      console.warn("could not publish keys for "+(u.name||u.id),e);
-      failed++;
-    }
+    if(wantPinKey) ops.push({type:"set",coll:"staffKeys",id:wantPinKey,merge:false,
+      data:{kind:"pin",uid:u.id,who,blocks,at}});
+    /* An address key holds only the primary address to sign in with \u2014
+       no name, no timetable. Knowing somebody's email is not a secret, so
+       it must not unlock anything that is. */
+    wantMailKeys.forEach(k=>ops.push({type:"set",coll:"staffKeys",id:k,merge:false,
+      data:{kind:"mail",uid:u.id,email:u.email||""}}));
+    ops.push({type:"set",coll:"users",id:u.id,data:{signInKeys:wantKeys,keysPublishedAt:at}});
+    written+=wantKeys.length;
   }
+
+  /* One commit for the lot, rather than a round trip per document. */
+  try{ await DB.batchWrite(ops); }
+  catch(e){ console.warn("could not publish sign-in keys",e); failed=1; written=0; }
+
   if(!opts.quiet){
-    if(failed) toast(written+" sign-in key"+(written===1?"":"s")+" published, "+failed+
-      " failed — check the database rules (PIN access → the help button).",true);
+    if(failed) toast("The sign-in keys could not be saved \u2014 check the database rules (PIN access \u2192 the help button).",true);
     else toast(written?("Published "+written+" sign-in key"+(written===1?"":"s")+
       (cleared?", removed "+cleared+" old one"+(cleared===1?"":"s"):"")+"."):"Nothing to publish yet.");
   }
@@ -10858,8 +10915,9 @@ function staffPinForm(u,allUsers,done){
       toast(v?(cur?"PIN updated.":"PIN issued."):"PIN removed.");
       /* A PIN is only any use once its key document exists, so publishing
          is part of saving rather than a step to remember. The old key is
-         cleared in the same pass, so a replaced PIN stops working. */
-      await publishSignInKeys({quiet:true});
+         cleared in the same pass, so a replaced PIN stops working.
+         Scoped to this person: nobody else's keys changed. */
+      await publishSignInKeys({quiet:true,only:u.id});
       done(); return true;
     },"Save PIN");
 }
@@ -11103,76 +11161,78 @@ function semesterForm(existing,done){
    ============================================================ */
 async function relinkStaffUid(oldId,newId){
   if(!oldId||!newId||oldId===newId) return {moved:0,failed:[]};
-  let moved=0; const failed=[];
+  const failed=[]; const ops=[];
   const oldKey="u_"+oldId, newKey="u_"+newId;
-  const step=async (what,fn)=>{ try{ await fn(); }catch(err){ console.warn("relink: "+what,err); failed.push(what); } };
+  /* Six collections to check, and none of them depends on another, so they
+     are read together. Read one after another this was six round trips
+     before a single byte was written. */
+  const safe=(what,p)=>p.catch(e=>{ console.warn("relink: "+what,e); failed.push(what); return []; });
+  const [students,cons,groups,pools,legacy,notes]=await Promise.all([
+    safe("students",DB.list("students")),
+    safe("consultations",DB.list("consultations")),
+    safe("panelGroups",DB.list("panelGroups")),
+    safe("panelPool",DB.list("panelPool")),
+    safe("panels",DB.list("panels")),
+    safe("notes",DB.list("notes"))]);
 
   // ---- students: allocations ----
-  await step("students",async()=>{
-    for(const s of await DB.list("students")){
-      const patch={};
-      if(s.principalUid===oldId) patch.principalUid=newId;
-      if(s.coUid===oldId) patch.coUid=newId;
-      if(Object.keys(patch).length){ await DB.update("students",s.id,patch); moved++; }
-    }
+  students.forEach(s=>{
+    const patch={};
+    if(s.principalUid===oldId) patch.principalUid=newId;
+    if(s.coUid===oldId) patch.coUid=newId;
+    if(Object.keys(patch).length) ops.push({type:"set",coll:"students",id:s.id,data:patch});
   });
   // ---- consultations: ownership and the co-supervisor stamp ----
-  await step("consultations",async()=>{
-    for(const c of await DB.list("consultations")){
-      const patch={};
-      if(c.supervisorUid===oldId) patch.supervisorUid=newId;
-      if(c.coUid===oldId) patch.coUid=newId;
-      if(Object.keys(patch).length){ await DB.update("consultations",c.id,patch); moved++; }
-    }
+  cons.forEach(c=>{
+    const patch={};
+    if(c.supervisorUid===oldId) patch.supervisorUid=newId;
+    if(c.coUid===oldId) patch.coUid=newId;
+    if(Object.keys(patch).length) ops.push({type:"set",coll:"consultations",id:c.id,data:patch});
   });
   // ---- panel seats: uid, memberUids, chair, availability ----
-  await step("panelGroups",async()=>{
-    for(const g of await DB.list("panelGroups")){
-      const members=Array.isArray(g.members)?g.members:[];
-      const seated=members.some(m=>m.uid===oldId);
-      const inUids=Array.isArray(g.memberUids)&&g.memberUids.includes(oldId);
-      const isChairHere=g.chairKey===oldKey;
-      const avail=g.availability&&Object.prototype.hasOwnProperty.call(g.availability,oldKey);
-      if(!(seated||inUids||isChairHere||avail)) continue;
-      const patch={};
-      if(seated) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
-      if(inUids) patch.memberUids=g.memberUids.map(x=>x===oldId?newId:x);
-      if(isChairHere) patch.chairKey=newKey;
-      if(avail){
-        const a={...g.availability};
-        a[newKey]=a[oldKey]; delete a[oldKey];
-        patch.availability=a;
-      }
-      await DB.update("panelGroups",g.id,patch); moved++;
+  groups.forEach(g=>{
+    const members=Array.isArray(g.members)?g.members:[];
+    const seated=members.some(m=>m.uid===oldId);
+    const inUids=Array.isArray(g.memberUids)&&g.memberUids.includes(oldId);
+    const isChairHere=g.chairKey===oldKey;
+    const avail=g.availability&&Object.prototype.hasOwnProperty.call(g.availability,oldKey);
+    if(!(seated||inUids||isChairHere||avail)) return;
+    const patch={};
+    if(seated) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
+    if(inUids) patch.memberUids=g.memberUids.map(x=>x===oldId?newId:x);
+    if(isChairHere) patch.chairKey=newKey;
+    if(avail){
+      const a={...g.availability};
+      a[newKey]=a[oldKey]; delete a[oldKey];
+      patch.availability=a;
     }
+    ops.push({type:"set",coll:"panelGroups",id:g.id,data:patch});
   });
   // ---- nomination lists: owner, and anyone nominated ----
-  await step("panelPool",async()=>{
-    for(const p of await DB.list("panelPool")){
-      const members=Array.isArray(p.members)?p.members:[];
-      const patch={};
-      if(p.supervisorUid===oldId) patch.supervisorUid=newId;
-      if(members.some(m=>m.uid===oldId)) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
-      if(Object.keys(patch).length){ await DB.update("panelPool",p.id,patch); moved++; }
-    }
+  pools.forEach(p=>{
+    const members=Array.isArray(p.members)?p.members:[];
+    const patch={};
+    if(p.supervisorUid===oldId) patch.supervisorUid=newId;
+    if(members.some(m=>m.uid===oldId)) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
+    if(Object.keys(patch).length) ops.push({type:"set",coll:"panelPool",id:p.id,data:patch});
   });
   // ---- legacy per-student panels: best effort, may not exist at all ----
-  await step("panels",async()=>{
-    for(const p of await DB.list("panels")){
-      const members=Array.isArray(p.members)?p.members:[];
-      const patch={};
-      if(p.principalUid===oldId) patch.principalUid=newId;
-      if(members.some(m=>m.uid===oldId)) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
-      if(Object.keys(patch).length){ await DB.update("panels",p.id,patch); moved++; }
-    }
+  legacy.forEach(p=>{
+    const members=Array.isArray(p.members)?p.members:[];
+    const patch={};
+    if(p.principalUid===oldId) patch.principalUid=newId;
+    if(members.some(m=>m.uid===oldId)) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
+    if(Object.keys(patch).length) ops.push({type:"set",coll:"panels",id:p.id,data:patch});
   });
   // ---- message board authorship, so their own posts stay theirs ----
-  await step("notes",async()=>{
-    for(const n of await DB.list("notes")){
-      if(n.authorUid===oldId){ await DB.update("notes",n.id,{authorUid:newId}); moved++; }
-    }
+  notes.forEach(n=>{
+    if(n.authorUid===oldId) ops.push({type:"set",coll:"notes",id:n.id,data:{authorUid:newId}});
   });
-  return {moved,failed};
+
+  /* One commit, so the move either lands whole or not at all. */
+  try{ await DB.batchWrite(ops); }
+  catch(e){ console.warn("relink: writing",e); failed.push("the move itself"); return {moved:0,failed}; }
+  return {moved:ops.length,failed};
 }
 
 /* ---- Password resets -------------------------------------------------
@@ -11276,7 +11336,10 @@ function createLoginFor(u,done){
         const {moved,failed}=await relinkStaffUid(u.id,newUid);
         await DB.removeUser(u.id);
         await reloadStaffCaches();
-        await publishSignInKeys({quiet:true,onlyIfInUse:true});
+        /* Always, not onlyIfInUse: this person needs their address key
+           even when the office issues no PINs, or signing in with their
+           second address would not work for them. It is two writes. */
+        await publishSignInKeys({quiet:true,only:newUid});
         if(failed.length) toast("Login created, but "+failed.join(" and ")+
           " could not be updated — check that record by hand.",true);
         else toast("Login created for "+(u.name||addr)+(moved?" — "+moved+" record"+(moved===1?"":"s")+" moved across.":"."));
@@ -11447,7 +11510,7 @@ function staffForm(existing,done){
         /* A PIN typed in here has to be published like one issued from the
            PIN button, or it opens nothing. Same call, so the two routes
            cannot drift apart. */
-        if(pinVal||existing?.pin) await publishSignInKeys({quiet:true});
+        if(pinVal||existing?.pin) await publishSignInKeys({quiet:true,only:existing.id});
         toast("Staff updated."); done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
@@ -11495,7 +11558,7 @@ function staffForm(existing,done){
         /* Publish whether or not a PIN was set: a new account still needs
            its address key so that signing in with a second address works
            for them from the start. */
-        await publishSignInKeys({quiet:true,onlyIfInUse:!pinVal});
+        await publishSignInKeys({quiet:true,only:newUid});
         toast("Staff login created — you're still signed in."); done(); return true;
       }catch(e){ toast(e.message||"Could not create account.",true); return false; }
     });
