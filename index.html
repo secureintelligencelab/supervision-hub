@@ -726,7 +726,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, onAuthStateChanged
+  signOut, onAuthStateChanged, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
@@ -6669,9 +6669,36 @@ function renderLogin(){
             "If your record has a second address, either one signs you in — the password is the same.")),
         el("div",{style:"margin-bottom:6px"},el("label",{},"Password"),pass),
         btn,
-        el("p",{class:"muted",style:"margin-top:10px;font-size:12.5px"},
-          "Forgotten your password? Use ",el("strong",{style:"font-weight:600"},"Staff PIN"),
-          " above to see your panels and your students' times, and ask the MRes office for your login again.")
+        /* Self-service, because the office being the only route to a reset
+           is what made the PIN necessary in the first place. The address
+           already typed above is carried into it, so the usual case is two
+           clicks and no retyping. */
+        (()=>{
+          const line=el("p",{class:"muted",style:"margin-top:10px;font-size:12.5px"});
+          const btn=el("button",{class:"btn ghost sm",type:"button",style:"margin-top:8px",
+            onclick:async()=>{
+              const addr=email.value.trim();
+              if(!addr){ toast("Type your email address above first, then press this.",true); email.focus(); return; }
+              btn.disabled=true; btn.textContent="Sending…";
+              const r=await sendReset(addr,{neutral:true});
+              btn.disabled=false; btn.textContent="Email me a reset link";
+              if(r.ok){
+                line.textContent="If "+addr+" has an account, a reset link is on its way — check junk mail too. "+
+                  "Use the link to choose a new password, then sign in here.";
+                toast(r.quiet?"Reset link requested.":"Reset email sent.");
+              }else{
+                line.textContent=r.msg;
+                toast(r.msg,true);
+              }
+            }},"Email me a reset link");
+          return el("div",{},
+            el("p",{class:"muted",style:"margin-top:10px;font-size:12.5px"},
+              "Forgotten your password? Type your address above and send yourself a reset link. "+
+              "It has to go to your main address — a second address on your record can sign you in, but can't receive the link. "+
+              "Meanwhile ",el("strong",{style:"font-weight:600"},"Staff PIN"),
+              " above shows your panels and your students' times without a password."),
+            btn,line);
+        })()
       );
       if(DEMO) card.append(el("p",{class:"muted",style:"margin-top:12px"},
         "Demo mode — try ",el("code",{},"admin@uni.edu"),
@@ -10592,6 +10619,12 @@ async function viewPeople(v){
     actions.append(el("button",{class:"btn ghost sm",onclick:()=>staffForm(u,()=>viewPeople(v))},"Edit"));
     actions.append(el("button",{class:"btn ghost sm",title:"Issue, read back, email or revoke this person's read-only PIN",
       onclick:()=>staffPinForm(u,users,()=>viewPeople(v))},"PIN"));
+    /* The way out of an imported profile nobody can sign in to. Offered
+       only where it applies, so the row stays quiet for everyone else. */
+    if(u.pendingLogin||!String(u.email||"").trim())
+      actions.append(el("button",{class:"btn sm",
+        title:"Turn this profile into a real login, keeping their students, panel seats and chair role",
+        onclick:()=>createLoginFor(u,()=>viewPeople(v))},"Create login"));
     const isSelf = u.id===S.uid;
     actions.append(el("button",{class:"btn danger sm",...(isSelf?{disabled:"disabled",title:"You can't delete your own account"}:{}),
       onclick:()=> isSelf ? toast("You can't delete your own account.",true)
@@ -11047,9 +11080,237 @@ function semesterForm(existing,done){
     });
 }
 
+/* ============================================================
+   12c. GIVING AN EXISTING PROFILE A LOGIN
+   An import creates a staff record from a name alone — the panel import
+   takes `email: w.email||""`, so a spreadsheet without an email column
+   produces perfectly good profiles that nobody can sign in to. Those
+   records are already load-bearing by the time anyone notices: students
+   are allocated to them, they are seated on panels, they may be chairing
+   one. So the fix cannot be "delete it and make a new one".
+
+   A Firebase Auth account's uid is assigned by Auth and cannot be chosen,
+   so giving one of these profiles a login means moving it to a NEW id —
+   and every reference to the old id has to move with it, or the person
+   signs in successfully to an empty screen while their students and panel
+   seats still point at a profile that no longer exists.
+
+   relinkStaffUid() is that move, and it is deliberately exhaustive. The
+   panel references are the ones that are easy to miss and the most
+   damaging to get wrong: a seat carries the uid, the flat memberUids array
+   carries it again (the security rules read that one), and the chair and
+   availability maps key off it in their own "u_<uid>" form.
+   ============================================================ */
+async function relinkStaffUid(oldId,newId){
+  if(!oldId||!newId||oldId===newId) return {moved:0,failed:[]};
+  let moved=0; const failed=[];
+  const oldKey="u_"+oldId, newKey="u_"+newId;
+  const step=async (what,fn)=>{ try{ await fn(); }catch(err){ console.warn("relink: "+what,err); failed.push(what); } };
+
+  // ---- students: allocations ----
+  await step("students",async()=>{
+    for(const s of await DB.list("students")){
+      const patch={};
+      if(s.principalUid===oldId) patch.principalUid=newId;
+      if(s.coUid===oldId) patch.coUid=newId;
+      if(Object.keys(patch).length){ await DB.update("students",s.id,patch); moved++; }
+    }
+  });
+  // ---- consultations: ownership and the co-supervisor stamp ----
+  await step("consultations",async()=>{
+    for(const c of await DB.list("consultations")){
+      const patch={};
+      if(c.supervisorUid===oldId) patch.supervisorUid=newId;
+      if(c.coUid===oldId) patch.coUid=newId;
+      if(Object.keys(patch).length){ await DB.update("consultations",c.id,patch); moved++; }
+    }
+  });
+  // ---- panel seats: uid, memberUids, chair, availability ----
+  await step("panelGroups",async()=>{
+    for(const g of await DB.list("panelGroups")){
+      const members=Array.isArray(g.members)?g.members:[];
+      const seated=members.some(m=>m.uid===oldId);
+      const inUids=Array.isArray(g.memberUids)&&g.memberUids.includes(oldId);
+      const isChairHere=g.chairKey===oldKey;
+      const avail=g.availability&&Object.prototype.hasOwnProperty.call(g.availability,oldKey);
+      if(!(seated||inUids||isChairHere||avail)) continue;
+      const patch={};
+      if(seated) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
+      if(inUids) patch.memberUids=g.memberUids.map(x=>x===oldId?newId:x);
+      if(isChairHere) patch.chairKey=newKey;
+      if(avail){
+        const a={...g.availability};
+        a[newKey]=a[oldKey]; delete a[oldKey];
+        patch.availability=a;
+      }
+      await DB.update("panelGroups",g.id,patch); moved++;
+    }
+  });
+  // ---- nomination lists: owner, and anyone nominated ----
+  await step("panelPool",async()=>{
+    for(const p of await DB.list("panelPool")){
+      const members=Array.isArray(p.members)?p.members:[];
+      const patch={};
+      if(p.supervisorUid===oldId) patch.supervisorUid=newId;
+      if(members.some(m=>m.uid===oldId)) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
+      if(Object.keys(patch).length){ await DB.update("panelPool",p.id,patch); moved++; }
+    }
+  });
+  // ---- legacy per-student panels: best effort, may not exist at all ----
+  await step("panels",async()=>{
+    for(const p of await DB.list("panels")){
+      const members=Array.isArray(p.members)?p.members:[];
+      const patch={};
+      if(p.principalUid===oldId) patch.principalUid=newId;
+      if(members.some(m=>m.uid===oldId)) patch.members=members.map(m=>m.uid===oldId?{...m,uid:newId}:m);
+      if(Object.keys(patch).length){ await DB.update("panels",p.id,patch); moved++; }
+    }
+  });
+  // ---- message board authorship, so their own posts stay theirs ----
+  await step("notes",async()=>{
+    for(const n of await DB.list("notes")){
+      if(n.authorUid===oldId){ await DB.update("notes",n.id,{authorUid:newId}); moved++; }
+    }
+  });
+  return {moved,failed};
+}
+
+/* ---- Password resets -------------------------------------------------
+   A password cannot be SET from this page. Setting one for somebody else
+   needs the Firebase Admin SDK, which means a server, and a static site
+   has none — anything claiming otherwise would have to ship credentials
+   that every visitor could read.
+
+   What the client SDK does allow, signed in or not, is asking Firebase to
+   send its own reset email. The link in it is generated and honoured by
+   Firebase; the password is typed by the person themselves and never
+   passes through this app or through the office. That is the whole
+   mechanism, and it is the right one: nobody else ever knows the password,
+   which is not true of a code read out over the phone.
+
+   Firebase addresses the email to the account's PRIMARY address, because
+   that is the only one it knows — a second address on the staff record is
+   this app's idea, not Auth's. Said plainly wherever this is offered, so
+   nobody waits on a message sent to a mailbox they cannot open.
+
+   With "email enumeration protection" turned on in the Firebase console
+   (the default for newer projects) a request for an unknown address
+   succeeds silently rather than reporting user-not-found, so the wording
+   below never promises the address definitely has an account. */
+/* `opts.neutral` is for the sign-in screen, where anyone can type any
+   address: an unknown one is answered exactly as a known one is, so the
+   box cannot be used to find out who has an account. The admin screens
+   pass it off, because there the difference is the useful part. */
+async function sendReset(addr,opts={}){
+  const email=String(addr||"").trim();
+  if(!email) return {ok:false,msg:"No email address on record for this person."};
+  if(DEMO) return {ok:true,msg:"Demo mode — no email is actually sent."};
+  try{
+    await sendPasswordResetEmail(auth,email);
+    return {ok:true,msg:"Reset email sent to "+email+"."};
+  }catch(e){
+    const c=e?.code||"";
+    if(c.includes("user-not-found"))
+      return opts.neutral
+        ? {ok:true,quiet:true,msg:"If that address has an account, a reset link is on its way."}
+        : {ok:false,msg:email+" has no Firebase login. Use “Create login” on their row instead."};
+    if(c.includes("invalid-email"))
+      return {ok:false,msg:"That address doesn't look valid."};
+    if(c.includes("too-many-requests"))
+      return {ok:false,msg:"Firebase is rate-limiting reset emails. Wait a few minutes and try again."};
+    if(c.includes("network"))
+      return {ok:false,msg:"No connection to Firebase. Check the network and try again."};
+    return {ok:false,msg:e?.message||"Could not send the reset email."};
+  }
+}
+
+/* Give an existing profile a real login, keeping everything attached to it. */
+function createLoginFor(u,done){
+  const email=el("input",{type:"email",value:u.email||"",placeholder:"they@uni.edu"});
+  const pass=el("input",{type:"password",placeholder:"Min 6 characters"});
+  const note=el("p",{class:"muted",style:"margin:0;font-size:13px"});
+  const busy=el("p",{class:"muted ui",style:"margin:0;font-size:12.5px"});
+  const load=studentLoadOf(u.id);
+  modal("Create a login — "+(u.name||"staff"),
+    el("div",{class:"grid"},
+      el("p",{class:"muted",style:"margin:0"},
+        (u.name||"This person")+" has a profile but no login"+
+        (u.email?"":" and no email address on record")+
+        ". Give them one here and everything already attached to them comes along — "+
+        "their panel seats, whether they chair, any availability they have recorded"+
+        (load?", and the "+load+" student"+(load===1?"":"s")+" allocated to them":"")+"."),
+      el("div",{},el("label",{},"Email address — this becomes their login"),email),
+      el("div",{},el("label",{},"Temporary password"),pass),
+      note,busy,
+      el("p",{class:"muted",style:"margin:0;font-size:12.5px"},
+        "Firebase decides the account's internal id, so the profile is moved to the new one and every "+
+        "reference is repointed in the same step. Nothing is retyped and nothing is lost. "+
+        "If they already have a PIN it keeps working.")),
+    async()=>{
+      const addr=email.value.trim();
+      if(!addr||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)){ toast("Enter a valid email address.",true); return false; }
+      if(pass.value.length<6){ toast("The password needs at least 6 characters.",true); return false; }
+      const all=await DB.listUsers();
+      const clash=all.find(x=>x.id!==u.id&&emailsOf(x).some(e=>e.toLowerCase()===addr.toLowerCase()));
+      if(clash){
+        toast("That address is already on "+(clash.name||clash.email||"another record")+
+          ". Merge them instead of creating a second login.",true);
+        return false;
+      }
+      const profile={...u, email:addr, pendingLogin:false};
+      delete profile.id;
+      try{
+        busy.textContent="Creating the account…";
+        let newUid;
+        if(DEMO){
+          newUid="u"+Math.random().toString(36).slice(2,8);
+          await DB.setUser(newUid,profile);
+        }else{
+          const factory=getFactoryAuth();
+          const cred=await createUserWithEmailAndPassword(factory,addr,pass.value);
+          newUid=cred.user.uid;
+          await DB.setUser(newUid,profile);
+          await signOut(factory).catch(()=>{});
+        }
+        busy.textContent="Moving their students and panel seats…";
+        const {moved,failed}=await relinkStaffUid(u.id,newUid);
+        await DB.removeUser(u.id);
+        await reloadStaffCaches();
+        await publishSignInKeys({quiet:true,onlyIfInUse:true});
+        if(failed.length) toast("Login created, but "+failed.join(" and ")+
+          " could not be updated — check that record by hand.",true);
+        else toast("Login created for "+(u.name||addr)+(moved?" — "+moved+" record"+(moved===1?"":"s")+" moved across.":"."));
+        done(); return true;
+      }catch(e){
+        const c=e?.code||"";
+        if(c.includes("email-already-in-use")){
+          toast("That address already has a login in Firebase Authentication. Either sign in as them once to "+
+            "find it, or use a different address here.",true);
+        } else toast(e?.message||"Could not create the account.",true);
+        busy.textContent="";
+        return false;
+      }
+    },"Create the login");
+}
+
 function staffForm(existing,done){
   const editing=!!existing;
-  const name=el("input",{value:existing?.name||""}), email=el("input",{type:"email",value:existing?.email||"",...(editing?{disabled:"disabled"}:{})});
+  /* The login email is owned by Firebase Auth, so editing it on a record
+     that HAS a login would only make the two disagree — it stays locked
+     there, and the second-email field below is the way to add an address
+     such a person can sign in with.
+
+     A record with no login yet is the opposite case: there is no Auth
+     account for it to disagree with, and an import that had no email
+     column leaves exactly this — a profile nobody can be given a login for
+     because the field that would identify them is greyed out. So here it
+     is editable, and filling it in is the first half of "Create login". */
+  const noLogin=!!(existing&&(existing.pendingLogin||!String(existing.email||"").trim()));
+  const emailLocked=editing&&!noLogin;
+  const name=el("input",{value:existing?.name||""}),
+        email=el("input",{type:"email",value:existing?.email||"",
+          ...(emailLocked?{disabled:"disabled"}:{}),
+          ...(noLogin?{placeholder:"none on record — add one, then use Create login"}:{})});
   /* The second address is a plain profile field, not the login, so unlike
      the primary it stays editable when editing. Everything that mails
      this person sends to both. */
@@ -11112,7 +11373,17 @@ function staffForm(existing,done){
 
   const fields=[
     el("div",{},el("label",{},"Full name"),name),
-    el("div",{},el("label",{},"Email"),email),
+    el("div",{},el("label",{},"Email"),email,
+      emailLocked
+        ? el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},
+            "This is their login address and is held in Firebase Authentication, so it can't be changed here. "+
+            "If they read a different mailbox, put that in Second email below — either address signs them in.")
+        : editing
+          ? el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},
+              "This record has no login yet, so the address is still editable. Save it, then use "+
+              "“Create login” on their row to turn it into an account — their students, panel seats and "+
+              "chair role come with them.")
+          : el("span",{})),
     el("div",{},el("label",{},"Second email (optional)"),email2,
       el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},
         "Some staff read two mailboxes. If one is here, every email the hub prepares \u2014 single or group \u2014 goes to both addresses.")),
@@ -11120,6 +11391,33 @@ function staffForm(existing,done){
     el("div",{},el("label",{},"Employment status"),emp,empHelp),
   ];
   if(!editing) fields.push(el("div",{},el("label",{},"Temporary password"),pass));
+  /* Editing an account that HAS a login: the password can't be shown or
+     set from here, but the reset can be started from here, which is what
+     the office actually needs when somebody rings up locked out. */
+  if(editing&&!noLogin){
+    const resetNote=el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},
+      "Sends "+(existing?.email||"their address")+" a Firebase reset link. They choose the new password themselves — "+
+      "it never passes through this app, and the office never learns it."+
+      (existing?.email2?"  The link can only go to the primary address above, not to "+existing.email2+".":""));
+    const resetBtn=el("button",{class:"btn ghost sm",type:"button",onclick:async()=>{
+      if(!window.confirm("Email a password reset link to "+(existing?.email||"this person")+"?\n\n"+
+        "Their current password keeps working until they use the link.")) return;
+      resetBtn.disabled=true; resetBtn.textContent="Sending…";
+      const r=await sendReset(existing?.email);
+      resetBtn.disabled=false; resetBtn.textContent="✉ Send password reset email";
+      toast(r.msg,!r.ok);
+      if(r.ok) resetNote.textContent="Sent. The link expires after a while — send another if they don't get to it in time. "+
+        "Tell them to check junk mail; it comes from Firebase, not from your own address.";
+    }},"✉ Send password reset email");
+    fields.push(el("div",{},el("label",{},"Password"),
+      el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap"},resetBtn),
+      resetNote,
+      el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},
+        "Setting a password outright needs the Firebase console (Authentication → the person → Edit user), "+
+        "because a page with no server of its own cannot be trusted with that power. "+
+        "If they can't reach their mailbox at all, give them a PIN so they can still see their timetable "+
+        "while the address is sorted out.")));
+  }
   fields.push(pinRow);
   fields.push(el("div",{},el("label",{},"Account role"),role,roleHelp), warnRow, capRow, areaRow,
     el("div",{},el("p",{class:"muted",style:"margin:0"}, editing
@@ -11138,6 +11436,9 @@ function staffForm(existing,done){
       if(editing){
         const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim(),email2:alt,
                        employment:emp.value,pin:pinVal,pinSetAt:pinVal?(existing?.pinSetAt||Date.now()):0};
+        /* Only a record without a login carries its address here; one with
+           a login keeps whatever Auth holds. */
+        if(!emailLocked) profile.email=email.value.trim();
         if(role.value==="supervisor"){ profile.supRole=cap.value; profile.area=area.value; }
         else if(role.value==="panellist"){ profile.supRole=null; profile.area=area.value; }
         else { profile.supRole=null; profile.area=null; }
@@ -11182,19 +11483,13 @@ function staffForm(existing,done){
           await signOut(factory).catch(()=>{});
         }
         if(orphan && newUid){
-          const linked=await DB.list("students");
-          for(const s of linked){
-            const patch={};
-            if(s.principalUid===orphan.id) patch.principalUid=newUid;
-            if(s.coUid===orphan.id) patch.coUid=newUid;
-            if(Object.keys(patch).length) await DB.update("students",s.id,patch);
-            // move any consultations owned by the old profile id too
-            if(patch.principalUid){
-              const cs=await DB.list("consultations",{studentDocId:s.id});
-              for(const c of cs){ if(c.supervisorUid===orphan.id) await DB.update("consultations",c.id,{supervisorUid:newUid}); }
-            }
-          }
+          /* One relink helper for both routes into this. It used to move
+             students and consultations only, which quietly stranded the
+             panel seats — the very thing an imported panel member has. */
+          const {failed}=await relinkStaffUid(orphan.id,newUid);
           await DB.removeUser(orphan.id);
+          if(failed.length) toast("Account created, but "+failed.join(" and ")+
+            " could not be repointed — check that record by hand.",true);
         }
         await reloadStaffCaches();
         /* Publish whether or not a PIN was set: a new account still needs
