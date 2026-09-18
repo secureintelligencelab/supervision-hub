@@ -1108,12 +1108,15 @@ const DB = {
      so the read-only view needs nothing else: panelGroups stays closed to
      the public, exactly as its rule intends. Each document holds one
      person's own data and nobody else's. */
+  /* Throws rather than swallowing, because the caller has to tell two very
+     different things apart: "no such PIN" (a wrong guess, which counts
+     against the attempt limit) and "the rules won't let me look" (a site
+     that has not been set up, where counting a strike would lock out
+     somebody who typed their PIN correctly). */
   async getStaffKey(key){
     if(DEMO){ mem.staffKeys=mem.staffKeys||{}; return mem.staffKeys[key]||null; }
-    try{
-      const s=await getDoc(doc(db,"staffKeys",String(key)));
-      return s.exists()?s.data():null;
-    }catch(err){ console.warn("sign-in key unavailable",err); return null; }
+    const s=await getDoc(doc(db,"staffKeys",String(key)));
+    return s.exists()?s.data():null;
   },
   async setStaffKey(key,data){
     if(DEMO){ mem.staffKeys=mem.staffKeys||{}; mem.staffKeys[key]={...data}; return; }
@@ -1134,15 +1137,23 @@ const DB = {
       const e=Object.entries(mem.users).find(([k,v])=>normPin(v.pin)===want);
       return e?{uid:e[0],id:e[0],...e[1]}:null;
     }
+    let lastErr=null;
     try{
       const r=await getDocs(query(collection(db,"users"),where("pin","==",String(pin).trim())));
       if(!r.empty) return {uid:r.docs[0].id,id:r.docs[0].id,...r.docs[0].data()};
-    }catch(err){ console.warn("pin lookup failed",err); }
+    }catch(err){ lastErr=err; console.warn("pin lookup failed",err); }
     try{
       const all=await getDocs(collection(db,"users"));
       const d=all.docs.find(x=>normPin(x.data().pin)===want);
       return d?{uid:d.id,id:d.id,...d.data()}:null;
-    }catch(err){ console.warn("pin scan failed",err); return null; }
+    }catch(err){
+      /* The staff list being unreadable is the normal, CORRECT state for a
+         signed-out visitor. It means this route cannot answer, not that
+         the PIN was wrong — so the error is passed up rather than being
+         reported as a failed guess. */
+      console.warn("pin scan failed",err);
+      throw err||lastErr;
+    }
   },
   async listUsers(){
     if(DEMO){ return Object.entries(mem.users).map(([id,v])=>({id,...v})); }
@@ -2399,6 +2410,19 @@ function panelRuleHelp(err){
       "The app couldn't read the CoC collections. Firestore reported: "+(err?.message||"unknown error")),
     el("p",{style:"margin:0 0 8px;font-size:14px"},
       "Nominations, panels and schedules live in three collections. Anything your security rules don't mention is denied outright, so this tab comes back empty. Add these under Firestore Database \u2192 Rules, then reload:"));
+  /* The commonest cause once the collections ARE in the rules: a rules file
+     written before the panel-member role existed, whose isStaff() covers
+     admins and supervisors only. Supervisors get in and panel members do
+     not, which reads as "it works for everyone except the new person" and
+     sends the coordinator looking in the wrong place. Named first, because
+     the rule block below is not the fix for it. */
+  if(S.role==="panellist") card.append(
+    el("p",{style:"margin:0 0 10px;font-size:14px;font-weight:600;color:var(--clay-ink,#9a3412)"},
+      "You are signed in as a panel member, and that is very likely the cause. "+
+      "If your rules guard panelGroups with an isStaff() test, check what isStaff() actually says: "+
+      "written as (role == 'admin' || role == 'supervisor') it excludes panel members, so everyone "+
+      "else gets in and they don't. The firestore.rules file supplied with this app adds an "+
+      "isAssessor() test \u2014 staff OR panel member \u2014 and uses it for panelGroups."));
   const rule=
 "match /panelPool/{id} {\n  allow read, write: if request.auth != null;\n}\n"+
 "match /panels/{id} {\n  allow read, write: if request.auth != null;\n}\n"+
@@ -6752,24 +6776,51 @@ async function staffPinLookup(pin){
   const gate=pinGate();
   if(gate.until&&gate.until>Date.now()){
     const mins=Math.max(1,Math.ceil((gate.until-Date.now())/60000));
-    toast("Too many wrong PINs. Try again in "+mins+" minute"+(mins===1?"":"s")+".",true);
+    /* The lock lives in this browser only, which is worth saying: it is
+       what an office testing its own setup needs to know, and it is no use
+       to anyone trying to guess their way in, who could open a new window
+       regardless. The limit is there to make guessing slow, not sealed. */
+    toast("Too many wrong PINs. Try again in "+mins+" minute"+(mins===1?"":"s")+
+      " — or in a private window, since the wait is only on this browser.",true);
     return;
   }
   if(DEMO) seedDemo();
   try{
-    /* First the key document, which is the route that works without
-       opening the staff list or the panels to public reads. */
-    const key=await DB.getStaffKey(pinKeyOf(typed));
+    /* Two routes, and THREE outcomes — which is the whole point of the
+       bookkeeping below. A route can find the person, can say for certain
+       that no such PIN exists, or can fail to look at all because the
+       rules do not permit it. Only the middle one is a wrong guess.
+       Counting the third against the attempt limit would lock out somebody
+       who typed their PIN correctly at a site that was never set up, which
+       is precisely the wrong person to lock out. */
+    let denied=0, tried=0;
+
+    // 1. the key document: works with users and panelGroups left closed
+    let key=null;
+    tried++;
+    try{ key=await DB.getStaffKey(pinKeyOf(typed)); }
+    catch(err){ denied++; console.warn("sign-in key unreadable",err); }
     if(key&&key.kind==="pin"&&key.who){
       pinGateClear();
       document.body.innerHTML="";
       renderStaffPinView(key.who,key.blocks||[],{at:key.at||0});
       return;
     }
-    /* Otherwise fall back to reading the records live, for an office that
-       has opened its rules instead. */
-    const u=await DB.findUserByPin(typed);
+
+    // 2. reading the records live, for an office that opened its rules
+    let u=null;
+    tried++;
+    try{ u=await DB.findUserByPin(typed); }
+    catch(err){ denied++; console.warn("live PIN lookup unavailable",err); }
+
     if(!u){
+      if(denied===tried){
+        /* Neither route could look. That is a setting, not a bad PIN, so
+           it costs no attempt and is named plainly enough for whoever is
+           holding the phone to relay it to the office. */
+        toast("PIN sign-in isn't switched on for this site yet — ask the MRes office to publish the PIN rule.",true);
+        return;
+      }
       const st=pinGateFail();
       toast(st.until&&st.until>Date.now()
         ? "That PIN wasn't recognised. Too many attempts — try again in 10 minutes."
@@ -11092,6 +11143,10 @@ function staffForm(existing,done){
         else { profile.supRole=null; profile.area=null; }
         await DB.updateUser(existing.id,profile);
         await reloadStaffCaches();
+        /* A PIN typed in here has to be published like one issued from the
+           PIN button, or it opens nothing. Same call, so the two routes
+           cannot drift apart. */
+        if(pinVal||existing?.pin) await publishSignInKeys({quiet:true});
         toast("Staff updated."); done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
@@ -11142,6 +11197,10 @@ function staffForm(existing,done){
           await DB.removeUser(orphan.id);
         }
         await reloadStaffCaches();
+        /* Publish whether or not a PIN was set: a new account still needs
+           its address key so that signing in with a second address works
+           for them from the start. */
+        await publishSignInKeys({quiet:true,onlyIfInUse:!pinVal});
         toast("Staff login created — you're still signed in."); done(); return true;
       }catch(e){ toast(e.message||"Could not create account.",true); return false; }
     });
