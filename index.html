@@ -2211,6 +2211,15 @@ async function saveGroup(g){
        panel rather than on each student. Always written as a string — an
        absent key and `undefined` are different things to Firestore. */
     meetingLink:String(g.meetingLink||"").trim(),
+    /* The shared CoC examination report: ONE file per panel, held on the
+       office's own OneDrive or Google Drive, which every assessor on the
+       panel edits — marks and comments for all of its students in the same
+       document. The hub stores only the address and when it is due; the
+       file, its contents and who may edit it stay with the drive. Listed
+       here because this record is rebuilt from a fixed list of fields on
+       every save, and a field left off the list is quietly lost. */
+    reportLink:String(g.reportLink||"").trim(),
+    reportDue:String(g.reportDue||""),
     studentIds:(g.studentIds||[]).filter(Boolean),
     sessions:(g.sessions||[]).map(s=>({id:s.id||nomId(),date:s.date||"",
                                        start:s.start||"",end:s.end||"",
@@ -2859,6 +2868,24 @@ async function viewPanels(v){
       c.append(el("p",{class:"muted",style:"padding:16px;margin:0"},"You haven't been put on any CoC panel this semester."));
       host.append(c); return;
     }
+    /* The shared examination report for each released panel, above the
+       student list — it is the one thing an assessor comes back to this
+       screen for after the presentations. Released panels only, for the
+       same reason the students are hidden until then. */
+    const forms=asMember.filter(g=>isAssessorReleased(g)&&String(g.reportLink||"").trim());
+    if(forms.length){
+      const strip=el("div",{style:"padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(127,127,127,.05)"});
+      strip.append(el("div",{class:"ui",style:"font-weight:700;font-size:13px;margin-bottom:6px"},
+        "CoC examination report"+(forms.length===1?"":"s")));
+      forms.forEach(g=>strip.append(el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0"},
+        el("span",{class:"ui",style:"font-size:13.5px;min-width:140px"},g.label||"Panel"),
+        joinLink(String(g.reportLink).trim(),"Open the report form"),
+        g.reportDue?el("span",{class:"pill pending",style:"font-size:11.5px"},"Due "+prettyDate(g.reportDue)):el("span",{}))));
+      strip.append(el("p",{class:"muted ui",style:"margin:6px 0 0;font-size:12.5px"},
+        "One shared file per panel — all its assessors fill in the same document, so edit it online rather than downloading a copy. "+
+        "If it asks for permission, tell the MRes office which address you use for OneDrive / Google Drive."));
+      c.append(strip);
+    }
     const t=el("table",{});
     t.append(el("thead",{},el("tr",{},...["Student","Proposal title","Principal","Panel","My role","Time"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
@@ -3179,6 +3206,12 @@ async function viewPanelAdmin(v){
       groups.some(g=>scheduledCount(g))
         ?el("button",{class:"btn ghost",title:"One email per person covering their panels AND their students \u2014 nobody is written to twice",
             onclick:()=>scheduleEmailDialog({mode:"everyone"})},"\u2709 One email each (IT / Business)")
+        :el("span",{}),
+      /* The shared examination report, to the assessors only. Shown once
+         any panel has a form, so it does not clutter the bar before then. */
+      groups.some(g=>String(g.reportLink||"").trim())
+        ?el("button",{class:"btn ghost",title:"Send each assessor the shared CoC report form for their panels",
+            onclick:()=>reportEmailDialog()},"\u2709 Send CoC report forms")
         :el("span",{}),
       /* Supervisors get their own students' times, across every panel
          those students sit on, rather than one panel at a time. */
@@ -3538,6 +3571,35 @@ async function viewPanelAdmin(v){
       : el("p",{class:"muted",style:"margin:0 0 16px"},
           "Paste the Teams meeting link for this session. It goes to the assessors, the supervisors and the students, and onto the exported CoC document. A student who needs a different link can be given their own on their row above."));
 
+    // ---- the shared examination report ----
+    // Assessors only. It carries marks and comments on the students, so it
+    // is never put in front of a supervisor or a student by this app.
+    const rLink=String(g.reportLink||"").trim();
+    const rBox=step("report","CoC report form",
+      rLink?(g.reportDue?"due "+prettyDate(g.reportDue):"set"):"none",false);
+    const rRow=el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;margin-bottom:6px"});
+    if(rLink){
+      rRow.append(joinLink(rLink,"Open the report form"),
+        el("button",{class:"btn sm ghost",onclick:()=>setReportLink(g)},"Change"),
+        el("button",{class:"btn sm ghost",onclick:()=>{
+          navigator.clipboard?.writeText(rLink).then(()=>toast("Report link copied."),
+            ()=>toast("Copy failed — select the link manually.",true));
+        }},"Copy"),
+        el("button",{class:"btn sm",onclick:()=>reportEmailDialog({groupId:g.id})},
+          "✉ Send to this panel's assessors"));
+    } else {
+      rRow.append(el("span",{class:"pill pending"},"No report form yet"),
+        el("button",{class:"btn sm",onclick:()=>setReportLink(g)},"Add the report form link"));
+    }
+    rBox.append(rRow);
+    rBox.append(rLink
+      ? el("p",{class:"muted ui",style:"margin:0 0 16px;font-size:12.5px;word-break:break-all"},
+          rLink+(g.reportDue?"  ·  due "+longDate(g.reportDue):""))
+      : el("p",{class:"muted",style:"margin:0 0 16px"},
+          "The one shared file this panel's assessors fill in — marks and comments for all "+
+          groupStudents(g).length+" of its students. Put it on OneDrive or Google Drive, give the assessors edit "+
+          "access there, and paste its link here. Only this panel's assessors are shown it."));
+
     if(chosen){
       const ttBox=step("timetable","Presentation timetable",
         (g.slots||[]).filter(x=>x.start).length+" slots");
@@ -3832,6 +3894,251 @@ async function viewPanelAdmin(v){
   /* The Teams link for the panel's session. Left exactly as pasted — Teams
      URLs carry query strings that must not be "tidied" — and only turned
      into an href when it is rendered. Clearing the box removes it. */
+  /* ============================================================
+     CoC EXAMINATION REPORT FORM
+     The office already has the form and already runs it the right way: one
+     shared file per panel, which all its assessors edit together, marks and
+     comments for every student in one place. What it lacked was a way to
+     get each assessor to the right file. This stores that file's address on
+     the panel and delivers it — on the panel card, in the assessor's own
+     CoC tab, in their PIN view, and by email — and changes nothing else.
+
+     Who can EDIT the file is decided by OneDrive or Google Drive, not here.
+     The link is only a pointer; the drive's sharing settings are the lock.
+     That is said wherever the link is set, because it is the one thing that
+     can go wrong without the app being able to see it.
+
+     Assessors only, throughout. The report holds marks and comments on the
+     students, so no supervisor-facing or student-facing screen or email in
+     this app ever carries it.
+     ============================================================ */
+  function reportLinkWarnings(url){
+    const u=String(url||"").trim(), out=[];
+    if(!u) return out;
+    if(!/^https:\/\//i.test(u)) out.push("It doesn't start with https:// — paste the full address from the Share button.");
+    /* Google's address shows whether it was copied from a view-only page;
+       OneDrive's does not, so only the Google case can be caught here. */
+    if(/docs\.google\.com\/.+\/(view|preview)(\b|[?#])/i.test(u))
+      out.push("This Google link ends in /view — it may open read-only. Use Share → Editor → Copy link instead.");
+    if(/\/(copy|template\/preview)(\b|[?#])/i.test(u))
+      out.push("This link makes each person their own COPY, so the assessors would not be filling in the same file.");
+    return out;
+  }
+  function setReportLink(g){
+    const inp=el("input",{value:g.reportLink||"",
+      placeholder:"https://… (OneDrive / SharePoint / Google Drive share link)"});
+    const due=el("input",{type:"date",value:g.reportDue||""});
+    const warn=el("div",{});
+    const paint=()=>{
+      warn.innerHTML="";
+      reportLinkWarnings(inp.value).forEach(t=>warn.append(noticeBar("amber",t)));
+    };
+    inp.addEventListener("input",paint); paint();
+    const ms=groupMembers(g);
+    const noMail=ms.filter(m=>!memberEmails(m).length);
+    modal(g.reportLink?"Change the CoC report form — "+(g.label||"panel"):"Add the CoC report form — "+(g.label||"panel"),
+      el("div",{class:"grid"},
+        el("div",{},el("label",{},"Link to the shared report file"),inp,warn),
+        el("div",{},el("label",{},"Due by (optional)"),due,
+          el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},
+            "Shown beside the link and in the email, so the assessors know when marks are needed.")),
+        el("div",{},el("p",{class:"muted",style:"margin:0 0 6px"},
+          "Before you send it, share the file on the drive with this panel's assessors as EDITORS:"),
+          el("ul",{class:"muted",style:"margin:0 0 6px;padding-left:20px;font-size:13.5px"},
+            ...ms.map(m=>el("li",{},(m.name||"?")+(isChair(g,m)?" (chair)":"")+" — "+
+              (memberEmails(m).join(", ")||"no email on record")))),
+          el("p",{class:"muted",style:"margin:0;font-size:12.5px"},
+            "Sharing with those addresses (“Specific people”) keeps the marks private: a forwarded link opens "+
+            "nothing for anyone else. “Anyone with the link can edit” also works — useful for an external "+
+            "assessor with no university account — but then anyone the email reaches can change the marks. "+
+            "The hub only stores the address; the drive decides who gets in."+
+            (noMail.length?"  "+noMail.map(m=>m.name||"?").join(", ")+(noMail.length===1?" has":" have")+
+              " no email here, so the drive will need their address from you directly.":"")))),
+      async()=>{
+        const v=inp.value.trim();
+        if(v&&!/^https?:\/\//i.test(v)){ toast("That doesn't look like a link — paste the full https:// address.",true); return false; }
+        const ok=await persist({...g,reportLink:v,reportDue:v?due.value:""},
+          v?"Report form saved for "+(g.label||"the panel")+".":"Report form removed.");
+        /* Panel members without a login reach the form through their PIN,
+           whose page is a snapshot — so it is republished now rather than
+           waiting for somebody to remember "Refresh what the PINs show". */
+        await refreshPinViews();
+        return ok;
+      },"Save");
+  }
+
+  /* Sending it. Built on the same rule as the timetable's duplicate-free
+     mode: an assessor sitting on three panels gets ONE email with three
+     links, not three emails — and it goes only to assessors. */
+  function reportEmailDialog(preset={}){
+    const semLabel=activeSemester()?.label||"";
+    const withLink=groups.filter(g=>String(g.reportLink||"").trim());
+    if(!withLink.length){ toast("No panel has a report form link yet — add one on a panel card first.",true); return; }
+
+    const mode=el("select",{},
+      el("option",{value:"each",...(preset.groupId?{}:{selected:"selected"})},
+        "Each assessor — one email covering all their panels"),
+      el("option",{value:"panel",...(preset.groupId?{selected:"selected"}:{})},
+        "One panel — all its assessors in one email"));
+    const who=el("select",{});
+    const whoLabel=el("label",{},"Assessor");
+    const includeDraft=el("input",{type:"checkbox",style:"width:auto;margin:0",
+      ...(preset.groupId&&!isAssessorReleased(groups.find(x=>x.id===preset.groupId)||{})?{checked:"checked"}:{})});
+    const subject=el("input",{});
+    const body=el("textarea",{style:"min-height:260px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.45"});
+    const recip=el("div",{class:"muted ui",style:"font-size:13px"});
+    const warn=el("div",{});
+    const nextBtn=el("button",{class:"btn xs ghost",type:"button"},"Next in the list");
+    let edited=false;
+
+    const eligible=()=>withLink.filter(g=>includeDraft.checked||isAssessorReleased(g));
+    /* Each assessor once, however many panels they sit on. */
+    const roster=()=>{
+      const map=new Map();
+      eligible().forEach(g=>groupMembers(g).forEach(m=>{
+        const k=memberKey(m);
+        if(!map.has(k)) map.set(k,{key:k,name:m.name||"",emails:memberEmails(m),panels:[],chairs:[]});
+        const r=map.get(k);
+        if(!r.emails.length) r.emails=memberEmails(m);
+        r.panels.push(g); if(isChair(g,m)) r.chairs.push(g);
+      }));
+      return [...map.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    };
+    function fill(){
+      who.innerHTML="";
+      if(mode.value==="panel"){
+        whoLabel.textContent="Panel";
+        eligible().sort((a,b)=>String(a.label).localeCompare(String(b.label))).forEach(g=>
+          who.append(el("option",{value:g.id,...(g.id===preset.groupId?{selected:"selected"}:{})},
+            (g.label||"Panel")+" — "+groupMembers(g).length+" assessor"+(groupMembers(g).length===1?"":"s")+
+            (isAssessorReleased(g)?"":" (not released to assessors)"))));
+      }else{
+        whoLabel.textContent="Assessor";
+        roster().forEach(r=>who.append(el("option",{value:r.key},
+          (r.name||"?")+" — "+r.panels.length+" panel"+(r.panels.length===1?"":"s")+
+          (r.emails.length?"":"  (no email)"))));
+      }
+      if(!who.children.length) who.append(el("option",{value:""},"— nothing to send —"));
+    }
+    /* One panel's block: which file, which students, when it's due. */
+    function panelBlock(L,g,forKey){
+      const chair=groupMembers(g).find(m=>isChair(g,m));
+      const mine=forKey?groupMembers(g).find(m=>memberKey(m)===forKey):null;
+      L.push("","── "+(g.label||"Panel")+(mine&&isChair(g,mine)?" — you are the chair":"")+
+        (isAssessorReleased(g)?"":"  (DRAFT — may still change)")+" ──");
+      L.push("Report form:   "+String(g.reportLink||"").trim());
+      if(g.reportDue) L.push("Due by:        "+weekdayOf(g.reportDue)+" "+longDate(g.reportDue));
+      L.push("Chair:         "+(chair?.name||"not yet set"));
+      L.push("Assessors:     "+groupMembers(g).map(m=>m.name||"?").join(", "));
+      const sts=groupStudents(g).map(id=>students.find(x=>x.id===id)).filter(Boolean)
+        .sort((a,b)=>{ const sa=slotOfStudent(g,a.id), sb=slotOfStudent(g,b.id);
+          return String(sa?slotDate(g,sa)+sa.start:"~").localeCompare(String(sb?slotDate(g,sb)+sb.start:"~")); });
+      L.push("","Students on this form ("+sts.length+"):");
+      sts.forEach(st=>{
+        const sl=slotOfStudent(g,st.id), d=sl?slotDate(g,sl):"";
+        L.push("  • "+(st.name||"?")+(st.sid?" ("+st.sid+")":"")+
+          (sl&&d?" — "+prettyDate(d)+" "+clockRange(sl.start,sl.end):""));
+        if(titleOf(st)) L.push("      “"+titleOf(st)+"”");
+      });
+    }
+    const howTo=[
+      "","How to fill it in:",
+      "  • It is ONE shared file for the whole panel. Please edit it online and don't download or make a copy —",
+      "    the other assessors are writing in the same document.",
+      "  • Enter your marks and comments for each student in your own section.",
+      "  • If the link says you need permission, reply to this email with the address you use for",
+      "    OneDrive / Google Drive and we will add you."];
+    function target(){
+      const none={to:[],gs:[]};
+      if(mode.value==="panel"){
+        const g=eligible().find(x=>x.id===who.value); if(!g) return none;
+        return {to:groupMembers(g).map(m=>({name:m.name||"",emails:memberEmails(m)})),gs:[g],panel:g};
+      }
+      const r=roster().find(x=>x.key===who.value); if(!r) return none;
+      return {to:[{name:r.name,emails:r.emails}],gs:r.panels,person:r};
+    }
+    function regen(){
+      const t=target();
+      subject.value=t.panel
+        ? "MRes CoC examination report — "+(t.panel.label||"your panel")+(semLabel?" ("+semLabel+")":"")
+        : "MRes CoC examination report"+(t.gs.length===1?"":"s")+" — your panel"+(t.gs.length===1?"":"s")+(semLabel?" ("+semLabel+")":"");
+      if(!edited){
+        const L=[t.panel?"Dear panel members,":"Dear "+(t.person?.name||"colleague")+",",""];
+        L.push(t.gs.length===1
+          ? "Here is the Confirmation of Candidature examination report form for "+(t.gs[0]?.label||"your panel")+
+            (semLabel?" ("+semLabel+")":"")+". All of the panel's assessors fill in the same file."
+          : "Here are the Confirmation of Candidature examination report forms for the "+t.gs.length+
+            " panels you are sitting on"+(semLabel?" ("+semLabel+")":"")+" — one shared file per panel.");
+        t.gs.forEach(g=>panelBlock(L,g,t.person?.key));
+        L.push(...howTo);
+        L.push("","Thank you,","MRes Coordination");
+        body.value=t.gs.length?L.join("\n"):"";
+      }
+      const emails=[...new Map(t.to.flatMap(x=>x.emails).map(e=>[e.toLowerCase(),e])).values()];
+      recip.innerHTML="";
+      recip.append(emails.length
+        ? el("div",{},"To: "+t.to.filter(x=>x.emails.length).map(x=>(x.name||"")+" <"+x.emails.join(", ")+">").join(", "))
+        : "Nobody selected has an email address on file.");
+      warn.innerHTML="";
+      const say=(txt,strong)=>warn.append(el("p",{class:"muted",
+        style:"margin:6px 0 0;font-size:13px;"+(strong?"font-weight:700;color:var(--clay-ink,#9a3412)":"color:var(--amber-ink)")},txt));
+      const noMail=t.to.filter(x=>!x.emails.length).map(x=>x.name||"Someone");
+      if(noMail.length) say(noMail.join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off.");
+      const noLink=groups.filter(g=>!String(g.reportLink||"").trim()).length;
+      if(noLink) say(noLink+" panel"+(noLink===1?" has":"s have")+" no report form link yet and "+
+        (noLink===1?"is":"are")+" not in this list.");
+      if(!includeDraft.checked){
+        const held=withLink.filter(g=>!isAssessorReleased(g)).length;
+        if(held) say(held+" panel"+(held===1?" with a form is":"s with forms are")+" not yet released to "+
+          (held===1?"its":"their")+" assessors and left out. Tick the box to include "+(held===1?"it":"them")+" as draft.");
+      }
+      t.gs.forEach(g=>reportLinkWarnings(g.reportLink).forEach(x=>say((g.label||"Panel")+": "+x,true)));
+      if(mode.value==="each"&&t.person&&t.person.panels.length>1)
+        say("One email covering all "+t.person.panels.length+" of their panels — they are not sent one per panel.");
+      if(body.value.length>1800) say("This message is long. If it arrives cut short in your mail app, use Copy message and paste it in.");
+      const rest=[...who.options].slice(who.selectedIndex+1).filter(o=>o.value);
+      nextBtn.style.display=rest.length?"":"none";
+    }
+    nextBtn.onclick=()=>{
+      for(let k=who.selectedIndex+1;k<who.options.length;k++) if(who.options[k].value){ who.selectedIndex=k; break; }
+      edited=false; regen();
+    };
+    mode.onchange=()=>{ edited=false; fill(); regen(); };
+    includeDraft.onchange=()=>{ edited=false; fill(); regen(); };
+    who.onchange=()=>{ edited=false; regen(); };
+    body.oninput=()=>{ edited=true; };
+
+    modal("Send the CoC report forms",
+      el("div",{class:"grid"},
+        el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+          el("div",{style:"flex:1;min-width:220px"},el("label",{},"Send"),mode),
+          el("div",{style:"flex:1;min-width:220px"},whoLabel,who)),
+        el("div",{},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+          includeDraft,el("span",{},"Include panels not yet released to their assessors"))),
+        el("div",{},el("label",{},"Subject"),subject),
+        el("div",{},el("label",{},"Message"),body,
+          el("div",{class:"row",style:"gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap"},
+            el("button",{class:"btn xs ghost",onclick:()=>{ edited=false; regen(); toast("Message regenerated."); }},"Regenerate"),
+            el("button",{class:"btn xs ghost",onclick:async()=>{
+              (await copyText(body.value))?toast("Message copied."):toast("Copy failed — select the text manually.",true);
+            }},"Copy message"),
+            nextBtn),
+          el("div",{style:"margin-top:6px"},recip),
+          warn),
+        el("p",{class:"muted",style:"margin:0"},
+          "Goes to assessors only — never to supervisors or students, since the form carries marks. "+
+          "Opens your mail app with the message filled in; you press send there, then use Next in the list.")),
+      async()=>{
+        const t=target();
+        const emails=[...new Map(t.to.flatMap(x=>x.emails).map(e=>[e.toLowerCase(),e])).values()];
+        if(!emails.length){ toast("Nobody selected has an email address on file.",true); return false; }
+        openEmail(emails.join(","),subject.value,body.value);
+        return false;   // stay open for the next person
+      },"✉ Open in mail");
+    const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+    fill(); regen();
+  }
+
   function setMeetingLink(g){
     const inp=el("input",{value:g.meetingLink||"",
       placeholder:"https://teams.microsoft.com/l/meetup-join/\u2026"});
@@ -12033,6 +12340,11 @@ async function pinBlocksFor(u,sems,preload){
         chair:chair?.name||"not yet set",
         assessors:groupMembers(g).map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", ")||"to be confirmed",
         link:String(g.meetingLink||"").trim(),
+        /* The shared examination report. Only ever in the ASSESSING list,
+           which is already limited to panels released to their assessors,
+           so it never reaches a supervisor's "your students" section. */
+        report:String(g.reportLink||"").trim(),
+        reportDue:g.reportDue?weekdayOf(g.reportDue)+" "+longDate(g.reportDue):"",
         rows
       };
     });
@@ -12136,8 +12448,15 @@ function renderStaffPinView(who,blocks,opts={}){
         const line=(lbl,val)=>box.append(el("p",{style:"margin:2px 0"},
           el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
         line("When:",p.when); line("Chair:",p.chair); line("Assessors:",p.assessors);
-        if(p.link) box.append(el("div",{style:"margin:6px 0 2px"},
-          el("a",{class:"linkpill",href:p.link,target:"_blank",rel:"noopener"},"Join the panel")));
+        if(p.link||p.report){
+          const lr=el("div",{class:"row",style:"margin:6px 0 2px;gap:8px;flex-wrap:wrap;align-items:center"});
+          if(p.link) lr.append(el("a",{class:"linkpill",href:p.link,target:"_blank",rel:"noopener"},"Join the panel"));
+          if(p.report) lr.append(el("a",{class:"linkpill",href:p.report,target:"_blank",rel:"noopener"},"Open the CoC report form"));
+          if(p.reportDue) lr.append(el("span",{class:"pill pending",style:"font-size:11px"},"Report due "+p.reportDue));
+          box.append(lr);
+          if(p.report) box.append(el("p",{class:"muted ui",style:"margin:4px 0 0;font-size:12px"},
+            "One shared file for the whole panel \u2014 edit it online; the other assessors are writing in it too."));
+        }
         if((p.rows||[]).length){
           const t=el("table",{style:"width:100%;font-size:13px;margin-top:8px"});
           t.append(el("thead",{},el("tr",{},...["Time","Student","Presentation · Q&A","Supervisors"]
