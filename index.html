@@ -2876,10 +2876,10 @@ async function viewPanels(v){
     if(forms.length){
       const strip=el("div",{style:"padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(127,127,127,.05)"});
       strip.append(el("div",{class:"ui",style:"font-weight:700;font-size:13px;margin-bottom:6px"},
-        "CoC examination report"+(forms.length===1?"":"s")));
+        "CoC Panel Examination Report Form"+(forms.length===1?"":"s")));
       forms.forEach(g=>strip.append(el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0"},
         el("span",{class:"ui",style:"font-size:13.5px;min-width:140px"},g.label||"Panel"),
-        joinLink(String(g.reportLink).trim(),"Open the report form"),
+        joinLink(String(g.reportLink).trim(),"Open the CoC Panel Examination Report Form"),
         g.reportDue?el("span",{class:"pill pending",style:"font-size:11.5px"},"Due "+prettyDate(g.reportDue)):el("span",{}))));
       strip.append(el("p",{class:"muted ui",style:"margin:6px 0 0;font-size:12.5px"},
         "One shared file per panel — all its assessors fill in the same document, so edit it online rather than downloading a copy. "+
@@ -2945,6 +2945,92 @@ async function viewPanels(v){
    Three sub-tabs: read and chase the nominations, build the panels and get
    them scheduled, then export the lot principal-supervisor-wise.
    ============================================================ */
+/* ============================================================
+   STUDENT CoC SNAPSHOTS
+   Students look themselves up WITHOUT signing in, and panelGroups is — by
+   design, and by the rules file's own warning — closed to anyone who is
+   not signed in. So "Release to students" used to flip a switch the
+   student's page could never read: the portal asked for panelGroups, was
+   refused, and showed an error instead of the time.
+
+   The fix is the one the PIN view uses. Each released student gets one
+   small document in staffKeys, named "coc:<their record id>", holding
+   exactly what their own CoC block shows — their slot, their panel's
+   name, chair, assessors and link — and nothing about anybody else. That
+   collection allows `get` and forbids `list`, so nobody can enumerate it,
+   and panelGroups stays shut. No rules change.
+
+   It keeps itself right. Every panel carries a stamp of when its students
+   were last published and which students that covered; whenever the admin
+   screen loads or reloads, any panel edited since its stamp is republished,
+   and any student who has left a released panel — or whose panel was
+   hidden again — has their document removed. So releasing, moving a slot,
+   swapping two students or un-releasing all reach the portal on their own,
+   with no button to remember.
+   ============================================================ */
+const cocKeyOf = studentDocId => "coc:"+String(studentDocId||"");
+
+/* What a student's own CoC block shows, as plain data. */
+function studentCocSnap(g,st){
+  const sl=slotOfStudent(g,st.id), day=sl?slotDate(g,sl):"";
+  const pp=sl?slotParts(g,sl):null, t=timingOf(g);
+  const chair=groupMembers(g).find(m=>isChair(g,m));
+  return {
+    kind:"coc", studentDocId:st.id,
+    panel:g.label||"Panel",
+    date:day||"", start:sl?.start||"", end:sl?.end||"",
+    pres:pp?{start:pp.start,qaStart:pp.qaStart,end:pp.end,presMins:pp.presMins,qaMins:pp.qaMins}:null,
+    presMins:t.presMins, qaMins:t.qaMins,
+    chair:chair?.name||"",
+    assessors:groupMembers(g).map(m=>m.name||"?"),
+    link:slotLink(g,sl)||"",
+    at:Date.now()
+  };
+}
+
+/* Bring the published student snapshots into line with the panels.
+   Only touches panels whose content moved since they were last published,
+   so an ordinary reload with nothing changed costs no writes at all. */
+async function syncStudentCoc(groups,students,opts={}){
+  /* `full` republishes every panel and reconsiders every student, which
+     also takes down the time of a student whose panel was deleted outright
+     (a deleted panel leaves no stamp behind to notice it by). */
+  const stale=opts.full?(groups||[]).slice():(groups||[]).filter(g=>{
+    const stamp=g.studentKeysAt||0;
+    return isStudentReleased(g) ? stamp<(g.updatedAt||0)||!stamp
+                                : (Array.isArray(g.studentKeysFor)&&g.studentKeysFor.length>0);
+  });
+  if(!stale.length&&!opts.full) return {written:0,removed:0};
+  const now=Date.now(), ops=[];
+  let written=0, removed=0;
+  /* Every student any stale panel covers now or covered at its last
+     publish — the second half is how a student who has been moved off a
+     panel gets their old time taken down. */
+  const ids=new Set(opts.full?(students||[]).map(x=>x.id):[]);
+  stale.forEach(g=>{
+    groupStudents(g).forEach(id=>ids.add(id));
+    (g.studentKeysFor||[]).forEach(id=>ids.add(id));
+  });
+  ids.forEach(id=>{
+    /* Decided from ALL panels, not just the stale one, so a student moved
+       from one panel to another is written by the new and not deleted by
+       the old. */
+    const home=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(id));
+    const st=(students||[]).find(x=>x.id===id);
+    if(home&&st){ ops.push({type:"set",coll:"staffKeys",id:cocKeyOf(id),merge:false,data:studentCocSnap(home,st)}); written++; }
+    else { ops.push({type:"delete",coll:"staffKeys",id:cocKeyOf(id)}); removed++; }
+  });
+  stale.forEach(g=>ops.push({type:"set",coll:"panelGroups",id:g.id,data:{
+    studentKeysAt:Math.max(now,(g.updatedAt||0)+1),
+    studentKeysFor:isStudentReleased(g)?groupStudents(g).slice():[]}}));
+  try{ await DB.batchWrite(ops); }
+  catch(e){
+    console.warn("could not publish the students' CoC times",e);
+    return {written:0,removed:0,failed:true};
+  }
+  return {written,removed};
+}
+
 async function viewPanelAdmin(v){
   v.innerHTML="";
   v.append(el("div",{class:"section-title"},el("div",{},
@@ -2983,7 +3069,20 @@ async function viewPanelAdmin(v){
     }catch(err){ toast(err?.message||"Could not reload panels.",true); return; }
     try{ legacy=await DB.list("panels",{semesterId:S.activeSem}); }catch(err){ legacy=[]; }
     draw();
+    syncCoc();
   }
+  /* Publishes the released students' own CoC times for the student portal.
+     Run after every load and reload, without holding up the screen; it
+     writes nothing unless a panel has changed since it was last published. */
+  function syncCoc(){
+    syncStudentCoc(groups,students).then(r=>{
+      if(r&&r.failed&&!S.cocSyncWarned){
+        S.cocSyncWarned=true;
+        toast("Students' CoC times could not be published for the student portal \u2014 check the staffKeys rule (PIN access \u2192 the help button).",true);
+      }
+    }).catch(e=>console.warn("CoC sync failed",e));
+  }
+  syncCoc();
 
   if(!S.panelTab) S.panelTab="panels";
   const tabs=el("div",{class:"subtabs ui"});
@@ -3210,8 +3309,8 @@ async function viewPanelAdmin(v){
       /* The shared examination report, to the assessors only. Shown once
          any panel has a form, so it does not clutter the bar before then. */
       groups.some(g=>String(g.reportLink||"").trim())
-        ?el("button",{class:"btn ghost",title:"Send each assessor the shared CoC report form for their panels",
-            onclick:()=>reportEmailDialog()},"\u2709 Send CoC report forms")
+        ?el("button",{class:"btn ghost",title:"Send each assessor the shared CoC Panel Examination Report Form for their panels",
+            onclick:()=>reportEmailDialog()},"\u2709 Send CoC Panel Examination Report Forms")
         :el("span",{}),
       /* Supervisors get their own students' times, across every panel
          those students sit on, rather than one panel at a time. */
@@ -3575,11 +3674,11 @@ async function viewPanelAdmin(v){
     // Assessors only. It carries marks and comments on the students, so it
     // is never put in front of a supervisor or a student by this app.
     const rLink=String(g.reportLink||"").trim();
-    const rBox=step("report","CoC report form",
+    const rBox=step("report","CoC Panel Examination Report Form",
       rLink?(g.reportDue?"due "+prettyDate(g.reportDue):"set"):"none",false);
     const rRow=el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;margin-bottom:6px"});
     if(rLink){
-      rRow.append(joinLink(rLink,"Open the report form"),
+      rRow.append(joinLink(rLink,"Open the CoC Panel Examination Report Form"),
         el("button",{class:"btn sm ghost",onclick:()=>setReportLink(g)},"Change"),
         el("button",{class:"btn sm ghost",onclick:()=>{
           navigator.clipboard?.writeText(rLink).then(()=>toast("Report link copied."),
@@ -3588,8 +3687,8 @@ async function viewPanelAdmin(v){
         el("button",{class:"btn sm",onclick:()=>reportEmailDialog({groupId:g.id})},
           "✉ Send to this panel's assessors"));
     } else {
-      rRow.append(el("span",{class:"pill pending"},"No report form yet"),
-        el("button",{class:"btn sm",onclick:()=>setReportLink(g)},"Add the report form link"));
+      rRow.append(el("span",{class:"pill pending"},"No CoC Panel Examination Report Form yet"),
+        el("button",{class:"btn sm",onclick:()=>setReportLink(g)},"Add the CoC Panel Examination Report Form link"));
     }
     rBox.append(rRow);
     rBox.append(rLink
@@ -3936,7 +4035,7 @@ async function viewPanelAdmin(v){
     inp.addEventListener("input",paint); paint();
     const ms=groupMembers(g);
     const noMail=ms.filter(m=>!memberEmails(m).length);
-    modal(g.reportLink?"Change the CoC report form — "+(g.label||"panel"):"Add the CoC report form — "+(g.label||"panel"),
+    modal(g.reportLink?"Change the CoC Panel Examination Report Form — "+(g.label||"panel"):"Add the CoC Panel Examination Report Form — "+(g.label||"panel"),
       el("div",{class:"grid"},
         el("div",{},el("label",{},"Link to the shared report file"),inp,warn),
         el("div",{},el("label",{},"Due by (optional)"),due,
@@ -3958,7 +4057,7 @@ async function viewPanelAdmin(v){
         const v=inp.value.trim();
         if(v&&!/^https?:\/\//i.test(v)){ toast("That doesn't look like a link — paste the full https:// address.",true); return false; }
         const ok=await persist({...g,reportLink:v,reportDue:v?due.value:""},
-          v?"Report form saved for "+(g.label||"the panel")+".":"Report form removed.");
+          v?"CoC Panel Examination Report Form saved for "+(g.label||"the panel")+".":"CoC Panel Examination Report Form removed.");
         /* Panel members without a login reach the form through their PIN,
            whose page is a snapshot — so it is republished now rather than
            waiting for somebody to remember "Refresh what the PINs show". */
@@ -3973,7 +4072,7 @@ async function viewPanelAdmin(v){
   function reportEmailDialog(preset={}){
     const semLabel=activeSemester()?.label||"";
     const withLink=groups.filter(g=>String(g.reportLink||"").trim());
-    if(!withLink.length){ toast("No panel has a report form link yet — add one on a panel card first.",true); return; }
+    if(!withLink.length){ toast("No panel has a CoC Panel Examination Report Form link yet — add one on a panel card first.",true); return; }
 
     const mode=el("select",{},
       el("option",{value:"each",...(preset.groupId?{}:{selected:"selected"})},
@@ -4060,14 +4159,14 @@ async function viewPanelAdmin(v){
     function regen(){
       const t=target();
       subject.value=t.panel
-        ? "MRes CoC examination report — "+(t.panel.label||"your panel")+(semLabel?" ("+semLabel+")":"")
-        : "MRes CoC examination report"+(t.gs.length===1?"":"s")+" — your panel"+(t.gs.length===1?"":"s")+(semLabel?" ("+semLabel+")":"");
+        ? "MRes CoC Panel Examination Report Form — "+(t.panel.label||"your panel")+(semLabel?" ("+semLabel+")":"")
+        : "MRes CoC Panel Examination Report Form"+(t.gs.length===1?"":"s")+" — your panel"+(t.gs.length===1?"":"s")+(semLabel?" ("+semLabel+")":"");
       if(!edited){
         const L=[t.panel?"Dear panel members,":"Dear "+(t.person?.name||"colleague")+",",""];
         L.push(t.gs.length===1
-          ? "Here is the Confirmation of Candidature examination report form for "+(t.gs[0]?.label||"your panel")+
+          ? "Here is the CoC Panel Examination Report Form for "+(t.gs[0]?.label||"your panel")+
             (semLabel?" ("+semLabel+")":"")+". All of the panel's assessors fill in the same file."
-          : "Here are the Confirmation of Candidature examination report forms for the "+t.gs.length+
+          : "Here are the CoC Panel Examination Report Forms for the "+t.gs.length+
             " panels you are sitting on"+(semLabel?" ("+semLabel+")":"")+" — one shared file per panel.");
         t.gs.forEach(g=>panelBlock(L,g,t.person?.key));
         L.push(...howTo);
@@ -4085,7 +4184,7 @@ async function viewPanelAdmin(v){
       const noMail=t.to.filter(x=>!x.emails.length).map(x=>x.name||"Someone");
       if(noMail.length) say(noMail.join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off.");
       const noLink=groups.filter(g=>!String(g.reportLink||"").trim()).length;
-      if(noLink) say(noLink+" panel"+(noLink===1?" has":"s have")+" no report form link yet and "+
+      if(noLink) say(noLink+" panel"+(noLink===1?" has":"s have")+" no CoC Panel Examination Report Form link yet and "+
         (noLink===1?"is":"are")+" not in this list.");
       if(!includeDraft.checked){
         const held=withLink.filter(g=>!isAssessorReleased(g)).length;
@@ -4108,7 +4207,7 @@ async function viewPanelAdmin(v){
     who.onchange=()=>{ edited=false; regen(); };
     body.oninput=()=>{ edited=true; };
 
-    modal("Send the CoC report forms",
+    modal("Send the CoC Panel Examination Report Forms",
       el("div",{class:"grid"},
         el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
           el("div",{style:"flex:1;min-width:220px"},el("label",{},"Send"),mode),
@@ -11515,6 +11614,12 @@ async function pinBulkDialog(done){
   const republish=el("button",{class:"btn ghost sm",type:"button",onclick:async()=>{
     republish.disabled=true; republish.textContent="Refreshing…";
     await publishSignInKeys();
+    /* The students' own CoC times are published the same way, so the one
+       Refresh button puts everything right at once. */
+    try{
+      const [gs,sts]=await Promise.all([DB.list("panelGroups"),DB.list("students")]);
+      await syncStudentCoc(gs,sts,{full:true});
+    }catch(e){ console.warn("student CoC refresh failed",e); }
     await reload();
     republish.disabled=false; republish.textContent="↻ Refresh what the PINs show";
     draw();
@@ -12451,7 +12556,7 @@ function renderStaffPinView(who,blocks,opts={}){
         if(p.link||p.report){
           const lr=el("div",{class:"row",style:"margin:6px 0 2px;gap:8px;flex-wrap:wrap;align-items:center"});
           if(p.link) lr.append(el("a",{class:"linkpill",href:p.link,target:"_blank",rel:"noopener"},"Join the panel"));
-          if(p.report) lr.append(el("a",{class:"linkpill",href:p.report,target:"_blank",rel:"noopener"},"Open the CoC report form"));
+          if(p.report) lr.append(el("a",{class:"linkpill",href:p.report,target:"_blank",rel:"noopener"},"Open the CoC Panel Examination Report Form"));
           if(p.reportDue) lr.append(el("span",{class:"pill pending",style:"font-size:11px"},"Report due "+p.reportDue));
           box.append(lr);
           if(p.report) box.append(el("p",{class:"muted ui",style:"margin:4px 0 0;font-size:12px"},
@@ -12550,49 +12655,62 @@ function renderStaffPinView(who,blocks,opts={}){
 async function studentCocBlock(card,en){
   const head=()=>card.append(el("div",{style:"font-weight:600;margin:16px 0 4px",class:"ui"},
     "My Confirmation of Candidature"));
-  let groups;
-  try{ groups=await DB.list("panelGroups",{semesterId:en.semesterId}); }
-  catch(err){
-    head();
-    card.append(el("p",{class:"muted",style:"margin:2px 0"},
-      "Your Confirmation of Candidature details can't be loaded right now. Please let your supervisor know — "+
-      "the site's database rules need to allow the “panelGroups” collection."));
-    return;
+
+  /* 1. The student's own published snapshot. This is the route that works
+        with panelGroups closed to signed-out visitors, which it should be.
+        It exists only while the panel is released to its students. */
+  let snap=null, keyDenied=false;
+  try{ snap=await DB.getStaffKey(cocKeyOf(en.id)); }
+  catch(err){ keyDenied=true; console.warn("CoC snapshot unreadable",err); }
+
+  /* 2. Reading the panels live, for a site whose rules have opened them. */
+  let g=null, liveDenied=false;
+  if(!(snap&&snap.kind==="coc")){
+    try{
+      const groups=await DB.list("panelGroups",{semesterId:en.semesterId});
+      g=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(en.id))||null;
+      if(g) snap=studentCocSnap(g,en);
+    }catch(err){ liveDenied=true; }
   }
-  const g=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(en.id));
+
   head();
-  if(!g){
+  if(!(snap&&snap.kind==="coc")){
+    /* Only when NEITHER route could look is this a set-up problem. A
+       refusal on the live route alone is the normal, correct state of a
+       site with panelGroups closed, and there the missing snapshot simply
+       means "not released yet". */
+    if(keyDenied&&liveDenied){
+      card.append(el("p",{class:"muted",style:"margin:2px 0"},
+        "Your Confirmation of Candidature details can't be loaded right now. Please let your supervisor know \u2014 "+
+        "the site's database rules need to allow the \u201CstaffKeys\u201D collection."));
+      return;
+    }
     card.append(el("p",{class:"muted",style:"margin:2px 0"},
       "Your Confirmation of Candidature is still being arranged. Your time will be emailed to you and will appear here once it is set."));
     return;
   }
-  const sl=slotOfStudent(g,en.id), day=sl?slotDate(g,sl):"";
-  if(!(sl&&day)){
-    card.append(el("p",{style:"margin:2px 0"},"You are on "+(g.label||"a panel")+"."),
+  if(!(snap.date&&snap.start)){
+    card.append(el("p",{style:"margin:2px 0"},"You are on "+(snap.panel||"a panel")+"."),
       el("p",{class:"muted",style:"margin:2px 0"},
         "Your presentation time is still being arranged. It will appear here once it is set."));
     return;
   }
-  const pp=slotParts(g,sl), t=timingOf(g);
-  const chair=groupMembers(g).find(m=>isChair(g,m));
   const line=(lbl,val)=>card.append(el("p",{style:"margin:2px 0"},
     el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
-  line("When:",weekdayOf(day)+" "+longDate(day)+", "+clockRange(sl.start,sl.end));
-  if(pp){
-    line("Presentation:",clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)");
-    if(pp.qaMins) line("Q&A:",clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)");
+  line("When:",weekdayOf(snap.date)+" "+longDate(snap.date)+", "+clockRange(snap.start,snap.end));
+  if(snap.pres){
+    line("Presentation:",clockRange(snap.pres.start,snap.pres.qaStart)+"  ("+snap.pres.presMins+" min)");
+    if(snap.pres.qaMins) line("Q&A:",clockRange(snap.pres.qaStart,snap.pres.end)+"  ("+snap.pres.qaMins+" min)");
   }
-  line("Panel:",g.label||"Panel");
-  line("Chair:",chair?.name||"to be confirmed");
-  const ms=groupMembers(g);
-  line("Assessors:",ms.length?ms.map(m=>m.name||"?").join(", "):"to be confirmed");
-  const lk=slotLink(g,sl);
-  if(lk) card.append(el("div",{style:"margin:6px 0 2px"},
-    el("a",{class:"linkpill",href:lk,target:"_blank",rel:"noopener"},"Join my CoC")));
+  line("Panel:",snap.panel||"Panel");
+  line("Chair:",snap.chair||"to be confirmed");
+  line("Assessors:",(snap.assessors||[]).length?snap.assessors.join(", "):"to be confirmed");
+  if(snap.link) card.append(el("div",{style:"margin:6px 0 2px"},
+    el("a",{class:"linkpill",href:snap.link,target:"_blank",rel:"noopener"},"Join my CoC")));
   else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Meeting link to follow."));
   card.append(el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:13px"},
-    "Join five minutes before your slot with your slides ready to share. You present for "+t.presMins+" minutes"+
-    (t.qaMins?", then take "+t.qaMins+" minutes of questions from the panel":"")+
+    "Join five minutes before your slot with your slides ready to share. You present for "+snap.presMins+" minutes"+
+    (snap.qaMins?", then take "+snap.qaMins+" minutes of questions from the panel":"")+
     ". If this time does not work for you, tell your principal supervisor as soon as possible."));
 }
 
