@@ -1380,6 +1380,34 @@ const EMPLOYMENTS=[
   {v:"casual-external", label:"Casual (external)",    short:"Casual (ext)", cls:"blue",
    help:"Engaged casually from outside the institution."}
 ];
+/* ---- Categories the office adds itself ("External", "Emeritus", …) ----
+   The three above are built in. Anything the admin adds on the Settings
+   tab is kept in one small document, staffKeys/config:employment — the
+   store that is readable without signing in and writable only by an
+   admin, so no security rule has to change for it — and is appended to
+   this same list when the app starts. Every screen, export and email that
+   names an employment status reads EMPLOYMENTS at the moment it draws, so
+   a new category appears everywhere at once. */
+const EMPLOYMENT_BUILTIN=EMPLOYMENTS.map(e=>({...e,builtin:true}));
+const EMPLOYMENT_CLASSES=[["none","Grey"],["blue","Blue"],["approved","Green"],["pending","Amber"],["missed","Red"]];
+function applyEmploymentConfig(items){
+  EMPLOYMENTS.length=0;
+  EMPLOYMENT_BUILTIN.forEach(e=>EMPLOYMENTS.push(e));
+  (items||[]).forEach(e=>{
+    if(!e||!e.v||!String(e.label||"").trim()||EMPLOYMENTS.some(x=>x.v===e.v)) return;
+    EMPLOYMENTS.push({v:e.v,label:String(e.label).trim(),short:String(e.short||e.label).trim(),
+      cls:EMPLOYMENT_CLASSES.some(c=>c[0]===e.cls)?e.cls:"none",help:String(e.help||"").trim()});
+  });
+}
+async function loadEmploymentConfig(){
+  try{ const d=await DB.getStaffKey("config:employment"); applyEmploymentConfig(d?.items||[]); }
+  catch(e){ console.warn("custom employment categories unavailable",e); applyEmploymentConfig([]); }
+}
+async function saveEmploymentConfig(items){
+  await DB.batchWrite([{type:"set",coll:"staffKeys",id:"config:employment",merge:false,
+    data:{kind:"config",items,at:Date.now()}}]);
+  applyEmploymentConfig(items);
+}
 const employmentOf=u=>(EMPLOYMENTS.find(e=>e.v===u?.employment)||{}).v||"";
 const employmentMeta=u=>EMPLOYMENTS.find(e=>e.v===employmentOf(u))||null;
 const employmentLabel=u=>(employmentMeta(u)||{}).label||"";
@@ -1470,6 +1498,14 @@ function activeSemester(){ return S.semesters.find(s=>s.id===S.activeSem)||null;
 const messagesOff      = sem => !!sem?.messagesOff;
 const clashWarningsOff = sem => !!sem?.clashWarningsOff;
 const messagesOn       = () => !messagesOff(activeSemester());
+/* The two supervisor-facing steps of arranging a CoC. Many offices skip
+   both and set the panels and times themselves after talking to people;
+   then these screens only ask staff for work nobody will read. Switched
+   off, they disappear from the supervisors' and panel members' CoC tab
+   and from the admin's panel cards. Anything already recorded is kept,
+   and reappears exactly as it was if the step is switched back on. */
+const nominationsOff   = sem => !!sem?.nominationsOff;
+const availabilityOff  = sem => !!sem?.availabilityOff;
 function semOf(id){ return S.semesters.find(s=>s.id===id)||null; }
 function unitsOf(sem){ return Array.isArray(sem?.units)?sem.units:[]; }
 function unitById(sem,unitId){ return unitsOf(sem).find(u=>u.id===unitId)||null; }
@@ -2604,9 +2640,10 @@ async function viewPanels(v){
   const panellistOnly=S.role==="panellist";
   function draw(){
     host.innerHTML="";
+    const sem=activeSemester();
     drawSummary();
-    drawAvailability();
-    if(!panellistOnly) drawNominations();
+    if(!availabilityOff(sem)) drawAvailability();
+    if(!panellistOnly&&!nominationsOff(sem)) drawNominations();
     if(!panellistOnly) drawMyStudents();
     drawAssessing();
   }
@@ -2625,16 +2662,20 @@ async function viewPanels(v){
       const g=groupOfStudent(groups,x.id);
       return g&&isFinal(g)&&isScheduled(g,x.id);
     }).length;
+    /* A tile for a switched-off step would count work nobody is asking
+       for, so it goes with the step. */
+    const semNow=activeSemester();
+    const availTile=availabilityOff(semNow)?null:statBox(pending,"Availability to answer");
     if(panellistOnly){
       host.append(el("div",{class:"stat"},
         statBox(asMember.length,"Panels I'm on"),
-        statBox(pending,"Availability to answer"),
+        availTile,
         statBox(asMember.reduce((n,g)=>n+groupStudents(g).length,0),"Students I assess")));
       return;
     }
     host.append(el("div",{class:"stat"},
-      statBox(members.length+" / "+PANEL_TARGET,"Names nominated"),
-      statBox(pending,"Availability to answer"),
+      nominationsOff(semNow)?null:statBox(members.length+" / "+PANEL_TARGET,"Names nominated"),
+      availTile,
       statBox(scheduled+" / "+mine.length,"My students scheduled"),
       /* Drafts contribute nothing here either: a load that ticks up before
          the coordinator has released the panel is still telling the
@@ -3095,8 +3136,12 @@ async function viewPanelAdmin(v){
   syncCoc();
 
   if(!S.panelTab) S.panelTab="panels";
+  /* No Nominations sub-tab while nominations are switched off. What was
+     nominated earlier is untouched and comes back with the switch. */
+  const nomOffHere=nominationsOff(activeSemester());
+  if(nomOffHere&&S.panelTab==="nominations") S.panelTab="panels";
   const tabs=el("div",{class:"subtabs ui"});
-  [["nominations","Nominations"],["panels","Panels & scheduling"],["export","Export"]].forEach(([id,label])=>{
+  [...(nomOffHere?[]:[["nominations","Nominations"]]),["panels","Panels & scheduling"],["export","Export"]].forEach(([id,label])=>{
     const b=el("button",{class:S.panelTab===id?"active":"",onclick:()=>{
       S.panelTab=id; [...tabs.children].forEach(x=>x.classList.toggle("active",x===b)); draw();
     }},label);
@@ -3599,13 +3644,18 @@ async function viewPanelAdmin(v){
         : [])));
 
     // ---- timing: one section, whether you polled for it or just set it ----
+    /* With the availability poll switched off the office sets every
+       session itself, so the poll's matrix, "propose" and "chase" go, and
+       a booking is not judged against replies nobody was asked for. */
+    const pollOn=!availabilityOff(activeSemester());
     const tBox=step("session","CoC session",
-      chosen?"booked":(groupSessions(g).length?groupSessions(g).length+" proposed":"not set"));
+      chosen?"booked":(pollOn&&groupSessions(g).length?groupSessions(g).length+" proposed":"not set"));
     if(chosen){
-      tBox.append(noticeBar(sessionWorks(g,chosen)?"green":"amber",
+      tBox.append(noticeBar(!pollOn||sessionWorks(g,chosen)?"green":"amber",
         "Booked for "+sessionLabel(chosen)+
         (deliberationOf(g,chosen)?" \u2014 deliberation "+clockRange(deliberationOf(g,chosen).start,deliberationOf(g,chosen).end):"")+
-        (sessionWorks(g,chosen)
+        (!pollOn ? "."
+          : sessionWorks(g,chosen)
           ? " \u2014 suits every assessor."
           : " \u2014 you set this over the availability replies. Tell the assessors it has moved.")));
     }
@@ -3625,7 +3675,12 @@ async function viewPanelAdmin(v){
           el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},
             "Panels may run at the same time, but not with the same person on both. Change one of the times, or swap the assessor."))));
     }
-    if(!groupSessions(g).length){
+    if(!pollOn){
+      if(!chosen) tBox.append(el("p",{class:"muted",style:"margin:0 0 10px"},
+        "Set the session once you have agreed it with the assessors: give the date and start, and each student's "+
+        "presentation and Q&A is laid out for you, with the last hour kept for the panel's deliberation. "+
+        "(The availability poll is switched off in Settings.)"));
+    }else if(!groupSessions(g).length){
       tBox.append(el("p",{class:"muted",style:"margin:0 0 10px"},
         "Set the session if you already know it: give the date and start, and each student's presentation and Q&A is laid out for you, with the last hour kept for the panel's deliberation. Or propose a few half-days and let the assessors tick what suits \u2014 you can still book any of them. Any student's time can be changed or cleared afterwards from the Students list above."));
     }else{
@@ -3634,8 +3689,8 @@ async function viewPanelAdmin(v){
     const sessBtns=el("div",{class:"row",style:"gap:8px;margin-bottom:6px"},
       el("button",{class:"btn sm",onclick:()=>setTimeDirect(g)},
         chosen?"Change the session":"Set the session"),
-      el("button",{class:"btn sm ghost",onclick:()=>addSession(g)},"+ Propose a session"));
-    if(groupSessions(g).length){
+      pollOn?el("button",{class:"btn sm ghost",onclick:()=>addSession(g)},"+ Propose a session"):null);
+    if(pollOn&&groupSessions(g).length){
       const waiting=ms.filter(m=>m.kind==="internal"
         &&groupSessions(g).some(s=>availOf(g,m,s.id)===undefined));
       if(waiting.length) sessBtns.append(el("button",{class:"btn sm ghost",onclick:()=>{
@@ -7397,6 +7452,7 @@ async function staffPinLookup(pin){
 
 async function afterLogin(){
   S.studentSid=null; S.studentName=""; S.bannerShown=false;
+  await loadEmploymentConfig();
   S.semesters=await DB.list("semesters");
   S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
   // default to the semester that actually has students (fall back to first)
@@ -7679,6 +7735,118 @@ async function viewSettings(v){
       "  Panel-against-panel clashes are a separate, harder check and are never turned off here.",
     toast:off=>off?"Teaching clash warnings turned off.":"Teaching clash warnings turned back on."
   }));
+
+  // ---- CoC: supervisor nominations ----
+  const nomOn=!nominationsOff(sem);
+  v.append(el("div",{class:"eyebrow ui",style:"margin:22px 0 8px"},"Confirmation of Candidature \u2014 how panels are arranged"));
+  v.append(toggleCard({
+    field:"nominationsOff", value:nomOn,
+    title:"Supervisors nominate assessors",
+    onState:"On", offState:"Off",
+    onLabel:"Turn nominations off", offLabel:"Turn nominations on",
+    body:nomOn
+      ? "Supervisors see \u201CNominate assessors\u201D on their CoC tab and put names forward, and you see everyone's suggestions on the Nominations sub-tab when seating panels."
+      : "Supervisors are not asked to nominate. The nomination section and its counter are hidden from their CoC tab, and the Nominations sub-tab is hidden from yours \u2014 you seat the panels yourself.",
+    detail:"Names already nominated are kept and come back when this is switched on. Seating panels, "+
+      "releasing them and everything a supervisor sees about their own students work the same either way.",
+    toast:off=>off?"Supervisor nominations turned off.":"Supervisor nominations turned back on."
+  }));
+
+  // ---- CoC: availability poll ----
+  const pollOn=!availabilityOff(sem);
+  v.append(toggleCard({
+    field:"availabilityOff", value:pollOn,
+    title:"Assessors answer an availability poll",
+    onState:"On", offState:"Off",
+    onLabel:"Turn the availability poll off", offLabel:"Turn the availability poll on",
+    body:pollOn
+      ? "You can propose half-days on a panel card, the assessors tick the ones that suit them on their CoC tab, and you book one that works for everybody."
+      : "No poll. You agree each session with the assessors directly and set it with \u201CSet the session\u201D. Assessors no longer see \u201CWhen can you assess?\u201D, and the panel cards lose \u201CPropose a session\u201D and \u201CChase for availability\u201D.",
+    detail:"Replies already given are kept and come back when this is switched on. Setting sessions yourself, "+
+      "the running order, the clash checks and the emails all work the same either way.",
+    toast:off=>off?"Availability poll turned off.":"Availability poll turned back on."
+  }));
+
+  // ---- Employment categories (app-wide) ----
+  v.append(el("div",{class:"eyebrow ui",style:"margin:22px 0 8px"},"Staff \u2014 applies to every semester"));
+  const empCard=el("div",{class:"card",style:"margin-bottom:14px"});
+  v.append(empCard);
+  async function drawEmployment(){
+    empCard.innerHTML="";
+    const users=await DB.listUsers();
+    const usedBy=vv=>users.filter(u=>u.employment===vv).length;
+    const custom=EMPLOYMENTS.filter(e=>!e.builtin);
+    empCard.append(el("h3",{style:"margin:0 0 4px"},"Employment categories"),
+      el("p",{class:"muted",style:"margin:0 0 10px"},
+        "The employment status shown beside each staff member \u2014 on the staff list, in Contacts, on the CoC panel screens and in the exports. "+
+        "Add your own, such as \u201CExternal\u201D or \u201CAdjunct\u201D, and they appear in the Employment status list on every staff record."));
+    const t=el("table",{});
+    t.append(el("thead",{},el("tr",{},...["Category","Description","Staff","",""].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    EMPLOYMENTS.forEach(e=>{
+      const n=usedBy(e.v);
+      const acts=el("div",{class:"row",style:"gap:6px"});
+      if(e.builtin) acts.append(el("span",{class:"muted ui",style:"font-size:12px"},"built in"));
+      else{
+        acts.append(el("button",{class:"btn xs ghost",onclick:()=>editCategory(e)},"Edit"));
+        acts.append(el("button",{class:"btn xs danger",
+          ...(n?{title:"In use by "+n+" \u2014 change their status first"}:{}),
+          onclick:async()=>{
+            if(n){ toast(n+" staff member"+(n===1?" still has":"s still have")+" \u201C"+e.label+
+              "\u201D. Change their employment status first, so nobody is left showing a category that no longer exists.",true); return; }
+            if(!window.confirm("Remove the category \u201C"+e.label+"\u201D?")) return;
+            try{ await saveEmploymentConfig(custom.filter(x=>x.v!==e.v));
+                 toast("Category removed."); drawEmployment(); }
+            catch(err){ toast(err?.message||"Could not save.",true); }
+          }},"Remove"));
+      }
+      tb.append(el("tr",{},
+        el("td",{},el("span",{class:"pill "+e.cls},e.label)),
+        el("td",{class:"muted",style:"font-size:13px"},e.help||"\u2014"),
+        el("td",{},n?String(n):el("span",{class:"muted"},"\u2014")),
+        el("td",{},acts),el("td",{})));
+    });
+    t.append(tb); empCard.append(t);
+    empCard.append(el("div",{style:"margin-top:10px"},
+      el("button",{class:"btn sm",onclick:()=>editCategory(null)},"+ Add a category")));
+    empCard.append(el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
+      "These describe how someone is engaged. What a person can DO in the hub is their account role \u2014 Admin, Supervisor or "+
+      "Panel member \u2014 which is fixed, because the database's security rules are written around exactly those three. "+
+      "An external examiner, for example, is a Panel member whose employment category is \u201CExternal\u201D."));
+
+    function editCategory(existing){
+      const label=el("input",{value:existing?.label||"",placeholder:"e.g. External"});
+      const help=el("input",{value:existing?.help||"",placeholder:"e.g. Examiner from another institution"});
+      const cls=el("select",{},...EMPLOYMENT_CLASSES.map(([c,n])=>
+        el("option",{value:c,...(c===(existing?.cls||"blue")?{selected:"selected"}:{})},n)));
+      const preview=el("span",{class:"pill"});
+      const paint=()=>{ preview.className="pill "+cls.value; preview.textContent=label.value.trim()||"Preview"; };
+      label.oninput=paint; cls.onchange=paint; paint();
+      modal(existing?"Edit category":"Add an employment category",
+        el("div",{class:"grid"},
+          el("div",{},el("label",{},"Name"),label),
+          el("div",{},el("label",{},"Description (shown on hover and in the staff form)"),help),
+          el("div",{},el("label",{},"Colour"),cls,el("div",{style:"margin-top:8px"},preview))),
+        async()=>{
+          const name=label.value.trim();
+          if(!name){ toast("Give the category a name.",true); return false; }
+          if(EMPLOYMENTS.some(x=>x.v!==existing?.v&&x.label.toLowerCase()===name.toLowerCase())){
+            toast("There is already a category called \u201C"+name+"\u201D.",true); return false; }
+          /* The stored key never changes after creation, so renaming a
+             category relabels everyone who has it rather than orphaning
+             them. */
+          const key=existing?.v||("custom-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,24)+
+            "-"+Math.random().toString(36).slice(2,6));
+          const item={v:key,label:name,short:name,help:help.value.trim(),cls:cls.value};
+          const next=existing?custom.map(x=>x.v===key?item:x):[...custom,item];
+          try{ await saveEmploymentConfig(next.map(({builtin,...x})=>x)); }
+          catch(err){ toast(err?.message||"Could not save \u2014 check the staffKeys rule.",true); return false; }
+          toast(existing?"Category updated.":"Category added \u2014 it is now in the Employment status list on every staff record.");
+          drawEmployment(); return true;
+        },existing?"Save":"Add category");
+    }
+  }
+  drawEmployment();
 
   // ---- What is deliberately NOT here ----
   v.append(el("div",{class:"card"},
