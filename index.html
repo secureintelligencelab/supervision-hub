@@ -2533,6 +2533,11 @@ async function viewPanels(v){
     el("h2",{},S.role==="panellist"?"My CoC panels":"CoC panel"))));
 
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewPanels(v)));
+  /* The printable copy. Printing this screen cuts the wide tables off at
+     the page edge, so the timetable is also offered as a spreadsheet —
+     the same two sheets a PIN holder gets, for the semester shown. */
+  const xl=myTimetableButton("\u2913 Download my timetable (Excel)"); xl.style.alignSelf="flex-end";
+  bar.append(xl);
   v.append(bar);
   if(!S.activeSem){ v.append(emptyState("No semester selected","Ask the coordinator to set one up first.")); return; }
 
@@ -3020,14 +3025,19 @@ async function syncStudentCoc(groups,students,opts={}){
     if(home&&st){ ops.push({type:"set",coll:"staffKeys",id:cocKeyOf(id),merge:false,data:studentCocSnap(home,st)}); written++; }
     else { ops.push({type:"delete",coll:"staffKeys",id:cocKeyOf(id)}); removed++; }
   });
-  stale.forEach(g=>ops.push({type:"set",coll:"panelGroups",id:g.id,data:{
-    studentKeysAt:Math.max(now,(g.updatedAt||0)+1),
-    studentKeysFor:isStudentReleased(g)?groupStudents(g).slice():[]}}));
   try{ await DB.batchWrite(ops); }
   catch(e){
     console.warn("could not publish the students' CoC times",e);
     return {written:0,removed:0,failed:true};
   }
+  /* The stamps go separately and as UPDATES: a set would quietly recreate
+     a panel deleted while this was running, as a nameless ghost. If a
+     stamp fails the panel is simply republished next time. */
+  try{
+    await DB.batchWrite(stale.map(g=>({type:"update",coll:"panelGroups",id:g.id,data:{
+      studentKeysAt:Math.max(now,(g.updatedAt||0)+1),
+      studentKeysFor:isStudentReleased(g)?groupStudents(g).slice():[]}})));
+  }catch(e){ console.warn("CoC publish stamps not saved; will retry",e); }
   return {written,removed};
 }
 
@@ -6992,9 +7002,13 @@ function classRunsOn(sem,date){
   if(isNaN(d.getTime())) return true;
   return d>=r.from && d<=r.to;
 }
+/* A Date as "YYYY-MM-DD" in LOCAL time. toISOString() gives the UTC date,
+   which in Sydney is the day before until 10am (11am in summer) — so a
+   term starting Monday 20 July printed as Sunday 19 July. */
+const localYMD=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const teachingRangeLabel=sem=>{
   const r=teachingRange(sem);
-  return r?longDate(r.from.toISOString().slice(0,10))+" – "+longDate(r.to.toISOString().slice(0,10)):"";
+  return r?longDate(localYMD(r.from))+" – "+longDate(localYMD(r.to)):"";
 };
 
 // Current teaching week, derived from the semester's (optional) start date.
@@ -7442,6 +7456,9 @@ function renderApp(){
       el("div",{style:"text-align:right"},
         el("div",{class:"name"},S.userName||S.user.email),
         el("div",{class:"role"},S.role==="panellist"?"panel member":S.role)),
+      /* Reachable from every tab, because the question "can I have my
+         timetable?" is not asked from any particular screen. */
+      S.role==="admin"?el("span",{}):myTimetableButton("\u2913 My timetable","btn ghost sm"),
       themeButton(),
       el("button",{class:"btn ghost sm",onclick:logout},"Sign out"))
   );
@@ -7610,8 +7627,7 @@ async function viewSettings(v){
         toast(opts.toast(!on));
         /* The tab strip itself can change, so the whole shell is redrawn
            rather than just this pane. */
-        renderApp();
-        S.tab="settings"; drawMain();
+        S.tab="settings"; renderApp();
       }catch(e){
         btn.disabled=false; btn.textContent=on?opts.onLabel:opts.offLabel;
         toast(e?.message||"Could not save that setting.",true);
@@ -8148,6 +8164,11 @@ async function viewStudents(v){
              el("div",{class:"field"},el("label",{},"Campus"),campusFilter),
              el("div",{class:"field"},el("label",{},"Area"),areaFilter));
   if(S.role==="admin") bar.append(el("div",{class:"field"},el("label",{},"Group by"),groupSel));
+  if(S.role==="supervisor"){
+    bar.append(el("div",{style:"flex:1"}));
+    const xb=myTimetableButton("\u2913 Download my timetable (Excel)"); xb.style.alignSelf="flex-end";
+    bar.append(xb);
+  }
   if(S.role==="admin"){
     bar.append(el("div",{style:"flex:1"}));
     bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Import students (CSV / paste)"),
@@ -11274,7 +11295,15 @@ async function viewPeople(v){
     const isSelf = u.id===S.uid;
     actions.append(el("button",{class:"btn danger sm",...(isSelf?{disabled:"disabled",title:"You can't delete your own account"}:{}),
       onclick:()=> isSelf ? toast("You can't delete your own account.",true)
-                         : confirmDelete("users",u.id,u.name||u.email,async()=>{ await DB.removeUser(u.id); await reloadStaffCaches(); viewPeople(v); }, true)},"Delete"));
+                         : confirmDelete("users",u.id,u.name||u.email,async()=>{
+                             /* Their PIN and address keys go first: a PIN left behind would keep
+                                opening a departed person's page, students and all. */
+                             const keys=[...new Set([...(Array.isArray(u.signInKeys)?u.signInKeys:[]),
+                               ...(String(u.pin||"").trim()?[pinKeyOf(u.pin)]:[]),
+                               ...emailsOf(u).map(mailKeyOf)])];
+                             try{ await DB.batchWrite(keys.map(k=>({type:"delete",coll:"staffKeys",id:k}))); }
+                             catch(e){ console.warn("could not revoke sign-in keys",e); }
+                             await DB.removeUser(u.id); await reloadStaffCaches(); viewPeople(v); }, true)},"Delete"));
     const acct = u.pendingLogin
       ? el("span",{class:"pill pending",title:"Profile auto-created from an import — add a login with the same email to activate it"},"No login yet")
       : el("span",{class:"pill "+(roleOf(u)==="admin"?"approved":"none")},"Has login");
@@ -11389,9 +11418,19 @@ async function publishSignInKeys(opts={}){
 
   const at=Date.now();
   const ops=[]; let written=0, cleared=0, failed=0;
+  /* Defence in depth for PINs shared by two records — possible in data
+     saved before the edit form checked. A shared PIN is published for
+     NOBODY rather than for whichever record happens to be written last,
+     because the alternative is one person seeing another's students. */
+  const pinOwners={};
+  users.forEach(x=>{ const k=normPin(x.pin); if(k) (pinOwners[k]=pinOwners[k]||[]).push(x); });
+  const shared=Object.values(pinOwners).filter(l=>l.length>1);
   for(const u of scope){
-    const pin=String(u.pin||"").trim();
+    const pinRaw=String(u.pin||"").trim();
+    const clash=pinRaw&&(pinOwners[normPin(pinRaw)]||[]).length>1;
+    const pin=clash?"":pinRaw;
     const wantPinKey=pin?pinKeyOf(pin):"";
+    if(clash) ops.push({type:"delete",coll:"staffKeys",id:pinKeyOf(pinRaw)});
     const wantMailKeys=emailsOf(u).map(mailKeyOf);
     const hadKeys=Array.isArray(u.signInKeys)?u.signInKeys:[];
     const wantKeys=[wantPinKey,...wantMailKeys].filter(Boolean);
@@ -11425,11 +11464,20 @@ async function publishSignInKeys(opts={}){
   try{ await DB.batchWrite(ops); }
   catch(e){ console.warn("could not publish sign-in keys",e); failed=1; written=0; }
 
+  /* One message, not two: a second toast would replace the first before
+     anyone could read it, and the shared-PIN warning is the one that
+     matters. */
+  const sharedMsg=shared.length
+    ? "Shared PIN"+(shared.length===1?"":"s")+" switched off: "+
+      shared.map(l=>l.map(x=>x.name||x.email||"?").join(" & ")).join("; ")+
+      " \u2014 give each of them a new PIN from the PIN button."
+    : "";
   if(!opts.quiet){
     if(failed) toast("The sign-in keys could not be saved \u2014 check the database rules (PIN access \u2192 the help button).",true);
-    else toast(written?("Published "+written+" sign-in key"+(written===1?"":"s")+
-      (cleared?", removed "+cleared+" old one"+(cleared===1?"":"s"):"")+"."):"Nothing to publish yet.");
-  }
+    else toast((written?("Published "+written+" sign-in key"+(written===1?"":"s")+
+      (cleared?", removed "+cleared+" old one"+(cleared===1?"":"s"):"")+"."):"Nothing to publish yet.")+
+      (sharedMsg?"  "+sharedMsg:""),!!sharedMsg);
+  }else if(sharedMsg&&scope.some(u=>(pinOwners[normPin(u.pin)]||[]).length>1)) toast(sharedMsg,true);
   return {written,cleared,failed,at};
 }
 
@@ -11582,8 +11630,18 @@ async function pinBulkDialog(done){
     /* Say when the PINs were last published and whether any are unpublished
        — an issued PIN that was never published simply does not open. */
     const withPin=users.filter(x=>String(x.pin||"").trim());
+    const byPin={}; withPin.forEach(x=>{ const k=normPin(x.pin); (byPin[k]=byPin[k]||[]).push(x); });
+    const dup=Object.values(byPin).filter(l=>l.length>1);
     const unpublished=withPin.filter(x=>!(Array.isArray(x.signInKeys)&&x.signInKeys.includes(pinKeyOf(x.pin))));
     const last=Math.max(0,...users.map(x=>x.keysPublishedAt||0));
+    if(dup.length){
+      freshness.textContent="Shared PIN"+(dup.length===1?"":"s")+" \u2014 switched off until fixed: "+
+        dup.map(l=>l.map(x=>x.name||x.email||"?").join(" & ")).join("; ")+
+        ". Give each of them a new PIN from the PIN button beside their name.";
+      freshness.style.color="var(--clay-ink,#9a3412)"; freshness.style.fontWeight="700";
+      return;
+    }
+    freshness.style.color=""; freshness.style.fontWeight="";
     freshness.textContent=!withPin.length ? ""
       : unpublished.length
         ? unpublished.length+" issued PIN"+(unpublished.length===1?"":"s")+" "+
@@ -11947,7 +12005,12 @@ function createLoginFor(u,done){
         }
         busy.textContent="Moving their students and panel seats…";
         const {moved,failed}=await relinkStaffUid(u.id,newUid);
-        await DB.removeUser(u.id);
+        /* Only retire the old profile once everything pointing at it has
+           moved. If the move failed, deleting it would leave students and
+           panel seats pointing at nothing; keeping it leaves a visible
+           duplicate the office can resolve by hand. */
+        const moveFailed=failed.includes("the move itself");
+        if(!moveFailed) await DB.removeUser(u.id);
         await reloadStaffCaches();
         /* Always, not onlyIfInUse: this person needs their address key
            even when the office issues no PINs, or signing in with their
@@ -11999,7 +12062,9 @@ function staffForm(existing,done){
      is issued when it is needed, from here or from the PIN button. */
   const pin=el("input",{value:existing?.pin||"",placeholder:"blank = no PIN",
     inputmode:"numeric",style:"letter-spacing:2px"});
-  const pinGen=el("button",{class:"btn ghost sm",type:"button",onclick:()=>{ pin.value=makePin(PIN_LEN); }},
+  const pinGen=el("button",{class:"btn ghost sm",type:"button",onclick:async()=>{
+      const taken=(await DB.listUsers()).filter(x=>x.id!==existing?.id).map(x=>x.pin).filter(Boolean);
+      pin.value=uniquePin(taken,PIN_LEN); }},
     "Generate");
   const pinRow=el("div",{},el("label",{},"Read-only PIN (optional)"),
     el("div",{class:"row",style:"gap:8px;align-items:center"},el("div",{style:"flex:1"},pin),pinGen),
@@ -12109,6 +12174,14 @@ function staffForm(existing,done){
         toast("The second email is the same as the first — leave it blank instead.",true); return false; }
       const pinVal=pin.value.trim();
       if(pinVal&&normPin(pinVal).length<4){ toast("A PIN needs at least 4 characters — or leave it blank.",true); return false; }
+      /* A PIN is a key to one person's page. Two people sharing one means
+         the second to be published overwrites the first, and whoever types
+         it then sees the OTHER person's students. The PIN button always
+         checked this; this form did not. */
+      if(pinVal){
+        const owner=(await DB.listUsers()).find(x=>x.id!==existing?.id&&normPin(x.pin)===normPin(pinVal));
+        if(owner){ toast("That PIN already belongs to "+(owner.name||owner.email||"another staff member")+". Use Generate for a new one.",true); return false; }
+      }
       if(editing){
         const profile={name:name.value.trim(),role:role.value,mobile:mobile.value.trim(),email2:alt,
                        employment:emp.value,pin:pinVal,pinSetAt:pinVal?(existing?.pinSetAt||Date.now()):0};
@@ -12163,7 +12236,7 @@ function staffForm(existing,done){
              students and consultations only, which quietly stranded the
              panel seats — the very thing an imported panel member has. */
           const {failed}=await relinkStaffUid(orphan.id,newUid);
-          await DB.removeUser(orphan.id);
+          if(!failed.includes("the move itself")) await DB.removeUser(orphan.id);
           if(failed.length) toast("Account created, but "+failed.join(" and ")+
             " could not be repointed — check that record by hand.",true);
         }
@@ -12515,6 +12588,99 @@ function pinWhoOf(u){
   };
 }
 
+/* ---- The same timetable as an Excel file -----------------------------
+   Printing the page loses information: the running-order table is wider
+   than a sheet of paper, so the browser cuts off the right-hand columns —
+   the Q&A times and the supervisors — and long titles wrap into rows that
+   split across pages. A spreadsheet has no page width. Every column is
+   there, titles wrap inside their cell, and Excel's own print settings
+   (landscape, fit to one page wide, set in the file) do the rest.
+
+   Built from the SAME view-model the screen draws, so the file and the
+   page cannot disagree, and so it works identically from the PIN view
+   (which reads only its snapshot) and from a signed-in CoC tab. Only what
+   that person's own screen already shows goes in: their released panels,
+   and their own students. */
+function staffTimetableXlsx(who,blocks){
+  const title=r=>({cells:r,s:4,h:24});
+  const note =r=>({cells:r,s:0});
+  const head =r=>({cells:r,s:1,h:30});
+  const body =r=>({cells:r,s:2});
+  const stamp="Downloaded "+todayLabel()+" from the MRes Supervision Hub";
+  const sheets=[], used=new Set();
+
+  // ---- Sheet 1: panels I am sitting on, one row per student slot ----
+  const P=["Semester","Panel","My role","Session","Chair","Assessors","Meeting link",
+           "Report form","Report due","Slot","Student","Student ID","Proposal title",
+           "Presentation · Q&A","Supervisors","Status"];
+  const pr=[title([(who.name||"")+" — CoC panels I am sitting on"]),
+            note([stamp+(who.role?" · "+who.role:"")]),note([]),head(P)];
+  let pn=0;
+  (blocks||[]).forEach(bl=>(bl.panels||[]).forEach(p=>{
+    const base=[bl.label,p.label,p.youChair?"Chair":"Member",p.when,p.chair,p.assessors,
+                p.link||"",p.report||"",p.reportDue||""];
+    const status=p.draft?"Draft — may still change":"Released";
+    if(!(p.rows||[]).length){ pr.push(body([...base,"","Running order to follow","","","","",status])); pn++; return; }
+    p.rows.forEach(r=>{
+      pr.push(body([...base,r.time,r.name||"Panel discussion",r.sid||"",r.title||"",r.parts||"",r.sups||"",status]));
+      pn++;
+    });
+  }));
+  if(!pn) pr.push(note(["No panel has been released to you yet."]));
+  sheets.push({name:safeSheetName("Panels I assess",used),
+    widths:[12,22,9,30,18,34,40,40,18,20,24,12,44,26,30,18],
+    rows:pr, freezeAt:4, filter:pn?"A4:"+colLetter(P.length-1)+(4+pn):""});
+
+  // ---- Sheet 2: my own students ----
+  const S2=["Semester","Student","Student ID","Proposal title","I am",
+            "CoC panel","CoC time","Presentation","Q&A","Assessors","CoC meeting link",
+            "Consultation time","Consultation link","Attendance so far","Changed weeks"];
+  const sr=[title([(who.name||"")+" — my students"]),note([stamp]),note([]),head(S2)];
+  let sn=0;
+  (blocks||[]).forEach(bl=>(bl.students||[]).forEach(s=>{
+    const c=s.coc, k=s.con;
+    sr.push(body([bl.label,s.name,s.sid||"",s.title||"",s.role,
+      c?c.panel:"Still being arranged", c?c.when:"", c?c.pres:"", c?c.qa:"", c?c.assessors:"", c?c.link:"",
+      k?k.time:"No consultation time set", k?k.link:"", k?k.attendance:"",
+      k&&(k.changed||[]).length?k.changed.map(x=>"Week "+x.w+": "+x.text).join("\n"):""]));
+    sn++;
+  }));
+  if(!sn) sr.push(note(["No students are allocated to you."]));
+  sheets.push({name:safeSheetName("My students",used),
+    widths:[12,24,12,44,20,26,30,22,22,34,40,26,40,24,34],
+    rows:sr, freezeAt:4, filter:sn?"A4:"+colLetter(S2.length-1)+(4+sn):""});
+
+  const slug=String(who.name||"staff").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"")||"staff";
+  saveBlob(xlsxBlob(sheets),"CoC_timetable_"+slug+"_"+localYMD(new Date())+".xlsx");
+}
+
+/* The signed-in download: the same workbook a PIN holder gets, built live
+   for whoever is signed in, for the semester currently selected. One
+   routine behind every button that offers it, so the header, the My
+   students tab and the CoC tab can never produce different files. */
+async function downloadMyTimetable(btn){
+  const sem=activeSemester();
+  if(!sem){ toast("Pick a semester first.",true); return; }
+  const was=btn?btn.textContent:"";
+  if(btn){ btn.disabled=true; btn.textContent="Preparing\u2026"; }
+  try{
+    const me=staffById(S.uid)||{id:S.uid,name:S.userName||"",email:S.user?.email||""};
+    const blocks=await pinBlocksFor(me,[sem]);
+    staffTimetableXlsx(pinWhoOf(me),blocks);
+    const nP=blocks.reduce((n,b)=>n+(b.panels||[]).length,0);
+    const nS=blocks.reduce((n,b)=>n+(b.students||[]).length,0);
+    toast("Excel file downloaded \u2014 "+(sem.label||"this semester")+": "+
+      nP+" panel"+(nP===1?"":"s")+" you assess, "+nS+" student"+(nS===1?"":"s")+" you supervise.");
+  }catch(e){ console.error(e); toast("Couldn't build the Excel file.",true); }
+  if(btn){ btn.disabled=false; btn.textContent=was; }
+}
+const myTimetableButton=(label,cls="btn sm")=>{
+  const b=el("button",{class:cls,
+    title:"Your students \u2014 the ones you assess and the ones you supervise \u2014 for the selected semester, as an Excel file with every column"},label);
+  b.onclick=()=>downloadMyTimetable(b);
+  return b;
+};
+
 /* Draws the view-model. `opts.at` is when a snapshot was published, so a
    reader can see for themselves how fresh the page is rather than trusting
    it; live pages have none and say nothing. */
@@ -12528,6 +12694,9 @@ function renderStaffPinView(who,blocks,opts={}){
       ((who.emails||[]).length?" · "+who.emails.join(" / "):"")),
     el("div",{class:"row",style:"margin-top:10px;gap:8px;flex-wrap:wrap"},
       el("button",{class:"btn ghost sm",onclick:()=>renderLogin()},"← Back"),
+      el("button",{class:"btn sm",title:"Every column, nothing cut off \u2014 opens in Excel, Numbers or Google Sheets",
+        onclick:()=>{ try{ staffTimetableXlsx(who,blocks); toast("Excel file downloaded."); }
+                      catch(e){ console.error(e); toast("Couldn't build the Excel file.",true); } }},"\u2913 Download (Excel)"),
       el("button",{class:"btn ghost sm",onclick:()=>window.print()},"⎙ Print"),
       el("span",{style:"flex:1"}), themeButton())));
   if(opts.at) col.append(el("p",{class:"muted ui",style:"margin:-8px 0 14px;font-size:12.5px"},
