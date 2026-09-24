@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MRes Supervision Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
   /* ============================================================
      DESIGN SYSTEM — "Register"
@@ -31,20 +34,20 @@
     color-scheme:light;
 
     /* -- surfaces & ink -- */
-    --ink:#0f1720;
-    --ink-soft:#5c6a79;
-    --muted:#5c6a79;              /* alias — a few inline styles read this */
-    --paper:#eef1f5;              /* canvas */
+    --ink:#101828;
+    --ink-soft:#5d6679;
+    --muted:#5d6679;              /* alias — a few inline styles read this */
+    --paper:#f4f6fb;              /* canvas */
     --paper-2:#ffffff;            /* raised: cards, inputs, menus */
-    --sunken:#f4f6f9;             /* recessed: table heads, tracks, tiles */
-    --line:#e3e8ef;
-    --line-strong:#cbd4df;
+    --sunken:#f6f7fb;             /* recessed: table heads, tracks, tiles */
+    --line:#e6e9f0;
+    --line-strong:#d2d7e2;
 
-    /* -- identity accent (never a status) -- */
-    --accent:#0d7c6c;
-    --accent-deep:#0a5d51;
-    --accent-tint:#0d7c6c14;
-    --ring:#0d7c6c38;
+    /* -- identity accent: indigo -- */
+    --accent:#4f46e5;
+    --accent-deep:#4338ca;
+    --accent-tint:#4f46e512;
+    --ring:#4f46e540;
 
     /* -- the app was written against --teal*; keep the names working -- */
     --teal:var(--accent);
@@ -52,26 +55,39 @@
     --teal-tint:var(--accent-tint);
 
     /* -- primary action -- */
-    --btn-bg:#161d26;
-    --btn-bg-hover:#2c3641;
+    --btn-bg:#4f46e5;
+    --btn-bg-hover:#4338ca;
     --btn-fg:#ffffff;
 
     /* -- status -- */
-    --amber:#8a6209;  --amber-soft:#fbf0da;  --amber-ink:#79540a;
-    --clay:#b04a33;   --clay-soft:#fbe5de;   --clay-ink:#8e3822;
-    --green:#2e7d52;  --green-soft:#dcefe3;  --green-ink:#246243;
-    --blue:#3a63a8;   --blue-soft:#e4ebf8;   --blue-ink:#2d4f88;
-    --neutral-soft:#ecf0f5; --neutral-ink:#5f6b79;
+    --amber:#d97706;  --amber-soft:#fef3c7;  --amber-ink:#92400e;
+    --clay:#dc2626;   --clay-soft:#fee2e2;   --clay-ink:#b91c1c;
+    --green:#059669;  --green-soft:#d1fae5;  --green-ink:#047857;
+    --blue:#2563eb;   --blue-soft:#dbeafe;   --blue-ink:#1d4ed8;
+    --neutral-soft:#eef1f6; --neutral-ink:#566074;
 
-    /* -- shape & depth: borders do the work, shadows only hint -- */
-    --r:14px; --r-sm:10px; --r-xs:8px;
-    --shadow:0 1px 2px rgba(15,23,32,.05);
-    --shadow-md:0 1px 2px rgba(15,23,32,.05),0 10px 22px -16px rgba(15,23,32,.36);
-    --shadow-lg:0 28px 64px -24px rgba(15,23,32,.42),0 2px 10px rgba(15,23,32,.09);
+    /* -- sidebar -- */
+    --side-bg:#0f172a;
+    --side-bg-2:#131c33;
+    --side-ink:#c3cbe0;
+    --side-soft:#7c87a3;
+    --side-line:#1f2a44;
+    --side-hover:#ffffff0d;
+    --side-active:#6366f126;
+    --side-active-ink:#ffffff;
+    --side-mark:#818cf8;
+
+    /* -- shape & depth -- */
+    --r:16px; --r-sm:11px; --r-xs:8px;
+    --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+    --shadow-md:0 2px 4px rgba(16,24,40,.05),0 12px 24px -12px rgba(16,24,40,.18);
+    --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35),0 2px 10px rgba(16,24,40,.08);
 
     /* -- type -- */
-    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:Inter,"Inter var",-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
+
+    --side-w:264px;
   }
   *{box-sizing:border-box}
 
@@ -82,22 +98,24 @@
      legible without being turned up loud. --------------------------- */
   html[data-theme="dark"]{
     color-scheme:dark;
-    --ink:#e6ecf3; --ink-soft:#93a1b2; --muted:#93a1b2;
-    --paper:#0d1117; --paper-2:#161c24; --sunken:#111820;
-    --line:#232c37; --line-strong:#38434f;
-    --accent:#3bb8a0; --accent-deep:#74e0cf; --accent-tint:#3bb8a01f; --ring:#3bb8a045;
-    --btn-bg:#e8eef6; --btn-bg-hover:#ffffff; --btn-fg:#0f1720;
-    --amber:#d2a03a; --amber-soft:#3a2f16; --amber-ink:#ecca8d;
-    --clay:#d0654a; --clay-soft:#3c211a; --clay-ink:#f3ab94;
-    --green:#3f9c66; --green-soft:#183327; --green-ink:#93d9ab;
-    --blue:#6090d6; --blue-soft:#1c2b43; --blue-ink:#accaf5;
-    --neutral-soft:#232c37; --neutral-ink:#96a3b3;
+    --ink:#e7eaf3; --ink-soft:#98a2b8; --muted:#98a2b8;
+    --paper:#0b1020; --paper-2:#131a2c; --sunken:#0f1526;
+    --line:#212a40; --line-strong:#344058;
+    --accent:#818cf8; --accent-deep:#a5b4fc; --accent-tint:#818cf81f; --ring:#818cf84d;
+    --btn-bg:#6366f1; --btn-bg-hover:#7c7ff5; --btn-fg:#ffffff;
+    --amber:#f59e0b; --amber-soft:#3a2a0e; --amber-ink:#fcd38a;
+    --clay:#ef4444; --clay-soft:#3d1618; --clay-ink:#fca5a5;
+    --green:#10b981; --green-soft:#0f3328; --green-ink:#6ee7b7;
+    --blue:#3b82f6; --blue-soft:#172746; --blue-ink:#93c5fd;
+    --neutral-soft:#1d2539; --neutral-ink:#a1abc0;
+    --side-bg:#080c18; --side-bg-2:#0c1224; --side-line:#1a2238;
     --shadow:0 1px 2px rgba(0,0,0,.45);
-    --shadow-md:0 1px 2px rgba(0,0,0,.45),0 10px 22px -16px rgba(0,0,0,.9);
+    --shadow-md:0 1px 2px rgba(0,0,0,.45),0 12px 24px -12px rgba(0,0,0,.8);
     --shadow-lg:0 28px 64px -24px rgba(0,0,0,.85),0 2px 10px rgba(0,0,0,.5);
   }
   /* The few places that need a per-theme nudge rather than a new token. */
   html[data-theme="dark"] .btn.amber{color:#1b1305}
+  html[data-theme="dark"] .btn.danger,html[data-theme="dark"] .btn.blue{color:#fff}
   html[data-theme="dark"] .card:not(.tone) > .cardhead{background:#ffffff08!important}
   html[data-theme="dark"] code{background:#ffffff12}
 
@@ -105,7 +123,7 @@
   body{
     margin:0;background:var(--paper);color:var(--ink);
     font-family:var(--sans);
-    font-size:15.5px;line-height:1.5;
+    font-size:15px;line-height:1.55;font-feature-settings:"cv11","ss01";
     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
   }
   body,input,select,button,textarea{font-family:var(--sans)}
@@ -155,14 +173,16 @@
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:7px;
     border:1px solid transparent;background:var(--btn-bg);color:var(--btn-fg);
-    padding:10px 16px;border-radius:var(--r-sm);font-weight:600;font-size:14.5px;
-    line-height:1.25;letter-spacing:-.005em;width:auto;box-shadow:var(--shadow);
+    padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;
+    line-height:1.25;letter-spacing:-.005em;width:auto;
+    box-shadow:0 1px 2px rgba(16,24,40,.08),inset 0 1px 0 #ffffff1f;
     transition:background .15s,border-color .15s,box-shadow .15s,transform .08s,opacity .15s;
   }
-  .btn:hover{background:var(--btn-bg-hover)}
+  .btn:hover{background:var(--btn-bg-hover);box-shadow:0 4px 12px -4px var(--ring)}
   .btn:active{transform:translateY(1px)}
-  .btn.ghost{background:var(--paper-2);color:var(--ink);border-color:var(--line-strong)}
-  .btn.ghost:hover{background:var(--sunken);border-color:var(--ink-soft)}
+  .btn.ghost{background:var(--paper-2);color:var(--ink);border-color:var(--line-strong);
+    box-shadow:0 1px 2px rgba(16,24,40,.05)}
+  .btn.ghost:hover{background:var(--sunken);border-color:var(--accent);color:var(--accent-deep);box-shadow:none}
   .btn.danger{background:var(--clay);color:#fff}
   .btn.danger:hover{background:var(--clay-ink)}
   .btn.amber{background:var(--amber);color:#fff}
@@ -176,14 +196,14 @@
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .grid{display:grid;gap:14px}
   .card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);
-    padding:20px;box-shadow:var(--shadow)}
+    padding:22px;box-shadow:var(--shadow)}
   .muted{color:var(--ink-soft);font-size:14px}
   .hidden{display:none!important}
 
   /* ---- Chips ----
      Rectangular chip = a label on a record. Round = a count. ---------- */
   .pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
-    padding:4px 9px;border-radius:7px;letter-spacing:0;line-height:1.35;white-space:nowrap}
+    padding:3px 10px;border-radius:99px;letter-spacing:0;line-height:1.35;white-space:nowrap}
   .pill.pending{background:var(--amber-soft);color:var(--amber-ink)}
   .pill.approved,.pill.held{background:var(--green-soft);color:var(--green-ink)}
   .pill.none{background:var(--neutral-soft);color:var(--neutral-ink)}
@@ -193,9 +213,10 @@
   .nbadge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;
     padding:0 6px;margin-left:7px;border-radius:99px;background:var(--clay);color:#fff;
     font-size:11px;font-weight:700;line-height:1;vertical-align:middle;font-variant-numeric:tabular-nums}
-  nav.tabs button.active .nbadge{background:var(--btn-fg);color:var(--btn-bg)}
+  nav.tabs .nbadge{margin-left:auto}
+  nav.tabs button.active .nbadge{background:var(--side-mark);color:#0f172a}
   .linkpill{font-size:12.5px;display:inline-flex;align-items:center;gap:5px;
-    background:var(--blue-soft);color:var(--blue-ink);padding:4px 10px;border-radius:7px;
+    background:var(--blue-soft);color:var(--blue-ink);padding:4px 11px;border-radius:99px;
     text-decoration:none;font-weight:600}
   .linkpill:hover{background:var(--blue);color:#fff}
   .loadpill{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:7px;
@@ -213,61 +234,103 @@
   /* ---- Tables ---- */
   table{width:100%;border-collapse:collapse;font-size:14.5px}
   th,td{text-align:left;padding:11px 12px;vertical-align:top}
-  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);
-    font-weight:600;background:transparent;border-bottom:1px solid var(--line-strong)}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+    font-weight:600;background:var(--sunken);border-bottom:1px solid var(--line)}
+  thead th:first-child{border-top-left-radius:10px} thead th:last-child{border-top-right-radius:10px}
   td{border-bottom:1px solid var(--line)}
   tbody tr:last-child td{border-bottom:none}
   tr:hover td{background:var(--accent-tint)}
 
-  /* ---- Header ----
-     Light and quiet: the chrome should not compete with the data. The mark
-     is the one place the accent appears at full strength. -------------- */
-  header.app{
-    background:var(--paper-2);color:var(--ink);padding:0 24px;
-    display:flex;align-items:center;justify-content:space-between;height:64px;
-    border-bottom:1px solid var(--line);
+  /* ---- App shell ----
+     A fixed sidebar holds the menu, grouped by what the work is about, so
+     every screen is one click away and "where am I" is always visible.
+     The content area has a slim sticky top bar with the page title and
+     the personal actions (timetable, theme, sign out). On a phone the
+     sidebar becomes a slide-in drawer opened from the top bar. -------- */
+  .shell{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);min-height:100vh}
+  aside.side{
+    position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40;
+    display:flex;flex-direction:column;gap:6px;padding:18px 14px 14px;
+    background:linear-gradient(180deg,var(--side-bg) 0%,var(--side-bg-2) 100%);
+    color:var(--side-ink);border-right:1px solid var(--side-line);
+    scrollbar-color:#ffffff22 transparent;
   }
-  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0;padding:4px 8px 16px;
+    border-bottom:1px solid var(--side-line);margin-bottom:8px}
   .brand .mark{
-    width:34px;height:34px;border-radius:10px;flex:0 0 auto;
-    background:linear-gradient(150deg,var(--accent),var(--accent-deep));
-    display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;
-    letter-spacing:.02em;box-shadow:inset 0 1px 0 #ffffff40,var(--shadow);
+    width:38px;height:38px;border-radius:12px;flex:0 0 auto;
+    background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#06b6d4 100%);
+    display:grid;place-items:center;font-weight:800;font-size:13.5px;color:#fff;
+    letter-spacing:.02em;box-shadow:inset 0 1px 0 #ffffff40,0 6px 16px -6px #6366f1aa;
   }
-  .brand h1{font-size:16px;color:var(--ink);font-weight:650;white-space:nowrap}
-  .brand .sub{font-size:10.5px;color:var(--ink-soft);letter-spacing:.1em;
-    text-transform:uppercase;font-weight:600;margin-top:1px}
-  .who{display:flex;align-items:center;gap:12px;font-size:14px}
-  .who .name{font-weight:600;white-space:nowrap}
-  .who .role{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;
-    letter-spacing:.1em;font-weight:600}
+  .brand h1{font-size:15.5px;color:#fff;font-weight:700;white-space:nowrap;letter-spacing:-.01em}
+  .brand .sub{font-size:11px;color:var(--side-soft);font-weight:500;margin-top:2px;white-space:nowrap}
 
-  main{max-width:1240px;margin:0 auto;padding:0 24px 48px}
+  nav.tabs{display:flex;flex-direction:column;gap:2px;flex:1}
+  nav.tabs .navgroup{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--side-soft);padding:16px 12px 6px}
+  nav.tabs .navgroup:first-child{padding-top:6px}
+  nav.tabs button{
+    display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    border:none;background:transparent;color:var(--side-ink);
+    font-weight:500;font-size:14px;line-height:1.2;padding:10px 12px;border-radius:10px;
+    position:relative;transition:background .15s,color .15s;
+  }
+  nav.tabs button .ico{flex:0 0 auto;width:19px;height:19px;display:grid;place-items:center;opacity:.8}
+  nav.tabs button .ico svg{width:19px;height:19px}
+  nav.tabs button .navlabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  nav.tabs button:hover{background:var(--side-hover);color:#fff}
+  nav.tabs button.active{background:var(--side-active);color:var(--side-active-ink);font-weight:600}
+  nav.tabs button.active .ico{opacity:1;color:var(--side-mark)}
+  nav.tabs button.active::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;
+    border-radius:0 3px 3px 0;background:var(--side-mark)}
+  nav.tabs button:focus-visible{outline:2px solid var(--side-mark);outline-offset:1px}
 
-  /* ---- Navigation rail ----
-     One segmented-control language for every level of navigation: this
-     rail, the sign-in switch (.seg) and the CoC sub-tabs (.subtabs) all
-     read as pills on a track, so "where am I" always looks the same.
-     Sticky and blurred, so it stays reachable down a long register. --- */
-  nav.tabs{
-    display:flex;gap:4px;flex-wrap:wrap;align-items:center;
-    position:sticky;top:0;z-index:20;
-    margin:0 -24px 22px;padding:12px 24px;
+  .side-user{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px 10px;
+    border-top:1px solid var(--side-line)}
+  .avatar{width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    font-weight:700;font-size:13px;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6)}
+  .side-user .who{min-width:0;flex:1}
+  .side-user .name{font-weight:600;font-size:13.5px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .side-user .role{font-size:11.5px;color:var(--side-soft);text-transform:capitalize}
+  .side-user .iconbtn{color:var(--side-ink);border-color:var(--side-line);background:transparent}
+  .side-user .iconbtn:hover{background:var(--side-hover);color:#fff}
+
+  .content{min-width:0;display:flex;flex-direction:column}
+  .topbar{
+    position:sticky;top:0;z-index:30;height:62px;flex:0 0 auto;
+    display:flex;align-items:center;gap:12px;padding:0 28px;
     background:var(--paper);
-    background:color-mix(in srgb,var(--paper) 80%,transparent);
-    backdrop-filter:blur(14px) saturate(1.6);
-    -webkit-backdrop-filter:blur(14px) saturate(1.6);
+    background:color-mix(in srgb,var(--paper) 82%,transparent);
+    backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5);
     border-bottom:1px solid var(--line);
   }
-  nav.tabs button{
-    border:1px solid transparent;background:transparent;color:var(--ink-soft);
-    font-weight:600;font-size:14px;line-height:1.2;padding:9px 14px;border-radius:99px;
-    transition:background .15s,color .15s,border-color .15s;
+  .topbar .crumb{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+  .topbar .crumb .grp{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+  .topbar .crumb .sep{color:var(--line-strong)}
+  .topbar .crumb .pg{font-size:15px;font-weight:650;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar .acts{display:flex;align-items:center;gap:8px}
+  .iconbtn{width:36px;height:36px;padding:0!important;display:inline-grid!important;place-items:center;border-radius:10px!important}
+  .iconbtn svg{width:18px;height:18px}
+  .menu-btn{display:none!important}
+  .scrim{display:none}
+
+  main{width:100%;max-width:1320px;margin:0 auto;padding:26px 32px 64px}
+
+  /* Phone & small tablet: the sidebar slides in over the page. */
+  @media (max-width:960px){
+    .shell{grid-template-columns:1fr}
+    aside.side{position:fixed;left:0;top:0;bottom:0;width:min(84vw,var(--side-w));
+      transform:translateX(-102%);transition:transform .24s cubic-bezier(.2,.8,.25,1);box-shadow:var(--shadow-lg)}
+    body.nav-open aside.side{transform:none}
+    body.nav-open .scrim{display:block;position:fixed;inset:0;z-index:35;background:rgba(8,13,25,.5);
+      backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+    .menu-btn{display:inline-grid!important}
+    .topbar{padding:0 14px}
+    .topbar .crumb .grp,.topbar .crumb .sep{display:none}
+    .topbar .acts .hide-sm{display:none}
+    main{padding:18px 16px 40px}
   }
-  nav.tabs button:hover{background:var(--paper-2);color:var(--ink);border-color:var(--line)}
-  nav.tabs button.active{background:var(--btn-bg);color:var(--btn-fg);border-color:transparent;
-    font-weight:600;box-shadow:var(--shadow)}
-  nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   .seg{display:flex;background:var(--sunken);border:1px solid var(--line);
     border-radius:12px;padding:4px;margin:18px 0;gap:4px}
@@ -282,25 +345,25 @@
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
   .field{min-width:150px}
-  .section-title{display:flex;align-items:center;gap:10px;margin:0 0 16px}
-  .section-title h2{font-size:26px;letter-spacing:-.025em}
-  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--accent-deep);margin-bottom:4px}
+  .section-title{display:flex;align-items:center;gap:10px;margin:0 0 18px}
+  .section-title h2{font-size:26px;font-weight:700;letter-spacing:-.03em}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:5px}
 
   /* ---- Sign in ----
      A dot grid under two soft washes of the accent: enough atmosphere to
      make the entry point feel like a place, not enough to read as noise. */
   .auth-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;
     background:
-      radial-gradient(820px 460px at 12% -12%, var(--accent-tint), transparent 68%),
-      radial-gradient(680px 400px at 104% 108%, var(--blue-soft), transparent 66%),
-      radial-gradient(circle at 1px 1px, var(--line-strong) 1px, transparent 0) 0 0/22px 22px,
+      radial-gradient(900px 520px at 8% -10%, #6366f133, transparent 65%),
+      radial-gradient(760px 460px at 105% 110%, #06b6d426, transparent 62%),
+      radial-gradient(600px 360px at 95% -5%, #8b5cf626, transparent 60%),
       var(--paper);
   }
-  .auth-card{width:100%;max-width:410px;background:var(--paper-2);border:1px solid var(--line);
-    border-radius:18px;padding:32px;box-shadow:var(--shadow-lg)}
-  .auth-card .mark-lg{width:48px;height:48px;border-radius:14px;color:#fff;
-    background:linear-gradient(150deg,var(--accent),var(--accent-deep));
+  .auth-card{width:100%;max-width:420px;background:var(--paper-2);border:1px solid var(--line);
+    border-radius:22px;padding:34px;box-shadow:var(--shadow-lg)}
+  .auth-card .mark-lg{width:50px;height:50px;border-radius:15px;color:#fff;
+    background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#06b6d4 100%);
     display:grid;place-items:center;font-weight:700;font-size:18px;letter-spacing:.02em;
     margin-bottom:16px;box-shadow:inset 0 1px 0 #ffffff40,var(--shadow-md)}
 
@@ -308,7 +371,7 @@
   .modal-bg{position:fixed;inset:0;background:rgba(8,13,19,.5);display:grid;place-items:center;
     padding:18px;z-index:50;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
     animation:mbgIn .16s ease-out}
-  .modal{background:var(--paper-2);border:1px solid var(--line);border-radius:18px;
+  .modal{background:var(--paper-2);border:1px solid var(--line);border-radius:20px;
     max-width:560px;width:100%;padding:26px;max-height:90vh;overflow:auto;
     -webkit-overflow-scrolling:touch;box-shadow:var(--shadow-lg);
     animation:mUp .22s cubic-bezier(.2,.8,.25,1)}
@@ -320,9 +383,9 @@
   /* ---- Toast ---- */
   #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(140%);
     background:var(--btn-bg);color:var(--btn-fg);padding:12px 18px;border-radius:12px;
-    font-size:14px;font-weight:500;z-index:99;transition:transform .28s cubic-bezier(.2,.8,.25,1);
-    box-shadow:var(--shadow-lg);max-width:90vw}
-  #toast.show{transform:translateX(-50%) translateY(0)}
+    font-size:14px;font-weight:500;z-index:99;transition:transform .28s cubic-bezier(.2,.8,.25,1),opacity .2s,visibility .2s;
+    box-shadow:var(--shadow-lg);max-width:90vw;opacity:0;visibility:hidden}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible}
   #toast.err{background:var(--clay);color:#fff}
 
   /* Keyboard focus is always visible. */
@@ -354,7 +417,9 @@
   /* ---- Metrics ---- */
   .stat{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
   .stat .b{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);
-    padding:14px 18px;min-width:132px;box-shadow:var(--shadow)}
+    padding:16px 20px;min-width:140px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .stat .b::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;
+    background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4);opacity:.85}
   .stat .n{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--ink);
     letter-spacing:-.03em;line-height:1.15}
   .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);
@@ -658,14 +723,9 @@
 
   /* ---- Phone ---- */
   @media (max-width:640px){
-    main{padding:0 14px 32px}
-    .who .name{display:none}
+    main{padding:16px 14px 32px}
     th,td{padding:9px 8px}
     body{font-size:15px}
-    nav.tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;-webkit-overflow-scrolling:touch;
-      scrollbar-width:none;margin:0 -14px 16px;padding:10px 14px;gap:4px}
-    nav.tabs::-webkit-scrollbar{display:none}
-    nav.tabs button{padding:10px 14px;flex:0 0 auto;font-size:14px}
     /* big thumb targets for taking attendance on a phone */
     .seg3 button{padding:12px 16px;font-size:15px;min-height:44px}
     .btn{padding:12px 16px}
@@ -713,7 +773,8 @@
   }
 
   @media print{
-    header.app,nav.tabs,.toolbar,.btn,#toast{display:none!important}
+    header.app,aside.side,.topbar,.scrim,nav.tabs,.toolbar,.btn,#toast{display:none!important}
+    .shell{display:block} main{padding:0;max-width:none}
     body{background:#fff;color:#000;font-size:11pt}
     .card{box-shadow:none;border:1px solid #b6bcc3;break-inside:avoid}
     th{background:#eef1f5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1506,6 +1567,85 @@ const messagesOn       = () => !messagesOff(activeSemester());
    and reappears exactly as it was if the step is switched back on. */
 const nominationsOff   = sem => !!sem?.nominationsOff;
 const availabilityOff  = sem => !!sem?.availabilityOff;
+
+/* ---- The CoC Panel Documents folder and the report deadline -----------
+   Each panel has ONE shared folder: the students' CoC proposals, their
+   presentation slides and the CoC Examination Report Form. It is still
+   stored in the panel's old `reportLink` field, so a link saved before the
+   rename carries on working. Only the panel's assessors are ever shown it.
+
+   The deadline is a semester setting: "the completed report form, with
+   the decision, reaches the Research Office within N business days of the
+   presentation". Each student's form is due N business days after THEIR
+   presentation day, so every panel member gets their deadline worked out
+   from the running order without anyone typing a date. A date typed on a
+   panel (the old `reportDue`) overrides the rule for that panel only. */
+const DOCS_NAME      = "CoC Panel Documents";
+const DOCS_FOLDER    = "CoC Panel Documents folder";
+const DOCS_OPEN      = "Open the CoC Panel Documents folder";
+const DOCS_CONTENTS  = "the students' CoC proposals, their presentation slides and the CoC Examination Report Form";
+const WEEKDAY_SHORT  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const reportDueDays  = sem => { const n=parseInt(sem?.reportDueDays,10); return n>0?Math.min(n,60):0; };
+const reportWeekend  = sem => Array.isArray(sem?.reportWeekend)
+  ? sem.reportWeekend.map(Number).filter(n=>n>=0&&n<=6) : [0,6];     // Sat & Sun unless set
+const reportHolidays = sem => Array.isArray(sem?.reportHolidays)
+  ? sem.reportHolidays.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x))) : [];
+const researchOfficeEmail = sem => String(sem?.researchOfficeEmail||"").trim();
+const docsLinkOf     = g => String(g?.reportLink||"").trim();
+const ymdOf = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+/* The day N business days after `ymd`. The presentation day itself is day
+   0, so 4 business days after a Monday presentation is the Friday (with a
+   Sat–Sun weekend). Weekend days and listed holidays are skipped. */
+function addBusinessDays(ymd,n,sem){
+  const dt=new Date(String(ymd||"")+"T00:00:00");
+  if(isNaN(dt)||!(n>0)) return "";
+  const wk=reportWeekend(sem), hol=new Set(reportHolidays(sem));
+  if(wk.length>=7) return "";
+  let left=n, guard=0;
+  while(left>0&&guard<800){
+    dt.setDate(dt.getDate()+1); guard++;
+    if(wk.includes(dt.getDay())||hol.has(ymdOf(dt))) continue;
+    left--;
+  }
+  return ymdOf(dt);
+}
+/* One student's report deadline on panel g. */
+function studentReportDue(g,id,sem){
+  if(g?.reportDue) return String(g.reportDue);
+  const n=reportDueDays(sem); if(!n) return "";
+  const sl=(g?.slots||[]).find(s=>s.studentDocId===id&&s.start)||null;
+  const d=sl?(sl.date||(Array.isArray(g?.sessions)?g.sessions:[]).find(x=>x.id===g?.chosenSessionId)?.date||""):"";
+  return d?addBusinessDays(d,n,sem):"";
+}
+/* The panel's deadline — the latest of its students'. Returns
+   {date, auto, from, multi, off, pending}. */
+function panelReportDue(g,sem){
+  if(g?.reportDue) return {date:String(g.reportDue),auto:false,from:"",multi:false};
+  const n=reportDueDays(sem);
+  if(!n) return {date:"",auto:true,off:true};
+  const sessDate=(Array.isArray(g?.sessions)?g.sessions:[]).find(x=>x.id===g?.chosenSessionId)?.date||"";
+  const ids=Array.isArray(g?.studentIds)?g.studentIds:[];
+  const dates=ids.map(id=>{ const sl=(g?.slots||[]).find(s=>s.studentDocId===id&&s.start); return sl?(sl.date||sessDate):""; }).filter(Boolean);
+  if(!dates.length&&sessDate) dates.push(sessDate);
+  if(!dates.length) return {date:"",auto:true,pending:true};
+  const multi=new Set(dates).size>1;
+  const last=dates.sort().pop();
+  return {date:addBusinessDays(last,n,sem),auto:true,from:last,multi};
+}
+const dueLong = ymd => { if(!ymd) return ""; const dt=new Date(ymd+"T00:00:00");
+  return isNaN(dt)?ymd:dt.toLocaleDateString("en-US",{weekday:"long"})+" "+longDate(ymd); };
+/* "overdue", "due today", "3 days left" — against today's date. */
+function dueState(ymd){
+  if(!ymd) return {cls:"none",txt:""};
+  const t=new Date(); t.setHours(0,0,0,0);
+  const d=new Date(ymd+"T00:00:00"); const days=Math.round((d-t)/86400000);
+  if(isNaN(days)) return {cls:"none",txt:""};
+  if(days<0) return {cls:"missed",txt:"date passed"};
+  if(days===0) return {cls:"pending",txt:"due today"};
+  return {cls:days<=2?"pending":"approved",txt:days+" day"+(days===1?"":"s")+" left"};
+}
+const dueRuleText = sem => { const n=reportDueDays(sem);
+  return n?n+" business day"+(n===1?"":"s")+" after the presentation":""; };
 function semOf(id){ return S.semesters.find(s=>s.id===id)||null; }
 function unitsOf(sem){ return Array.isArray(sem?.units)?sem.units:[]; }
 function unitById(sem,unitId){ return unitsOf(sem).find(u=>u.id===unitId)||null; }
@@ -2247,11 +2387,12 @@ async function saveGroup(g){
        panel rather than on each student. Always written as a string — an
        absent key and `undefined` are different things to Firestore. */
     meetingLink:String(g.meetingLink||"").trim(),
-    /* The shared CoC examination report: ONE file per panel, held on the
-       office's own OneDrive or Google Drive, which every assessor on the
-       panel edits — marks and comments for all of its students in the same
-       document. The hub stores only the address and when it is due; the
-       file, its contents and who may edit it stay with the drive. Listed
+    /* The CoC Panel Documents folder: ONE shared folder per panel on the
+       office's OneDrive / SharePoint / Google Drive, holding the students'
+       CoC proposals, slides and the CoC Examination Report Form. Kept under
+       the old field name `reportLink` so links saved earlier still work.
+       `reportDue` is now only an optional per-panel OVERRIDE — normally the
+       deadline is worked out from the semester's business-day rule. Listed
        here because this record is rebuilt from a fixed list of fields on
        every save, and a field left off the list is quietly lost. */
     reportLink:String(g.reportLink||"").trim(),
@@ -2918,18 +3059,27 @@ async function viewPanels(v){
        student list — it is the one thing an assessor comes back to this
        screen for after the presentations. Released panels only, for the
        same reason the students are hidden until then. */
-    const forms=asMember.filter(g=>isAssessorReleased(g)&&String(g.reportLink||"").trim());
+    const semA=activeSemester();
+    const forms=asMember.filter(g=>isAssessorReleased(g)&&(docsLinkOf(g)||panelReportDue(g,semA).date));
     if(forms.length){
       const strip=el("div",{style:"padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(127,127,127,.05)"});
       strip.append(el("div",{class:"ui",style:"font-weight:700;font-size:13px;margin-bottom:6px"},
-        "CoC Panel Examination Report Form"+(forms.length===1?"":"s")));
-      forms.forEach(g=>strip.append(el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0"},
-        el("span",{class:"ui",style:"font-size:13.5px;min-width:140px"},g.label||"Panel"),
-        joinLink(String(g.reportLink).trim(),"Open the CoC Panel Examination Report Form"),
-        g.reportDue?el("span",{class:"pill pending",style:"font-size:11.5px"},"Due "+prettyDate(g.reportDue)):el("span",{}))));
+        DOCS_NAME+" & report deadline"+(forms.length===1?"":"s")));
+      forms.forEach(g=>{
+        const pd=panelReportDue(g,semA), ds=dueState(pd.date);
+        strip.append(el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0"},
+          el("span",{class:"ui",style:"font-size:13.5px;min-width:140px"},g.label||"Panel"),
+          docsLinkOf(g)?joinLink(docsLinkOf(g),DOCS_OPEN):el("span",{class:"pill none",style:"font-size:11.5px"},"Folder not shared yet"),
+          pd.date?el("span",{class:"pill "+ds.cls,style:"font-size:11.5px",
+            title:pd.auto?"Worked out automatically: "+dueRuleText(semA)+(pd.multi?" (latest presentation day)":""):"Set by the MRes office for this panel"},
+            "Report due "+prettyDate(pd.date)+(ds.txt?" · "+ds.txt:"")):el("span",{})));
+      });
+      const ro=researchOfficeEmail(semA);
       strip.append(el("p",{class:"muted ui",style:"margin:6px 0 0;font-size:12.5px"},
-        "One shared file per panel — all its assessors fill in the same document, so edit it online rather than downloading a copy. "+
-        "If it asks for permission, tell the MRes office which address you use for OneDrive / Google Drive."));
+        "The folder holds "+DOCS_CONTENTS+". "+
+        (reportDueDays(semA)?"Send the completed CoC Examination Report Form, with the decision, to the Research Office"+(ro?" ("+ro+")":"")+
+          " within "+dueRuleText(semA)+" — each student's own deadline is under their time below. ":"")+
+        "If the folder asks for permission, tell the MRes office which address you use for OneDrive / Google Drive."));
       c.append(strip);
     }
     const t=el("table",{});
@@ -2967,6 +3117,10 @@ async function viewPanels(v){
         if(isScheduled(g,id)&&partsLine(g,slot)) timeCell.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(g,slot)));
         const jl=slotLink(g,slot);
         if(jl) timeCell.append(el("div",{style:"margin-top:4px"},joinLink(jl,"Join")));
+        const sDue=studentReportDue(g,id,activeSemester());
+        if(sDue){ const ds=dueState(sDue);
+          timeCell.append(el("div",{style:"margin-top:4px"},el("span",{class:"pill "+ds.cls,style:"font-size:11px"},
+            "Report due "+prettyDate(sDue)+(ds.txt?" · "+ds.txt:"")))); }
         tb.append(el("tr",{},
           el("td",{},el("strong",{},s.name),
             el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID")),
@@ -3363,9 +3517,14 @@ async function viewPanelAdmin(v){
         :el("span",{}),
       /* The shared examination report, to the assessors only. Shown once
          any panel has a form, so it does not clutter the bar before then. */
-      groups.some(g=>String(g.reportLink||"").trim())
-        ?el("button",{class:"btn ghost",title:"Send each assessor the shared CoC Panel Examination Report Form for their panels",
-            onclick:()=>reportEmailDialog()},"\u2709 Send CoC Panel Examination Report Forms")
+      groups.some(g=>docsLinkOf(g))
+        ?el("button",{class:"btn ghost",title:"Send each assessor the "+DOCS_FOLDER+" for their panels, with their report deadlines",
+            onclick:()=>reportEmailDialog()},"\u2709 Send "+DOCS_NAME)
+        :el("span",{}),
+      /* Every panel member's report deadline on one screen. */
+      groups.length
+        ?el("button",{class:"btn ghost",title:"Each panel member's CoC Examination Report deadlines, worked out from the presentation times",
+            onclick:()=>deadlinesDialog()},"\u23f1 Report deadlines")
         :el("span",{}),
       /* Supervisors get their own students' times, across every panel
          those students sit on, rather than one panel at a time. */
@@ -3738,31 +3897,49 @@ async function viewPanelAdmin(v){
     // ---- the shared examination report ----
     // Assessors only. It carries marks and comments on the students, so it
     // is never put in front of a supervisor or a student by this app.
-    const rLink=String(g.reportLink||"").trim();
-    const rBox=step("report","CoC Panel Examination Report Form",
-      rLink?(g.reportDue?"due "+prettyDate(g.reportDue):"set"):"none",false);
+    const rLink=docsLinkOf(g);
+    const semR=activeSemester(), pdR=panelReportDue(g,semR);
+    const rBox=step("report",DOCS_NAME+" & report deadline",
+      rLink?(pdR.date?"due "+prettyDate(pdR.date):"folder set"):(pdR.date?"due "+prettyDate(pdR.date):"none"),false);
     const rRow=el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;margin-bottom:6px"});
     if(rLink){
-      rRow.append(joinLink(rLink,"Open the CoC Panel Examination Report Form"),
+      rRow.append(joinLink(rLink,DOCS_OPEN),
         el("button",{class:"btn sm ghost",onclick:()=>setReportLink(g)},"Change"),
         el("button",{class:"btn sm ghost",onclick:()=>{
-          navigator.clipboard?.writeText(rLink).then(()=>toast("Report link copied."),
+          navigator.clipboard?.writeText(rLink).then(()=>toast("Folder link copied."),
             ()=>toast("Copy failed — select the link manually.",true));
         }},"Copy"),
         el("button",{class:"btn sm",onclick:()=>reportEmailDialog({groupId:g.id})},
           "✉ Send to this panel's assessors"));
     } else {
-      rRow.append(el("span",{class:"pill pending"},"No CoC Panel Examination Report Form yet"),
-        el("button",{class:"btn sm",onclick:()=>setReportLink(g)},"Add the CoC Panel Examination Report Form link"));
+      rRow.append(el("span",{class:"pill pending"},"No "+DOCS_FOLDER+" yet"),
+        el("button",{class:"btn sm",onclick:()=>setReportLink(g)},"Add the "+DOCS_FOLDER+" link"));
     }
     rBox.append(rRow);
     rBox.append(rLink
-      ? el("p",{class:"muted ui",style:"margin:0 0 16px;font-size:12.5px;word-break:break-all"},
-          rLink+(g.reportDue?"  ·  due "+longDate(g.reportDue):""))
-      : el("p",{class:"muted",style:"margin:0 0 16px"},
-          "The one shared file this panel's assessors fill in — marks and comments for all "+
-          groupStudents(g).length+" of its students. Put it on OneDrive or Google Drive, give the assessors edit "+
-          "access there, and paste its link here. Only this panel's assessors are shown it."));
+      ? el("p",{class:"muted ui",style:"margin:0 0 8px;font-size:12.5px;word-break:break-all"},rLink)
+      : el("p",{class:"muted",style:"margin:0 0 8px"},
+          "One shared folder for this panel's assessors, holding "+DOCS_CONTENTS+" for all "+
+          groupStudents(g).length+" of its students. Put it on OneDrive, SharePoint or Google Drive, share it with the "+
+          "assessors there, and paste its link here. Only this panel's assessors are shown it."));
+    /* The deadline line — automatic from Settings unless overridden. */
+    const dueLine=el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 16px"});
+    if(pdR.date){
+      const ds=dueState(pdR.date);
+      dueLine.append(el("span",{class:"pill "+ds.cls},"Report due "+dueLong(pdR.date)+(ds.txt?" · "+ds.txt:"")),
+        el("span",{class:"muted ui",style:"font-size:12.5px"},
+          pdR.auto
+            ? "Automatic: "+dueRuleText(semR)+(pdR.multi?" — the latest of its students' days; each student has their own deadline":"")+
+              ", for all "+groupMembers(g).length+" panel member"+(groupMembers(g).length===1?"":"s")+"."
+            : "Set by hand for this panel (overrides the "+(reportDueDays(semR)?dueRuleText(semR)+" rule":"Settings rule")+")."));
+    }else if(pdR.off){
+      dueLine.append(el("span",{class:"pill none"},"No report deadline"),
+        el("span",{class:"muted ui",style:"font-size:12.5px"},"Set the number of business days in Settings and every panel's deadline is worked out from its presentation times."));
+    }else{
+      dueLine.append(el("span",{class:"pill pending"},"Deadline follows the schedule"),
+        el("span",{class:"muted ui",style:"font-size:12.5px"},"Worked out ("+dueRuleText(semR)+") once the students have a presentation day."));
+    }
+    rBox.append(dueLine);
 
     if(chosen){
       const ttBox=step("timetable","Presentation timetable",
@@ -4059,71 +4236,94 @@ async function viewPanelAdmin(v){
      URLs carry query strings that must not be "tidied" — and only turned
      into an href when it is rendered. Clearing the box removes it. */
   /* ============================================================
-     CoC EXAMINATION REPORT FORM
-     The office already has the form and already runs it the right way: one
-     shared file per panel, which all its assessors edit together, marks and
-     comments for every student in one place. What it lacked was a way to
-     get each assessor to the right file. This stores that file's address on
-     the panel and delivers it — on the panel card, in the assessor's own
-     CoC tab, in their PIN view, and by email — and changes nothing else.
+     CoC PANEL DOCUMENTS FOLDER + REPORT DEADLINES
+     One shared folder per panel on the office's OneDrive / SharePoint /
+     Google Drive, holding the students' CoC proposals, their slides and
+     the CoC Examination Report Form. The hub stores only the folder's
+     address (in the panel's `reportLink` field, kept for old records) and
+     delivers it — on the panel card, in the assessor's own CoC tab, in
+     their PIN view, and by email.
 
-     Who can EDIT the file is decided by OneDrive or Google Drive, not here.
-     The link is only a pointer; the drive's sharing settings are the lock.
-     That is said wherever the link is set, because it is the one thing that
-     can go wrong without the app being able to see it.
+     The deadline for the report form comes from Settings: N business days
+     after each student's presentation. Nobody types a date; it moves by
+     itself when the running order moves. A panel can still be given its
+     own date by hand, which then wins for that panel.
 
-     Assessors only, throughout. The report holds marks and comments on the
-     students, so no supervisor-facing or student-facing screen or email in
-     this app ever carries it.
+     Who can OPEN the folder is decided by the drive, not here. The link is
+     only a pointer; the drive's sharing settings are the lock.
+
+     Assessors only, throughout. The folder holds the report form with
+     marks and decisions, so no supervisor-facing or student-facing screen
+     or email in this app ever carries it.
      ============================================================ */
   function reportLinkWarnings(url){
     const u=String(url||"").trim(), out=[];
     if(!u) return out;
     if(!/^https:\/\//i.test(u)) out.push("It doesn't start with https:// — paste the full address from the Share button.");
-    /* Google's address shows whether it was copied from a view-only page;
-       OneDrive's does not, so only the Google case can be caught here. */
-    if(/docs\.google\.com\/.+\/(view|preview)(\b|[?#])/i.test(u))
-      out.push("This Google link ends in /view — it may open read-only. Use Share → Editor → Copy link instead.");
+    /* A single Google Doc / Sheet / Slides file rather than a folder. */
+    if(/docs\.google\.com\/(document|spreadsheets|presentation|forms)\//i.test(u))
+      out.push("This looks like a single Google file, not a folder. Put the proposals, slides and report form in one Drive folder and share the FOLDER's link.");
+    if(/drive\.google\.com\/file\//i.test(u))
+      out.push("This is a link to one file in Google Drive, not a folder — use the folder's Share link instead.");
+    if(/\.(docx?|pptx?|xlsx?|pdf)(\?|#|$)/i.test(u)||/[?&]action=(edit|view|embedview)/i.test(u))
+      out.push("This looks like a link to a single document, not a folder. Share the folder that holds all of the panel's files.");
     if(/\/(copy|template\/preview)(\b|[?#])/i.test(u))
-      out.push("This link makes each person their own COPY, so the assessors would not be filling in the same file.");
+      out.push("This link makes each person their own COPY rather than opening the shared folder.");
     return out;
   }
   function setReportLink(g){
+    const sem=activeSemester();
     const inp=el("input",{value:g.reportLink||"",
-      placeholder:"https://… (OneDrive / SharePoint / Google Drive share link)"});
+      placeholder:"https://… (OneDrive / SharePoint / Google Drive FOLDER share link)"});
+    const useOwn=el("input",{type:"checkbox",style:"width:auto;margin:0",...(g.reportDue?{checked:"checked"}:{})});
     const due=el("input",{type:"date",value:g.reportDue||""});
+    const dueWrap=el("div",{style:"margin-top:6px"},due);
+    const autoTxt=el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"});
     const warn=el("div",{});
     const paint=()=>{
       warn.innerHTML="";
       reportLinkWarnings(inp.value).forEach(t=>warn.append(noticeBar("amber",t)));
+      dueWrap.style.display=useOwn.checked?"":"none";
+      const auto=panelReportDue({...g,reportDue:""},sem);
+      autoTxt.textContent=auto.date
+        ? "Automatic deadline: "+dueLong(auto.date)+" — "+dueRuleText(sem)+
+          (auto.multi?" (latest presentation day; each student gets their own date)":"")+". Every member of this panel is given it."
+        : auto.off
+          ? "No automatic deadline — set the number of business days in Settings → CoC report deadline."
+          : "The automatic deadline ("+dueRuleText(sem)+") appears once the students have a presentation day.";
     };
-    inp.addEventListener("input",paint); paint();
+    inp.addEventListener("input",paint); useOwn.addEventListener("change",paint); paint();
     const ms=groupMembers(g);
     const noMail=ms.filter(m=>!memberEmails(m).length);
-    modal(g.reportLink?"Change the CoC Panel Examination Report Form — "+(g.label||"panel"):"Add the CoC Panel Examination Report Form — "+(g.label||"panel"),
+    modal((g.reportLink?"Change the ":"Add the ")+DOCS_FOLDER+" — "+(g.label||"panel"),
       el("div",{class:"grid"},
-        el("div",{},el("label",{},"Link to the shared report file"),inp,warn),
-        el("div",{},el("label",{},"Due by (optional)"),due,
+        el("div",{},el("label",{},"Link to the panel's shared folder"),inp,
           el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},
-            "Shown beside the link and in the email, so the assessors know when marks are needed.")),
+            "One folder for the whole panel, holding "+DOCS_CONTENTS+"."),warn),
+        el("div",{},el("label",{},"CoC Examination Report deadline"),autoTxt,
+          el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap;margin-top:8px;font-weight:400"},
+            useOwn,el("span",{},"Use a different date for this panel only")),
+          dueWrap),
         el("div",{},el("p",{class:"muted",style:"margin:0 0 6px"},
-          "Before you send it, share the file on the drive with this panel's assessors as EDITORS:"),
+          "Before you send it, share the folder on the drive with this panel's assessors:"),
           el("ul",{class:"muted",style:"margin:0 0 6px;padding-left:20px;font-size:13.5px"},
             ...ms.map(m=>el("li",{},(m.name||"?")+(isChair(g,m)?" (chair)":"")+" — "+
               (memberEmails(m).join(", ")||"no email on record")))),
           el("p",{class:"muted",style:"margin:0;font-size:12.5px"},
-            "Sharing with those addresses (“Specific people”) keeps the marks private: a forwarded link opens "+
-            "nothing for anyone else. “Anyone with the link can edit” also works — useful for an external "+
-            "assessor with no university account — but then anyone the email reaches can change the marks. "+
+            "Sharing with those addresses (“Specific people”) keeps the proposals and the report private: a forwarded link opens "+
+            "nothing for anyone else. “Anyone with the link” also works — useful for an external "+
+            "assessor with no university account — but then anyone the email reaches can open it. "+
+            "Give the assessors edit access if they fill in the report form inside the folder. "+
             "The hub only stores the address; the drive decides who gets in."+
             (noMail.length?"  "+noMail.map(m=>m.name||"?").join(", ")+(noMail.length===1?" has":" have")+
               " no email here, so the drive will need their address from you directly.":"")))),
       async()=>{
         const v=inp.value.trim();
         if(v&&!/^https?:\/\//i.test(v)){ toast("That doesn't look like a link — paste the full https:// address.",true); return false; }
-        const ok=await persist({...g,reportLink:v,reportDue:v?due.value:""},
-          v?"CoC Panel Examination Report Form saved for "+(g.label||"the panel")+".":"CoC Panel Examination Report Form removed.");
-        /* Panel members without a login reach the form through their PIN,
+        if(useOwn.checked&&!due.value){ toast("Pick the date, or untick “Use a different date”.",true); return false; }
+        const ok=await persist({...g,reportLink:v,reportDue:useOwn.checked?due.value:""},
+          v?DOCS_FOLDER+" saved for "+(g.label||"the panel")+".":(g.reportLink?DOCS_FOLDER+" removed.":"Saved."));
+        /* Panel members without a login reach the folder through their PIN,
            whose page is a snapshot — so it is republished now rather than
            waiting for somebody to remember "Refresh what the PINs show". */
         await refreshPinViews();
@@ -4131,13 +4331,82 @@ async function viewPanelAdmin(v){
       },"Save");
   }
 
+  /* Every panel member's deadlines on one screen: one row per member per
+     student, soonest first. Worked out live from the running order and
+     the Settings rule, so it is never out of date. */
+  function deadlinesDialog(){
+    const sem=activeSemester();
+    const rows=[];
+    groups.forEach(g=>groupMembers(g).forEach(m=>groupStudents(g).forEach(id=>{
+      const st=students.find(x=>x.id===id); if(!st) return;
+      const sl=slotOfStudent(g,id), d=sl?slotDate(g,sl):"";
+      rows.push({member:m.name||"?",email:memberEmails(m).join(", "),panel:g.label||"Panel",
+        role:isChair(g,m)?"Chair":"Member",released:isAssessorReleased(g),
+        student:st.name||"?",sid:st.sid||"",pres:d?prettyDate(d)+(sl?.start?" "+clockTime(sl.start):""):"",
+        presYmd:d,due:studentReportDue(g,id,sem)});
+    })));
+    const sortBy=el("select",{},
+      el("option",{value:"member"},"Panel member"),
+      el("option",{value:"due"},"Deadline (soonest first)"),
+      el("option",{value:"panel"},"Panel"));
+    const tableHost=el("div",{style:"max-height:55vh;overflow:auto"});
+    const HEAD=["Panel member","Panel","Role","Student","Presentation","Report due","Status"];
+    const cellsOf=r=>{ const ds=dueState(r.due);
+      return [r.member,r.panel+(r.released?"":" (not released)"),r.role,r.student+(r.sid?" ("+r.sid+")":""),
+        r.pres||"not scheduled",r.due?dueLong(r.due):(reportDueDays(sem)?"once scheduled":"—"),ds.txt]; };
+    const sorted=()=>rows.slice().sort((a,b)=>{
+      const byDue=String(a.due||"9999").localeCompare(String(b.due||"9999"));
+      if(sortBy.value==="due") return byDue||a.member.localeCompare(b.member);
+      if(sortBy.value==="panel") return a.panel.localeCompare(b.panel)||a.member.localeCompare(b.member)||byDue;
+      return a.member.localeCompare(b.member)||byDue;
+    });
+    function draw(){
+      tableHost.innerHTML="";
+      if(!rows.length){ tableHost.append(el("p",{class:"muted"},"No panel has both assessors and students yet.")); return; }
+      const t=el("table",{style:"width:100%;font-size:13px"});
+      t.append(el("thead",{},el("tr",{},...HEAD.map(h=>el("th",{},h)))));
+      const tb=el("tbody",{});
+      let last="";
+      sorted().forEach(r=>{
+        const ds=dueState(r.due), c=cellsOf(r);
+        const first=sortBy.value==="member"&&r.member!==last; last=r.member;
+        tb.append(el("tr",{style:first?"border-top:2px solid var(--line)":""},
+          el("td",{},sortBy.value==="member"&&!first?el("span",{class:"muted"},"″"):el("strong",{},r.member)),
+          el("td",{class:"muted"},c[1]),el("td",{},c[2]),el("td",{},c[3]),el("td",{class:"muted"},c[4]),
+          el("td",{},r.due?el("strong",{},c[5]):el("span",{class:"muted"},c[5])),
+          el("td",{},ds.txt?el("span",{class:"pill "+ds.cls,style:"font-size:11px"},ds.txt):el("span",{}))));
+      });
+      t.append(tb); tableHost.append(t);
+    }
+    sortBy.onchange=draw;
+    const n=reportDueDays(sem), ro=researchOfficeEmail(sem);
+    modal("CoC Examination Report deadlines",
+      el("div",{class:"grid"},
+        n?noticeBar("blue","Rule for "+(sem?.label||"this semester")+": the completed CoC Examination Report Form, with the decision, reaches the Research Office"+
+            (ro?" ("+ro+")":"")+" within "+dueRuleText(sem)+". Weekend: "+
+            (reportWeekend(sem).map(d=>WEEKDAY_SHORT[d]).join(" & ")||"none")+
+            (reportHolidays(sem).length?" · "+reportHolidays(sem).length+" holiday"+(reportHolidays(sem).length===1?"":"s")+" skipped":"")+".")
+          :noticeBar("amber","No business-day rule is set for this semester, so only panels given a date by hand have a deadline. Set it in Settings → CoC report deadline."),
+        el("div",{class:"row",style:"gap:10px;align-items:flex-end;flex-wrap:wrap"},
+          el("div",{style:"min-width:220px"},el("label",{},"Sort by"),sortBy),
+          el("button",{class:"btn sm ghost",onclick:async()=>{
+            const tsv=[HEAD.concat(["Email"]).join("\t")].concat(sorted().map(r=>cellsOf(r).concat([r.email]).join("\t"))).join("\n");
+            (await copyText(tsv))?toast("Copied — paste it into Excel or an email."):toast("Copy failed.",true);
+          }},"Copy as table")),
+        tableHost),
+      async()=>true,"Close");
+    const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+    draw();
+  }
+
   /* Sending it. Built on the same rule as the timetable's duplicate-free
      mode: an assessor sitting on three panels gets ONE email with three
      links, not three emails — and it goes only to assessors. */
   function reportEmailDialog(preset={}){
-    const semLabel=activeSemester()?.label||"";
-    const withLink=groups.filter(g=>String(g.reportLink||"").trim());
-    if(!withLink.length){ toast("No panel has a CoC Panel Examination Report Form link yet — add one on a panel card first.",true); return; }
+    const sem=activeSemester();
+    const semLabel=sem?.label||"";
+    const withLink=groups.filter(g=>docsLinkOf(g));
+    if(!withLink.length){ toast("No panel has a "+DOCS_FOLDER+" link yet — add one on a panel card first.",true); return; }
 
     const mode=el("select",{},
       el("option",{value:"each",...(preset.groupId?{}:{selected:"selected"})},
@@ -4184,34 +4453,40 @@ async function viewPanelAdmin(v){
       }
       if(!who.children.length) who.append(el("option",{value:""},"— nothing to send —"));
     }
-    /* One panel's block: which file, which students, when it's due. */
+    /* One panel's block: which folder, which students, when each report is due. */
     function panelBlock(L,g,forKey){
       const chair=groupMembers(g).find(m=>isChair(g,m));
       const mine=forKey?groupMembers(g).find(m=>memberKey(m)===forKey):null;
+      const pd=panelReportDue(g,sem);
       L.push("","── "+(g.label||"Panel")+(mine&&isChair(g,mine)?" — you are the chair":"")+
         (isAssessorReleased(g)?"":"  (DRAFT — may still change)")+" ──");
-      L.push("Report form:   "+String(g.reportLink||"").trim());
-      if(g.reportDue) L.push("Due by:        "+weekdayOf(g.reportDue)+" "+longDate(g.reportDue));
+      L.push("Folder:        "+docsLinkOf(g));
+      if(pd.date) L.push("Report due:    "+dueLong(pd.date)+
+        (pd.auto?" ("+dueRuleText(sem)+(pd.multi?"; latest student — see each date below":"")+")":""));
       L.push("Chair:         "+(chair?.name||"not yet set"));
       L.push("Assessors:     "+groupMembers(g).map(m=>m.name||"?").join(", "));
       const sts=groupStudents(g).map(id=>students.find(x=>x.id===id)).filter(Boolean)
         .sort((a,b)=>{ const sa=slotOfStudent(g,a.id), sb=slotOfStudent(g,b.id);
           return String(sa?slotDate(g,sa)+sa.start:"~").localeCompare(String(sb?slotDate(g,sb)+sb.start:"~")); });
-      L.push("","Students on this form ("+sts.length+"):");
+      L.push("","Students ("+sts.length+"):");
       sts.forEach(st=>{
-        const sl=slotOfStudent(g,st.id), d=sl?slotDate(g,sl):"";
+        const sl=slotOfStudent(g,st.id), d=sl?slotDate(g,sl):"", sd=studentReportDue(g,st.id,sem);
         L.push("  • "+(st.name||"?")+(st.sid?" ("+st.sid+")":"")+
-          (sl&&d?" — "+prettyDate(d)+" "+clockRange(sl.start,sl.end):""));
+          (sl&&d?" — presents "+prettyDate(d)+" "+clockRange(sl.start,sl.end):"")+
+          (sd&&pd.multi?" — report due "+prettyDate(sd):""));
         if(titleOf(st)) L.push("      “"+titleOf(st)+"”");
       });
     }
-    const howTo=[
-      "","How to fill it in:",
-      "  • It is ONE shared file for the whole panel. Please edit it online and don't download or make a copy —",
-      "    the other assessors are writing in the same document.",
-      "  • Enter your marks and comments for each student in your own section.",
-      "  • If the link says you need permission, reply to this email with the address you use for",
-      "    OneDrive / Google Drive and we will add you."];
+    function howTo(){
+      const ro=researchOfficeEmail(sem), n=reportDueDays(sem);
+      return ["","What's in the folder, and what to do:",
+        "  • The folder holds "+DOCS_CONTENTS+".",
+        "  • Please read each student's proposal and slides before their presentation.",
+        "  • After the presentation, complete the CoC Examination Report Form with the decision and send it to",
+        "    the Research Office"+(ro?" ("+ro+")":"")+(n?" within "+dueRuleText(sem)+" —":"")+" by the deadline shown above.",
+        "  • If the link says you need permission, reply to this email with the address you use for",
+        "    OneDrive / Google Drive and we will add you."];
+    }
     function target(){
       const none={to:[],gs:[]};
       if(mode.value==="panel"){
@@ -4224,17 +4499,17 @@ async function viewPanelAdmin(v){
     function regen(){
       const t=target();
       subject.value=t.panel
-        ? "MRes CoC Panel Examination Report Form — "+(t.panel.label||"your panel")+(semLabel?" ("+semLabel+")":"")
-        : "MRes CoC Panel Examination Report Form"+(t.gs.length===1?"":"s")+" — your panel"+(t.gs.length===1?"":"s")+(semLabel?" ("+semLabel+")":"");
+        ? "MRes "+DOCS_NAME+" — "+(t.panel.label||"your panel")+(semLabel?" ("+semLabel+")":"")
+        : "MRes "+DOCS_NAME+" — your panel"+(t.gs.length===1?"":"s")+(semLabel?" ("+semLabel+")":"");
       if(!edited){
         const L=[t.panel?"Dear panel members,":"Dear "+(t.person?.name||"colleague")+",",""];
         L.push(t.gs.length===1
-          ? "Here is the CoC Panel Examination Report Form for "+(t.gs[0]?.label||"your panel")+
-            (semLabel?" ("+semLabel+")":"")+". All of the panel's assessors fill in the same file."
-          : "Here are the CoC Panel Examination Report Forms for the "+t.gs.length+
-            " panels you are sitting on"+(semLabel?" ("+semLabel+")":"")+" — one shared file per panel.");
+          ? "Here is the "+DOCS_FOLDER+" for "+(t.gs[0]?.label||"your panel")+
+            (semLabel?" ("+semLabel+")":"")+" — one shared folder for the whole panel."
+          : "Here are the "+DOCS_NAME+" folders for the "+t.gs.length+
+            " panels you are sitting on"+(semLabel?" ("+semLabel+")":"")+" — one shared folder per panel.");
         t.gs.forEach(g=>panelBlock(L,g,t.person?.key));
-        L.push(...howTo);
+        L.push(...howTo());
         L.push("","Thank you,","MRes Coordination");
         body.value=t.gs.length?L.join("\n"):"";
       }
@@ -4248,12 +4523,15 @@ async function viewPanelAdmin(v){
         style:"margin:6px 0 0;font-size:13px;"+(strong?"font-weight:700;color:var(--clay-ink,#9a3412)":"color:var(--amber-ink)")},txt));
       const noMail=t.to.filter(x=>!x.emails.length).map(x=>x.name||"Someone");
       if(noMail.length) say(noMail.join(", ")+" "+(noMail.length===1?"has":"have")+" no email on file and will be left off.");
-      const noLink=groups.filter(g=>!String(g.reportLink||"").trim()).length;
-      if(noLink) say(noLink+" panel"+(noLink===1?" has":"s have")+" no CoC Panel Examination Report Form link yet and "+
+      const noLink=groups.filter(g=>!docsLinkOf(g)).length;
+      if(noLink) say(noLink+" panel"+(noLink===1?" has":"s have")+" no "+DOCS_FOLDER+" link yet and "+
         (noLink===1?"is":"are")+" not in this list.");
+      if(!reportDueDays(sem)) say("No report deadline rule is set in Settings, so the email gives no due date unless a panel has one set by hand.");
+      const undated=t.gs.filter(g=>!panelReportDue(g,sem).date&&reportDueDays(sem)).length;
+      if(undated) say(undated+" panel"+(undated===1?" has":"s have")+" no presentation day yet, so no deadline is shown for "+(undated===1?"it":"them")+".");
       if(!includeDraft.checked){
         const held=withLink.filter(g=>!isAssessorReleased(g)).length;
-        if(held) say(held+" panel"+(held===1?" with a form is":"s with forms are")+" not yet released to "+
+        if(held) say(held+" panel"+(held===1?" with a folder is":"s with folders are")+" not yet released to "+
           (held===1?"its":"their")+" assessors and left out. Tick the box to include "+(held===1?"it":"them")+" as draft.");
       }
       t.gs.forEach(g=>reportLinkWarnings(g.reportLink).forEach(x=>say((g.label||"Panel")+": "+x,true)));
@@ -4272,7 +4550,7 @@ async function viewPanelAdmin(v){
     who.onchange=()=>{ edited=false; regen(); };
     body.oninput=()=>{ edited=true; };
 
-    modal("Send the CoC Panel Examination Report Forms",
+    modal("Send the "+DOCS_NAME+" folders",
       el("div",{class:"grid"},
         el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
           el("div",{style:"flex:1;min-width:220px"},el("label",{},"Send"),mode),
@@ -4290,7 +4568,7 @@ async function viewPanelAdmin(v){
           el("div",{style:"margin-top:6px"},recip),
           warn),
         el("p",{class:"muted",style:"margin:0"},
-          "Goes to assessors only — never to supervisors or students, since the form carries marks. "+
+          "Goes to assessors only — never to supervisors or students, since the folder holds the report form. "+
           "Opens your mail app with the message filled in; you press send there, then use Next in the list.")),
       async()=>{
         const t=target();
@@ -7220,7 +7498,7 @@ function renderLogin(){
       el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start"},
         el("div",{class:"mark-lg"},"SH"), themeButton()),
       el("div",{class:"eyebrow"},"Research supervision coordination"),
-      el("h1",{style:"font-size:23px;margin:2px 0 4px;font-family:Georgia,serif"},"MRes Supervision Hub"),
+      el("h1",{style:"font-size:24px;margin:2px 0 4px;font-weight:700;letter-spacing:-.03em"},"MRes Supervision Hub"),
       el("p",{class:"muted"},"Sign in to manage students, timetables and meetings.")
     );
     const seg=el("div",{class:"seg"},
@@ -7499,61 +7777,115 @@ async function studentLookup(sid){
 /* ============================================================
    5. MAIN APP SHELL (admin + supervisor)
    ============================================================ */
+/* ---- Menu icons ----
+   Simple 24px line icons, drawn inline so the page needs no icon font. */
+const NAV_ICONS={
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  check:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+  award:'<circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  layers:'<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>'
+};
+function navIcon(name){
+  return el("span",{class:"ico","aria-hidden":"true",
+    html:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+(NAV_ICONS[name]||"")+'</svg>'});
+}
+const initialsOf=n=>String(n||"?").replace(/^(dr|prof|mr|mrs|ms|a\/prof)\.?\s+/i,"").split(/[\s@._-]+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("")||"?";
+
+/* Which tab is showing: the sidebar highlight and the top-bar title follow
+   S.tab, and are re-synced every time a screen is drawn — so a button deep
+   inside a screen that jumps to another tab keeps the menu honest too. */
+function syncNav(){
+  document.querySelectorAll("nav.tabs button[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===S.tab));
+  const info=(S.navIndex||{})[S.tab];
+  const g=document.querySelector(".topbar .grp"), pg=document.querySelector(".topbar .pg");
+  if(pg) pg.textContent=info?info.label:"";
+  if(g) g.textContent=info?info.group:"";
+  document.body.classList.remove("nav-open");
+}
+function goTab(id){ S.tab=id; drawMain(); try{ window.scrollTo({top:0}); }catch(e){} }
+
 function renderApp(){
   document.body.innerHTML="";
-  const header=el("header",{class:"app"},
-    el("div",{class:"brand"},
-      el("div",{class:"mark ui"},"SH"),
-      el("div",{},
-        el("h1",{},"MRes Supervision Hub"),
-        el("div",{class:"sub"},"Research supervision coordination"))
-    ),
-    el("div",{class:"who ui"},
-      el("div",{style:"text-align:right"},
-        el("div",{class:"name"},S.userName||S.user.email),
-        el("div",{class:"role"},S.role==="panellist"?"panel member":S.role)),
-      /* Reachable from every tab, because the question "can I have my
-         timetable?" is not asked from any particular screen. */
-      S.role==="admin"?el("span",{}):myTimetableButton("\u2913 My timetable","btn ghost sm"),
-      themeButton(),
-      el("button",{class:"btn ghost sm",onclick:logout},"Sign out"))
-  );
+  document.body.classList.remove("nav-open");
   // A co-supervisor-only staff member never SETS consultation times — they
   // only view what the principal has arranged, so their tab says so.
   const meSup=staffById(S.uid);
   const coOnly=S.role==="supervisor" && capOf(meSup)==="co";
-  /* A panel member supervises nobody, so every student-shaped tab would be
-     empty for them. They get the one screen that concerns them. */
-  const TABS = S.role==="admin"
-    ? [["students","Students"],["schedule","Week planner"],["timetables","Class timetables"],["consultations","Consultation times"],
-       ["meetinglog","Attendance"],...(messagesOn()?[["notes","Messages"]]:[]),
-       ["panels","CoC panels"],["report","Summary report"],
-       ["export","Moodle export"],["contacts","Contacts"],["people","Semesters & staff"],["settings","Settings"]]
+  /* The menu, grouped by what the work is about. A panel member supervises
+     nobody, so every student-shaped tab would be empty for them — they get
+     the one screen that concerns them. */
+  const GROUPS = S.role==="admin"
+    ? [["Supervision",[["students","Students","users"],["schedule","Week planner","calendar"],
+          ["timetables","Class timetables","clock"],["consultations","Consultation times","chat"],
+          ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
+       ["Confirmation of Candidature",[["panels","CoC panels","award"]]],
+       ["Reports & records",[["report","Summary report","chart"],["export","Moodle export","download"],["contacts","Contacts","book"]]],
+       ["Administration",[["people","Semesters & staff","layers"],["settings","Settings","gear"]]]]
     : S.role==="panellist"
-    ? [["panels","My CoC panels"]]
-    : [["students","My students"],["schedule","My week"],["timetables","My class time"],
-       ["consultations",coOnly?"View consultation time":"Set consultation time"],
-       ["meetinglog","Attendance"],...(messagesOn()?[["notes","Messages"]]:[]),
-       ["panels","CoC panel"]];
-  // guard FIRST: if current tab not in this role's set, default to the first,
-  // so the tab strip below is built with the correct button highlighted.
+    ? [["Confirmation of Candidature",[["panels","My CoC panels","award"]]]]
+    : [["My supervision",[["students","My students","users"],["schedule","My week","calendar"],["timetables","My class time","clock"],
+          ["consultations",coOnly?"View consultation time":"Set consultation time","chat"],
+          ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
+       ["Confirmation of Candidature",[["panels","CoC panel","award"]]]];
+  const TABS=GROUPS.flatMap(g=>g[1]);
+  S.navIndex={};
+  GROUPS.forEach(([gl,items])=>items.forEach(([id,label])=>{ S.navIndex[id]={label,group:gl}; }));
+  // guard FIRST: if current tab not in this role's set, default to the first.
   if(!TABS.some(t=>t[0]===S.tab)) S.tab=TABS[0][0];
-  const tabs=el("nav",{class:"tabs ui"});
-  TABS.forEach(([id,label])=>{
-    const b=el("button",{class:S.tab===id?"active":"",onclick:()=>{
-      S.tab=id;
-      // BUGFIX: drawMain() only re-renders the content pane, so the tab
-      // strip's highlight went stale (e.g. "My students" stayed selected
-      // while Attendance content was showing). Sync the active class here.
-      [...tabs.children].forEach(x=>x.classList.toggle("active",x===b));
-      drawMain();
-    }},label);
-    if(id==="notes"){ b.append(el("span",{class:"nbadge",style:"display:none"},"0")); S.notesTabBtn=b; }
-    tabs.append(b);
+
+  const tabs=el("nav",{class:"tabs ui","aria-label":"Main menu"});
+  GROUPS.forEach(([gl,items])=>{
+    tabs.append(el("div",{class:"navgroup"},gl));
+    items.forEach(([id,label,ic])=>{
+      const b=el("button",{class:S.tab===id?"active":"","data-tab":id,title:label,onclick:()=>goTab(id)},
+        navIcon(ic),el("span",{class:"navlabel"},label));
+      if(id==="notes"){ b.append(el("span",{class:"nbadge",style:"display:none"},"0")); S.notesTabBtn=b; }
+      tabs.append(b);
+    });
   });
+
+  const roleTxt=S.role==="panellist"?"Panel member":S.role==="admin"?"Administrator":"Supervisor";
+  const signOutBtn=el("button",{class:"btn ghost sm iconbtn",title:"Sign out","aria-label":"Sign out",onclick:logout});
+  signOutBtn.append(navIcon("logout"));
+  const side=el("aside",{class:"side ui"},
+    el("div",{class:"brand"},
+      el("div",{class:"mark ui"},"SH"),
+      el("div",{style:"min-width:0"},
+        el("h1",{},"MRes Supervision Hub"),
+        el("div",{class:"sub"},"Research supervision coordination"))),
+    tabs,
+    el("div",{class:"side-user"},
+      el("div",{class:"avatar"},initialsOf(S.userName||S.user?.email)),
+      el("div",{class:"who"},
+        el("div",{class:"name",title:S.user?.email||""},S.userName||S.user?.email||""),
+        el("div",{class:"role"},roleTxt)),
+      signOutBtn));
+
+  const menuBtn=el("button",{class:"btn ghost sm iconbtn menu-btn","aria-label":"Open menu",
+    onclick:()=>document.body.classList.toggle("nav-open")});
+  menuBtn.append(navIcon("menu"));
+  const topbar=el("div",{class:"topbar ui"},
+    menuBtn,
+    el("div",{class:"crumb"},el("span",{class:"grp"},""),el("span",{class:"sep"},"/"),el("span",{class:"pg"},"")),
+    el("div",{class:"acts"},
+      /* Reachable from every screen, because the question "can I have my
+         timetable?" is not asked from any particular one. */
+      S.role==="admin"?el("span",{}):myTimetableButton("⤓ My timetable","btn ghost sm hide-sm"),
+      themeButton("btn ghost sm iconbtn")));
+
   const main=el("main",{},el("div",{id:"view"}));
-  document.body.append(header,el("div",{},main),toastNode());
-  main.prepend(tabs);
+  const scrim=el("div",{class:"scrim",onclick:()=>document.body.classList.remove("nav-open")});
+  document.body.append(el("div",{class:"shell"},side,el("div",{class:"content"},topbar,main)),scrim,toastNode());
   drawMain();
   refreshUnreadBadge();
   showInboxBanner();
@@ -7597,10 +7929,7 @@ async function showInboxBanner(){
           "from your supervision threads"+(names.length?" \u00B7 "+names.slice(0,3).join(", ")+(names.length>3?" +"+(names.length-3)+" more":""):"")),
         el("span",{style:"flex:1;min-width:10px"}),
         el("button",{class:"btn sm",onclick:()=>{
-          S.tab="notes";
-          const strip=document.querySelector("nav.tabs");
-          if(strip) [...strip.children].forEach(x=>x.classList.toggle("active",x.textContent.startsWith("Messages")));
-          drawMain();
+          goTab("notes");
           bar.remove();
         }},"Read them"),
         el("button",{class:"btn ghost sm",onclick:()=>bar.remove()},"Dismiss")));
@@ -7620,6 +7949,7 @@ function semesterPicker(onChange){
 }
 
 async function drawMain(){
+  syncNav();
   const v=$("#view"); v.innerHTML="<div class='muted ui' style='padding:30px'>Loading…</div>";
   if(S.tab==="students") return viewStudents(v);
   if(S.tab==="schedule") return viewSchedule(v);
@@ -7766,6 +8096,92 @@ async function viewSettings(v){
       "the running order, the clash checks and the emails all work the same either way.",
     toast:off=>off?"Availability poll turned off.":"Availability poll turned back on."
   }));
+
+  // ---- CoC: examination report deadline ----
+  /* The business-day rule every panel member's deadline is worked out
+     from. Stored on the semester like the switches above. */
+  (function(){
+    const card=el("div",{class:"card",style:"margin-bottom:14px"});
+    const n0=reportDueDays(sem);
+    const days=el("input",{type:"number",min:"0",max:"60",step:"1",value:n0?String(n0):"",placeholder:"e.g. 4",style:"max-width:110px"});
+    const wk=new Set(reportWeekend(sem));
+    /* Shown Monday first; stored as JS day numbers (0 = Sunday). */
+    const wkBoxes=[1,2,3,4,5,6,0].map(d=>{
+      const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(wk.has(d)?{checked:"checked"}:{})});
+      cb.dataset.day=String(d);
+      return {d,cb,node:el("label",{class:"row",style:"gap:4px;align-items:center;cursor:pointer;flex-wrap:nowrap;font-weight:400;margin:0"},cb,el("span",{},WEEKDAY_SHORT[d]))};
+    });
+    const hols=el("textarea",{style:"min-height:70px;font-size:13px",
+      placeholder:"One date per line, e.g.\n2026-10-05\n2026-12-25"},reportHolidays(sem).join("\n"));
+    const ro=el("input",{type:"email",value:researchOfficeEmail(sem),placeholder:"research.office@university.edu"});
+    const preview=el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:12.5px"});
+    const draftSem=()=>({
+      reportDueDays:parseInt(days.value,10)>0?Math.min(parseInt(days.value,10),60):0,
+      reportWeekend:wkBoxes.filter(x=>x.cb.checked).map(x=>x.d),
+      reportHolidays:[...new Set(String(hols.value||"").split(/[\s,;]+/).map(x=>x.trim()).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)))].sort(),
+      researchOfficeEmail:ro.value.trim()});
+    function paint(){
+      const d=draftSem();
+      if(!d.reportDueDays){ preview.textContent="Off — no automatic deadline. Panels only have a deadline if you give one a date by hand."; return; }
+      if(d.reportWeekend.length>=7){ preview.textContent="Every day is ticked as a weekend day, so no deadline can be worked out."; return; }
+      /* A worked example on the next Monday, so the rule can be checked at a glance. */
+      const t=new Date(); t.setHours(0,0,0,0);
+      while(t.getDay()!==1) t.setDate(t.getDate()+1);
+      const ex=ymdOf(t), due=addBusinessDays(ex,d.reportDueDays,d);
+      preview.textContent="Example: a presentation on "+dueLong(ex)+" → report due by the end of "+dueLong(due)+
+        ". Each student's deadline counts from their own presentation day, so every panel member gets it automatically.";
+    }
+    [days,hols,ro].forEach(x=>x.addEventListener("input",paint));
+    wkBoxes.forEach(x=>x.cb.addEventListener("change",paint));
+    const save=el("button",{class:"btn"},"Save deadline rule");
+    save.onclick=async()=>{
+      const d=draftSem();
+      if(String(days.value).trim()&&!(parseInt(days.value,10)>=0)){ toast("Enter a whole number of business days.",true); return; }
+      if(d.reportWeekend.length>=7){ toast("Leave at least one working day unticked.",true); return; }
+      if(d.researchOfficeEmail&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.researchOfficeEmail)){ toast("That Research Office email doesn't look right.",true); return; }
+      const bad=String(hols.value||"").split(/[\s,;]+/).map(x=>x.trim()).filter(x=>x&&!/^\d{4}-\d{2}-\d{2}$/.test(x));
+      if(bad.length&&!window.confirm("These holiday entries aren't in YYYY-MM-DD form and will be ignored:\n\n"+bad.join(", ")+"\n\nSave anyway?")) return;
+      save.disabled=true; save.textContent="Saving…";
+      try{
+        await DB.update("semesters",sem.id,d);
+        S.semesters=await DB.list("semesters");
+        S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
+        /* PIN pages are snapshots — republish so their deadlines move too. */
+        try{ if(typeof publishSignInKeys==="function") await publishSignInKeys({quiet:true,onlyIfInUse:true}); }
+        catch(e){ console.warn("PIN views not refreshed",e); }
+        toast(d.reportDueDays?"Report deadline set: "+d.reportDueDays+" business day"+(d.reportDueDays===1?"":"s")+" after each presentation.":"Automatic report deadline turned off.");
+        S.tab="settings"; renderApp();
+      }catch(e){
+        save.disabled=false; save.textContent="Save deadline rule";
+        toast(e?.message||"Could not save that setting.",true);
+      }
+    };
+    card.append(
+      el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap"},
+        el("h3",{style:"margin:0"},"CoC Examination Report deadline"),
+        el("span",{class:"pill "+(n0?"approved":"none"),style:"font-size:11.5px"},
+          n0?n0+" business day"+(n0===1?"":"s"):"Off")),
+      el("p",{class:"muted",style:"margin:6px 0 12px"},
+        "How long panel members have, after a student's presentation, to send the completed CoC Examination Report Form with the decision "+
+        "to the Research Office. Each member's deadline is then set automatically from the presentation times on their panels — "+
+        "it shows on their CoC tab, their PIN page, their Excel download and in the "+DOCS_NAME+" email, and moves by itself if a presentation is rescheduled."),
+      el("div",{class:"grid"},
+        el("div",{},el("label",{},"Business days after the presentation"),
+          el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:nowrap"},days,el("span",{class:"muted ui"},"business days  (blank or 0 = off)"))),
+        el("div",{},el("label",{},"Weekend — days that are not counted"),
+          el("div",{class:"row",style:"gap:14px;flex-wrap:wrap"},...wkBoxes.map(x=>x.node))),
+        el("div",{},el("label",{},"Public holidays / university closures (optional)"),hols,
+          el("p",{class:"muted",style:"margin:4px 0 0;font-size:12px"},"Skipped when counting, like a weekend day.")),
+        el("div",{},el("label",{},"Research Office email (optional)"),ro,
+          el("p",{class:"muted",style:"margin:4px 0 0;font-size:12px"},"Named in the panel members' emails and screens as where the completed form goes."))),
+      preview,
+      el("div",{class:"row",style:"gap:8px;margin-top:12px"},save),
+      el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
+        "A panel given its own date by hand (on its "+DOCS_NAME+" step) keeps that date; every other panel follows this rule. "+
+        "Nothing already stored is changed."));
+    paint();
+    v.append(card);
+  })();
 
   // ---- Employment categories (app-wide) ----
   v.append(el("div",{class:"eyebrow ui",style:"margin:22px 0 8px"},"Staff \u2014 applies to every semester"));
@@ -12674,7 +13090,8 @@ async function pinBlocksFor(u,sems,preload){
             name:st?(st.name||"?"):"", sid:st?(st.sid||""):"",
             title:st?titleOf(st):"",
             parts:pp?clockRange(pp.start,pp.qaStart)+(pp.qaMins?" · "+clockRange(pp.qaStart,pp.end):""):"",
-            sups:st?((st.principalName||supName(st.principalUid)||"—")+(st.coName?" / "+st.coName:"")):""
+            sups:st?((st.principalName||supName(st.principalUid)||"—")+(st.coName?" / "+st.coName:"")):"",
+            due:st?(()=>{ const d0=studentReportDue(g,st.id,sem); return d0?prettyDate(d0):""; })():""
           };
         });
       return {
@@ -12689,8 +13106,10 @@ async function pinBlocksFor(u,sems,preload){
         /* The shared examination report. Only ever in the ASSESSING list,
            which is already limited to panels released to their assessors,
            so it never reaches a supervisor's "your students" section. */
-        report:String(g.reportLink||"").trim(),
-        reportDue:g.reportDue?weekdayOf(g.reportDue)+" "+longDate(g.reportDue):"",
+        report:docsLinkOf(g),
+        reportDue:(()=>{ const pd=panelReportDue(g,sem); return pd.date?dueLong(pd.date):""; })(),
+        reportRule:reportDueDays(sem)?dueRuleText(sem):"",
+        reportTo:researchOfficeEmail(sem),
         rows
       };
     });
@@ -12779,7 +13198,7 @@ function staffTimetableXlsx(who,blocks){
 
   // ---- Sheet 1: panels I am sitting on, one row per student slot ----
   const P=["Semester","Panel","My role","Session","Chair","Assessors","Meeting link",
-           "Report form","Report due","Slot","Student","Student ID","Proposal title",
+           "CoC Panel Documents folder","Report due","Slot","Student","Student ID","Proposal title",
            "Presentation · Q&A","Supervisors","Status"];
   const pr=[title([(who.name||"")+" — CoC panels I am sitting on"]),
             note([stamp+(who.role?" · "+who.role:"")]),note([]),head(P)];
@@ -12790,7 +13209,8 @@ function staffTimetableXlsx(who,blocks){
     const status=p.draft?"Draft — may still change":"Released";
     if(!(p.rows||[]).length){ pr.push(body([...base,"","Running order to follow","","","","",status])); pn++; return; }
     p.rows.forEach(r=>{
-      pr.push(body([...base,r.time,r.name||"Panel discussion",r.sid||"",r.title||"",r.parts||"",r.sups||"",status]));
+      const rb=base.slice(); if(r.due) rb[8]=r.due;   // each student's own deadline
+      pr.push(body([...rb,r.time,r.name||"Panel discussion",r.sid||"",r.title||"",r.parts||"",r.sups||"",status]));
       pn++;
     });
   }));
@@ -12890,18 +13310,21 @@ function renderStaffPinView(who,blocks,opts={}){
         const line=(lbl,val)=>box.append(el("p",{style:"margin:2px 0"},
           el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
         line("When:",p.when); line("Chair:",p.chair); line("Assessors:",p.assessors);
-        if(p.link||p.report){
+        if(p.link||p.report||p.reportDue){
           const lr=el("div",{class:"row",style:"margin:6px 0 2px;gap:8px;flex-wrap:wrap;align-items:center"});
           if(p.link) lr.append(el("a",{class:"linkpill",href:p.link,target:"_blank",rel:"noopener"},"Join the panel"));
-          if(p.report) lr.append(el("a",{class:"linkpill",href:p.report,target:"_blank",rel:"noopener"},"Open the CoC Panel Examination Report Form"));
+          if(p.report) lr.append(el("a",{class:"linkpill",href:p.report,target:"_blank",rel:"noopener"},DOCS_OPEN));
           if(p.reportDue) lr.append(el("span",{class:"pill pending",style:"font-size:11px"},"Report due "+p.reportDue));
           box.append(lr);
-          if(p.report) box.append(el("p",{class:"muted ui",style:"margin:4px 0 0;font-size:12px"},
-            "One shared file for the whole panel \u2014 edit it online; the other assessors are writing in it too."));
+          if(p.report||p.reportDue) box.append(el("p",{class:"muted ui",style:"margin:4px 0 0;font-size:12px"},
+            (p.report?"The folder holds "+DOCS_CONTENTS+". ":"")+
+            (p.reportRule?"Send the completed report form, with the decision, to the Research Office"+(p.reportTo?" ("+p.reportTo+")":"")+
+              " within "+p.reportRule+" \u2014 each student's date is in the table below.":"")));
         }
         if((p.rows||[]).length){
           const t=el("table",{style:"width:100%;font-size:13px;margin-top:8px"});
-          t.append(el("thead",{},el("tr",{},...["Time","Student","Presentation · Q&A","Supervisors"]
+          const hasDue=p.rows.some(r=>r.due);
+          t.append(el("thead",{},el("tr",{},...["Time","Student","Presentation · Q&A","Supervisors"].concat(hasDue?["Report due"]:[])
             .map(h=>el("th",{style:"font-size:11.5px"},h)))));
           const tb=el("tbody",{});
           p.rows.forEach(r=>tb.append(el("tr",{},
@@ -12912,7 +13335,8 @@ function renderStaffPinView(who,blocks,opts={}){
                   r.title?el("div",{class:"muted",style:"font-size:12.5px"},"“"+r.title+"”"):el("span",{}))
               : el("span",{class:"muted"},"Panel discussion")),
             el("td",{class:"muted",style:"white-space:nowrap;font-size:12.5px"},r.parts||"—"),
-            el("td",{class:"muted",style:"font-size:12.5px"},r.sups||"—"))));
+            el("td",{class:"muted",style:"font-size:12.5px"},r.sups||"—"),
+            ...(hasDue?[el("td",{style:"white-space:nowrap;font-size:12.5px"},r.due||"—")]:[]))));
           t.append(tb);
           box.append(el("div",{style:"overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px"},t));
         }else box.append(el("p",{class:"muted",style:"margin:6px 0 0"},"Running order to follow."));
