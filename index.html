@@ -691,6 +691,96 @@
   .csection.act .cs-mark{background:var(--amber-soft);color:var(--amber-ink);border-color:transparent}
   .csection.done .cs-mark{background:var(--green-soft);color:var(--green-ink);border-color:transparent}
 
+  /* ---- Report charts ----
+     Two categorical hues (checked for colour-blind separation on both
+     surfaces) and a neutral grey. Marks carry the colour; text never does. */
+  :root{--viz-1:#2a78d6;--viz-2:#eb6834;--viz-3:#b4b9c4}
+  html[data-theme="dark"]{--viz-1:#3987e5;--viz-2:#d95926;--viz-3:#4b5469}
+  .viz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:6px}
+  .viz-card{position:relative;margin:0;min-width:0}
+  .viz-card.wide{grid-column:1/-1}
+  .viz-head h3{font-size:15.5px;font-weight:650;margin:0}
+  .viz-head p{margin:3px 0 12px;font-size:12.5px}
+  .viz-glance{margin-bottom:14px;border-left:4px solid var(--accent)}
+  .viz-glance ul{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14.5px}
+  .viz-svg{width:100%;height:auto;display:block;min-width:420px;overflow:visible}
+  .viz-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .viz-tick{font-size:11px;fill:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .viz-tick.now{fill:var(--ink);font-weight:700}
+  .viz-grid-l{stroke:var(--line);stroke-width:1}
+  .viz-base{stroke:var(--line-strong);stroke-width:1}
+  .viz-col.future{opacity:.35}
+  .viz-col.hover path,.viz-col.hover rect:not(.viz-hit){filter:brightness(1.12)}
+  .viz-hit{cursor:default;outline:none}
+  .viz-hit:focus-visible{stroke:var(--accent);stroke-width:2}
+  .viz-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 10px;font-size:12.5px;color:var(--ink-soft)}
+  .vl-item{display:inline-flex;align-items:center;gap:6px}
+  .vl-sw{width:16px;height:16px;border-radius:4px;display:inline-grid;place-items:center;font-size:10.5px;font-weight:800;color:#fff;line-height:1}
+  .vl-sw.outline{border:1px solid var(--line-strong);color:var(--ink-soft)}
+  .viz-tip{position:absolute;z-index:6;display:none;pointer-events:none;min-width:160px;max-width:280px;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+    box-shadow:var(--shadow-md);font-size:12.5px;color:var(--ink-soft)}
+  .viz-tip .vt-h{color:var(--ink);font-weight:600;margin-bottom:4px}
+  .viz-tip .vt-r{display:flex;align-items:center;gap:6px;margin-top:2px}
+  .viz-tip strong{color:var(--ink);font-variant-numeric:tabular-nums}
+  .viz-tip .vt-k{width:12px;height:3px;border-radius:2px;flex:0 0 auto}
+  .viz-tbtn{margin-top:8px}
+  .viz-table{font-size:13px}
+  /* horizontal bars */
+  .hb-axis{position:relative;height:16px;margin:0 78px 4px 174px;font-size:11px;color:var(--ink-soft)}
+  .hb-axis span{position:absolute;top:0;transform:translateX(-50%)}
+  .hb-axis span:first-child{left:0;transform:none}
+  .hb-axis span[style*="right"]{transform:none}
+  .hbars{display:grid;gap:2px}
+  .hb-row{display:grid;grid-template-columns:160px minmax(0,1fr) 64px;gap:10px;align-items:center;padding:6px 4px;border-radius:8px;outline:none}
+  .hb-row:hover,.hb-row:focus-visible{background:var(--sunken)}
+  .hb-name .nm{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hb-name .sub{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hb-track{position:relative;height:14px;border-left:1px solid var(--line-strong)}
+  .hb-bar{position:absolute;left:0;top:1px;height:12px;background:var(--viz-1);border-radius:0 4px 4px 0}
+  .hb-row.low .hb-name .sub{color:var(--clay-ink);font-weight:600}
+  .hb-flag{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--ink-soft);opacity:.55}
+  .hb-val{font-size:13px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* register heatmap */
+  .heat{display:grid;gap:3px;align-items:center;min-width:max-content}
+  .heat .hh{font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;padding-bottom:4px}
+  .heat .hh.c{text-align:center;text-transform:none;letter-spacing:0}
+  .heat .hh.now{color:var(--ink);font-weight:800}
+  .heat .hn{padding-right:10px;min-width:0}
+  .heat .hn .nm{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .heat .hn .sub{font-size:11.5px;color:var(--ink-soft)}
+  .heat .hc{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;outline:none;
+    transition:transform .1s}
+  .heat .hc:hover,.heat .hc:focus-visible{transform:scale(1.12);box-shadow:0 0 0 2px var(--paper-2),0 0 0 4px var(--accent)}
+  .heat .hc.s-unrec,.heat .hc.s-now,.heat .hc.s-blank{border:1px solid var(--line-strong);color:var(--ink-soft)}
+  .heat .hc.s-future{background:var(--sunken);border:1px solid var(--line)}
+  .heat .hc.s-none{background:transparent}
+  .heat .hc.now{box-shadow:0 0 0 2px var(--paper-2),0 0 0 3px var(--ink-soft)}
+  .heat .hr{font-size:12.5px;font-weight:600;padding-left:8px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .heat .hr.low{color:var(--clay-ink)}
+  @media (max-width:1100px){ .viz-grid{grid-template-columns:1fr} }
+  @media (max-width:640px){
+    .hb-row{grid-template-columns:110px minmax(0,1fr) 56px;gap:8px}
+    .hb-axis{margin:0 68px 4px 122px}
+    .hb-axis span[style*="70%"]{display:none}
+  }
+  @media print{ .viz-tip,.viz-tbtn{display:none!important} .viz-grid{grid-template-columns:1fr} details.viz-fold .cfold-body{display:block} }
+
+  /* Collapsible sections on the staff CoC tab. */
+  details.cfold{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);margin:14px 0;overflow:hidden}
+  details.cfold > summary{list-style:none;cursor:pointer;user-select:none;display:flex;align-items:center;
+    gap:12px;padding:14px 18px;transition:background .15s}
+  details.cfold > summary::-webkit-details-marker{display:none}
+  details.cfold > summary:hover{background:var(--sunken)}
+  details.cfold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  details.cfold > summary .csection{margin:0;flex:1;min-width:0}
+  details.cfold[open] > summary{border-bottom:1px solid var(--line)}
+  .cfold-right{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}
+  .cfold-body{padding:16px 18px 4px}
+  .cfold-body > .card:last-child{margin-bottom:14px}
+  @media (max-width:640px){ details.cfold > summary{flex-wrap:wrap;padding:12px 14px} .cfold-body{padding:12px 12px 2px} }
+
   /* Tone travels down the left edge and into the header strip, so a glance
      tells you which section a card belongs to even when it scrolls alone. */
   .cardhead{font-size:14.5px}
@@ -2748,7 +2838,39 @@ async function viewPanels(v){
     return held>1?("CoC panel "+aliasIdx.get(g.id)):"A CoC panel";
   }
   let members=membersOf(poolOf(pools,S.uid)).slice();
-  const host=el("div",{}); v.append(host);
+  let host=el("div",{}); v.append(host);
+  const realHost=host;
+
+  /* ---- Collapsible sections ----
+     Each section (availability, suggested assessors, my students' CoC,
+     students I assess) is drawn into a scratch box and then folded under
+     its own heading, with a one-line summary beside it so a shut section
+     still says what is inside. Open/shut is remembered on this device. */
+  const FOLD_KEY="sh-coc-fold";
+  const foldState=(()=>{ try{ return JSON.parse(window.localStorage.getItem(FOLD_KEY)||"{}")||{}; }catch(e){ return {}; } })();
+  const saveFold=()=>{ try{ window.localStorage.setItem(FOLD_KEY,JSON.stringify(foldState)); }catch(e){} };
+  function fold(key,drawFn,summary,defOpen){
+    const box=el("div",{}); host=box;
+    try{ drawFn(); } finally{ host=realHost; }
+    if(!box.firstElementChild) return;
+    const head=box.firstElementChild.classList.contains("csection")?box.firstElementChild:null;
+    const d=el("details",{class:"cfold","data-fold":key});
+    if(foldState[key]!==undefined?foldState[key]:defOpen) d.open=true;
+    d.addEventListener("toggle",()=>{ foldState[key]=d.open; saveFold(); });
+    const sm=el("summary",{});
+    if(head) sm.append(head);
+    sm.append(el("div",{class:"cfold-right"},
+      summary?el("span",{class:"pill "+(summary.cls||"none")},summary.txt):el("span",{}),
+      el("span",{class:"chev"},"\u203A")));
+    const body=el("div",{class:"cfold-body"}); body.append(...box.childNodes);
+    d.append(sm,body); realHost.append(d);
+  }
+  function foldBar(){
+    const setAll=open=>{ realHost.querySelectorAll("details.cfold").forEach(d=>{ d.open=open; foldState[d.dataset.fold]=open; }); saveFold(); };
+    realHost.append(el("div",{class:"row",style:"justify-content:flex-end;gap:6px;margin:4px 0 -4px"},
+      el("button",{class:"btn xs ghost",onclick:()=>setAll(true)},"Expand all"),
+      el("button",{class:"btn xs ghost",onclick:()=>setAll(false)},"Collapse all")));
+  }
 
   const eligibleStaff=()=>{
     const blocked=conflictedUidsFor(S.uid,students);
@@ -2783,10 +2905,24 @@ async function viewPanels(v){
     host.innerHTML="";
     const sem=activeSemester();
     drawSummary();
-    if(!availabilityOff(sem)) drawAvailability();
-    if(!panellistOnly&&!nominationsOff(sem)) drawNominations();
-    if(!panellistOnly) drawMyStudents();
-    drawAssessing();
+    foldBar();
+    const meIn=g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid);
+    const asMember=groups.filter(meIn);
+    if(!availabilityOff(sem)){
+      const pend=asMember.filter(g=>{ const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
+        return groupSessions(g).some(x=>availOf(g,me,x.id)===undefined); }).length;
+      fold("avail",drawAvailability,pend?{cls:"pending",txt:pend+" waiting for you"}:{cls:"approved",txt:"All answered"},pend>0);
+    }
+    if(!panellistOnly&&!nominationsOff(sem)){
+      const n=members.length;
+      fold("nominate",drawNominations,{cls:n<PANEL_MIN?"pending":"approved",txt:n+" of "+PANEL_TARGET+" suggested"},n<PANEL_MIN);
+    }
+    if(!panellistOnly){
+      const sch=mine.filter(x=>{ const g=groupOfStudent(groups,x.id); return g&&isFinal(g)&&isScheduled(g,x.id); }).length;
+      fold("mystudents",drawMyStudents,{cls:"blue",txt:sch+" of "+mine.length+" scheduled"},false);
+    }
+    const nAss=asMember.filter(isAssessorReleased).reduce((k,g)=>k+groupStudents(g).length,0);
+    fold("assessing",drawAssessing,{cls:"blue",txt:nAss+" student"+(nAss===1?"":"s")+(asMember.some(g=>!isAssessorReleased(g))?" + unreleased":"")},panellistOnly);
   }
 
   /* Three tiles answering the only questions a supervisor opens this tab
@@ -11246,6 +11382,307 @@ function notesRuleHelp(err){
    Shows, per principal supervisor and per student, whether the
    consultation is arranged, how many meetings held, and attendance.
    ============================================================ */
+/* ============================================================
+   CONSULTATION INSIGHTS — charts for the Summary report
+   Four views of the same rows the report already filtered (semester,
+   supervisor focus, role lens), so every chart agrees with the table:
+     1. What happened each teaching week (stacked columns)
+     2. The register: every student × every week (heatmap with glyphs)
+     3. Attendance rate by student, lowest first, against the 70% flag
+     4. How up to date each principal's recording is
+   Plus a few tiles and an automatic "at a glance" summary.
+   Hand-drawn SVG/HTML, so nothing is loaded from outside. Two
+   categorical hues (validated for colour-blind separation in light and
+   dark) plus a neutral grey; every state also carries a glyph and a
+   legend, and every value is reachable without hovering.
+   ============================================================ */
+const SVGNS="http://www.w3.org/2000/svg";
+function sv(tag,attrs={},...kids){
+  const n=document.createElementNS(SVGNS,tag);
+  for(const[k,v] of Object.entries(attrs)) if(v!=null) n.setAttribute(k,v);
+  kids.flat().forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c??"")));
+  return n;
+}
+/* A column with a rounded top and a square base. */
+function colPath(x,y,w,h,r){
+  r=Math.min(r,h,w/2);
+  if(h<=0) return "";
+  return "M"+x+","+(y+h)+"V"+(y+r)+"Q"+x+","+y+" "+(x+r)+","+y+"H"+(x+w-r)+"Q"+(x+w)+","+y+" "+(x+w)+","+(y+r)+"V"+(y+h)+"Z";
+}
+/* One tooltip per chart card. Text only — names come from records. */
+function vizTip(host){
+  const tip=el("div",{class:"viz-tip",role:"status"});
+  host.append(tip);
+  return {
+    show(ev,lines){
+      tip.innerHTML="";
+      lines.forEach((ln,i)=>{
+        const row=el("div",{class:i===0?"vt-h":"vt-r"});
+        if(ln.key){ const k=el("span",{class:"vt-k"}); k.style.background=ln.key; row.append(k); }
+        if(ln.value!=null) row.append(el("strong",{},String(ln.value)));
+        row.append(el("span",{},(ln.value!=null?" ":"")+ln.text));
+        tip.append(row);
+      });
+      const hb=host.getBoundingClientRect();
+      let x,y;
+      if(ev&&ev.clientX!=null&&ev.type!=="focus"){ x=ev.clientX-hb.left+14; y=ev.clientY-hb.top+14; }
+      else { const tb=(ev?.target||host).getBoundingClientRect(); x=tb.left-hb.left+tb.width/2; y=tb.bottom-hb.top+8; }
+      tip.style.display="block";
+      const w=tip.offsetWidth;
+      if(x+w>hb.width-6) x=Math.max(6,x-w-28);
+      tip.style.left=x+"px"; tip.style.top=y+"px";
+    },
+    hide(){ tip.style.display="none"; }
+  };
+}
+function vizCard(title,sub,...kids){
+  const c=el("div",{class:"card viz-card"});
+  c.append(el("div",{class:"viz-head"},el("h3",{},title),sub?el("p",{class:"muted"},sub):el("span",{})),...kids);
+  return c;
+}
+function vizLegend(items){
+  return el("div",{class:"viz-legend"},...items.map(it=>{
+    const sw=el("span",{class:"vl-sw"+(it.outline?" outline":"")},it.glyph||"");
+    if(it.color) sw.style.background=it.color;
+    return el("span",{class:"vl-item"},sw,el("span",{},it.label));
+  }));
+}
+
+/* What a student's week was. */
+function weekState(c,w,cw){
+  const l=weekLog(c,w);
+  if(l.held===true&&l.studentAttended===true) return "att";
+  if(l.held===true&&l.studentAttended===false) return "miss";
+  if(l.held===true) return "held";          // held, student attendance not ticked
+  if(l.held===false) return "not";
+  if(cw&&w>=cw) return w===cw?"now":"future";
+  if(!cw) return "blank";
+  return "unrec";
+}
+const STATE_INFO={
+  att:{label:"Held · student attended",glyph:"✓",color:"var(--viz-1)"},
+  miss:{label:"Held · student missed",glyph:"✕",color:"var(--viz-2)"},
+  held:{label:"Held · attendance not ticked",glyph:"•",color:"var(--viz-1)"},
+  not:{label:"Not held",glyph:"–",color:"var(--viz-3)"},
+  unrec:{label:"Past week, not recorded",glyph:"?",color:null,outline:true},
+  now:{label:"This week, not recorded yet",glyph:"",color:null,outline:true},
+  future:{label:"Still to come",glyph:"",color:"var(--sunken)",outline:true},
+  blank:{label:"Not recorded",glyph:"",color:null,outline:true}
+};
+
+function reportInsights(rows,sem,weeks){
+  const cw=currentWeekOf(sem);
+  const withC=rows.filter(r=>r.c);
+  const wrap=el("div",{class:"viz-wrap"});
+  if(!withC.length){
+    wrap.append(el("div",{class:"card empty",style:"margin-bottom:14px"},
+      el("div",{class:"big"},"▤"),el("div",{},"Charts appear once students have a consultation time.")));
+    return wrap;
+  }
+
+  // ---------- numbers everything below uses ----------
+  const perWeek=[];
+  for(let w=1;w<=weeks;w++){
+    const o={w,att:0,miss:0,held:0,not:0,unrec:0};
+    withC.forEach(r=>{ const s=weekState(r.c,w,cw);
+      if(s==="att")o.att++; else if(s==="miss")o.miss++; else if(s==="held")o.held++; else if(s==="not")o.not++;
+      else if(s==="unrec"||s==="blank"||(s==="now"))o.unrec++; });
+    perWeek.push(o);
+  }
+  const pastWeeks=cw?cw-1:null;
+  let recorded=0, expected=0, coYes=0, coNo=0;
+  withC.forEach(r=>{
+    for(let w=1;w<=weeks;w++){
+      const l=weekLog(r.c,w);
+      if(pastWeeks!=null&&w<=pastWeeks){ expected++; if(l.held===true||l.held===false) recorded++; }
+      if(l.held===true){ if(l.coAttended==="yes")coYes++; else if(l.coAttended==="no")coNo++; }
+    }
+  });
+  const held=rows.reduce((a,r)=>a+r.st.held,0), att=rows.reduce((a,r)=>a+r.st.attended,0);
+  const pct=(a,b)=>b?Math.round(a/b*100):null;
+
+  // ---------- at a glance ----------
+  const facts=[];
+  const rate=pct(att,held);
+  if(rate!=null) facts.push("Students attended "+rate+"% of the "+held+" consultation"+(held===1?"":"s")+" held so far.");
+  if(pastWeeks!=null&&expected) facts.push("Recording is "+pct(recorded,expected)+"% up to date for weeks 1–"+pastWeeks+
+    " ("+(expected-recorded)+" student-week"+(expected-recorded===1?"":"s")+" still unrecorded).");
+  const worst=perWeek.filter(o=>o.miss>0).sort((a,b)=>b.miss-a.miss||a.w-b.w)[0];
+  if(worst) facts.push("Week "+worst.w+" had the most missed consultations ("+worst.miss+").");
+  const low=rows.filter(r=>r.st.held>=3&&r.st.attended/r.st.held<0.7);
+  if(low.length) facts.push(low.length+" student"+(low.length===1?" is":"s are")+" below 70% attendance: "+low.map(r=>r.s.name).join(", ")+".");
+  if(rows.filter(r=>!r.arranged).length) facts.push(rows.filter(r=>!r.arranged).length+" student"+(rows.filter(r=>!r.arranged).length===1?" has":"s have")+" no consultation time yet.");
+  if(coYes+coNo) facts.push("A co-supervisor was present at "+pct(coYes,coYes+coNo)+"% of the meetings where it was recorded.");
+  wrap.append(el("div",{class:"card viz-glance"},
+    el("div",{class:"viz-head"},el("h3",{},"At a glance"),
+      el("p",{class:"muted"},(sem?.label||"This semester")+(cw?" · teaching week "+cw+" of "+weeks:""))),
+    facts.length?el("ul",{},...facts.map(f=>el("li",{},f))):el("p",{class:"muted",style:"margin:0"},"Nothing recorded yet.")));
+
+  wrap.append(el("div",{class:"stat"},
+    statBox(pastWeeks!=null&&expected?pct(recorded,expected)+"%":"—","Recording up to date"),
+    statBox(coYes+coNo?pct(coYes,coYes+coNo)+"%":"—","Co-supervisor present"),
+    statBox(cw?(()=>{ const o=perWeek[cw-1]; return (o.att+o.miss+o.held+o.not)+" / "+withC.length; })():"—",
+      cw?"Recorded this week (wk "+cw+")":"Recorded this week")));
+
+  const grid=el("div",{class:"viz-grid"});
+  wrap.append(grid);
+
+  // ---------- 1. weekly stacked columns ----------
+  (function(){
+    const W=640,H=250,ml=34,mr=8,mt=14,mb=40;
+    const pw=W-ml-mr, ph=H-mt-mb, n=withC.length;
+    const band=pw/weeks, bw=Math.max(6,Math.min(24,band*0.62));
+    const step=n<=6?1:Math.ceil(n/5);
+    const top=Math.ceil(n/step)*step;
+    const y=v=>mt+ph-(v/top)*ph;
+    const svg=sv("svg",{viewBox:"0 0 "+W+" "+H,class:"viz-svg",role:"img",
+      "aria-label":"Consultations per teaching week: attended, missed and not held"});
+    for(let t=0;t<=top;t+=step){
+      svg.append(sv("line",{x1:ml,x2:W-mr,y1:y(t),y2:y(t),class:t===0?"viz-base":"viz-grid-l"}));
+      svg.append(sv("text",{x:ml-8,y:y(t)+4,"text-anchor":"end",class:"viz-tick"},String(t)));
+    }
+    const card=vizCard("Consultations each week","How many students' consultations were attended, missed or not held, week by week.");
+    const tip=vizTip(card);
+    const SEG=[["att","var(--viz-1)","Attended"],["held","var(--viz-1)","Held (attendance not ticked)"],["miss","var(--viz-2)","Student missed"],["not","var(--viz-3)","Not held"]];
+    perWeek.forEach((o,i)=>{
+      const cx=ml+band*i+band/2, x=cx-bw/2;
+      const g=sv("g",{class:"viz-col"+(cw&&o.w>cw?" future":"")});
+      let acc=0;
+      const segs=SEG.filter(([k])=>o[k]>0);
+      segs.forEach(([k,col],si)=>{
+        const y0=y(acc), y1=y(acc+o[k]); acc+=o[k];
+        const gap=si>0?2:0, h=y0-y1-gap;
+        if(h<=0) return;
+        const isTop=si===segs.length-1;
+        g.append(isTop?sv("path",{d:colPath(x,y1,bw,h,4),fill:col}):sv("rect",{x,y:y1,width:bw,height:h,fill:col}));
+      });
+      const isNow=cw===o.w;
+      g.append(sv("text",{x:cx,y:H-mb+16,"text-anchor":"middle",class:"viz-tick"+(isNow?" now":"")},String(o.w)));
+      if(isNow) g.append(sv("text",{x:cx,y:H-mb+30,"text-anchor":"middle",class:"viz-tick now"},"now"));
+      const hit=sv("rect",{x:ml+band*i,y:mt,width:band,height:ph,fill:"transparent",tabindex:"0",class:"viz-hit",
+        "aria-label":"Week "+o.w+": "+o.att+" attended, "+o.miss+" missed, "+o.not+" not held, "+o.unrec+" not recorded"});
+      const lines=()=>[{text:"Week "+o.w+(weekRangeLabel(sem,o.w)?" · "+weekRangeLabel(sem,o.w):"")+(isNow?" (this week)":"")},
+        {key:"var(--viz-1)",value:o.att+o.held,text:"attended"+(o.held?" / held":"")},
+        {key:"var(--viz-2)",value:o.miss,text:"missed"},
+        {key:"var(--viz-3)",value:o.not,text:"not held"},
+        {value:o.unrec,text:cw&&o.w>=cw?"not recorded yet":"not recorded"}];
+      hit.addEventListener("pointermove",e=>{ g.classList.add("hover"); tip.show(e,lines()); });
+      hit.addEventListener("pointerleave",()=>{ g.classList.remove("hover"); tip.hide(); });
+      hit.addEventListener("focus",e=>{ g.classList.add("hover"); tip.show(e,lines()); });
+      hit.addEventListener("blur",()=>{ g.classList.remove("hover"); tip.hide(); });
+      g.append(hit); svg.append(g);
+    });
+    svg.append(sv("text",{x:ml,y:H-4,class:"viz-tick"},"Teaching week"));
+    card.append(vizLegend([{color:"var(--viz-1)",label:"Attended"},{color:"var(--viz-2)",label:"Student missed"},{color:"var(--viz-3)",label:"Not held"}]),
+      el("div",{class:"viz-scroll"},svg));
+    // table twin
+    const tbl=el("table",{class:"viz-table"});
+    tbl.append(el("thead",{},el("tr",{},...["Week","Attended","Missed","Not held","Not recorded"].map(h=>el("th",{},h)))));
+    tbl.append(el("tbody",{},...perWeek.map(o=>el("tr",{},el("td",{},String(o.w)+(cw===o.w?" (now)":"")),
+      el("td",{},String(o.att+o.held)),el("td",{},String(o.miss)),el("td",{},String(o.not)),el("td",{},String(o.unrec))))));
+    const tw=el("div",{style:"display:none;margin-top:10px"},tbl);
+    card.append(el("button",{class:"btn xs ghost viz-tbtn",onclick:e=>{ const on=tw.style.display==="none"; tw.style.display=on?"":"none"; e.target.textContent=on?"Hide table":"Show as table"; }},"Show as table"),tw);
+    grid.append(card);
+  })();
+
+  // ---------- 2. attendance rate by student ----------
+  (function(){
+    const card=vizCard("Attendance by student","Share of held consultations each student attended, lowest first. The line marks the 70% flag.");
+    const tip=vizTip(card);
+    const list=el("div",{class:"hbars"});
+    const sorted=rows.slice().sort((a,b)=>{
+      const ra=a.st.held?a.st.attended/a.st.held:2, rb=b.st.held?b.st.attended/b.st.held:2;
+      return ra-rb||String(a.s.name).localeCompare(String(b.s.name)); });
+    sorted.forEach(r=>{
+      const h=r.st.held, p=h?r.st.attended/h:null;
+      const track=el("div",{class:"hb-track"},el("span",{class:"hb-flag",style:"left:70%"}));
+      if(p!=null){ const b=el("span",{class:"hb-bar"}); b.style.width=Math.max(p*100,p>0?1.5:0)+"%"; track.append(b); }
+      const row=el("div",{class:"hb-row",tabindex:"0"},
+        el("div",{class:"hb-name"},el("div",{class:"nm"},r.s.name||"?"),el("div",{class:"sub"},r.s.principalName||"")),
+        track,
+        el("div",{class:"hb-val"},p==null?el("span",{class:"muted"},r.arranged?"no meetings yet":"no time set"):
+          el("span",{},el("strong",{},Math.round(p*100)+"%"),el("span",{class:"muted"}," "+r.st.attended+"/"+h))));
+      if(p!=null&&h>=3&&p<0.7){ row.classList.add("low");
+        row.querySelector(".hb-name .sub").textContent="\u26A0 below 70% \u00B7 "+(r.s.principalName||""); }
+      const lines=()=>[{text:r.s.name+(r.s.sid?" ("+r.s.sid+")":"")},
+        {key:"var(--viz-1)",value:r.st.attended,text:"attended"},{key:"var(--viz-2)",value:r.st.missed,text:"missed"},
+        {value:h,text:"held in total"},{text:"Principal: "+(r.s.principalName||"—")+(r.s.coName?" · Co: "+r.s.coName:"")}];
+      row.addEventListener("pointermove",e=>tip.show(e,lines())); row.addEventListener("pointerleave",()=>tip.hide());
+      row.addEventListener("focus",e=>tip.show(e,lines())); row.addEventListener("blur",()=>tip.hide());
+      list.append(row);
+    });
+    card.append(el("div",{class:"hb-axis"},el("span",{},"0%"),el("span",{style:"left:70%"},"70%"),el("span",{style:"right:0"},"100%")),list);
+    grid.append(card);
+  })();
+
+  // ---------- 3. register heatmap ----------
+  (function(){
+    const card=vizCard("Consultation register","Every student's consultation, week by week. Hover or tab onto a square for the details and the supervisor's comment.");
+    card.classList.add("wide");
+    const tip=vizTip(card);
+    const show=["att","miss","not","unrec"].concat(cw?["now","future"]:[]);
+    card.append(vizLegend(show.map(k=>({color:STATE_INFO[k].color,glyph:STATE_INFO[k].glyph,label:STATE_INFO[k].label,outline:STATE_INFO[k].outline}))));
+    const heat=el("div",{class:"heat",style:"grid-template-columns:minmax(150px,210px) repeat("+weeks+",28px) auto"});
+    heat.append(el("div",{class:"hh"},"Student"));
+    for(let w=1;w<=weeks;w++) heat.append(el("div",{class:"hh c"+(cw===w?" now":""),title:weekRangeLabel(sem,w)||""},String(w)));
+    heat.append(el("div",{class:"hh"},"Rate"));
+    rows.slice().sort((a,b)=>String(a.s.name).localeCompare(String(b.s.name))).forEach(r=>{
+      heat.append(el("div",{class:"hn"},el("div",{class:"nm"},r.s.name||"?"),
+        el("div",{class:"sub"},r.c?(r.c.day?(r.c.day.slice(0,3)+" "+(r.c.start||"")):""):"no consultation time")));
+      for(let w=1;w<=weeks;w++){
+        const st=r.c?weekState(r.c,w,cw):"none";
+        const info=STATE_INFO[st]||{label:"No consultation time",glyph:""};
+        const cell=el("div",{class:"hc s-"+st+(cw===w&&r.c?" now":""),tabindex:r.c?"0":"-1",
+          "aria-label":r.s.name+", week "+w+": "+info.label},info.glyph||"");
+        if(info.color) cell.style.background=info.color;
+        if(r.c){
+          const l=weekLog(r.c,w);
+          const lines=()=>{
+            const L=[{text:r.s.name+" · week "+w+(weekRangeLabel(sem,w)?" ("+weekRangeLabel(sem,w)+")":"")},
+              {key:info.color||"transparent",text:info.label}];
+            if(l.held===true) L.push({text:"Co-supervisor: "+(l.coAttended==="yes"?"present":l.coAttended==="no"?"absent":l.coAttended==="na"?"n/a":"not recorded")});
+            if(String(l.comment||"").trim()) L.push({text:"“"+String(l.comment).trim().slice(0,160)+"”"});
+            return L; };
+          cell.addEventListener("pointermove",e=>tip.show(e,lines())); cell.addEventListener("pointerleave",()=>tip.hide());
+          cell.addEventListener("focus",e=>tip.show(e,lines())); cell.addEventListener("blur",()=>tip.hide());
+        }
+        heat.append(cell);
+      }
+      const h=r.st.held;
+      heat.append(el("div",{class:"hr"+(h>=3&&r.st.attended/h<0.7?" low":"")},h?Math.round(r.st.attended/h*100)+"%":"—"));
+    });
+    card.append(el("div",{class:"viz-scroll"},heat));
+    grid.append(card);
+  })();
+
+  // ---------- 4. recording up to date, by principal ----------
+  if(pastWeeks){
+    const card=vizCard("Recording up to date, by principal","Share of past weeks (1–"+pastWeeks+") each principal supervisor has recorded for their students.");
+    const tip=vizTip(card);
+    const by=new Map();
+    withC.forEach(r=>{ const k=r.s.principalName||"Unassigned";
+      const o=by.get(k)||{name:k,rec:0,exp:0,n:0}; o.n++;
+      for(let w=1;w<=pastWeeks;w++){ const l=weekLog(r.c,w); o.exp++; if(l.held===true||l.held===false) o.rec++; }
+      by.set(k,o); });
+    const list=el("div",{class:"hbars"});
+    [...by.values()].sort((a,b)=>a.rec/a.exp-b.rec/b.exp||a.name.localeCompare(b.name)).forEach(o=>{
+      const p=o.exp?o.rec/o.exp:0;
+      const b=el("span",{class:"hb-bar"}); b.style.width=Math.max(p*100,p>0?1.5:0)+"%";
+      const row=el("div",{class:"hb-row",tabindex:"0"},
+        el("div",{class:"hb-name"},el("div",{class:"nm"},o.name),el("div",{class:"sub"},o.n+" student"+(o.n===1?"":"s"))),
+        el("div",{class:"hb-track"},b),
+        el("div",{class:"hb-val"},el("strong",{},Math.round(p*100)+"%"),el("span",{class:"muted"}," "+o.rec+"/"+o.exp)));
+      const lines=()=>[{text:o.name},{key:"var(--viz-1)",value:o.rec,text:"student-weeks recorded"},{value:o.exp-o.rec,text:"still to record"}];
+      row.addEventListener("pointermove",e=>tip.show(e,lines())); row.addEventListener("pointerleave",()=>tip.hide());
+      row.addEventListener("focus",e=>tip.show(e,lines())); row.addEventListener("blur",()=>tip.hide());
+      list.append(row);
+    });
+    card.append(el("div",{class:"hb-axis"},el("span",{},"0%"),el("span",{style:"right:0"},"100%")),list);
+    grid.append(card);
+  }
+  return wrap;
+}
+
 async function viewReport(v){
   v.innerHTML="";
   const sem=activeSemester();
@@ -11332,6 +11769,20 @@ async function viewReport(v){
     statBox(String(totalHeld),"Meetings held"),
     statBox(String(totalMissed),"Missed"),
     statBox(totalHeld?Math.round(totalAttended/totalHeld*100)+"%":"—","Attendance rate")));
+
+  /* ---- Consultation insights: summary, tiles and charts ----
+     Folded under one heading so the office can put it away and go
+     straight to the tables; open/shut is remembered on this device. */
+  {
+    let open=true; try{ open=window.localStorage.getItem("sh-report-charts")!=="closed"; }catch(e){}
+    const d=el("details",{class:"cfold viz-fold"}); if(open) d.open=true;
+    d.addEventListener("toggle",()=>{ try{ window.localStorage.setItem("sh-report-charts",d.open?"open":"closed"); }catch(e){} });
+    d.append(el("summary",{},
+      sectionHead("\u25A5","Consultation insights","Charts of what happened each week, each student's attendance and how up to date the recording is. They follow the filters above."),
+      el("div",{class:"cfold-right"},el("span",{class:"chev"},"\u203A"))),
+      el("div",{class:"cfold-body"},reportInsights(rows,sem,weeks)));
+    v.append(d);
+  }
 
   // ---- Needs attention: automatic early-warning flags ----
   // Low attendance rate, runs of consecutive misses, no consultation time,
@@ -11853,17 +12304,41 @@ async function viewPeople(v){
       "this show as \u201CNot set\u201D until you edit them; nothing depends on it being filled in.")));
   await refreshAllocCounts();
   const users=await DB.listUsers();
+  /* The panels of the selected semester, so the list can say who is
+     already seated on one — and filter on it. */
+  let semGroups=[];
+  try{ if(S.activeSem) semGroups=await DB.list("panelGroups",{semesterId:S.activeSem}); }
+  catch(e){ console.warn("panels unavailable for the staff list",e); }
+  const seatsOf=u=>seatedPanelsOf(u,semGroups);
   /* ---- PIN access ----
      The PIN column and its buttons are the office's half of the read-only
      sign-in: issue one, read it back to whoever rings up, email it, or
      revoke it. It sits with the staff list because that is where the
      coordinator already goes when someone says they can't get in. */
-  staffCard.append(el("div",{class:"row",style:"gap:8px;margin:0 0 10px;flex-wrap:wrap"},
+  staffCard.append(el("div",{class:"row",style:"gap:8px;margin:0 0 12px;flex-wrap:wrap"},
     el("button",{class:"btn sm",onclick:()=>pinBulkDialog(()=>viewPeople(v))},"⚿ Staff PIN access"),
+    el("button",{class:"btn ghost sm",title:"Name, email and PIN of the people seated on CoC panels — copy or download for a mail merge",
+      onclick:()=>pinMergeDialog(()=>viewPeople(v))},"⤓ PIN list for mail merge"),
     el("span",{class:"muted ui",style:"font-size:12.5px;align-self:center"},
       users.filter(x=>String(x.pin||"").trim()).length+" of "+users.length+" staff have a PIN")));
-  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","PIN","Role","Employment","Area","Students",""].map(h=>el("th",{},h)))));
+
+  /* ---- Search ----
+     Typing filters the rows in place — name, either address, PIN, area or
+     employment — and the role filter narrows it further. Both are kept for
+     the session, so editing someone and coming back keeps the search. */
+  const q=el("input",{type:"search",placeholder:"Search staff by name, email, PIN or area…",
+    value:S.staffQuery||"",style:"flex:1;min-width:220px",autocomplete:"off"});
+  const semLbl=activeSemester()?.label||"this semester";
+  const rf=el("select",{style:"width:auto;min-width:200px"},
+    ...[["all","Everyone"],["admin","Admins"],["supervisor","Supervisors"],["panellist","Panel members"],
+        ["seated","Seated on a CoC panel ("+semLbl+")"],["nopin","No PIN yet"],["nologin","No login yet"]]
+      .map(([val,txt])=>el("option",{value:val,...((S.staffRole||"all")===val?{selected:"selected"}:{})},txt)));
+  const count=el("span",{class:"muted ui",style:"font-size:12.5px;white-space:nowrap"});
+  staffCard.append(el("div",{class:"row",style:"gap:10px;margin:0 0 12px;flex-wrap:wrap;align-items:center"},q,rf,count));
+
+  const t=el("table",{}); t.append(el("thead",{},el("tr",{},...["Name","Email","Account","PIN","Role","CoC panels","Employment","Area","Students",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
+  const rowsIdx=[];
   users.forEach(u=>{
     const actions=el("div",{class:"row"});
     // admin can edit & delete any staff record (supervisor or admin)
@@ -11894,28 +12369,55 @@ async function viewPeople(v){
     const load=studentLoadOf(u.id);
     const mails=el("td",{},el("div",{},u.email||el("span",{class:"muted"},"—")),
       u.email2?el("div",{class:"muted ui",style:"font-size:12.5px"},
-        u.email2+" \u00B7 also mailed"):el("span",{}));
+        u.email2+" · also mailed"):el("span",{}));
     const pinTxt=String(u.pin||"").trim();
     const pinCell=el("td",{},pinTxt
       ? el("code",{style:"font-size:13px;letter-spacing:1px",
           title:"Read-only PIN — opens their own panels and students, no password"},pinTxt)
       : el("span",{class:"muted",title:"No PIN issued"},"—"));
-    tb.append(el("tr",{},
+    const seats=seatsOf(u);
+    const seatCell=el("td",{},seats.length
+      ? el("span",{class:"pill blue",title:seats.map(g=>(g.label||"Panel")+(isAssessorReleased(g)?"":" (not released)")).join("\n")},
+          seats.length+" panel"+(seats.length===1?"":"s"))
+      : el("span",{class:"muted"},"—"));
+    const tr=el("tr",{},
       el("td",{},el("strong",{},u.name||"—")),
       mails,
       el("td",{},acct),
       pinCell,
       el("td",{},roleTag(u)),
+      seatCell,
       el("td",{},employmentPill(u)),
       el("td",{},roleOf(u)==="admin"?el("span",{class:"muted"},"—"):areaPill(u.area)),
       /* A panel member with students still on them is a leftover from
-         before the role existed, and needs reassigning \u2014 so it is shown
+         before the role existed, and needs reassigning — so it is shown
          rather than hidden behind a dash. */
       el("td",{},load?el("span",{class:"pill "+(isSupervisor(u)?"none":"missed"),
           title:isSupervisor(u)?"":"This person no longer appears in the supervisor pickers — reassign these students"},String(load))
         :el("span",{class:"muted"},"—")),
-      el("td",{},actions)));
+      el("td",{},actions));
+    const hay=[u.name,u.email,u.email2,pinTxt,u.area,u.mobile,roleOf(u),
+      (EMPLOYMENTS.find(e=>e.v===u.employment)||{}).label].filter(Boolean).join(" ").toLowerCase();
+    rowsIdx.push({u,tr,hay,seated:seats.length>0});
+    tb.append(tr);
   });
+  const emptyRow=el("tr",{style:"display:none"},el("td",{colspan:"10",class:"muted",style:"text-align:center;padding:22px"},"No staff match that search."));
+  tb.append(emptyRow);
+  function applyFilter(){
+    S.staffQuery=q.value; S.staffRole=rf.value;
+    const words=q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    let shown=0;
+    rowsIdx.forEach(r=>{
+      const f=rf.value, u=r.u;
+      const okRole=f==="all"||(f==="seated"?r.seated:f==="nopin"?!String(u.pin||"").trim():f==="nologin"?!!u.pendingLogin:roleOf(u)===f);
+      const ok=okRole&&words.every(w=>r.hay.includes(w));
+      r.tr.style.display=ok?"":"none"; if(ok) shown++;
+    });
+    emptyRow.style.display=shown?"none":"";
+    count.textContent="Showing "+shown+" of "+rowsIdx.length;
+  }
+  q.addEventListener("input",applyFilter); rf.addEventListener("change",applyFilter);
+  applyFilter();
   t.append(tb); staffCard.append(t);
   if(!DEMO) staffCard.append(el("p",{class:"muted",style:"margin-top:10px"},"New staff are created with a Firebase Authentication login and can sign in immediately. Editing here updates their profile; deleting removes the profile record."));
   v.append(staffCard);
@@ -12307,6 +12809,177 @@ async function pinBulkDialog(done){
         "PIN sign-in isn't finding anyone — what to check"))),
     async()=>{ done&&done(); return true; },"Done");
   const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+}
+
+/* The panels a staff member is seated on: matched on their account id,
+   or on either address for a seat typed in before they had an account. */
+function seatedPanelsOf(u,groups){
+  const mine=emailsOf(u).map(e=>String(e).trim().toLowerCase());
+  return (groups||[]).filter(g=>groupMembers(g).some(m=>
+    (m.kind==="internal"&&m.uid&&m.uid===u.id)
+    ||(!!m.email&&mine.includes(String(m.email).trim().toLowerCase()))));
+}
+
+/* ============================================================
+   PIN LIST FOR MAIL MERGE (admin)
+   One row per person, with the columns a Word / Outlook / Gmail mail merge
+   needs: name, email, PIN, and the CoC details worth putting in the same
+   letter — their panels, whether they chair, how many students, the
+   presentation days, the report deadline and the documents folder.
+   Copy pastes straight into Excel; the downloads open in Word's
+   "Select Recipients → Use an existing list".
+   ============================================================ */
+async function pinMergeDialog(done){
+  const byName=(a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email));
+  let users=(await DB.listUsers()).sort(byName);
+  const semSel=el("select",{},...S.semesters.map(x=>
+    el("option",{value:x.id,...(x.id===S.activeSem?{selected:"selected"}:{})},x.label)));
+  const who=el("select",{},
+    el("option",{value:"seated"},"Seated on a CoC panel — everyone"),
+    el("option",{value:"seated-sup"},"Seated on a CoC panel — supervisors only"),
+    el("option",{value:"seated-pan"},"Seated on a CoC panel — panel-member accounts only"),
+    el("option",{value:"sup"},"All supervisors (seated or not)"),
+    el("option",{value:"pin"},"Everyone who has a PIN"));
+  const relOnly=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+  const preview=el("div",{style:"max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px"});
+  const warn=el("div",{});
+  const hubLink=String(location.href).split(/[?#]/)[0];
+  let groups=[], sem=null, rows=[];
+
+  async function loadSem(){
+    sem=S.semesters.find(x=>x.id===semSel.value)||null;
+    try{ groups=sem?await DB.list("panelGroups",{semesterId:sem.id}):[]; }
+    catch(e){ groups=[]; toast("Couldn't read the panels: "+(e?.message||e),true); }
+  }
+  const HEAD=["Name","Email","Other email","PIN","Role","Semester","Panels","Chair of","Students to assess",
+    "Presentation days","Report due","Documents folder","Hub link"];
+  function build(){
+    const panelsFor=u=>seatedPanelsOf(u,groups).filter(g=>!relOnly.checked||isAssessorReleased(g));
+    rows=users.filter(u=>{
+      const seated=panelsFor(u).length>0;
+      if(who.value==="seated") return seated;
+      if(who.value==="seated-sup") return seated&&isSupervisor(u);
+      if(who.value==="seated-pan") return seated&&isPanellist(u);
+      if(who.value==="sup") return isSupervisor(u);
+      return !!String(u.pin||"").trim();
+    }).map(u=>{
+      const gs=panelsFor(u).slice().sort((a,b)=>String(a.label).localeCompare(String(b.label)));
+      const days=[...new Set(gs.flatMap(g=>groupStudents(g).map(id=>{ const sl=slotOfStudent(g,id); return sl?slotDate(g,sl):""; })).filter(Boolean))].sort();
+      const dues=[...new Set(gs.map(g=>panelReportDue(g,sem).date).filter(Boolean))].sort();
+      const es=emailsOf(u);
+      return {u,cells:[u.name||"",es[0]||"",es.slice(1).join(", "),String(u.pin||"").trim(),
+        roleOf(u)==="panellist"?"Panel member":roleOf(u)==="admin"?"Admin":"Supervisor",
+        sem?.label||"",
+        gs.map(g=>g.label||"Panel").join("; "),
+        gs.filter(g=>groupMembers(g).some(m=>isChair(g,m)&&((m.uid&&m.uid===u.id)||(m.email&&es.map(x=>x.toLowerCase()).includes(String(m.email).toLowerCase()))))).map(g=>g.label||"Panel").join("; "),
+        gs.length?String(gs.reduce((n,g)=>n+groupStudents(g).length,0)):"",
+        days.map(d=>dueLong(d)).join("; "),
+        dues.map(d=>dueLong(d)).join("; "),
+        gs.map(g=>docsLinkOf(g)).filter(Boolean).join(" ; "),
+        hubLink]};
+    });
+    draw();
+  }
+  function draw(){
+    preview.innerHTML="";
+    const t=el("table",{style:"width:100%;font-size:12.5px"});
+    t.append(el("thead",{},el("tr",{},...["Name","Email","PIN","Role","Panels","Students","Report due"].map(h=>el("th",{style:"font-size:11px"},h)))));
+    const tb=el("tbody",{});
+    rows.forEach(r=>{ const c=r.cells;
+      tb.append(el("tr",{},el("td",{},el("strong",{},c[0]||"—")),el("td",{class:"muted"},c[1]||"no email"),
+        el("td",{},c[3]?el("code",{style:"letter-spacing:1px"},c[3]):el("span",{class:"pill pending",style:"font-size:11px"},"no PIN")),
+        el("td",{class:"muted"},c[4]),el("td",{},c[6]||"—"),el("td",{},c[8]||"—"),el("td",{class:"muted"},c[10]||"—")));
+    });
+    if(!rows.length) tb.append(el("tr",{},el("td",{colspan:"7",class:"muted",style:"text-align:center;padding:20px"},"Nobody matches this selection.")));
+    t.append(tb); preview.append(t);
+
+    warn.innerHTML="";
+    const noPin=rows.filter(r=>!r.cells[3]), noMail=rows.filter(r=>!r.cells[1]);
+    const unpub=rows.filter(r=>r.cells[3]&&!(Array.isArray(r.u.signInKeys)&&r.u.signInKeys.includes(pinKeyOf(r.u.pin))));
+    if(noPin.length){
+      const b=el("button",{class:"btn sm amber",onclick:async()=>{
+        b.disabled=true; b.textContent="Issuing…";
+        const taken=users.map(x=>x.pin).filter(Boolean);
+        for(const r of noPin){ const p=uniquePin(taken,PIN_LEN); taken.push(p);
+          await DB.updateUser(r.u.id,{pin:p,pinSetAt:Date.now()}); }
+        await publishSignInKeys({quiet:true});
+        users=(await DB.listUsers()).sort(byName);
+        toast(noPin.length+" PIN"+(noPin.length===1?"":"s")+" issued and published."); build();
+      }},"⚿ Issue PINs to these "+noPin.length);
+      warn.append(noticeBar("amber",noPin.length+" of them "+(noPin.length===1?"has":"have")+" no PIN yet: "+
+        noPin.map(r=>r.cells[0]||"?").join(", ")+".",b));
+    }
+    if(unpub.length){
+      const b=el("button",{class:"btn sm ghost",onclick:async()=>{
+        b.disabled=true; b.textContent="Publishing…";
+        await publishSignInKeys(); users=(await DB.listUsers()).sort(byName); build();
+      }},"↻ Publish now");
+      warn.append(noticeBar("amber",unpub.length+" PIN"+(unpub.length===1?" has":"s have")+" not been published yet and would not open anything. Publish before sending.",b));
+    }
+    if(noMail.length) warn.append(noticeBar("clay",noMail.length+" "+(noMail.length===1?"has":"have")+" no email address and will have an empty Email cell: "+
+      noMail.map(r=>r.cells[0]||"?").join(", ")+"."));
+    /* Seats held by people with no staff record can never have a PIN. */
+    if(who.value.startsWith("seated")){
+      const orphans=[...new Map(groups.filter(g=>!relOnly.checked||isAssessorReleased(g)).flatMap(g=>groupMembers(g))
+        .filter(m=>!users.some(u=>seatedPanelsOf(u,[{members:[m]}]).length))
+        .map(m=>[memberKey(m),m.name||m.email||"?"])).values()];
+      if(orphans.length) warn.append(noticeBar("blue","Not on the staff list, so no PIN is possible: "+orphans.join(", ")+
+        ". Add them as staff (Panel member) to give them one."));
+    }
+    if(relOnly.checked){
+      const held=groups.filter(g=>!isAssessorReleased(g)).length;
+      if(held) warn.append(el("p",{class:"muted",style:"margin:0 0 8px;font-size:12.5px"},
+        held+" panel"+(held===1?" is":"s are")+" not released to "+(held===1?"its":"their")+" assessors and left out — their PIN page would not show those panels yet."));
+    }
+    const n=rows.length;
+    copyBtn.textContent="⧉ Copy "+n+" row"+(n===1?"":"s");
+  }
+  const fileBase=()=>("CoC_PIN_mail_merge_"+(sem?.label||"")).replace(/[^A-Za-z0-9]+/g,"_").replace(/_+$/,"");
+  const copyBtn=el("button",{class:"btn sm",onclick:async()=>{
+    if(!rows.length){ toast("Nothing to copy.",true); return; }
+    const clean=v=>String(v??"").replace(/[\t\r\n]+/g," ");
+    const tsv=[HEAD.join("\t"),...rows.map(r=>r.cells.map(clean).join("\t"))].join("\n");
+    (await copyText(tsv))?toast("Copied "+rows.length+" rows with headings — paste into Excel, then use it as the mail-merge list."):toast("Copy failed.",true);
+  }},"⧉ Copy");
+  const csvBtn=el("button",{class:"btn ghost sm",onclick:()=>{
+    if(!rows.length){ toast("Nothing to download.",true); return; }
+    const q=v=>{ const x=String(v??""); return /[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x; };
+    const csv="﻿"+[HEAD.map(q).join(","),...rows.map(r=>r.cells.map(q).join(","))].join("\r\n");
+    saveBlob(new Blob([csv],{type:"text/csv;charset=utf-8"}),fileBase()+".csv");
+    toast("CSV downloaded.");
+  }},"⤓ Download CSV");
+  const xlBtn=el("button",{class:"btn ghost sm",onclick:()=>{
+    if(!rows.length){ toast("Nothing to download.",true); return; }
+    /* Headings on row 1, nothing above them — what a mail merge expects. */
+    saveBlob(xlsxBlob([{name:"Mail merge",widths:[24,30,26,10,14,10,30,22,10,30,28,40,40],
+      rows:[{cells:HEAD,s:1,h:22},...rows.map(r=>({cells:r.cells,s:2}))],
+      freezeAt:1,filter:"A1:"+colLetter(HEAD.length-1)+(rows.length+1)}]),fileBase()+".xlsx");
+    toast("Excel file downloaded.");
+  }},"⤓ Download Excel");
+
+  semSel.onchange=async()=>{ await loadSem(); build(); };
+  who.onchange=build; relOnly.onchange=build;
+  await loadSem();
+
+  modal("PIN list for mail merge",
+    el("div",{class:"grid"},
+      el("p",{class:"muted",style:"margin:0"},
+        "Name, email and PIN for each person — plus their panels, presentation days, report deadline and documents folder — "+
+        "ready for a mail merge in Word, Outlook or Gmail. Copy pastes into Excel with headings; the downloads can be picked "+
+        "directly as the recipient list."),
+      el("div",{class:"row",style:"gap:10px;flex-wrap:wrap"},
+        el("div",{style:"flex:1;min-width:150px"},el("label",{},"Semester"),semSel),
+        el("div",{style:"flex:2;min-width:240px"},el("label",{},"Who"),who)),
+      el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap;font-weight:400;margin:0"},
+        relOnly,el("span",{},"Only panels already released to their assessors")),
+      el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},copyBtn,csvBtn,xlBtn),
+      warn,
+      preview,
+      el("p",{class:"muted",style:"margin:0;font-size:12.5px"},
+        "Columns: "+HEAD.join(", ")+". A PIN is personal — send one per person (a mail merge does that), never in a group email.")),
+    async()=>{ done&&done(); return true; },"Done");
+  const mm=document.querySelectorAll(".modal"); if(mm.length) mm[mm.length-1].classList.add("wide");
+  build();
 }
 
 function semesterForm(existing,done){
