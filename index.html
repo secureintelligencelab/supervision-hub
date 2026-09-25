@@ -871,6 +871,265 @@
     thead{display:table-header-group}
     tr{break-inside:avoid}
   }
+
+  /* ============================================================
+     STUDENT PORTAL
+     What a student sees after typing their ID. Built phone-first:
+     most students open it on a phone a few minutes before a meeting,
+     so the question "when is my next thing and where do I click" is
+     answered at the top of the first tab, and everything else is one
+     tap away in the tab strip. Same tokens as the rest of the hub, so
+     dark mode comes for free.
+     ============================================================ */
+  .sp{min-height:100vh;
+    background:
+      radial-gradient(900px 420px at -5% -8%, #6366f124, transparent 65%),
+      radial-gradient(700px 380px at 105% -4%, #06b6d41a, transparent 60%),
+      var(--paper)}
+  .sp-i{display:inline-grid;place-items:center;flex:0 0 auto;line-height:0}
+  .sp-top{position:sticky;top:0;z-index:30;height:60px;display:flex;align-items:center;gap:12px;
+    padding:0 20px;border-bottom:1px solid var(--line);background:var(--paper);
+    background:color-mix(in srgb,var(--paper) 84%,transparent);
+    backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5)}
+  .sp-top .mark{width:34px;height:34px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;
+    background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#06b6d4 100%);color:#fff;
+    font-weight:800;font-size:12.5px;letter-spacing:.02em;box-shadow:inset 0 1px 0 #ffffff40}
+  .sp-top .ttl{font-weight:700;font-size:14.5px;letter-spacing:-.01em;line-height:1.15}
+  .sp-top .sub{font-size:11.5px;color:var(--ink-soft);line-height:1.2}
+  .sp-top .acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .sp-main{max-width:880px;margin:0 auto;padding:22px 20px 64px}
+
+  .sp-card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:20px;box-shadow:var(--shadow);min-width:0}
+  .sp-sec{display:grid;gap:14px}
+  .sp-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;min-width:0}
+  .sp-head h2{font-size:17px;font-weight:650;letter-spacing:-.015em;margin:0}
+  .sp-head .s{font-size:13px;color:var(--ink-soft);margin-top:1px}
+  .sp-head .grow{flex:1;min-width:0}
+  .sp-ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;
+    background:var(--accent-tint);color:var(--accent-deep)}
+  .sp-ico.green{background:var(--green-soft);color:var(--green-ink)}
+  .sp-ico.amber{background:var(--amber-soft);color:var(--amber-ink)}
+  .sp-ico.blue{background:var(--blue-soft);color:var(--blue-ink)}
+  .sp-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-soft);margin:0 0 10px;display:flex;align-items:center;gap:7px}
+
+  /* ---- Hero ---- */
+  .sp-hero{position:relative;overflow:hidden;padding:24px 24px 20px}
+  .sp-hero::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+    background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4)}
+  .sp-hero h1{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:2px 0 10px}
+  .sp-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .sp-chip{font-size:12.5px;font-weight:500;padding:4px 10px;border-radius:99px;background:var(--sunken);
+    border:1px solid var(--line);color:var(--ink-soft);white-space:nowrap}
+  .sp-chip b{color:var(--ink);font-weight:600}
+  .sp-team{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .sp-person{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border:1px solid var(--line);
+    border-radius:13px;background:var(--paper-2);min-width:0;flex:0 1 auto}
+  .sp-person .avatar{width:34px;height:34px;font-size:12px}
+  .sp-person .avatar.co{background:linear-gradient(135deg,#0ea5e9,#06b6d4)}
+  .sp-person .r{font-size:10.5px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.08em;line-height:1.3}
+  .sp-person .n{font-weight:600;font-size:14px;line-height:1.3}
+  .sp-prog{margin-top:18px}
+  .sp-prog .lab{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink-soft);margin-bottom:6px}
+  .sp-prog .lab b{color:var(--ink);font-weight:600}
+  .sp-bar{height:8px;border-radius:99px;background:var(--sunken);border:1px solid var(--line);overflow:hidden}
+  .sp-bar > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6)}
+  .sp-bar.att > i{background:var(--green)}
+  .sp-bar.att.low > i{background:var(--clay)}
+
+  /* ---- Tabs ---- */
+  .sp-tabs{position:sticky;top:60px;z-index:20;display:flex;gap:4px;padding:4px;margin:16px 0;
+    background:var(--sunken);border:1px solid var(--line);border-radius:14px;overflow-x:auto;
+    scrollbar-width:none;box-shadow:0 6px 14px -12px rgba(16,24,40,.35)}
+  .sp-tabs::-webkit-scrollbar{display:none}
+  .sp-tabs button{flex:1 0 auto;border:none;background:none;padding:9px 14px;border-radius:10px;
+    font-weight:600;font-size:14px;color:var(--ink-soft);display:inline-flex;align-items:center;
+    justify-content:center;gap:7px;white-space:nowrap;transition:background .15s,color .15s}
+  .sp-tabs button:hover{color:var(--ink)}
+  .sp-tabs button.on{background:var(--paper-2);color:var(--ink);box-shadow:var(--shadow)}
+  .sp-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .sp-tabs .nbadge{margin-left:0}
+  .sp-sems{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+
+  /* ---- Alerts & empties ---- */
+  .sp-alert{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:13px 16px;border-radius:var(--r);
+    background:var(--blue-soft);color:var(--blue-ink);font-size:14.5px;font-weight:500}
+  .sp-alert .grow{flex:1;min-width:180px}
+  .sp-alert .btn{background:var(--blue);color:#fff}
+  .sp-empty{padding:14px 16px;border:1px dashed var(--line-strong);border-radius:12px;background:var(--sunken);
+    color:var(--ink-soft);font-size:14px;line-height:1.5}
+  .sp-note{font-size:13px;color:var(--ink-soft);margin:14px 0 0;line-height:1.5}
+
+  /* ---- "Up next" tiles ---- */
+  .sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  .sp-tile{display:flex;flex-direction:column;gap:12px}
+  .sp-tile .foot{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .sp-when{display:flex;gap:14px;align-items:center;min-width:0}
+  .sp-date{width:58px;flex:0 0 auto;border-radius:12px;border:1px solid var(--line);overflow:hidden;
+    text-align:center;background:var(--paper-2);box-shadow:var(--shadow)}
+  .sp-date .m{background:var(--btn-bg);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:3px 0}
+  .sp-date .d{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1.15;padding-top:4px;color:var(--ink)}
+  .sp-date .w{font-size:10.5px;color:var(--ink-soft);padding-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .sp-date.lg{width:76px;border-radius:14px}
+  .sp-date.lg .d{font-size:30px}
+  .sp-big{font-size:17px;font-weight:650;letter-spacing:-.01em;line-height:1.25}
+  .sp-time{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .sp-small{font-size:13px;color:var(--ink-soft);line-height:1.45}
+  .sp-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
+  /* ---- Stats ---- */
+  .sp-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .sp-stats .b{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--sunken);min-width:0}
+  .sp-stats .n{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.03em;line-height:1.2}
+  .sp-stats .n small{font-size:13px;color:var(--ink-soft);font-weight:500;letter-spacing:0}
+  .sp-stats .l{font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-top:2px}
+  .sp-stats .b.ok .n{color:var(--green-ink)} .sp-stats .b.bad .n{color:var(--clay-ink)}
+
+  /* ---- Key/value ---- */
+  .sp-kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 14px;font-size:14.5px}
+  .sp-kv .k{color:var(--ink-soft);font-size:13px;font-weight:600;padding-top:1px}
+
+  /* ---- Upcoming weeks list ---- */
+  .sp-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sp-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;
+    padding:10px 12px;border-top:1px solid var(--line);background:var(--paper-2)}
+  .sp-row:first-child{border-top:none}
+  .sp-row.next{background:var(--accent-tint)}
+  .sp-row.cxl .sp-time{text-decoration:line-through;color:var(--ink-soft)}
+  .sp-wk{font-family:var(--mono);font-weight:600;font-size:12.5px;text-align:center;padding:6px 0;border-radius:9px;
+    background:var(--sunken);color:var(--ink-soft);border:1px solid var(--line)}
+  .sp-row.next .sp-wk{background:var(--btn-bg);color:#fff;border-color:transparent}
+  .sp-more{margin-top:10px}
+
+  /* ---- Attendance ribbon ---- */
+  .sp-ribbon{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;margin-top:14px}
+  .sp-ribbon button{height:46px;border-radius:10px;border:1px solid var(--line-strong);background:var(--paper-2);
+    font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink-soft);padding:0;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1;
+    transition:transform .1s,box-shadow .12s}
+  .sp-ribbon button .g{font-size:13px}
+  .sp-ribbon button:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .sp-ribbon button.ok{background:var(--green-soft);color:var(--green-ink);border-color:transparent}
+  .sp-ribbon button.miss{background:var(--clay-soft);color:var(--clay-ink);border-color:transparent}
+  .sp-ribbon button.held{background:var(--blue-soft);color:var(--blue-ink);border-color:transparent}
+  .sp-ribbon button.nh{background:var(--neutral-soft);color:var(--neutral-ink);border-color:transparent}
+  .sp-ribbon button.unrec{border-style:dashed}
+  .sp-ribbon button.future{opacity:.45}
+  .sp-ribbon button.now{box-shadow:0 0 0 2px var(--accent)}
+  .sp-ribbon button.sel{outline:2px solid var(--ink);outline-offset:2px}
+  .sp-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink-soft);margin-top:12px}
+  .sp-legend span{display:inline-flex;align-items:center;gap:6px}
+  .sp-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .sp-detail{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--sunken);border:1px solid var(--line);font-size:14px}
+  .sp-detail .t{font-weight:600;margin-bottom:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sp-quote{margin-top:8px;padding:8px 12px;border-left:3px solid var(--accent);background:var(--paper-2);
+    border-radius:0 8px 8px 0;white-space:pre-wrap}
+
+  /* ---- CoC ---- */
+  .sp-coc-top{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .sp-count{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:4px 10px;
+    border-radius:99px;background:var(--accent-tint);color:var(--accent-deep)}
+  .sp-count.today{background:var(--amber-soft);color:var(--amber-ink)}
+  .sp-count.past{background:var(--neutral-soft);color:var(--neutral-ink)}
+  .sp-split{display:flex;gap:6px;margin:18px 0 4px}
+  .sp-split > div{min-width:0;padding:10px 12px;border-radius:11px;background:var(--sunken);border:1px solid var(--line);
+    border-top:3px solid var(--accent)}
+  .sp-split > div.qa{border-top-color:var(--blue)}
+  .sp-split .h{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  .sp-check{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .sp-check li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+  .sp-check li .sp-i{width:22px;height:22px;border-radius:50%;background:var(--green-soft);color:var(--green-ink);margin-top:1px}
+
+  /* ---- Messages ---- */
+  .sp-pinned{border:1px solid transparent;background:var(--amber-soft);border-radius:12px;padding:10px 14px;margin-bottom:12px}
+  .sp-pinned .h{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);
+    display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .sp-pinned .x{white-space:pre-wrap;font-size:14px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;
+    -webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+  .sp-pinned .x.open{-webkit-line-clamp:unset;display:block}
+  .sp-pinned .x + .h{margin-top:10px}
+  .sp-thread{display:flex;flex-direction:column;gap:12px;max-height:min(62vh,600px);overflow-y:auto;
+    padding:6px 4px 6px 2px;overscroll-behavior:contain}
+  .sp-msg{max-width:82%;align-self:flex-start;display:flex;flex-direction:column;min-width:0}
+  .sp-msg.me{align-self:flex-end;align-items:flex-end}
+  .sp-meta{font-size:12px;color:var(--ink-soft);margin:0 4px 4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .sp-meta b{color:var(--ink);font-weight:600}
+  .sp-bub{padding:10px 14px;border-radius:16px 16px 16px 5px;background:var(--sunken);border:1px solid var(--line);
+    white-space:pre-wrap;font-size:14.5px;line-height:1.5;overflow-wrap:anywhere;color:var(--ink)}
+  .sp-msg.me .sp-bub{background:var(--btn-bg);color:#fff;border-color:transparent;border-radius:16px 16px 5px 16px}
+  .sp-msg.new .sp-bub{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .sp-divider{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;color:var(--blue-ink);
+    text-transform:uppercase;letter-spacing:.1em}
+  .sp-divider::before,.sp-divider::after{content:"";flex:1;height:1px;background:var(--blue);opacity:.4}
+  .sp-compose{display:flex;gap:10px;align-items:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .sp-compose textarea{min-height:46px;max-height:220px;resize:none;border-radius:14px}
+  .sp-compose .btn{height:46px;flex:0 0 auto}
+  .sp-hint{font-size:12px;color:var(--ink-soft);margin-top:6px}
+
+  @media (max-width:640px){
+    .sp-top{padding:0 14px}
+    .sp .hide-xs{display:none}
+    .sp-main{padding:14px 14px 48px}
+    .sp-hero{padding:20px 18px 18px}
+    .sp-hero h1{font-size:23px}
+    .sp-card{padding:16px}
+    .sp-person{flex:1 1 100%}
+    .sp-tabs{margin:14px 0 12px;gap:2px}
+    .sp-tabs button{flex:1 1 0;min-width:0;flex-direction:column;gap:3px;padding:7px 4px;font-size:12px;position:relative}
+    .sp-tabs .nbadge{position:absolute;top:3px;left:calc(50% + 6px);min-width:17px;height:17px;font-size:10.5px}
+    .sp-row .row{justify-content:flex-start!important}
+    .sp-row > .pill{justify-self:start}
+    .sp-hint{display:none}
+    .sp-stats .n{font-size:19px}
+    .sp-stats .b{padding:10px 11px}
+    .sp-kv{grid-template-columns:1fr;gap:0}
+    .sp-kv .k{margin-top:10px;font-size:12px}
+    .sp-kv .k:first-child{margin-top:0}
+    .sp-row{grid-template-columns:46px minmax(0,1fr);row-gap:6px}
+    .sp-row > :last-child:not(:nth-child(2)){grid-column:2}
+    .sp-msg{max-width:92%}
+    .sp-tile .foot .btn{flex:1 1 auto}
+    .sp-split{flex-direction:column}
+  }
+  @media print{
+    .sp-top,.sp-tabs,.sp-compose,.sp-sems{display:none!important}
+    .sp{background:#fff}
+  }
+
+  /* ---- Staff PIN view (shares the student portal's parts) ---- */
+  .sp-fresh{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;margin-bottom:14px;border-radius:12px;
+    background:var(--sunken);border:1px solid var(--line);color:var(--ink-soft);font-size:13px;line-height:1.5}
+  .sp-fresh .sp-i{margin-top:2px}
+  .sp-next-strip{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:16px;padding:14px;border-radius:14px;
+    background:var(--accent-tint);border:1px solid var(--line)}
+  .sp-cnt{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:99px;
+    background:var(--neutral-soft);color:var(--neutral-ink)}
+  .sp-tabs button.on .sp-cnt{background:var(--accent-tint);color:var(--accent-deep)}
+  .sp-hide{display:none!important}
+  .sp-printhead{display:none}
+  .sp-search{margin-bottom:2px}
+  .sp-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .sp-sub{padding:14px;border-radius:12px;background:var(--sunken);border:1px solid var(--line);min-width:0}
+  .sp-sub .sp-empty{background:var(--paper-2)}
+  .sp-kv.sm{grid-template-columns:96px minmax(0,1fr);font-size:13.5px;gap:5px 12px}
+  .sp-row.sp-ro{grid-template-columns:168px minmax(0,1fr) auto;align-items:start}
+  .sp-slot{padding-top:1px}
+  .sp-row.disc{background:var(--sunken)}
+  @media (max-width:640px){
+    .sp-row.sp-ro{grid-template-columns:1fr;row-gap:4px}
+    .sp-row.sp-ro > :last-child:not(:nth-child(2)){grid-column:1;justify-self:start}
+    .sp-tabs button .sp-cnt{position:absolute;top:3px;left:calc(50% + 8px);font-size:10px;padding:0 5px}
+    .sp-next-strip .btn{flex:1 1 100%}
+  }
+  @media print{
+    .sp-hide{display:grid!important}
+    .sp-hide.sp-keephide{display:none!important}
+    .sp-printhead{display:block;font-size:16px;margin:18px 0 4px}
+    .sp-fresh .sp-i,.sp-search{display:none}
+    .sp-card{break-inside:avoid}
+  }
 </style>
 <!-- Firebase SDK (modular, via CDN) -->
 <script type="module">
@@ -7720,14 +7979,23 @@ function renderLogin(){
     } else {
       const sid=el("input",{placeholder:"e.g. cihe45001",autocapitalize:"none",
         autocorrect:"off",spellcheck:"false",inputmode:"text",autocomplete:"off"});
-      const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:6px"},"View my schedule");
-      btn.onclick=()=>studentLookup(sid.value.trim());
+      /* Remembered on this device only, and only when the student ticks
+         the box — the ID is the key to their page, so a shared lab
+         computer should never keep it by default. */
+      let saved=""; try{ saved=window.localStorage.getItem("sh-sid")||""; }catch(e){}
+      if(saved) sid.value=saved;
+      const remember=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+      remember.checked=!!saved;
+      const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:6px"},"Open my portal");
+      btn.onclick=()=>studentLookup(sid.value.trim(),remember.checked);
       sid.addEventListener("keydown",e=>{if(e.key==="Enter")btn.click();});
       card.append(
         el("div",{style:"margin-bottom:6px"},el("label",{},"Student ID"),sid,
           el("p",{class:"muted",style:"margin:5px 0 0;font-size:12.5px"},"Capitals don't matter — CIHE45001 and cihe45001 both work.")),
+        el("label",{style:"display:flex;align-items:center;gap:8px;font-weight:500;margin:10px 0 4px;cursor:pointer"},
+          remember,"Remember my ID on this device"),
         btn,
-        el("p",{class:"muted",style:"margin-top:12px"},"Read-only access. No password required — your ID is your key.")
+        el("p",{class:"muted",style:"margin-top:12px"},"See your meeting times, attendance and CoC, and message your supervisors. No password required — your ID is your key.")
       );
     }
   }
@@ -7883,7 +8151,7 @@ async function afterLogin(){
   renderApp();
 }
 
-async function studentLookup(sid){
+async function studentLookup(sid,remember){
   const typed=String(sid||"").trim();
   if(!typed){ toast("Enter your student ID.",true); return; }
   if(DEMO) seedDemo();
@@ -7893,6 +8161,9 @@ async function studentLookup(sid){
     // carry on with the ID exactly as it is stored, so read receipts on the
     // message board key off one consistent value however it was typed
     const canonical=matches[0].sid||typed;
+    if(remember!==undefined){
+      try{ if(remember) window.localStorage.setItem("sh-sid",canonical); else window.localStorage.removeItem("sh-sid"); }catch(e){}
+    }
     const sems=await DB.list("semesters");
     /* The portal never signs in, so this cache is empty here. The switches
        that live on a semester document are read through it, so fill it
@@ -13551,152 +13822,728 @@ async function copyForward(fromSem,done){
 }
 
 /* ============================================================
-   13. STUDENT READ-ONLY VIEW
-   Shows: class time(s), consultation time + meeting link, and the
-   student's own week-by-week attendance (attended / missed).
+   13. STUDENT PORTAL
+   What a student sees after typing their ID: their next meeting, their
+   classes, their attendance, their Confirmation of Candidature and the
+   message thread with their supervisors — in four tabs, phone-first.
+
+   Everything is gathered once (studentPortalData) and then drawn, so
+   switching tab or semester never goes back to the database. The rules
+   about WHAT a student may see are unchanged:
+     - classes: only the approved class run by the student's own
+       principal supervisor, for units the student is enrolled in;
+     - CoC: only this student's own slot, and only once the panel is
+       released to students (never the running order);
+     - messages: only this student's own thread, and none at all when
+       messaging is switched off for the semester.
    ============================================================ */
+const SP_ICONS={
+  cal:'<rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>',
+  video:'<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="m15.5 10.5 6-3.5v10l-6-3.5"/>',
+  msg:'<path d="M21 12a8.5 8.5 0 0 1-12.4 7.5L3.5 21l1.4-4.6A8.5 8.5 0 1 1 21 12z"/>',
+  award:'<circle cx="12" cy="9" r="6"/><path d="m8.6 14.2-1.6 7.8 5-2.8 5 2.8-1.6-7.8"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+  home:'<path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9v12h14V9"/>',
+  out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+  pin:'<path d="M12 17v5"/><path d="M9 10.8V4h6v6.8l3 3.2H6z"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  plus:'<rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 10h18M12 13.5v5M9.5 16h5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  dl:'<path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  folder:'<path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H9l2 2.5h7.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
+  lock:'<rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>'
+};
+const spIcon=(k,size=18)=>el("span",{class:"sp-i",html:
+  '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="currentColor" stroke-width="2" '+
+  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(SP_ICONS[k]||"")+'</svg>'});
+
+/* ---- Dates: a teaching week + a weekday name -> a real calendar day ---- */
+const SP_MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const spDayIdx=d=>DAYS.indexOf(String(d||"").trim());
+function spDateOf(sem,w,day){
+  const b=semWeekBounds(sem,w), i=spDayIdx(day);
+  if(!b||i<0) return null;
+  const d=new Date(b.mon); d.setDate(b.mon.getDate()+i); d.setHours(0,0,0,0);
+  return d;
+}
+function spAt(d,t){ const x=new Date(d), m=minsOf(t); x.setHours(Math.floor(m/60),m%60,0,0); return x; }
+function spYmdDate(ymd){ const d=new Date(String(ymd||"")+"T00:00:00"); return isNaN(d)?null:d; }
+function spDaysUntil(d){ const a=new Date(); a.setHours(0,0,0,0); const b=new Date(d); b.setHours(0,0,0,0); return Math.round((b-a)/86400000); }
+const spShortDate=d=>DAYS[(d.getDay()+6)%7].slice(0,3)+" "+d.getDate()+" "+SP_MON[d.getMonth()];
+function spWhenWord(d){
+  const n=spDaysUntil(d);
+  return n===0?"Today":n===1?"Tomorrow":spShortDate(d);
+}
+function spCountdown(d){
+  const n=spDaysUntil(d);
+  if(n===0) return {txt:"Today",cls:"today"};
+  if(n===1) return {txt:"Tomorrow",cls:"today"};
+  if(n>1)  return {txt:"In "+n+" days",cls:""};
+  return {txt:"Date has passed",cls:"past"};
+}
+const spDateTile=(d,big)=>el("div",{class:"sp-date"+(big?" lg":""),"aria-hidden":"true"},
+  el("div",{class:"m"},SP_MON[d.getMonth()]),
+  el("div",{class:"d"},String(d.getDate())),
+  el("div",{class:"w"},DAYS[(d.getDay()+6)%7].slice(0,3)));
+const spInitials=n=>String(n||"").replace(/^(dr|prof|professor|mr|mrs|ms|assoc\.? prof)\.?\s+/i,"")
+  .split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0].toUpperCase()).join("")||"?";
+const spPlural=(n,w)=>n+" "+w+(n===1?"":"s");
+
+/* Every week of one consultation, with its real date where the semester
+   has a start date on record. */
+function spConsultOccurrences(c,sem,weeks){
+  const out=[];
+  for(let w=1;w<=weeks;w++){
+    const et=weekTime(c,w), log=weekLog(c,w), date=et.day?spDateOf(sem,w,et.day):null;
+    out.push({w,et,log,date,
+      start:date&&et.start?spAt(date,et.start):null,
+      end:date&&(et.end||et.start)?spAt(date,et.end||et.start):null,
+      cancelled:log.held===false});
+  }
+  return out;
+}
+/* The next consultation still to happen (not cancelled, not yet logged). */
+function spNextConsult(d){
+  const now=new Date(); let best=null;
+  d.cons.forEach(c=>spConsultOccurrences(c,d.sem,d.weeks).forEach(o=>{
+    if(!o.end||o.end<=now||o.cancelled||o.log.held===true) return;
+    if(!best||o.start<best.o.start) best={c,o};
+  }));
+  return best;
+}
+function spNextClass(d){
+  const now=new Date(); let best=null;
+  d.classes.forEach(t=>{
+    for(let w=1;w<=d.weeks;w++){
+      const date=spDateOf(d.sem,w,t.day); if(!date) break;
+      const end=spAt(date,t.end||t.start);
+      if(end>now){ const start=spAt(date,t.start); if(!best||start<best.start) best={t,w,date,start}; break; }
+    }
+  });
+  return best;
+}
+/* Where the semester is: before / week n / finished / unknown. */
+function spSemPhase(sem){
+  const weeks=sem?.weeks||12;
+  if(!sem?.start) return {kind:"unknown",weeks};
+  const r=teachingRange(sem), now=new Date(); now.setHours(0,0,0,0);
+  if(r&&now<r.from) return {kind:"before",weeks,days:spDaysUntil(r.from),from:r.from};
+  if(r&&now>r.to) return {kind:"after",weeks};
+  const w=currentWeekOf(sem);
+  return w?{kind:"week",w,weeks}:{kind:"after",weeks};
+}
+
+/* ---- Add to calendar (.ics) -------------------------------------------
+   Floating local times — no time zone — so the event lands at the time
+   printed on the page in whatever zone the student's phone is in. */
+function spIcs(events,fname){
+  const st=d=>d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+"T"+pad2(d.getHours())+pad2(d.getMinutes())+"00";
+  const esc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/\r?\n/g,"\\n").replace(/([,;])/g,"\\$1");
+  const fold=l=>{ const out=[]; while(l.length>74){ out.push(l.slice(0,74)); l=" "+l.slice(74); } out.push(l); return out.join("\r\n"); };
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MRes Supervision Hub//Student portal//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  events.forEach(e=>{
+    L.push("BEGIN:VEVENT","UID:"+e.uid+"@mres-supervision-hub","DTSTAMP:"+stamp,
+      "DTSTART:"+st(e.start),"DTEND:"+st(e.end),"SUMMARY:"+esc(e.title));
+    if(e.desc) L.push("DESCRIPTION:"+esc(e.desc));
+    if(e.loc)  L.push("LOCATION:"+esc(e.loc));
+    if(e.url)  L.push("URL:"+String(e.url).replace(/[\r\n]/g,""));
+    L.push("END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  saveBlob(new Blob([L.map(fold).join("\r\n")+"\r\n"],{type:"text/calendar;charset=utf-8"}),fname);
+}
+
+/* ---- Data -------------------------------------------------------------- */
+async function studentPortalData(en,sems){
+  const sem=sems.find(s=>s.id===en.semesterId)||null;
+  const weeks=sem?.weeks||12;
+  const unitIds=en.unitIds||[];
+  const units=unitIds.map(id=>unitById(sem,id)).filter(Boolean);
+  let classes=[], cons=[], classErr=false, consErr=false;
+  try{
+    classes=(await DB.list("timetables",{semesterId:en.semesterId}))
+      .filter(t=>t.status==="approved" && unitIds.includes(t.unitId) && t.supervisorUid===en.principalUid)
+      .sort((a,b)=>spDayIdx(a.day)-spDayIdx(b.day)||minsOf(a.start)-minsOf(b.start));
+  }catch(e){ classErr=true; console.warn("classes unavailable",e); }
+  try{
+    cons=(await DB.list("consultations",{semesterId:en.semesterId})).filter(c=>c.studentDocId===en.id);
+  }catch(e){ consErr=true; console.warn("consultations unavailable",e); }
+  const coc=await studentCocLoad(en);
+  const msgs=await studentNotesLoad(en);
+  return {en,sem,weeks,units,classes,cons,classErr,consErr,coc,msgs};
+}
+
+/* The student's own CoC, by the snapshot the office publishes for them,
+   or — on a site whose rules allow it — read live from the panels. */
+async function studentCocLoad(en){
+  /* 1. The student's own published snapshot. This is the route that works
+        with panelGroups closed to signed-out visitors, which it should be.
+        It exists only while the panel is released to its students. */
+  let snap=null, keyDenied=false;
+  try{ snap=await DB.getStaffKey(cocKeyOf(en.id)); }
+  catch(err){ keyDenied=true; console.warn("CoC snapshot unreadable",err); }
+  /* 2. Reading the panels live, for a site whose rules have opened them. */
+  let liveDenied=false;
+  if(!(snap&&snap.kind==="coc")){
+    try{
+      const groups=await DB.list("panelGroups",{semesterId:en.semesterId});
+      const g=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(en.id))||null;
+      if(g) snap=studentCocSnap(g,en);
+    }catch(err){ liveDenied=true; }
+  }
+  if(!(snap&&snap.kind==="coc")){
+    /* Only when NEITHER route could look is this a set-up problem. A
+       refusal on the live route alone is the normal, correct state of a
+       site with panelGroups closed, and there the missing snapshot simply
+       means "not released yet". */
+    return {state:(keyDenied&&liveDenied)?"error":"arranging",snap:null};
+  }
+  if(!(snap.date&&snap.start)) return {state:"noTime",snap};
+  return {state:"ok",snap};
+}
+
+async function studentNotesLoad(en){
+  /* The portal reads its own semester's setting rather than the admin's
+     currently selected one — a student looking up an old semester should
+     see that semester's arrangement, not today's. */
+  const semOf=S.semesters.find(x=>x.id===en.semesterId)||null;
+  if(messagesOff(semOf)) return {state:"off",list:[]};
+  try{ return {state:"ok",list:await loadNotes(en.semesterId,[en.id])}; }
+  catch(err){ return {state:"error",list:[]}; }
+}
+
+/* ---- Page -------------------------------------------------------------- */
 async function renderStudentView(sid,enrolments,sems){
   S.studentSid=sid; S.studentName=enrolments[0]?.name||"";
-  const wrap=el("div",{class:"auth-wrap",style:"align-items:flex-start;padding-top:30px"});
-  const col=el("div",{style:"width:100%;max-width:760px"});
-  const stu=enrolments[0];
-  col.append(el("div",{class:"card",style:"border-top:4px solid var(--blue);margin-bottom:16px"},
-    el("div",{class:"eyebrow ui",style:"color:var(--blue)"},"Read-only student view"),
-    el("h1",{style:"font-size:24px;margin:2px 0"},stu.name),
-    el("p",{class:"muted",style:"margin:0"},"ID "+sid+" · "+stu.email),
-    el("div",{class:"row",style:"margin-top:10px"},
-      el("button",{class:"btn ghost sm",onclick:()=>renderLogin()},"← Back"),
-      el("span",{style:"flex:1"}), themeButton())));
+  const data=[];
+  for(const en of enrolments) data.push(await studentPortalData(en,sems));
+  data.sort((a,b)=>(String(a.sem?.label||"")>String(b.sem?.label||"")?-1:1));
+  // Open on the semester that is teaching right now, if there is one.
+  const running=data.findIndex(d=>currentWeekOf(d.sem)!==null);
+  const st={i:running>=0?running:0, tab:"home", selWeek:null, showAllWeeks:false};
+  const meId=noteMeId();
+  const unreadOf=d=>d.msgs.list.filter(n=>isUnread(n,meId)).length;
 
-  for(const en of enrolments){
-    const sem=sems.find(s=>s.id===en.semesterId);
-    const weeks=sem?.weeks||12;
-    const myUnitIds=en.unitIds||[];
-    const myUnitCodes=myUnitIds.map(id=>unitById(sem,id)?.code).filter(Boolean);
-    const card=el("div",{class:"card",style:"margin-bottom:14px"});
-    card.append(
-      el("div",{class:"eyebrow ui"},myUnitCodes.length?myUnitCodes.join(" · "):"No units"),
-      el("h3",{style:"margin-top:2px"},sem?.label||"Semester"),
-      el("p",{class:"muted",style:"margin:4px 0 12px"},"Campus: "+en.campus+
-        (en.area?" · Area: "+en.area:"")+
-        " · Principal: "+(en.principalName||"—")+(en.coName?" · Co: "+en.coName:"")));
+  const who=enrolments[0]||{};
+  const top=el("header",{class:"sp-top"},
+    el("div",{class:"mark"},"SH"),
+    el("div",{style:"min-width:0"},
+      el("div",{class:"ttl"},"Student portal"),
+      el("div",{class:"sub"},"MRes Supervision Hub")),
+    el("div",{class:"acts"},
+      themeButton("btn ghost sm"),
+      el("button",{class:"btn ghost sm",title:"Leave the portal",
+        onclick:()=>{ S.studentSid=null; S.studentName=""; renderLogin(); }},
+        spIcon("out",16),el("span",{class:"hide-xs"},"Sign out"))));
+  const main=el("main",{class:"sp-main"});
+  const root=el("div",{class:"sp"},top,main);
+  document.body.append(root,toastNode());
 
-    // ---- Weekly classes ----
-    // Only the classes RUN BY THIS STUDENT'S PRINCIPAL SUPERVISOR, for units the
-    // student is enrolled in, and only once admin-approved. A unit may be taught
-    // by several supervisors (e.g. one class group per campus); the student must
-    // see only their own principal's group, not every campus's.
-    const tts=(await DB.list("timetables",{semesterId:en.semesterId}))
-      .filter(t=>t.status==="approved"
-                 && myUnitIds.includes(t.unitId)
-                 && t.supervisorUid===en.principalUid);
-    card.append(el("div",{style:"font-weight:600;margin-bottom:4px",class:"ui"},"Weekly classes"));
-    if(tts.length) tts.forEach(t=>{
-      const u=unitById(sem,t.unitId);
-      card.append(el("p",{style:"margin:2px 0"},`${u?.code?u.code+" · ":""}${t.day} ${t.start}–${t.end} · ${t.room||""}`));
-    });
-    else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Class times not published yet."));
+  let tabsNode=null, panelNode=null;
 
-    // ---- Consultation (recurring) + meeting link ----
-    const cons=(await DB.list("consultations",{semesterId:en.semesterId}))
-      .filter(c=>c.studentDocId===en.id);
-    card.append(el("div",{style:"font-weight:600;margin:14px 0 4px",class:"ui"},"My consultation"));
-    if(cons.length){
-      cons.forEach(c=>{
-        const block=el("div",{style:"margin:2px 0 6px"});
-        block.append(el("p",{style:"margin:2px 0"},
-          el("span",{class:"muted ui",style:"font-size:12px"},"Usual time: "),
-          c.day?`${c.day} ${c.start}–${c.end}${c.mode?" · "+c.mode:""}`+(c.principalName?" · with "+c.principalName:"")
-               :"No fixed weekly time \u2014 your supervisor arranges each meeting"+(c.principalName?" (with "+c.principalName+")":"")));
-        if(c.meetingLink) block.append(el("a",{class:"linkpill",href:c.meetingLink,target:"_blank",rel:"noopener"},"Join meeting"));
-        card.append(block);
-
-        // ---- Weeks with a CHANGED time (overrides) ----
-        // The supervisor can change one week's time/link. Surface every such
-        // week so the student sees it, not just the recurring time. We show all
-        // overridden weeks (held or not), since a changed upcoming meeting is
-        // exactly what a student needs to know.
-        const changed=[];
-        for(let w=1;w<=weeks;w++){
-          const et=weekTime(c,w);
-          if(et.overridden) changed.push({w,et});
-        }
-        if(changed.length){
-          card.append(el("div",{style:"font-weight:600;margin:10px 0 4px",class:"ui"},"Changed meeting times"));
-          changed.forEach(({w,et})=>{
-            const row=el("div",{style:"margin:2px 0 6px"});
-            row.append(el("p",{style:"margin:2px 0"},
-              el("span",{class:"pill blue",style:"font-size:11.5px;margin-right:6px"},"Week "+w),
-              `${et.day} ${et.start}–${et.end}${et.mode?" · "+et.mode:""}`));
-            if(et.link) row.append(el("a",{class:"linkpill",href:et.link,target:"_blank",rel:"noopener"},"Join meeting"));
-            card.append(row);
-          });
-        }
-
-        // ---- My attendance, week by week ----
-        const log=c.weeks||{};
-        const anyLogged=Object.keys(log).length>0;
-        card.append(el("div",{style:"font-weight:600;margin:12px 0 6px",class:"ui"},"My attendance"));
-        if(!anyLogged){
-          card.append(el("p",{class:"muted",style:"margin:2px 0"},"No meetings recorded yet."));
-        } else {
-          const grid=el("div",{style:"display:flex;flex-wrap:wrap;gap:6px"});
-          for(let w=1;w<=weeks;w++){
-            const l=weekLog(c,w);
-            let cls="none",txt="W"+w;
-            if(l?.held===true){
-              if(l.studentAttended===true){ cls="held"; txt="W"+w+" ✓"; }
-              else if(l.studentAttended===false){ cls="missed"; txt="W"+w+" ✗"; }
-              else { cls="none"; txt="W"+w+" ·"; }
-            } else if(l?.held===false){ cls="none"; txt="W"+w+" —"; }
-            else continue; // unrecorded weeks: skip in student view
-            const et=weekTime(c,w);
-            if(et.overridden) txt+=" *"; // time was changed this week
-            const pill=el("span",{class:"pill "+cls,title:`${et.day} ${et.start}–${et.end}`+(et.overridden?" (changed time)":"")+(l?.comment?" · "+l.comment:"")},txt);
-            grid.append(pill);
-          }
-          if(!grid.children.length) grid.append(el("span",{class:"muted"},"No meetings recorded yet."));
-          card.append(grid);
-          // legend
-          card.append(el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:13px"},
-            "✓ attended · ✗ missed · — not held · * time changed that week · hover a week for the time and any note."));
-        }
-      });
-    } else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Consultation time not set yet."));
-
-    card.append(el("p",{class:"muted ui",style:"margin:12px 0 0;font-size:13px"},
-      "Consultations are held in your Team classroom, in your own channel — use the Join button above at the shown time. Attendance is recorded against these meetings. To contact your supervisor, email them directly."));
-
-    // ---- My Confirmation of Candidature ----
-    await studentCocBlock(card,en);
-
-    // ---- Messages with my supervisors ----
-    await studentNotesBlock(card,en);
-
-    col.append(card);
+  function go(tab){
+    st.tab=tab; drawTabs(); drawPanel();
+    const y=(tabsNode?.offsetTop||0)-70;
+    if(window.scrollY>y) window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
   }
 
-  wrap.append(col);
-  document.body.append(wrap, toastNode());
-  // "You have new messages" banner at the top of the student's portal
-  try{
-    const meId=noteMeId();
-    let unread=0;
-    for(const en of enrolments){
-      if(messagesOff(sems.find(x=>x.id===en.semesterId))) continue;
-      const ns=await loadNotes(en.semesterId,[en.id]);
-      unread+=ns.filter(n=>isUnread(n,meId)).length;
+  function draw(){
+    main.replaceChildren();
+    const d=data[st.i];
+    if(data.length>1){
+      main.append(el("div",{class:"subtabs sp-sems",role:"tablist","aria-label":"Semester"},
+        ...data.map((x,i)=>el("button",{class:i===st.i?"active":"",role:"tab","aria-selected":String(i===st.i),
+          onclick:()=>{ st.i=i; st.selWeek=null; st.showAllWeeks=false; draw(); }},
+          x.sem?.label||"Semester"))));
     }
-    if(unread){
-      const bar=el("div",{class:"card ui",style:"border-left:4px solid var(--blue);padding:12px 14px;margin-bottom:14px"},
-        el("div",{class:"row",style:"align-items:center;gap:10px;flex-wrap:wrap"},
-          el("span",{class:"pill blue"},"\u2709 "+unread+" new message"+(unread===1?"":"s")),
-          el("span",{class:"ui",style:"font-size:13.5px"},"from your supervisors \u2014 scroll down to \u201CMessages with my supervisors\u201D."),
-          el("span",{style:"flex:1;min-width:10px"}),
-          el("button",{class:"btn ghost sm",onclick:()=>bar.remove()},"Dismiss")));
-      col.insertBefore(bar,col.children[1]||null);
+    main.append(hero(d));
+    tabsNode=el("nav",{class:"sp-tabs",role:"tablist","aria-label":"Sections"});
+    panelNode=el("div",{class:"sp-sec"});
+    main.append(tabsNode,panelNode);
+    drawTabs(); drawPanel();
+  }
+
+  function drawTabs(){
+    const d=data[st.i], unread=unreadOf(d);
+    const T=[["home","Overview","home"],["meet","Meetings","cal"],["coc","My CoC","award"],["msg","Messages","msg"]];
+    tabsNode.replaceChildren(...T.map(([k,lbl,ic])=>{
+      const b=el("button",{class:st.tab===k?"on":"",role:"tab","aria-selected":String(st.tab===k),onclick:()=>go(k)},
+        spIcon(ic,16),lbl);
+      if(k==="msg"&&unread) b.append(el("span",{class:"nbadge","aria-label":unread+" unread"},String(unread)));
+      return b;
+    }));
+  }
+
+  function drawPanel(){
+    const d=data[st.i];
+    panelNode.replaceChildren();
+    if(st.tab==="home") homePanel(d);
+    else if(st.tab==="meet") meetPanel(d);
+    else if(st.tab==="coc") cocPanel(d);
+    else msgPanel(d);
+  }
+
+  /* ---- Hero: who, which semester, who supervises, how far through ---- */
+  function hero(d){
+    const en=d.en, sem=d.sem;
+    const first=String(en.name||"").trim().split(/\s+/)[0]||"there";
+    const h=new Date().getHours();
+    const hi=h<12?"Good morning":h<17?"Good afternoon":"Good evening";
+    const card=el("section",{class:"sp-card sp-hero"},
+      el("div",{class:"eyebrow"},(sem?.label||"Semester")+(d.units.length?" \u00B7 "+d.units.map(u=>u.code).filter(Boolean).join(" \u00B7 "):"")),
+      el("h1",{},hi+", "+first));
+    const chips=el("div",{class:"sp-chips"},
+      el("span",{class:"sp-chip"},"ID ",el("b",{},sid)));
+    if(en.campus) chips.append(el("span",{class:"sp-chip"},"Campus ",el("b",{},en.campus)));
+    if(en.area) chips.append(el("span",{class:"sp-chip"},"Area ",el("b",{},en.area)));
+    if(en.email) chips.append(el("span",{class:"sp-chip"},en.email));
+    card.append(chips);
+    const team=el("div",{class:"sp-team"});
+    const person=(role,name,co)=>el("div",{class:"sp-person"},
+      el("div",{class:"avatar"+(co?" co":"")},spInitials(name)),
+      el("div",{style:"min-width:0"},el("div",{class:"r"},role),el("div",{class:"n"},name)));
+    team.append(person("Principal supervisor",en.principalName||"To be confirmed"));
+    if(en.coName) team.append(person("Co-supervisor",en.coName,true));
+    card.append(team);
+    const ph=spSemPhase(sem);
+    if(ph.kind!=="unknown"){
+      const pct=ph.kind==="before"?0:ph.kind==="after"?100:Math.round(ph.w/ph.weeks*100);
+      const left=ph.kind==="week"
+        ? el("span",{},el("b",{},"Week "+ph.w)," of "+ph.weeks+(weekRangeLabel(sem,ph.w)?" \u00B7 "+weekRangeLabel(sem,ph.w):""))
+        : ph.kind==="before"
+          ? el("span",{},el("b",{},"Starts "+spShortDate(ph.from))," \u00B7 in "+spPlural(ph.days,"day"))
+          : el("span",{},el("b",{},"Semester finished"));
+      card.append(el("div",{class:"sp-prog"},
+        el("div",{class:"lab"},left,el("span",{},pct+"%")),
+        el("div",{class:"sp-bar",role:"progressbar","aria-valuenow":String(pct),"aria-valuemin":"0","aria-valuemax":"100"},
+          el("i",{style:"width:"+pct+"%"}))));
     }
-  }catch(e){ console.warn("messages banner unavailable:",e?.message||e); }
+    return card;
+  }
+
+  function cardHead(icon,tone,title,sub,right){
+    return el("div",{class:"sp-head"},
+      el("div",{class:"sp-ico"+(tone?" "+tone:"")},spIcon(icon,18)),
+      el("div",{class:"grow"},el("h2",{},title),sub?el("div",{class:"s"},sub):""),
+      right||"");
+  }
+  const joinBtn=(href,label="Join meeting",cls="btn sm")=>el("a",{class:cls,href,target:"_blank",rel:"noopener",
+    style:"text-decoration:none"},spIcon("video",16),label);
+
+  /* ---- Overview ---- */
+  function homePanel(d){
+    const unread=unreadOf(d);
+    if(unread) panelNode.append(el("div",{class:"sp-alert",role:"status"},
+      spIcon("msg",20),
+      el("div",{class:"grow"},el("b",{},spPlural(unread,"new message"))," from your supervisors"),
+      el("button",{class:"btn sm",onclick:()=>go("msg")},"Read now")));
+
+    const grid=el("div",{class:"sp-grid"});
+    grid.append(nextConsultTile(d), nextClassTile(d), cocTile(d));
+    panelNode.append(el("div",{},el("div",{class:"sp-label"},"Coming up"),grid));
+
+    // at a glance
+    const stats=attStats(d);
+    const glance=el("section",{class:"sp-card"},cardHead("chart","green","Attendance so far",
+      stats.held?"Consultations your supervisor has recorded":"Nothing recorded yet"));
+    glance.append(statBlock(stats));
+    glance.append(el("div",{class:"row",style:"margin-top:14px"},
+      el("button",{class:"btn ghost sm",onclick:()=>go("meet")},"See week by week \u2192")));
+    if(stats.held) panelNode.append(glance);
+  }
+
+  function nextConsultTile(d){
+    const t=el("section",{class:"sp-card sp-tile"},el("div",{class:"sp-label",style:"margin:0"},spIcon("video",14),"Next consultation"));
+    if(d.consErr){ t.append(el("div",{class:"sp-empty"},"Consultation times can't be loaded right now.")); return t; }
+    if(!d.cons.length){ t.append(el("div",{class:"sp-empty"},"Your supervisor hasn't set a consultation time yet.")); return t; }
+    const nx=spNextConsult(d);
+    if(nx){
+      const {c,o}=nx;
+      t.append(el("div",{class:"sp-when"},spDateTile(o.date),
+        el("div",{style:"min-width:0"},
+          el("div",{class:"sp-big"},spWhenWord(o.date)),
+          el("div",{class:"sp-time"},clockRange(o.et.start,o.et.end)||clockTime(o.et.start)),
+          el("div",{class:"sp-small"},["Week "+o.w,o.et.mode,c.principalName?"with "+c.principalName:""].filter(Boolean).join(" \u00B7 ")),
+          o.et.overridden?el("div",{class:"sp-tags"},el("span",{class:"pill pending"},"Time changed this week")):"")));
+      const foot=el("div",{class:"foot"});
+      if(o.et.link) foot.append(joinBtn(o.et.link));
+      else foot.append(el("span",{class:"sp-small"},"Meeting link to follow."));
+      t.append(foot);
+      return t;
+    }
+    const c=d.cons[0];
+    if(!d.sem?.start && c.day){
+      t.append(el("div",{},el("div",{class:"sp-big"},"Every "+c.day),
+        el("div",{class:"sp-time"},clockRange(c.start,c.end)),
+        el("div",{class:"sp-small"},[c.mode,c.principalName?"with "+c.principalName:""].filter(Boolean).join(" \u00B7 "))));
+      if(c.meetingLink) t.append(el("div",{class:"foot"},joinBtn(c.meetingLink)));
+      return t;
+    }
+    if(!c.day){
+      t.append(el("div",{class:"sp-empty"},"No fixed weekly time \u2014 your supervisor arranges each meeting"+
+        (c.principalName?" (with "+c.principalName+")":"")+"."));
+      if(c.meetingLink) t.append(el("div",{class:"foot"},joinBtn(c.meetingLink)));
+      return t;
+    }
+    t.append(el("div",{class:"sp-empty"},"No more consultations are scheduled this semester."));
+    return t;
+  }
+
+  function nextClassTile(d){
+    const t=el("section",{class:"sp-card sp-tile"},el("div",{class:"sp-label",style:"margin:0"},spIcon("book",14),"Next class"));
+    if(d.classErr){ t.append(el("div",{class:"sp-empty"},"Class times can't be loaded right now.")); return t; }
+    if(!d.classes.length){ t.append(el("div",{class:"sp-empty"},"Class times not published yet.")); return t; }
+    const nx=spNextClass(d);
+    if(nx){
+      const u=unitById(d.sem,nx.t.unitId);
+      t.append(el("div",{class:"sp-when"},spDateTile(nx.date),
+        el("div",{style:"min-width:0"},
+          el("div",{class:"sp-big"},spWhenWord(nx.date)),
+          el("div",{class:"sp-time"},clockRange(nx.t.start,nx.t.end)),
+          el("div",{class:"sp-small"},[u?.code,nx.t.room].filter(Boolean).join(" \u00B7 ")))));
+      if(d.classes.length>1) t.append(el("div",{class:"foot"},
+        el("button",{class:"btn ghost sm",onclick:()=>go("meet")},"All "+d.classes.length+" classes")));
+      return t;
+    }
+    if(!d.sem?.start){
+      const x=d.classes[0], u=unitById(d.sem,x.unitId);
+      t.append(el("div",{},el("div",{class:"sp-big"},"Every "+x.day),
+        el("div",{class:"sp-time"},clockRange(x.start,x.end)),
+        el("div",{class:"sp-small"},[u?.code,x.room].filter(Boolean).join(" \u00B7 "))));
+      return t;
+    }
+    t.append(el("div",{class:"sp-empty"},"No more classes this semester."));
+    return t;
+  }
+
+  function cocTile(d){
+    const t=el("section",{class:"sp-card sp-tile"},el("div",{class:"sp-label",style:"margin:0"},spIcon("award",14),"Confirmation of Candidature"));
+    const {state,snap}=d.coc;
+    if(state!=="ok"){
+      t.append(el("div",{class:"sp-empty"},
+        state==="error"?"Your CoC details can't be loaded right now."
+        :state==="noTime"?"You are on "+(snap.panel||"a panel")+". Your presentation time is still being arranged."
+        :"Still being arranged. Your time will be emailed to you and will appear here once it is set."));
+      return t;
+    }
+    const day=spYmdDate(snap.date), cd=day?spCountdown(day):null;
+    t.append(el("div",{class:"sp-when"},day?spDateTile(day):"",
+      el("div",{style:"min-width:0"},
+        el("div",{class:"sp-big"},day?weekdayOf(snap.date):longDate(snap.date)),
+        el("div",{class:"sp-time"},clockRange(snap.start,snap.end)),
+        cd?el("div",{class:"sp-tags"},el("span",{class:"sp-count "+cd.cls},cd.txt)):"")));
+    t.append(el("div",{class:"foot"},el("button",{class:"btn ghost sm",onclick:()=>go("coc")},"Details & checklist")));
+    return t;
+  }
+
+  /* ---- Attendance helpers ---- */
+  function attStats(d){
+    let held=0,attended=0,missed=0;
+    d.cons.forEach(c=>{ const x=consultStats(c,d.weeks); held+=x.held; attended+=x.attended; missed+=x.missed; });
+    return {held,attended,missed,rate:held?Math.round(attended/held*100):null};
+  }
+  function statBlock(s){
+    const low=s.rate!==null&&s.rate<75;
+    const wrap=el("div",{});
+    wrap.append(el("div",{class:"sp-stats"},
+      el("div",{class:"b ok"},el("div",{class:"n"},String(s.attended),el("small",{}," / "+s.held)),el("div",{class:"l"},"Attended")),
+      el("div",{class:"b"+(s.missed?" bad":"")},el("div",{class:"n"},String(s.missed)),el("div",{class:"l"},"Missed")),
+      el("div",{class:"b"},el("div",{class:"n"},s.rate===null?"\u2014":s.rate+"%"),el("div",{class:"l"},"Attendance rate"))));
+    if(s.held) wrap.append(el("div",{class:"sp-bar att"+(low?" low":""),style:"margin-top:12px"},
+      el("i",{style:"width:"+(s.rate||0)+"%"})));
+    return wrap;
+  }
+  function weekState(c,w,cw,phase){
+    const l=weekLog(c,w);
+    if(l.held===true){
+      if(l.studentAttended===true) return {cls:"ok",g:"\u2713",txt:"Attended"};
+      if(l.studentAttended===false) return {cls:"miss",g:"\u2717",txt:"Missed"};
+      return {cls:"held",g:"\u00B7",txt:"Held \u2014 attendance not marked"};
+    }
+    if(l.held===false) return {cls:"nh",g:"\u2014",txt:"Not held"};
+    const past=phase.kind==="after"||(cw!==null&&w<cw);
+    if(past) return {cls:"unrec",g:"",txt:"Not recorded yet"};
+    if(cw===w) return {cls:"",g:"",txt:"This week"};
+    return {cls:"future",g:"",txt:"Upcoming"};
+  }
+
+  /* ---- Meetings ---- */
+  function meetPanel(d){
+    const phase=spSemPhase(d.sem);
+    const cw=phase.kind==="week"?phase.w:null;
+
+    // consultation(s)
+    const cc=el("section",{class:"sp-card"});
+    cc.append(cardHead("video","","Weekly consultation","Held in your Team classroom, in your own channel"));
+    if(d.consErr) cc.append(el("div",{class:"sp-empty"},"Consultation times can't be loaded right now."));
+    else if(!d.cons.length) cc.append(el("div",{class:"sp-empty"},"Consultation time not set yet."));
+    d.cons.forEach((c,ci)=>{
+      if(ci) cc.append(el("hr",{style:"border:none;border-top:1px solid var(--line);margin:18px 0"}));
+      const kv=el("div",{class:"sp-kv"});
+      kv.append(el("div",{class:"k"},"Usual time"),
+        el("div",{},c.day?el("span",{},el("b",{},c.day+"s "),el("span",{class:"sp-time"},clockRange(c.start,c.end)))
+          :"No fixed weekly time \u2014 your supervisor arranges each meeting"));
+      if(c.mode) kv.append(el("div",{class:"k"},"Mode"),el("div",{},c.mode));
+      if(c.principalName) kv.append(el("div",{class:"k"},"With"),el("div",{},c.principalName+(c.coName?" \u00B7 co-supervisor "+c.coName:"")));
+      cc.append(kv);
+
+      const occ=spConsultOccurrences(c,d.sem,d.weeks);
+      const now=new Date();
+      const upcoming=occ.filter(o=>o.end&&o.end>now&&o.log.held!==true);
+      const acts=el("div",{class:"row",style:"margin-top:14px"});
+      if(c.meetingLink) acts.append(joinBtn(c.meetingLink,"Join meeting","btn sm"));
+      const cal=upcoming.filter(o=>!o.cancelled&&o.start);
+      if(cal.length) acts.append(el("button",{class:"btn ghost sm",title:"Adds each remaining meeting, at its own time, to your calendar",
+        onclick:()=>{ spIcs(cal.map(o=>({uid:"consult-"+(c.id||ci)+"-w"+o.w,start:o.start,end:o.end>o.start?o.end:new Date(o.start.getTime()+30*60000),
+            title:"Consultation"+(c.principalName?" with "+c.principalName:"")+" (week "+o.w+")",
+            desc:(o.et.mode?o.et.mode+". ":"")+(o.et.link?"Join: "+o.et.link:""),url:o.et.link||""})),
+            "consultations.ics"); toast("Calendar file downloaded \u2014 open it to add "+spPlural(cal.length,"meeting")+"."); }},
+        spIcon("plus",16),"Add to calendar"));
+      if(acts.children.length) cc.append(acts);
+
+      if(d.sem?.start){
+        cc.append(el("div",{class:"sp-label",style:"margin:20px 0 8px"},"Coming up"));
+        if(!upcoming.length) cc.append(el("div",{class:"sp-empty"},"No more consultations are scheduled this semester."));
+        else{
+          const list=el("div",{class:"sp-list"});
+          const firstLive=upcoming.find(o=>!o.cancelled);
+          const shown=st.showAllWeeks?upcoming:upcoming.slice(0,4);
+          shown.forEach(o=>{
+            const tags=el("div",{class:"row",style:"gap:6px;justify-content:flex-end"});
+            if(o.cancelled) tags.append(el("span",{class:"pill none"},"Not held"));
+            else if(o.et.overridden) tags.append(el("span",{class:"pill pending"},"Changed"));
+            if(!o.cancelled&&o.et.link&&o.et.link!==c.meetingLink)
+              tags.append(el("a",{class:"linkpill",href:o.et.link,target:"_blank",rel:"noopener"},"Join"));
+            list.append(el("div",{class:"sp-row"+(o===firstLive?" next":"")+(o.cancelled?" cxl":"")},
+              el("div",{class:"sp-wk"},"W"+o.w),
+              el("div",{style:"min-width:0"},
+                el("div",{style:"font-weight:600"},o.date?spWhenWord(o.date)+(spDaysUntil(o.date)<2?" \u00B7 "+spShortDate(o.date):""):"Week "+o.w),
+                el("div",{class:"sp-time"},clockRange(o.et.start,o.et.end)+(o.et.mode?"  \u00B7 "+o.et.mode:""))),
+              tags));
+          });
+          cc.append(list);
+          if(upcoming.length>4) cc.append(el("button",{class:"btn ghost sm sp-more",
+            onclick:()=>{ st.showAllWeeks=!st.showAllWeeks; drawPanel(); }},
+            st.showAllWeeks?"Show fewer":"Show all "+upcoming.length+" remaining weeks"));
+        }
+      }else{
+        const changed=occ.filter(o=>o.et.overridden);
+        if(changed.length){
+          cc.append(el("div",{class:"sp-label",style:"margin:20px 0 8px"},"Changed meeting times"));
+          const list=el("div",{class:"sp-list"});
+          changed.forEach(o=>list.append(el("div",{class:"sp-row"},
+            el("div",{class:"sp-wk"},"W"+o.w),
+            el("div",{class:"sp-time"},o.et.day+" "+clockRange(o.et.start,o.et.end)+(o.et.mode?" \u00B7 "+o.et.mode:"")),
+            o.et.link?el("a",{class:"linkpill",href:o.et.link,target:"_blank",rel:"noopener"},"Join"):el("span",{}))));
+          cc.append(list);
+        }
+      }
+    });
+    if(d.cons.length) cc.append(el("p",{class:"sp-note"},
+      "Use the Join button at the time shown. Attendance is recorded against these meetings. "+
+      "To contact your supervisor, use the Messages tab or email them directly."));
+    panelNode.append(cc);
+
+    // attendance
+    const ac=el("section",{class:"sp-card"});
+    const stats=attStats(d);
+    ac.append(cardHead("chart","green","My attendance","Tap a week for the time and any note"));
+    ac.append(statBlock(stats));
+    if(!d.cons.length) ac.append(el("div",{class:"sp-empty",style:"margin-top:14px"},"No meetings recorded yet."));
+    d.cons.forEach(c=>{
+      const rib=el("div",{class:"sp-ribbon",role:"list"});
+      let lastRec=null;
+      for(let w=1;w<=d.weeks;w++){ const l=weekLog(c,w); if(l.held===true||l.held===false) lastRec=w; }
+      if(st.selWeek===null) st.selWeek=lastRec||cw||1;
+      for(let w=1;w<=d.weeks;w++){
+        const s=weekState(c,w,cw,phase);
+        const et=weekTime(c,w);
+        rib.append(el("button",{role:"listitem",
+          class:[s.cls,cw===w?"now":"",st.selWeek===w?"sel":""].filter(Boolean).join(" "),
+          "aria-label":"Week "+w+": "+s.txt,title:"Week "+w+": "+s.txt+(et.overridden?" (time changed)":""),
+          onclick:()=>{ st.selWeek=w; drawPanel(); }},
+          el("span",{},"W"+w+(et.overridden?"*":"")),el("span",{class:"g"},s.g||"\u00A0")));
+      }
+      ac.append(rib);
+      ac.append(el("div",{class:"sp-legend"},
+        ...[["var(--green-soft)","Attended"],["var(--clay-soft)","Missed"],["var(--neutral-soft)","Not held"],
+            ["var(--blue-soft)","Held, not marked"]].map(([bg,t])=>el("span",{},el("i",{style:"background:"+bg}),t)),
+        el("span",{},el("i",{style:"box-shadow:0 0 0 2px var(--accent);background:transparent"}),"This week"),
+        el("span",{},"* time changed")));
+      // detail for the selected week
+      const w=st.selWeek, s=weekState(c,w,cw,phase), et=weekTime(c,w), l=weekLog(c,w);
+      const det=el("div",{class:"sp-detail"},
+        el("div",{class:"t"},"Week "+w,
+          weekRangeLabel(d.sem,w)?el("span",{class:"muted",style:"font-weight:500;font-size:13px"},weekRangeLabel(d.sem,w)):"",
+          el("span",{class:"pill "+({ok:"held",miss:"missed",nh:"none",held:"blue"}[s.cls]||"none")},s.txt)),
+        el("div",{class:"sp-time",style:"font-weight:500"},
+          et.day?et.day+" "+clockRange(et.start,et.end)+(et.mode?" \u00B7 "+et.mode:""):"No time set",
+          et.overridden?el("span",{class:"pill pending",style:"margin-left:8px;font-family:var(--sans)"},"Time changed"):""));
+      if(l.comment) det.append(el("div",{class:"sp-quote"},l.comment));
+      ac.append(det);
+    });
+    panelNode.append(ac);
+
+    // classes
+    const kc=el("section",{class:"sp-card"});
+    kc.append(cardHead("book","blue","Weekly classes",d.units.length?d.units.map(u=>u.code+(u.name?" "+u.name:"")).join(" \u00B7 "):""));
+    if(d.classErr) kc.append(el("div",{class:"sp-empty"},"Class times can't be loaded right now."));
+    else if(!d.classes.length) kc.append(el("div",{class:"sp-empty"},"Class times not published yet."));
+    else{
+      const list=el("div",{class:"sp-list"});
+      d.classes.forEach(t=>{
+        const u=unitById(d.sem,t.unitId);
+        list.append(el("div",{class:"sp-row"},
+          el("div",{class:"sp-wk"},String(t.day||"").slice(0,3)),
+          el("div",{style:"min-width:0"},
+            el("div",{style:"font-weight:600"},(u?.code?u.code+" ":"")+(u?.name?"\u00B7 "+u.name:"")),
+            el("div",{class:"sp-time"},(t.day||"")+" "+clockRange(t.start,t.end))),
+          t.room?el("span",{class:"pill none"},t.room):el("span",{})));
+      });
+      kc.append(list);
+    }
+    panelNode.append(kc);
+  }
+
+  /* ---- CoC ---- */
+  function cocPanel(d){
+    const {state,snap}=d.coc;
+    const c=el("section",{class:"sp-card"});
+    c.append(cardHead("award","amber","My Confirmation of Candidature",""));
+    if(state==="error"){
+      c.append(el("div",{class:"sp-empty"},"Your Confirmation of Candidature details can't be loaded right now. Please let your supervisor know \u2014 "+
+        "the site's database rules need to allow the \u201CstaffKeys\u201D collection."));
+      panelNode.append(c); return;
+    }
+    if(state==="arranging"){
+      c.append(el("div",{class:"sp-empty"},"Your Confirmation of Candidature is still being arranged. Your time will be emailed to you and will appear here once it is set."));
+      panelNode.append(c); return;
+    }
+    if(state==="noTime"){
+      c.append(el("p",{style:"margin:0 0 8px"},"You are on ",el("b",{},snap.panel||"a panel"),"."),
+        el("div",{class:"sp-empty"},"Your presentation time is still being arranged. It will appear here once it is set."));
+      panelNode.append(c); return;
+    }
+    const day=spYmdDate(snap.date), cd=day?spCountdown(day):null;
+    c.append(el("div",{class:"sp-coc-top"},
+      day?spDateTile(day,true):"",
+      el("div",{style:"min-width:0;flex:1"},
+        el("div",{class:"sp-big",style:"font-size:20px"},weekdayOf(snap.date)+" "+longDate(snap.date)),
+        el("div",{class:"sp-time",style:"font-size:15px;margin-top:2px"},clockRange(snap.start,snap.end)),
+        cd?el("div",{class:"sp-tags"},el("span",{class:"sp-count "+cd.cls},spIcon("clock",14),cd.txt)):"")));
+    if(snap.pres){
+      const split=el("div",{class:"sp-split"},
+        el("div",{style:"flex:"+(snap.pres.presMins||1)},el("div",{class:"h"},"Presentation \u00B7 "+snap.pres.presMins+" min"),
+          el("div",{class:"sp-time"},clockRange(snap.pres.start,snap.pres.qaStart))));
+      if(snap.pres.qaMins) split.append(el("div",{class:"qa",style:"flex:"+snap.pres.qaMins},
+        el("div",{class:"h"},"Q&A \u00B7 "+snap.pres.qaMins+" min"),el("div",{class:"sp-time"},clockRange(snap.pres.qaStart,snap.pres.end))));
+      c.append(split);
+    }
+    const kv=el("div",{class:"sp-kv",style:"margin-top:16px"},
+      el("div",{class:"k"},"Panel"),el("div",{},snap.panel||"Panel"),
+      el("div",{class:"k"},"Chair"),el("div",{},snap.chair||"to be confirmed"),
+      el("div",{class:"k"},"Assessors"),el("div",{},(snap.assessors||[]).length?snap.assessors.join(", "):"to be confirmed"));
+    c.append(kv);
+    const acts=el("div",{class:"row",style:"margin-top:18px"});
+    if(snap.link) acts.append(joinBtn(snap.link,"Join my CoC","btn"));
+    else acts.append(el("span",{class:"pill pending"},"Meeting link to follow"));
+    if(day&&spDaysUntil(day)>=0) acts.append(el("button",{class:"btn ghost",onclick:()=>{
+      spIcs([{uid:"coc-"+(d.en.id||sid),start:spAt(day,snap.start),end:spAt(day,snap.end||snap.start),
+        title:"Confirmation of Candidature \u2014 "+(snap.panel||"panel"),
+        desc:"Presentation "+(snap.presMins||"")+" min"+(snap.qaMins?", then "+snap.qaMins+" min Q&A":"")+
+          ". Chair: "+(snap.chair||"TBC")+"."+(snap.link?" Join: "+snap.link:""),url:snap.link||""}],"CoC.ics");
+      toast("Calendar file downloaded \u2014 open it to add your CoC."); }},spIcon("plus",16),"Add to calendar"));
+    c.append(acts);
+    panelNode.append(c);
+
+    const tips=el("section",{class:"sp-card"});
+    tips.append(cardHead("check","green","Before the day",""));
+    const items=[
+      "Join five minutes before your slot.",
+      "Have your slides open and ready to share.",
+      "You present for "+snap.presMins+" minutes"+(snap.qaMins?", then take "+snap.qaMins+" minutes of questions from the panel.":"."),
+      "Check your camera and microphone beforehand."
+    ];
+    tips.append(el("ul",{class:"sp-check"},...items.map(t=>el("li",{},spIcon("check",14),el("span",{},t)))));
+    panelNode.append(tips);
+  }
+
+  /* ---- Messages ---- */
+  function msgPanel(d){
+    const en=d.en;
+    const c=el("section",{class:"sp-card"});
+    c.append(cardHead("msg","blue","Messages with my supervisors",
+      d.msgs.state==="ok"?"Shared with "+(en.principalName||"your principal supervisor")+(en.coName?" and "+en.coName:"")+
+        ". Both supervisors and the admin office can read this thread.":""));
+    panelNode.append(c);
+    if(d.msgs.state==="off"){
+      c.append(el("div",{class:"sp-empty"},"The message board is closed for this semester. To reach your supervisors, email them directly \u2014 "+
+        "their addresses are on your enrolment record with the MRes office."));
+      return;
+    }
+    if(d.msgs.state==="error"){
+      c.append(el("div",{class:"sp-empty"},"Messages can't be loaded right now. Please let your supervisor know \u2014 "+
+        "the site's database rules need to allow the \u201Cnotes\u201D collection."));
+      return;
+    }
+    const notes=d.msgs.list;
+    const fresh=new Set(notes.filter(n=>isUnread(n,meId)).map(n=>n.id));
+    const pinned=notes.filter(n=>n.pinned).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    if(pinned.length){
+      const p=el("div",{class:"sp-pinned"});
+      pinned.forEach(n=>p.append(el("div",{class:"h"},spIcon("pin",13),"Pinned by "+(n.authorName||"a supervisor")),
+        el("div",{class:"x",title:"Tap to expand",onclick:e=>e.currentTarget.classList.toggle("open")},n.text||"")));
+      c.append(p);
+    }
+    const thread=el("div",{class:"sp-thread",role:"log","aria-live":"polite"});
+    const ordered=[...notes].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    if(!ordered.length) thread.append(el("div",{class:"sp-empty"},"No messages yet. Say hello, or ask your supervisors a question \u2014 they'll see it when they next sign in."));
+    let dividerDone=false;
+    ordered.forEach(n=>{
+      const mine=n.authorUid===meId, isNew=fresh.has(n.id);
+      if(isNew&&!dividerDone){ thread.append(el("div",{class:"sp-divider"},"New")); dividerDone=true; }
+      const meta=el("div",{class:"sp-meta"});
+      if(!mine) meta.append(el("b",{},n.authorName||"Unknown"),
+        el("span",{class:"pill "+rolePillClass(n.authorRole),style:"font-size:10.5px;padding:1px 8px"},roleLabel(n.authorRole)));
+      else meta.append(el("b",{},"You"));
+      meta.append(el("span",{title:n.createdAt?new Date(n.createdAt).toLocaleString():""},relTime(n.createdAt)));
+      if(n.pinned) meta.append(spIcon("pin",12));
+      thread.append(el("div",{class:"sp-msg"+(mine?" me":"")+(isNew?" new":"")},meta,el("div",{class:"sp-bub"},n.text||"")));
+    });
+    c.append(thread);
+
+    const ta=el("textarea",{placeholder:"Write to your supervisors\u2026",rows:"1","aria-label":"Message to your supervisors"});
+    const grow=()=>{ ta.style.height="auto"; ta.style.height=Math.min(220,ta.scrollHeight+2)+"px"; };
+    ta.addEventListener("input",grow);
+    const send=el("button",{class:"btn",title:"Send (Ctrl/\u2318 + Enter)"},spIcon("send",16),el("span",{class:"hide-xs"},"Send"));
+    send.onclick=async()=>{
+      if(!ta.value.trim()){ toast("Write something first.",true); ta.focus(); return; }
+      send.disabled=true;
+      try{
+        if(await postNote(en,ta.value,false)){
+          toast("Message sent to your supervisors.");
+          d.msgs=await studentNotesLoad(en);
+          drawTabs(); drawPanel();
+          return;
+        }
+      }catch(err){ console.error(err); toast("Couldn't send \u2014 check your connection and try again.",true); }
+      send.disabled=false;
+    };
+    ta.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); send.click(); } });
+    c.append(el("div",{class:"sp-compose"},ta,send),
+      el("div",{class:"sp-hint"},"Press Ctrl + Enter (\u2318 + Enter on a Mac) to send."));
+    requestAnimationFrame(()=>{ thread.scrollTop=thread.scrollHeight; });
+
+    /* Opening the thread is reading it: clear the unread count, but keep
+       this view's "New" markers so the student can still see what arrived. */
+    if(fresh.size) markNotesRead(notes).then(()=>drawTabs()).catch(err=>console.warn("mark read failed",err));
+  }
+
+  draw();
 }
 /* ============================================================
    13b. STAFF PIN VIEW — read-only, no password
@@ -13769,6 +14616,7 @@ async function pinBlocksFor(u,sems,preload){
         });
       return {
         label:g.label||"Panel",
+        date:sess?.date||"",          // raw, for the countdown; older snapshots lack it
         youChair:!!(me&&isChair(g,me)),
         draft:!isFinal(g),
         when:sess?weekdayOf(sess.date)+" "+longDate(sess.date)+", "+clockRange(sess.start,sess.end)
@@ -13802,6 +14650,7 @@ async function pinBlocksFor(u,sems,preload){
         coc={
           panel:(g.label||"Panel")+(isFinal(g)?"":"  (draft — may still change)"),
           when:sl&&d?weekdayOf(d)+" "+longDate(d)+", "+clockRange(sl.start,sl.end):"to be confirmed",
+          date:sl&&d?d:"",
           pres:pp?clockRange(pp.start,pp.qaStart)+"  ("+pp.presMins+" min)":"",
           qa:pp&&pp.qaMins?clockRange(pp.qaStart,pp.end)+"  ("+pp.qaMins+" min)":"",
           assessors:groupMembers(g).map(m=>(m.name||"?")+(isChair(g,m)?" (chair)":"")).join(", ")||"to be confirmed",
@@ -13823,6 +14672,7 @@ async function pinBlocksFor(u,sems,preload){
           attendance:stx&&stx.held
             ? stx.attended+" of "+stx.held+" meetings attended"+(stx.missed?", "+stx.missed+" missed":"")
             : "nothing recorded yet",
+          att:stx?{held:stx.held,attended:stx.attended,missed:stx.missed}:null,
           changed
         };
       }
@@ -13946,277 +14796,252 @@ const myTimetableButton=(label,cls="btn sm")=>{
    reader can see for themselves how fresh the page is rather than trusting
    it; live pages have none and say nothing. */
 function renderStaffPinView(who,blocks,opts={}){
-  const wrap=el("div",{class:"auth-wrap",style:"align-items:flex-start;padding-top:30px"});
-  const col=el("div",{style:"width:100%;max-width:820px"});
-  col.append(el("div",{class:"card",style:"border-top:4px solid var(--blue);margin-bottom:16px"},
-    el("div",{class:"eyebrow ui",style:"color:var(--blue)"},"Read-only PIN view"),
-    el("h1",{style:"font-size:24px;margin:2px 0"},who.name),
-    el("p",{class:"muted",style:"margin:0"},who.role+(who.area?" · "+who.area:"")+
-      ((who.emails||[]).length?" · "+who.emails.join(" / "):"")),
-    el("div",{class:"row",style:"margin-top:10px;gap:8px;flex-wrap:wrap"},
-      el("button",{class:"btn ghost sm",onclick:()=>renderLogin()},"← Back"),
-      el("button",{class:"btn sm",title:"Every column, nothing cut off \u2014 opens in Excel, Numbers or Google Sheets",
+  blocks=blocks||[];
+  const st={i:0, tab:null, q:""};
+  const top=el("header",{class:"sp-top"},
+    el("div",{class:"mark"},"SH"),
+    el("div",{style:"min-width:0"},
+      el("div",{class:"ttl"},"My CoC timetable"),
+      el("div",{class:"sub"},"Read-only PIN view")),
+    el("div",{class:"acts"},
+      el("button",{class:"btn ghost sm",title:"Every column, nothing cut off — opens in Excel, Numbers or Google Sheets",
         onclick:()=>{ try{ staffTimetableXlsx(who,blocks); toast("Excel file downloaded."); }
-                      catch(e){ console.error(e); toast("Couldn't build the Excel file.",true); } }},"\u2913 Download (Excel)"),
-      el("button",{class:"btn ghost sm",onclick:()=>window.print()},"⎙ Print"),
-      el("span",{style:"flex:1"}), themeButton())));
-  if(opts.at) col.append(el("p",{class:"muted ui",style:"margin:-8px 0 14px;font-size:12.5px"},
-    "Showing the timetable as the MRes office last published it, "+relTime(opts.at)+
-    ". If something has changed since, ask them to refresh it."));
+                      catch(e){ console.error(e); toast("Couldn't build the Excel file.",true); } }},
+        spIcon("dl",16),el("span",{class:"hide-xs"},"Excel")),
+      el("button",{class:"btn ghost sm hide-xs",title:"Print this page",onclick:()=>window.print()},"⎙ Print"),
+      themeButton("btn ghost sm"),
+      el("button",{class:"btn ghost sm",title:"Leave this view",onclick:()=>renderLogin()},
+        spIcon("out",16),el("span",{class:"hide-xs"},"Sign out"))));
+  const main=el("main",{class:"sp-main"});
+  document.body.append(el("div",{class:"sp"},top,main),toastNode());
 
-  (blocks||[]).forEach(bl=>{
-    const card=el("div",{class:"card",style:"margin-bottom:14px"});
-    card.append(el("div",{class:"eyebrow ui"},"Semester"),
-      el("h3",{style:"margin-top:2px"},bl.label));
+  /* Everything across all semesters, for the hero's "next up". */
+  const allPanels=blocks.flatMap(b=>(b.panels||[]).map(p=>({...p,sem:b.label})));
+  const allStudents=blocks.flatMap(b=>b.students||[]);
 
-    if((bl.panels||[]).length){
-      card.append(el("div",{style:"font-weight:600;margin:14px 0 4px",class:"ui"},
-        "Panels you are sitting on ("+bl.panels.length+")"));
-      bl.panels.forEach(p=>{
-        const box=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0"});
-        const head=el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"},
-          el("strong",{class:"ui"},p.label));
-        if(p.youChair) head.append(el("span",{class:"pill blue",style:"font-size:11px"},"You chair this panel"));
-        if(p.draft) head.append(el("span",{class:"pill pending",style:"font-size:11px",
-          title:"Not yet released to supervisors — the time may still change"},"Draft"));
-        box.append(head);
-        const line=(lbl,val)=>box.append(el("p",{style:"margin:2px 0"},
-          el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
-        line("When:",p.when); line("Chair:",p.chair); line("Assessors:",p.assessors);
-        if(p.link||p.report||p.reportDue){
-          const lr=el("div",{class:"row",style:"margin:6px 0 2px;gap:8px;flex-wrap:wrap;align-items:center"});
-          if(p.link) lr.append(el("a",{class:"linkpill",href:p.link,target:"_blank",rel:"noopener"},"Join the panel"));
-          if(p.report) lr.append(el("a",{class:"linkpill",href:p.report,target:"_blank",rel:"noopener"},DOCS_OPEN));
-          if(p.reportDue) lr.append(el("span",{class:"pill pending",style:"font-size:11px"},"Report due "+p.reportDue));
-          box.append(lr);
-          if(p.report||p.reportDue) box.append(el("p",{class:"muted ui",style:"margin:4px 0 0;font-size:12px"},
-            (p.report?"The folder holds "+DOCS_CONTENTS+". ":"")+
-            (p.reportRule?"Send the completed report form, with the decision, to the Research Office"+(p.reportTo?" ("+p.reportTo+")":"")+
-              " within "+p.reportRule+" \u2014 each student's date is in the table below.":"")));
-        }
-        if((p.rows||[]).length){
-          const t=el("table",{style:"width:100%;font-size:13px;margin-top:8px"});
-          const hasDue=p.rows.some(r=>r.due);
-          t.append(el("thead",{},el("tr",{},...["Time","Student","Presentation · Q&A","Supervisors"].concat(hasDue?["Report due"]:[])
-            .map(h=>el("th",{style:"font-size:11.5px"},h)))));
-          const tb=el("tbody",{});
-          p.rows.forEach(r=>tb.append(el("tr",{},
-            el("td",{style:"white-space:nowrap"},r.time),
-            el("td",{},r.name
-              ? el("div",{},el("strong",{},r.name),
-                  r.sid?el("span",{class:"muted ui",style:"font-size:12px"}," ("+r.sid+")"):el("span",{}),
-                  r.title?el("div",{class:"muted",style:"font-size:12.5px"},"“"+r.title+"”"):el("span",{}))
-              : el("span",{class:"muted"},"Panel discussion")),
-            el("td",{class:"muted",style:"white-space:nowrap;font-size:12.5px"},r.parts||"—"),
-            el("td",{class:"muted",style:"font-size:12.5px"},r.sups||"—"),
-            ...(hasDue?[el("td",{style:"white-space:nowrap;font-size:12.5px"},r.due||"—")]:[]))));
-          t.append(tb);
-          box.append(el("div",{style:"overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px"},t));
-        }else box.append(el("p",{class:"muted",style:"margin:6px 0 0"},"Running order to follow."));
-        card.append(box);
-      });
+  function nextPanel(){
+    const up=allPanels.map(p=>({p,d:spYmdDate(p.date)})).filter(x=>x.d&&spDaysUntil(x.d)>=0)
+      .sort((a,b)=>a.d-b.d);
+    return up[0]||null;
+  }
+
+  function hero(){
+    const card=el("section",{class:"sp-card sp-hero"},
+      el("div",{class:"eyebrow"},who.role+(who.area?" · "+who.area:"")),
+      el("h1",{},who.name||"Staff"));
+    if((who.emails||[]).length) card.append(el("div",{class:"sp-chips"},
+      ...who.emails.map(e=>el("span",{class:"sp-chip"},e))));
+    const chairs=allPanels.filter(p=>p.youChair).length;
+    const reportsDue=allPanels.filter(p=>p.reportDue).length;
+    card.append(el("div",{class:"sp-stats",style:"margin-top:18px"},
+      el("div",{class:"b"},el("div",{class:"n"},String(allPanels.length)),
+        el("div",{class:"l"},(allPanels.length===1?"Panel":"Panels")+(chairs?" · you chair "+chairs:""))),
+      el("div",{class:"b"},el("div",{class:"n"},String(allPanels.reduce((n,p)=>n+(p.rows||[]).filter(r=>r.name).length,0))),
+        el("div",{class:"l"},"Students to assess")),
+      el("div",{class:"b"},el("div",{class:"n"},String(allStudents.length)),
+        el("div",{class:"l"},"My students"))));
+    const nx=nextPanel();
+    if(nx){
+      const cd=spCountdown(nx.d);
+      card.append(el("div",{class:"sp-next-strip"},
+        spDateTile(nx.d),
+        el("div",{style:"min-width:0;flex:1"},
+          el("div",{class:"sp-label",style:"margin:0 0 2px"},"Next panel"),
+          el("div",{class:"sp-big"},nx.p.label+(nx.p.youChair?" · you chair":"")),
+          el("div",{class:"sp-small"},nx.p.when),
+          el("div",{class:"sp-tags"},el("span",{class:"sp-count "+cd.cls},spIcon("clock",14),cd.txt),
+            nx.p.draft?el("span",{class:"pill pending"},"Draft — may still change"):"")),
+        nx.p.link?el("a",{class:"btn sm",href:nx.p.link,target:"_blank",rel:"noopener",style:"text-decoration:none"},
+          spIcon("video",16),"Join"):""));
+    }
+    if(reportsDue&&!nx) card.append(el("p",{class:"sp-note"},
+      spPlural(reportsDue,"panel")+" with an examination report to send — dates are on each panel below."));
+    return card;
+  }
+
+  function draw(){
+    main.replaceChildren();
+    if(opts.at) main.append(el("div",{class:"sp-fresh"},spIcon("clock",15),
+      el("span",{},"Showing the timetable as the MRes office last published it, "+relTime(opts.at)+
+        ". If something has changed since, ask them to refresh it.")));
+    main.append(hero());
+
+    if(!blocks.length){
+      main.append(el("section",{class:"sp-card",style:"margin-top:16px"},
+        cardHead("cal","","Nothing on record yet",""),
+        el("div",{class:"sp-empty"},"No panel has been released to its assessors and no students are allocated to you in any semester. "+
+          "If that looks wrong, contact the MRes office.")));
+      main.append(footer());
+      return;
     }
 
-    if((bl.students||[]).length){
-      card.append(el("div",{style:"font-weight:600;margin:16px 0 4px",class:"ui"},
-        "Your students ("+bl.students.length+")"));
-      bl.students.forEach(s=>{
-        const box=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0"});
-        box.append(el("div",{class:"row",style:"align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"},
-          el("strong",{class:"ui"},s.name),
-          s.sid?el("span",{class:"muted ui",style:"font-size:12px"},s.sid):el("span",{}),
-          el("span",{class:"pill none",style:"font-size:11px"},"You are "+s.role)));
-        if(s.title) box.append(el("p",{class:"muted",style:"margin:2px 0;font-size:12.5px"},"“"+s.title+"”"));
-        const line=(lbl,val)=>box.append(el("p",{style:"margin:2px 0"},
-          el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
-        box.append(el("div",{class:"muted ui",style:"font-weight:600;font-size:12px;margin:8px 0 2px"},
-          "CONFIRMATION OF CANDIDATURE"));
-        if(!s.coc){
-          box.append(el("p",{class:"muted",style:"margin:2px 0"},
-            "Still being arranged — the time appears here once the office releases it."));
-        }else{
-          line("Panel:",s.coc.panel); line("When:",s.coc.when);
-          if(s.coc.pres) line("Presentation:",s.coc.pres);
-          if(s.coc.qa)   line("Q&A:",s.coc.qa);
-          line("Assessors:",s.coc.assessors);
-          if(s.coc.link) box.append(el("div",{style:"margin:6px 0 2px"},
-            el("a",{class:"linkpill",href:s.coc.link,target:"_blank",rel:"noopener"},"Join this CoC")));
-        }
-        box.append(el("div",{class:"muted ui",style:"font-weight:600;font-size:12px;margin:10px 0 2px"},
-          "WEEKLY CONSULTATION"));
-        if(!s.con){
-          box.append(el("p",{class:"muted",style:"margin:2px 0"},"No consultation time set yet."));
-        }else{
-          line("Usual time:",s.con.time);
-          if(s.con.link) box.append(el("div",{style:"margin:6px 0 2px"},
-            el("a",{class:"linkpill",href:s.con.link,target:"_blank",rel:"noopener"},"Join the consultation")));
-          line("Attendance:",s.con.attendance);
-          if((s.con.changed||[]).length){
-            box.append(el("p",{class:"muted ui",style:"margin:6px 0 2px;font-size:12px"},"CHANGED WEEKS"));
-            s.con.changed.forEach(ch=>box.append(el("p",{style:"margin:2px 0;font-size:13px"},
-              el("span",{class:"pill blue",style:"font-size:11px;margin-right:6px"},"Week "+ch.w),ch.text)));
-          }
-        }
-        card.append(box);
-      });
+    if(blocks.length>1) main.append(el("div",{class:"subtabs sp-sems",role:"tablist","aria-label":"Semester",style:"margin-top:16px"},
+      ...blocks.map((b,i)=>el("button",{class:i===st.i?"active":"",role:"tab","aria-selected":String(i===st.i),
+        onclick:()=>{ st.i=i; st.tab=null; st.q=""; draw(); }},b.label))));
+
+    const bl=blocks[st.i];
+    const panels=bl.panels||[], studs=bl.students||[];
+    if(!st.tab) st.tab=panels.length?"panels":"students";
+    const tabs=el("nav",{class:"sp-tabs",role:"tablist","aria-label":"Sections"});
+    let T=[["panels","Panels I assess",panels.length,"award"],["students","My students",studs.length,"users"]];
+    // A section with nothing in it gets no tab; with only one left, no tab bar at all.
+    if(panels.length||studs.length) T=T.filter(t=>t[2]>0);
+    if(T.length===1) st.tab=T[0][0];
+    if(T.length===1) tabs.classList.add("sp-hide","sp-keephide");
+    T.forEach(([k,lbl,n,ic])=>tabs.append(el("button",{class:st.tab===k?"on":"",role:"tab","aria-selected":String(st.tab===k),
+      onclick:()=>{ st.tab=k; draw(); }},spIcon(ic,16),lbl,el("span",{class:"sp-cnt"},String(n)))));
+    main.append(tabs);
+
+    // Both sections are built; the tab only hides one, so Print still gets both.
+    const secP=el("div",{class:"sp-sec"+(st.tab==="panels"?"":" sp-hide")+(panels.length||!studs.length?"":" sp-keephide")});
+    const secS=el("div",{class:"sp-sec"+(st.tab==="students"?"":" sp-hide")+(studs.length||!panels.length?"":" sp-keephide")});
+    if(T.length===1) (st.tab==="panels"?secP:secS).style.marginTop="16px";
+    secP.append(el("h2",{class:"sp-printhead"},bl.label+" — panels I assess"));
+    secS.append(el("h2",{class:"sp-printhead"},bl.label+" — my students"));
+    if(!panels.length) secP.append(el("section",{class:"sp-card"},
+      el("div",{class:"sp-empty"},"No panel has been released to you for "+bl.label+" yet. It will appear here once the office releases it to its assessors.")));
+    panels.forEach(p=>secP.append(panelCard(p)));
+    studentsSection(secS,studs,bl);
+    main.append(secP,secS,footer());
+  }
+
+  function cardHead(icon,tone,title,sub,right){
+    return el("div",{class:"sp-head"},
+      el("div",{class:"sp-ico"+(tone?" "+tone:"")},spIcon(icon,18)),
+      el("div",{class:"grow"},el("h2",{},title),sub?el("div",{class:"s"},sub):""),
+      right||"");
+  }
+
+  function panelCard(p){
+    const c=el("section",{class:"sp-card"});
+    const tags=el("div",{class:"sp-tags",style:"margin-top:4px"});
+    if(p.youChair) tags.append(el("span",{class:"pill blue"},"You chair this panel"));
+    if(p.draft) tags.append(el("span",{class:"pill pending",title:"Not yet released to supervisors — the time may still change"},"Draft"));
+    const d=spYmdDate(p.date);
+    if(d){ const cd=spCountdown(d); tags.append(el("span",{class:"sp-count "+cd.cls},spIcon("clock",14),cd.txt)); }
+    c.append(el("div",{class:"sp-coc-top",style:"margin-bottom:14px"},
+      d?spDateTile(d,true):el("div",{class:"sp-ico amber"},spIcon("award",18)),
+      el("div",{style:"min-width:0;flex:1"},
+        el("h2",{style:"font-size:18px;font-weight:650;letter-spacing:-.015em"},p.label),
+        el("div",{class:"sp-small",style:"font-size:14px;margin-top:2px"},p.when),
+        tags)));
+    c.append(el("div",{class:"sp-kv"},
+      el("div",{class:"k"},"Chair"),el("div",{},p.chair),
+      el("div",{class:"k"},"Assessors"),el("div",{},p.assessors)));
+    if(p.link||p.report||p.reportDue){
+      const acts=el("div",{class:"row",style:"margin-top:16px"});
+      if(p.link) acts.append(el("a",{class:"btn sm",href:p.link,target:"_blank",rel:"noopener",style:"text-decoration:none"},
+        spIcon("video",16),"Join the panel"));
+      if(p.report) acts.append(el("a",{class:"btn ghost sm",href:p.report,target:"_blank",rel:"noopener",style:"text-decoration:none"},
+        spIcon("folder",16),DOCS_OPEN));
+      if(p.reportDue) acts.append(el("span",{class:"pill pending"},"Report due "+p.reportDue));
+      c.append(acts);
+      if(p.report||p.reportRule) c.append(el("p",{class:"sp-note",style:"margin-top:10px"},
+        (p.report?"The folder holds "+DOCS_CONTENTS+". ":"")+
+        (p.reportRule?"Send the completed report form, with the decision, to the Research Office"+(p.reportTo?" ("+p.reportTo+")":"")+
+          " within "+p.reportRule+" — each student's date is in the running order below.":"")));
     }
-    col.append(card);
-  });
+    c.append(el("div",{class:"sp-label",style:"margin:20px 0 8px"},"Running order"));
+    if(!(p.rows||[]).length){ c.append(el("div",{class:"sp-empty"},"Running order to follow.")); return c; }
+    const list=el("div",{class:"sp-list"});
+    p.rows.forEach(r=>{
+      const who=r.name
+        ? el("div",{style:"min-width:0"},
+            el("div",{style:"font-weight:600"},r.name,r.sid?el("span",{class:"muted",style:"font-weight:500;font-size:12.5px"},"  "+r.sid):""),
+            r.title?el("div",{class:"sp-small",style:"font-style:italic"},"“"+r.title+"”"):"",
+            el("div",{class:"sp-small"},[r.parts?(()=>{ const [pr,qa]=String(r.parts).split(" · "); return "Presentation "+pr+(qa?" · Q&A "+qa:""); })():"",r.sups&&r.sups!=="—"?"Supervisors: "+r.sups:""].filter(Boolean).join("  ·  ")))
+        : el("div",{class:"muted"},"Panel discussion");
+      list.append(el("div",{class:"sp-row sp-ro"+(r.name?"":" disc")},
+        el("div",{class:"sp-time sp-slot"},r.time),
+        who,
+        r.due?el("span",{class:"pill none",title:"Report due"},"Due "+r.due):el("span",{})));
+    });
+    c.append(list);
+    return c;
+  }
 
-  if(!(blocks||[]).length) col.append(el("div",{class:"card"},
-    el("p",{style:"margin:0"},"Nothing is recorded against you yet."),
-    el("p",{class:"muted",style:"margin:6px 0 0"},
-      "No panel has been released to its assessors and no students are allocated to you in any semester. "+
-      "If that looks wrong, contact the MRes office.")));
+  function studentsSection(sec,studs,bl){
+    if(!studs.length){
+      sec.append(el("section",{class:"sp-card"},el("div",{class:"sp-empty"},"No students are allocated to you in "+bl.label+".")));
+      return;
+    }
+    const host=el("div",{class:"sp-sec"});
+    if(studs.length>4){
+      const q=el("input",{type:"search",placeholder:"Find a student by name or ID…",value:st.q,"aria-label":"Find a student",class:"sp-search"});
+      q.addEventListener("input",()=>{ st.q=q.value; fill(); });
+      sec.append(q);
+    }
+    sec.append(host);
+    function fill(){
+      const t=st.q.trim().toLowerCase();
+      const shown=studs.filter(s=>!t||String(s.name).toLowerCase().includes(t)||String(s.sid).toLowerCase().includes(t));
+      host.replaceChildren(...shown.map(studentCard));
+      if(!shown.length) host.append(el("div",{class:"sp-empty"},"No student matches “"+st.q+"”."));
+    }
+    fill();
+  }
 
-  col.append(el("div",{class:"card",style:"margin-top:4px"},
-    el("p",{class:"muted",style:"margin:0;font-size:13px"},
+  function studentCard(s){
+    const c=el("section",{class:"sp-card"});
+    c.append(el("div",{class:"sp-head",style:"align-items:flex-start"},
+      el("div",{class:"avatar",style:"width:40px;height:40px;font-size:13px"},spInitials(s.name)),
+      el("div",{class:"grow"},
+        el("h2",{},s.name,s.sid?el("span",{class:"muted",style:"font-weight:500;font-size:13px"},"  "+s.sid):""),
+        s.title?el("div",{class:"s",style:"font-style:italic"},"“"+s.title+"”"):"",
+        el("div",{class:"sp-tags"},el("span",{class:"pill "+(/principal/.test(s.role)?"held":"blue")},"You are "+s.role)))));
+    const grid=el("div",{class:"sp-two"});
+
+    // CoC
+    const a=el("div",{class:"sp-sub"},el("div",{class:"sp-label"},spIcon("award",14),"Confirmation of Candidature"));
+    if(!s.coc) a.append(el("div",{class:"sp-empty"},"Still being arranged — the time appears here once the office releases it."));
+    else{
+      const d=spYmdDate(s.coc.date), cd=d?spCountdown(d):null;
+      a.append(el("div",{class:"sp-when",style:"margin-bottom:10px"},d?spDateTile(d):"",
+        el("div",{style:"min-width:0"},el("div",{style:"font-weight:600"},s.coc.when),
+          cd?el("div",{class:"sp-tags"},el("span",{class:"sp-count "+cd.cls},cd.txt)):"")));
+      const kv=el("div",{class:"sp-kv sm"},el("div",{class:"k"},"Panel"),el("div",{},s.coc.panel));
+      if(s.coc.pres) kv.append(el("div",{class:"k"},"Presentation"),el("div",{class:"sp-time"},s.coc.pres));
+      if(s.coc.qa) kv.append(el("div",{class:"k"},"Q&A"),el("div",{class:"sp-time"},s.coc.qa));
+      kv.append(el("div",{class:"k"},"Assessors"),el("div",{},s.coc.assessors));
+      a.append(kv);
+      if(s.coc.link) a.append(el("div",{style:"margin-top:12px"},
+        el("a",{class:"btn sm",href:s.coc.link,target:"_blank",rel:"noopener",style:"text-decoration:none"},spIcon("video",16),"Join this CoC")));
+    }
+    // Consultation
+    const b=el("div",{class:"sp-sub"},el("div",{class:"sp-label"},spIcon("video",14),"Weekly consultation"));
+    if(!s.con) b.append(el("div",{class:"sp-empty"},"No consultation time set yet."));
+    else{
+      b.append(el("div",{style:"font-weight:600;margin-bottom:8px"},s.con.time));
+      const at=s.con.att;
+      if(at&&at.held){
+        const rate=Math.round(at.attended/at.held*100);
+        b.append(el("div",{class:"sp-small",style:"display:flex;justify-content:space-between;gap:8px"},
+          el("span",{},s.con.attendance),el("b",{style:"color:var(--ink)"},rate+"%")),
+          el("div",{class:"sp-bar att"+(rate<75?" low":""),style:"margin:6px 0 4px"},el("i",{style:"width:"+rate+"%"})));
+      }else b.append(el("div",{class:"sp-small"},"Attendance: "+s.con.attendance));
+      if((s.con.changed||[]).length){
+        b.append(el("div",{class:"sp-label",style:"margin:14px 0 6px"},"Changed weeks"));
+        b.append(el("div",{style:"display:grid;gap:4px"},...s.con.changed.map(ch=>el("div",{style:"font-size:13.5px"},
+          el("span",{class:"pill blue",style:"margin-right:6px"},"W"+ch.w),el("span",{class:"sp-time",style:"font-weight:500"},ch.text)))));
+      }
+      if(s.con.link) b.append(el("div",{style:"margin-top:12px"},
+        el("a",{class:"btn ghost sm",href:s.con.link,target:"_blank",rel:"noopener",style:"text-decoration:none"},spIcon("video",16),"Join the consultation")));
+    }
+    grid.append(a,b);
+    c.append(grid);
+    return c;
+  }
+
+  function footer(){
+    return el("div",{class:"sp-fresh",style:"margin-top:18px"},spIcon("lock",15),el("span",{},
       "This PIN view is read-only — it shows what is on record and cannot change any of it. "+
       "To set consultation times, record attendance, answer an availability request or read the message board, "+
       "sign in with your email and password. Either address on your record works. "+
-      "If you have lost your password, ask the MRes office to reset it.")));
+      "If you have lost your password, ask the MRes office to reset it."));
+  }
 
-  wrap.append(col);
-  document.body.append(wrap, toastNode());
+  draw();
 }
-/* ---- Student-side view of their own CoC -------------------------------
-   The student's half of the release switch on the panel card. A panel the
-   coordinator has not released to students does not appear here at all,
-   and neither does the fact that it exists: until the times are settled,
-   "still being arranged" is both the truth and all a student can act on.
-   Only this student's own slot is shown — never the panel's running
-   order, which carries their classmates' names and times. */
-async function studentCocBlock(card,en){
-  const head=()=>card.append(el("div",{style:"font-weight:600;margin:16px 0 4px",class:"ui"},
-    "My Confirmation of Candidature"));
-
-  /* 1. The student's own published snapshot. This is the route that works
-        with panelGroups closed to signed-out visitors, which it should be.
-        It exists only while the panel is released to its students. */
-  let snap=null, keyDenied=false;
-  try{ snap=await DB.getStaffKey(cocKeyOf(en.id)); }
-  catch(err){ keyDenied=true; console.warn("CoC snapshot unreadable",err); }
-
-  /* 2. Reading the panels live, for a site whose rules have opened them. */
-  let g=null, liveDenied=false;
-  if(!(snap&&snap.kind==="coc")){
-    try{
-      const groups=await DB.list("panelGroups",{semesterId:en.semesterId});
-      g=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(en.id))||null;
-      if(g) snap=studentCocSnap(g,en);
-    }catch(err){ liveDenied=true; }
-  }
-
-  head();
-  if(!(snap&&snap.kind==="coc")){
-    /* Only when NEITHER route could look is this a set-up problem. A
-       refusal on the live route alone is the normal, correct state of a
-       site with panelGroups closed, and there the missing snapshot simply
-       means "not released yet". */
-    if(keyDenied&&liveDenied){
-      card.append(el("p",{class:"muted",style:"margin:2px 0"},
-        "Your Confirmation of Candidature details can't be loaded right now. Please let your supervisor know \u2014 "+
-        "the site's database rules need to allow the \u201CstaffKeys\u201D collection."));
-      return;
-    }
-    card.append(el("p",{class:"muted",style:"margin:2px 0"},
-      "Your Confirmation of Candidature is still being arranged. Your time will be emailed to you and will appear here once it is set."));
-    return;
-  }
-  if(!(snap.date&&snap.start)){
-    card.append(el("p",{style:"margin:2px 0"},"You are on "+(snap.panel||"a panel")+"."),
-      el("p",{class:"muted",style:"margin:2px 0"},
-        "Your presentation time is still being arranged. It will appear here once it is set."));
-    return;
-  }
-  const line=(lbl,val)=>card.append(el("p",{style:"margin:2px 0"},
-    el("span",{class:"muted ui",style:"font-size:12px"},lbl+" "),val));
-  line("When:",weekdayOf(snap.date)+" "+longDate(snap.date)+", "+clockRange(snap.start,snap.end));
-  if(snap.pres){
-    line("Presentation:",clockRange(snap.pres.start,snap.pres.qaStart)+"  ("+snap.pres.presMins+" min)");
-    if(snap.pres.qaMins) line("Q&A:",clockRange(snap.pres.qaStart,snap.pres.end)+"  ("+snap.pres.qaMins+" min)");
-  }
-  line("Panel:",snap.panel||"Panel");
-  line("Chair:",snap.chair||"to be confirmed");
-  line("Assessors:",(snap.assessors||[]).length?snap.assessors.join(", "):"to be confirmed");
-  if(snap.link) card.append(el("div",{style:"margin:6px 0 2px"},
-    el("a",{class:"linkpill",href:snap.link,target:"_blank",rel:"noopener"},"Join my CoC")));
-  else card.append(el("p",{class:"muted",style:"margin:2px 0"},"Meeting link to follow."));
-  card.append(el("p",{class:"muted ui",style:"margin:8px 0 0;font-size:13px"},
-    "Join five minutes before your slot with your slides ready to share. You present for "+snap.presMins+" minutes"+
-    (snap.qaMins?", then take "+snap.qaMins+" minutes of questions from the panel":"")+
-    "."));
-}
-
-/* Student-side view of the shared supervision thread: read everything
-   the supervisors have posted, and reply into the same thread. */
-async function studentNotesBlock(card,en){
-  /* The student portal reads its own semester's setting rather than the
-     admin's currently selected one — a student looking up an old semester
-     should see that semester's arrangement, not today's. */
-  const semOf=S.semesters.find(x=>x.id===en.semesterId)||null;
-  if(messagesOff(semOf)){
-    card.append(el("div",{style:"font-weight:600;margin:16px 0 6px",class:"ui"},"Messages with my supervisors"),
-      el("p",{class:"muted",style:"margin:0"},
-        "The message board is closed for this semester. To reach your supervisors, email them directly — "+
-        "their addresses are on your enrolment record with the MRes office."));
-    return;
-  }
-  const meId=noteMeId();
-  let notes;
-  try{ notes=await loadNotes(en.semesterId,[en.id]); }
-  catch(err){
-    card.append(el("div",{style:"font-weight:600;margin:16px 0 6px",class:"ui"},"Messages with my supervisors"),
-      el("p",{class:"muted",style:"margin:0"},
-        "Messages can't be loaded right now. Please let your supervisor know \u2014 the site's database rules need to allow the \u201Cnotes\u201D collection."));
-    return;
-  }
-  const unread=notes.filter(n=>isUnread(n,meId)).length;
-
-  const head=el("div",{class:"row",style:"align-items:center;gap:8px;font-weight:600;margin:16px 0 6px",...{}},
-    el("span",{class:"ui"},"Messages with my supervisors"));
-  if(unread) head.append(el("span",{class:"pill missed",style:"font-size:11.5px"},unread+" new"));
-  card.append(head);
-  card.append(el("p",{class:"muted ui",style:"margin:0 0 8px;font-size:13px"},
-    "A shared thread with "+(en.principalName||"your principal supervisor")+
-    (en.coName?" and "+en.coName:"")+". Anything you post here is visible to both supervisors and the admin office."));
-
-  const body=el("div",{style:"display:flex;flex-direction:column;gap:8px"});
-  const ordered=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.createdAt||0)-(a.createdAt||0));
-  if(!ordered.length) body.append(el("p",{class:"muted",style:"margin:0"},"No messages yet."));
-  ordered.forEach(n=>{
-    const isNew=isUnread(n,meId);
-    const row=el("div",{style:"border:1px solid var(--line);border-radius:10px;padding:10px 12px"
-      +(isNew?";border-left:3px solid var(--blue)":"")+(n.pinned?";background:rgba(127,127,127,.06)":"")});
-    const top=el("div",{class:"row",style:"align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"},
-      el("strong",{class:"ui",style:"font-size:13.5px"},n.authorName||"Unknown"),
-      el("span",{class:"pill "+rolePillClass(n.authorRole),style:"font-size:11px"},roleLabel(n.authorRole)),
-      el("span",{class:"muted ui",style:"font-size:12px"},relTime(n.createdAt)));
-    if(n.pinned) top.append(el("span",{class:"pill pending",style:"font-size:11px"},"\u2691 Pinned"));
-    if(isNew) top.append(el("span",{class:"pill missed",style:"font-size:11px"},"New"));
-    row.append(top, el("div",{style:"white-space:pre-wrap;font-size:14px"},n.text||""));
-    body.append(row);
-  });
-  card.append(body);
-
-  const ta=el("textarea",{placeholder:"Reply to your supervisors\u2026",style:"min-height:70px;margin-top:10px"});
-  const actions=el("div",{class:"row",style:"gap:8px;margin-top:8px;flex-wrap:wrap"});
-  if(unread) actions.append(el("button",{class:"btn ghost sm",onclick:async()=>{
-    await markNotesRead(notes); toast("Marked as read.");
-    card.replaceChildren(...[...card.children].slice(0,[...card.children].indexOf(head)));
-    await studentNotesBlock(card,en);
-  }},"Mark as read"));
-  actions.append(el("span",{style:"flex:1;min-width:8px"}));
-  actions.append(el("button",{class:"btn sm",onclick:async()=>{
-    if(await postNote(en,ta.value,false)){
-      toast("Message sent to your supervisors.");
-      card.replaceChildren(...[...card.children].slice(0,[...card.children].indexOf(head)));
-      await studentNotesBlock(card,en);
-    }
-  }},"Send message"));
-  card.append(ta,actions);
-}
-
 /* ============================================================
    14. SHARED MODAL + DELETE
    ============================================================ */
