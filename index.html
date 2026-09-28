@@ -4,9 +4,18 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MRes Supervision Hub</title>
+<!-- Start fetching the Firebase SDK straight away, in parallel with the
+     rest of the page, instead of only once the app script has been read. -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js" />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<!-- Fonts load without blocking the first paint; the system font stands in
+     for the moment it takes (display=swap). -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" /></noscript>
 <style>
   /* ============================================================
      DESIGN SYSTEM — "Register"
@@ -1131,6 +1140,23 @@
     .sp-card{break-inside:avoid}
   }
 </style>
+</head>
+<body>
+  <!-- Shown the moment the page arrives, while the app below is read. -->
+  <div class="auth-wrap" id="boot"><div class="muted ui">Loading…</div></div>
+  <script>
+    /* If the app never starts (the Firebase CDN blocked by a network
+       filter, say) the page used to sit on "Loading…" forever. After a
+       while, say so and offer a reload. The app replaces this screen the
+       moment it starts, so this never shows on a normal load. */
+    setTimeout(function(){
+      var b=document.getElementById("boot"); if(!b) return;
+      b.innerHTML='<div class="muted ui" style="text-align:center;max-width:360px;line-height:1.5">'+
+        'Still loading\u2026 This is taking longer than it should \u2014 check your internet connection '+
+        '(some work or campus networks block the sign-in service).<br><br>'+
+        '<button class="btn" onclick="location.reload()">Reload</button></div>';
+    },20000);
+  </script>
 <!-- Firebase SDK (modular, via CDN) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1457,14 +1483,35 @@ function pinGateFail(){
 }
 function pinGateClear(){ pinGateSave({n:0,until:0}); }
 
+/* Identical reads that are already on their way share one round trip.
+   On sign-in the first screen, the unread badge and the inbox banner all ask
+   for this semester's students and notes at the same moment; without this
+   each of them pays for the same query. Nothing is cached once the answer
+   arrives — the next call always goes to the server — so no screen can be
+   shown stale data by it. */
+const _inflight=new Map();
+/* A read started early and awaited later. Marking it handled up front keeps
+   an early failure from being reported as unhandled when the screen bails
+   out before reaching the await; the await itself still throws. */
+function prefetch(p){ p.catch(()=>{}); return p; }
+function forgetInflight(coll){
+  for(const k of [..._inflight.keys()]) if(k.startsWith(coll+"|")) _inflight.delete(k);
+}
+function inflight(key,fn){
+  if(_inflight.has(key)) return _inflight.get(key);
+  const p=Promise.resolve().then(fn).finally(()=>{ if(_inflight.get(key)===p) _inflight.delete(key); });
+  _inflight.set(key,p);
+  return p;
+}
+
 const DB = {
   async getUser(uid){
     if(DEMO){ return mem.users[uid]||null; }
     const s = await getDoc(doc(db,"users",uid)); return s.exists()?s.data():null;
   },
-  async setUser(uid,data){ if(DEMO){mem.users[uid]={...mem.users[uid],...data};return;} await setDoc(doc(db,"users",uid),data,{merge:true}); },
-  async updateUser(uid,data){ if(DEMO){mem.users[uid]={...mem.users[uid],...data};return;} await updateDoc(doc(db,"users",uid),data); },
-  async removeUser(uid){ if(DEMO){ delete mem.users[uid]; return; } await deleteDoc(doc(db,"users",uid)); },
+  async setUser(uid,data){ forgetInflight("users"); if(DEMO){mem.users[uid]={...mem.users[uid],...data};return;} await setDoc(doc(db,"users",uid),data,{merge:true}); },
+  async updateUser(uid,data){ forgetInflight("users"); if(DEMO){mem.users[uid]={...mem.users[uid],...data};return;} await updateDoc(doc(db,"users",uid),data); },
+  async removeUser(uid){ forgetInflight("users"); if(DEMO){ delete mem.users[uid]; return; } await deleteDoc(doc(db,"users",uid)); },
   async findUserByEmail(email){
     if(DEMO){ const e=Object.entries(mem.users).find(([k,v])=>v.email===email); return e?{uid:e[0],...e[1]}:null; }
     const q=query(collection(db,"users"),where("email","==",email)); const r=await getDocs(q);
@@ -1567,16 +1614,26 @@ const DB = {
   },
   async listUsers(){
     if(DEMO){ return Object.entries(mem.users).map(([id,v])=>({id,...v})); }
-    const r=await getDocs(collection(db,"users")); return r.docs.map(d=>({id:d.id,...d.data()}));
+    const rows=await inflight("users|*",async()=>{
+      const r=await getDocs(collection(db,"users")); return r.docs.map(d=>({id:d.id,...d.data()}));
+    });
+    return rows.map(o=>({...o}));
   },
   async list(coll, filters={}){
     if(DEMO){
       return Object.entries(mem[coll]||{}).map(([id,v])=>({id,...v}))
         .filter(o=>Object.entries(filters).every(([k,val])=>o[k]===val));
     }
-    let qref=collection(db,coll); const fs=Object.entries(filters);
-    if(fs.length){ qref=query(qref,...fs.map(([k,v])=>where(k,"==",v))); }
-    const r=await getDocs(qref); return r.docs.map(d=>({id:d.id,...d.data()}));
+    const fs=Object.entries(filters||{});
+    const key=coll+"|"+JSON.stringify(fs.slice().sort((a,b)=>a[0]<b[0]?-1:1).map(([k,v])=>[k,v===undefined?{u:1}:v]));
+    const rows=await inflight(key,async()=>{
+      let qref=collection(db,coll);
+      if(fs.length){ qref=query(qref,...fs.map(([k,v])=>where(k,"==",v))); }
+      const r=await getDocs(qref); return r.docs.map(d=>({id:d.id,...d.data()}));
+    });
+    // each caller gets its own top-level copies, so one screen mutating a
+    // record (s.proposalTitle=…) can't leak into another caller's list
+    return rows.map(o=>({...o}));
   },
   // Case-insensitive student-ID lookup, used by the student portal sign-in.
   // Firestore's "==" is case-sensitive, so this tries the cheap indexed
@@ -1611,14 +1668,17 @@ const DB = {
     const s=await getDoc(doc(db,coll,id)); return s.exists()?{id,...s.data()}:null;
   },
   async add(coll,data){
+    forgetInflight(coll);
     if(DEMO){ const id="x"+Math.random().toString(36).slice(2,9); mem[coll][id]={...data}; return id; }
     const r=await addDoc(collection(db,coll),data); return r.id;
   },
   async set(coll,id,data){
+    forgetInflight(coll);
     if(DEMO){ mem[coll][id]={...mem[coll][id],...data}; return; }
     await setDoc(doc(db,coll,id),data,{merge:true});
   },
   async update(coll,id,data){
+    forgetInflight(coll);
     if(DEMO){ mem[coll][id]={...mem[coll][id],...data}; return; }
     await updateDoc(doc(db,coll,id),data);
   },
@@ -1628,6 +1688,7 @@ const DB = {
   // time changes appear not to save. weekData fully replaces that week.
   async updateWeek(consId, weekKey, weekData){
     const key=String(weekKey);
+    forgetInflight("consultations");
     if(DEMO){
       const c=mem.consultations[consId]||{};
       const weeks={...(c.weeks||{})};
@@ -1650,7 +1711,7 @@ const DB = {
     const s=await getDoc(doc(db,"consultations",id));
     return s.exists()?{id,...s.data()}:null;
   },
-  async remove(coll,id){ if(DEMO){ delete mem[coll][id]; return; } await deleteDoc(doc(db,coll,id)); }
+  async remove(coll,id){ forgetInflight(coll); if(DEMO){ delete mem[coll][id]; return; } await deleteDoc(doc(db,coll,id)); }
   ,
   /* Many small writes in ONE round trip.
      A write to Firestore costs a network round trip, and awaiting them one
@@ -1669,6 +1730,7 @@ const DB = {
   async batchWrite(ops){
     const list=(ops||[]).filter(Boolean);
     if(!list.length) return 0;
+    new Set(list.map(o=>o.coll)).forEach(forgetInflight);
     if(DEMO){
       list.forEach(o=>{
         mem[o.coll]=mem[o.coll]||{};
@@ -1710,6 +1772,7 @@ const $ = s=>document.querySelector(s);
 const el = (tag,props={},...kids)=>{
   const n=document.createElement(tag);
   for(const[k,v]of Object.entries(props)){
+    if(v===undefined||v===null) continue;   // never write the word "undefined" into a field
     if(k==="class")n.className=v; else if(k==="html")n.innerHTML=v;
     else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);
     else n.setAttribute(k,v);
@@ -1717,7 +1780,10 @@ const el = (tag,props={},...kids)=>{
   kids.flat().forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c??"")));
   return n;
 };
-function toast(msg,isErr){ let t=$("#toast"); if(!t){ t=toastNode(); document.body.append(t); } t.textContent=msg; t.className="show"+(isErr?" err":""); setTimeout(()=>t.className="",2600); }
+/* One timer at a time: a second toast used to be cut short by the first
+   one's timer, so an error that followed a success flashed and vanished. */
+let toastTimer=0;
+function toast(msg,isErr){ let t=$("#toast"); if(!t){ t=toastNode(); document.body.append(t); } t.textContent=msg; t.className="show"+(isErr?" err":""); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className="",isErr?4200:2600); }
 
 /* ---- Theme (light / dark) ----
    Defaults to the OS preference; the moon/sun button flips it and the choice
@@ -1756,12 +1822,20 @@ function labelTable(t){
   });
   t.classList.add("resp");
 }
+/* Each table is labelled once per batch of changes, however many of its
+   rows arrived — and rows added to a table that is already on the page
+   (a tbody refilled by a filter) are labelled too, which they weren't. */
 new MutationObserver(muts=>{
+  const todo=new Set();
   for(const m of muts) for(const n of m.addedNodes){
     if(n.nodeType!==1) continue;
-    if(n.tagName==="TABLE") labelTable(n);
-    else n.querySelectorAll?.("table").forEach(labelTable);
+    if(n.tagName==="TABLE") todo.add(n);
+    else{
+      const host=n.closest?.("table"); if(host) todo.add(host);
+      n.querySelectorAll?.("table").forEach(t=>todo.add(t));
+    }
   }
+  todo.forEach(labelTable);
 }).observe(document.documentElement,{childList:true,subtree:true});
 const CAMPUSES=["NSW","ACT","Perth","VIC","QLD"];
 const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
@@ -1859,7 +1933,7 @@ function editProposalTitle(s,done){
     el("div",{class:"grid"},
       el("div",{},el("label",{},"Proposal / research title \u2014 "+(s.name||"student")),inp),
       el("div",{},el("p",{class:"muted",style:"margin:0"},
-        "The title being confirmed. It appears on the CoC panel screens, in the "+
+        "The title being confirmed. It appears on the CoC panel screens and in "+
         "the exported CoC document. It is not shown to the student. Leave it empty to clear it."))),
     async()=>{
       try{ await DB.update("students",s.id,{proposalTitle:inp.value.trim()}); }
@@ -2080,6 +2154,7 @@ async function reloadStaffCaches(){
   const all=await DB.listUsers();
   S.supervisors=all.filter(isSupervisor);
   S.panellists =all.filter(isPanellist);
+  S.admins     =all.filter(u=>u.role==="admin");
   return all;
 }
 
@@ -3069,14 +3144,16 @@ async function viewPanels(v){
 
   let students,pools,groups;
   try{
-    students=await DB.list("students",{semesterId:S.activeSem});
-    S.cocStudents=students;
     /* Only ever ask for MY OWN nomination doc, never the whole semester's.
        Firestore rejects a list query outright unless the query itself is
        narrow enough to guarantee every document it could return is allowed
-       \u2014 so the security rule and this filter have to agree. */
-    pools=await DB.list("panelPool",{semesterId:S.activeSem,supervisorUid:S.uid});
-    groups=await DB.list("panelGroups",{semesterId:S.activeSem});
+       \u2014 so the security rule and this filter have to agree.
+       The three reads are independent, so they go out together. */
+    [students,pools,groups]=await Promise.all([
+      DB.list("students",{semesterId:S.activeSem}),
+      DB.list("panelPool",{semesterId:S.activeSem,supervisorUid:S.uid}),
+      DB.list("panelGroups",{semesterId:S.activeSem})]);
+    S.cocStudents=students;
   }catch(err){ v.append(panelRuleHelp(err)); return; }
 
   const mine=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
@@ -3642,32 +3719,33 @@ async function viewPanelAdmin(v){
   if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
 
   let students,pools,groups,legacy,cons,timetables;
+  const semId=S.activeSem;
+  /* All six reads go out at once. Class timetables feed the clash check
+     only, and the legacy per-student panels are only read to offer the
+     one-off conversion, so either of those failing costs its own feature,
+     not the screen. */
+  const optTimetables=DB.list("timetables",{semesterId:semId}).catch(()=>[]);
+  const optLegacy=DB.list("panels",{semesterId:semId}).catch(()=>[]);
   try{
-    students=await DB.list("students",{semesterId:S.activeSem});
+    [students,pools,groups,cons]=await Promise.all([
+      DB.list("students",{semesterId:semId}),
+      DB.list("panelPool",{semesterId:semId}),
+      DB.list("panelGroups",{semesterId:semId}),
+      DB.list("consultations",{semesterId:semId})]);
     S.cocStudents=students;   // lets groupBusy() name a student in a clash message
-    pools=await DB.list("panelPool",{semesterId:S.activeSem});
-    groups=await DB.list("panelGroups",{semesterId:S.activeSem});
-    cons=await DB.list("consultations",{semesterId:S.activeSem});
   }catch(err){ v.append(panelRuleHelp(err)); return; }
-  /* Class timetables feed the clash check only; a missing collection
-     should cost the warning, not the screen. */
-  try{ timetables=await DB.list("timetables",{semesterId:S.activeSem}); }
-  catch(err){ timetables=[]; }
-  /* The legacy per-student panels are only read to offer the one-off
-     conversion. A site that never had them \u2014 or that has already dropped
-     the collection from its rules \u2014 should not lose the whole screen over
-     it, so this read fails quietly on its own. */
-  try{ legacy=await DB.list("panels",{semesterId:S.activeSem}); }
-  catch(err){ legacy=[]; }
+  [timetables,legacy]=await Promise.all([optTimetables,optLegacy]);
 
   async function reload(){
+    const optLegacy=DB.list("panels",{semesterId:S.activeSem}).catch(()=>[]);
     try{
-      students=await DB.list("students",{semesterId:S.activeSem});
+      [students,pools,groups]=await Promise.all([
+        DB.list("students",{semesterId:S.activeSem}),
+        DB.list("panelPool",{semesterId:S.activeSem}),
+        DB.list("panelGroups",{semesterId:S.activeSem})]);
       S.cocStudents=students;
-      pools=await DB.list("panelPool",{semesterId:S.activeSem});
-      groups=await DB.list("panelGroups",{semesterId:S.activeSem});
     }catch(err){ toast(err?.message||"Could not reload panels.",true); return; }
-    try{ legacy=await DB.list("panels",{semesterId:S.activeSem}); }catch(err){ legacy=[]; }
+    legacy=await optLegacy;
     draw();
     syncCoc();
   }
@@ -7857,11 +7935,23 @@ async function postNote(stu,text,pinned){
 async function markNotesRead(notes){
   const meId=noteMeId();
   const todo=notes.filter(n=>isUnread(n,meId));
-  for(const n of todo){
-    await DB.update("notes",n.id,{readBy:{...(n.readBy||{}),[meId]:true}});
-    n.readBy={...(n.readBy||{}),[meId]:true};
+  if(!todo.length) return 0;
+  const readOf=n=>({...(n.readBy||{}),[meId]:true});
+  /* One batched round trip instead of one per note — opening a busy thread
+     used to wait for every receipt in turn before the screen settled. If
+     the batch is refused (a note deleted meanwhile fails the whole batch),
+     fall back to the notes one at a time, all in flight together. */
+  try{
+    await DB.batchWrite(todo.map(n=>({type:"update",coll:"notes",id:n.id,data:{readBy:readOf(n)}})));
+    todo.forEach(n=>{ n.readBy=readOf(n); });
+    return todo.length;
+  }catch(err){
+    const res=await Promise.allSettled(todo.map(n=>DB.update("notes",n.id,{readBy:readOf(n)})));
+    let ok=0;
+    res.forEach((r,i)=>{ if(r.status==="fulfilled"){ todo[i].readBy=readOf(todo[i]); ok++; } });
+    if(!ok) throw res[0].reason||err;
+    return ok;
   }
-  return todo.length;
 }
 function relTime(ms){
   if(!ms) return "";
@@ -8134,20 +8224,26 @@ async function staffPinLookup(pin){
 
 async function afterLogin(){
   S.studentSid=null; S.studentName=""; S.bannerShown=false;
-  await loadEmploymentConfig();
-  S.semesters=await DB.list("semesters");
+  /* The four start-up reads don't depend on one another, so they go out
+     together: sign-in now waits for the slowest one, not for all four in
+     a row. */
+  const [, sems, allStudents] = await Promise.all([
+    loadEmploymentConfig(),
+    DB.list("semesters"),
+    DB.list("students").catch(()=>null),
+    reloadStaffCaches()
+  ]);
+  S.semesters=sems;
   S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
   // default to the semester that actually has students (fall back to first)
   let defaultSem=S.semesters[0]?.id||null;
-  try{
+  if(allStudents){
     const counts={};
-    const all=await DB.list("students");
-    all.forEach(s=>{ counts[s.semesterId]=(counts[s.semesterId]||0)+1; });
+    allStudents.forEach(s=>{ counts[s.semesterId]=(counts[s.semesterId]||0)+1; });
     const best=S.semesters.filter(s=>counts[s.id]).sort((a,b)=>counts[b.id]-counts[a.id])[0];
     if(best) defaultSem=best.id;
-  }catch(e){}
+  }
   S.activeSem=defaultSem;
-  await reloadStaffCaches();
   renderApp();
 }
 
@@ -8357,19 +8453,34 @@ function semesterPicker(onChange){
 
 async function drawMain(){
   syncNav();
-  const v=$("#view"); v.innerHTML="<div class='muted ui' style='padding:30px'>Loading…</div>";
-  if(S.tab==="students") return viewStudents(v);
-  if(S.tab==="schedule") return viewSchedule(v);
-  if(S.tab==="timetables") return viewTimetables(v);
-  if(S.tab==="consultations") return viewConsultations(v);
-  if(S.tab==="meetinglog") return viewMeetingLog(v);
-  if(S.tab==="notes") return viewNotes(v);
-  if(S.tab==="panels") return S.role==="admin"?viewPanelAdmin(v):viewPanels(v);
-  if(S.tab==="report") return viewReport(v);
-  if(S.tab==="export") return viewExport(v);
-  if(S.tab==="contacts") return viewContacts(v);
-  if(S.tab==="people") return viewPeople(v);
-  if(S.tab==="settings") return viewSettings(v);
+  const host=$("#view"); if(!host) return;
+  /* Each draw gets its own fresh pane. Screens load their data before
+     drawing, so clicking a second tab while the first is still loading
+     used to let BOTH finish into the same box — two screens stacked on top
+     of each other. A screen that finishes after the user has moved on now
+     draws into a pane that is no longer on the page, and nobody sees it. */
+  const v=el("div",{});
+  v.innerHTML="<div class='muted ui' style='padding:30px'>Loading…</div>";
+  host.replaceChildren(v);
+  const views={students:viewStudents, schedule:viewSchedule, timetables:viewTimetables,
+    consultations:viewConsultations, meetinglog:viewMeetingLog, notes:viewNotes,
+    panels:S.role==="admin"?viewPanelAdmin:viewPanels, report:viewReport, export:viewExport,
+    contacts:viewContacts, people:viewPeople, settings:viewSettings};
+  const fn=views[S.tab]; if(!fn) return;
+  try{ return await fn(v); }
+  catch(err){
+    /* A failed read (permissions, network) used to leave a half-drawn
+       screen with no explanation. Say what happened, and offer a retry. */
+    console.error("screen failed to load",err);
+    if(!v.isConnected) return;
+    v.append(el("div",{class:"card ui",style:"border-left:4px solid var(--clay);margin-top:12px"},
+      el("strong",{},"This screen couldn't finish loading."),
+      el("p",{class:"muted",style:"margin:6px 0 10px"},
+        /permission/i.test(err?.message||"")
+          ? "Your account isn't allowed to read some of the records this screen needs. Ask the coordinator to check the site's access rules."
+          : "Check your connection and try again. ("+(err?.message||"unknown error")+")"),
+      el("button",{class:"btn sm",onclick:()=>drawMain()},"Try again")));
+  }
 }
 
 /* ============================================================
@@ -9134,7 +9245,10 @@ async function viewStudents(v){
     students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
   }
   // admin contacts (for the "Email admin" quick action available to supervisors)
-  const admins = S.role==="supervisor" ? (await DB.listUsers()).filter(u=>u.role==="admin") : [];
+  // read from the staff cache filled at sign-in rather than re-reading the
+  // whole staff collection every time this screen is drawn
+  const admins = S.role==="supervisor"
+    ? (S.admins||(await DB.listUsers().catch(()=>[])).filter(u=>u.role==="admin")) : [];
   const head=el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Enrolment"),
     el("h2",{},S.role==="admin"?"Students":"My students")));
@@ -9351,7 +9465,7 @@ function studentForm(existing,done){
       // keep linked consultation's denormalised supervisor names in sync
       if(existing){
         const cons=await DB.list("consultations",{studentDocId:existing.id});
-        for(const c of cons){ await DB.update("consultations",c.id,{coUid:co.value,coName:cName,principalName:pName}); }
+        await Promise.all(cons.map(c=>DB.update("consultations",c.id,{coUid:co.value,coName:cName,principalName:pName})));
       }
       toast("Saved."); done(); return true;
     });
@@ -9804,6 +9918,8 @@ async function viewTimetables(v){
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewTimetables(v)));
 
   let myStudents=[];
+  // started now, awaited below — it runs alongside the students read
+  const ttsP=prefetch(DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{}));
   if(S.role==="admin"){
     bar.append(el("div",{style:"flex:1"}),
       el("button",{class:"btn",onclick:()=>timetableForm(null,()=>viewTimetables(v))},"+ Set class time"));
@@ -9817,7 +9933,7 @@ async function viewTimetables(v){
       "Class times are set by the admin office. You see your own weekly class, and — for students you co-supervise — only the class run by that student's principal supervisor. Other supervisors' class groups are not shown."));
   }
 
-  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
+  let tts=await ttsP;
 
   if(S.role==="supervisor"){
     tts=classSlotsFor(tts,myStudents);
@@ -9932,9 +10048,10 @@ async function viewSchedule(v){
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewSchedule(v)));
   v.append(bar);
 
-  const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
-  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
-  let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+  let [students,tts,cons]=await Promise.all([
+    DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}),
+    DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{}),
+    DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{})]);
 
   if(S.role==="supervisor"){
     const mine=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
@@ -10196,11 +10313,12 @@ async function viewConsultations(v){
       ? "As co-supervisor you VIEW here — the consultation time and the student's Teams-classroom channel are set by each student's principal supervisor. What you see is the current timetable, plus each student's attendance so far. The full week-by-week record is on the Attendance tab."
       : "Set the recurring consultation time for each student here — this time is what weekly ATTENDANCE is recorded against (Attendance tab). The meeting is held in the Team classroom, in the student's own channel; paste that channel's link below. Only the PRINCIPAL supervisor sets the time. For students you co-supervise, the time and current attendance are shown read-only."));
 
-  let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
+  let [students,cons]=await Promise.all([
+    DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}),
+    DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{})]);
   // A supervisor sees students they supervise EITHER as principal or as co.
   // They can only set/edit the time as principal; as co they see it read-only.
   if(S.role==="supervisor") students=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
-  let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
   if(!students.length){
     v.append(emptyState(S.role==="supervisor"?"No students assigned to you":"No students yet",
       S.role==="supervisor"?"You'll see consultation times for students you principal- or co-supervise here.":"Add students first."));
@@ -10669,6 +10787,7 @@ async function viewMeetingLog(v){
       ? "Pick a student, choose the week, then tap to mark that week's consultation: held, student attended, co-supervisor attended. Weeks run Monday\u2013Sunday and you can record on any day of the week \u2014 even if no consultation time is set yet. You can go back as far as your admin allows; future weeks are locked. Co-supervised students are shown read-only."
       : "Read-only view of each student's weekly consultation attendance, recorded by the principal supervisor."));
 
+  const consP=prefetch(DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{}));
   let students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
   // Supervisors see students they principal- OR co-supervise. The principal
   // records the log; a co-supervisor sees the same record read-only.
@@ -10678,7 +10797,7 @@ async function viewMeetingLog(v){
       S.role==="supervisor"?"You'll see the weekly record for students you principal- or co-supervise here.":"Add students first."));
     return;
   }
-  let cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+  let cons=await consP;
 
   // Pick a student — tappable cards instead of a dropdown. One tap on a
   // phone, and each card doubles as a status chip: it shows the role you
@@ -11496,6 +11615,8 @@ async function viewNotes(v){
   v.append(el("p",{class:"muted ui",style:"margin-top:-6px"},
     "One message board per student, shared by the principal supervisor, the co-supervisor and the student — everyone sees the same thread, so nothing gets lost in separate email chains. New messages are flagged here and on the tab, and are shown to each person when they next sign in. Students read and reply in their own portal."));
 
+  // the notes read goes out alongside the students read, not after it
+  const notesP=prefetch(loadNotes(S.activeSem,null));
   const students=await myNoteStudents();
   if(!students.length){
     // Distinguish "no students at all" from "none in THIS semester" or
@@ -11516,7 +11637,8 @@ async function viewNotes(v){
   }
   let notes;
   try{
-    notes=await loadNotes(S.activeSem,students.map(s=>s.id));
+    const mineIds=new Set(students.map(s=>s.id));
+    notes=(await notesP).filter(n=>mineIds.has(n.studentDocId));
   }catch(err){
     v.append(notesRuleHelp(err));
     return;
@@ -11967,8 +12089,9 @@ async function viewReport(v){
   viewReport._sup = viewReport._sup || "all";        // supervisor uid or "all"
   viewReport._lens = viewReport._lens || "any";       // "any" | "principal" | "co"
 
-  const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
-  const cons=await DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{});
+  const [students,cons]=await Promise.all([
+    DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}),
+    DB.list("consultations", S.activeSem?{semesterId:S.activeSem}:{})]);
 
   // Supervisor focus dropdown (built from staff who actually supervise here,
   // plus any supervisor on the roster so admin can pick anyone).
@@ -12301,9 +12424,10 @@ async function viewExport(v){
   v.append(bar);
 
   const sem=activeSemester();
-  let tts=await DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{});
+  const [tts,students]=await Promise.all([
+    DB.list("timetables", S.activeSem?{semesterId:S.activeSem}:{}),
+    DB.list("students", S.activeSem?{semesterId:S.activeSem}:{})]);
   const approved=tts.filter(t=>t.status==="approved");
-  const students=await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{});
 
   v.append(el("div",{class:"row",style:"margin-bottom:14px"},
     el("button",{class:"btn",onclick:()=>downloadTimetableCSV(approved,sem)},"Download CSV"),
@@ -12450,9 +12574,10 @@ async function viewContacts(v){
   bar.append(el("div",{class:"field"},el("label",{},"Search"),search));
   v.append(bar);
 
-  const staff=(await DB.listUsers()).sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
-  const students=(await DB.list("students", S.activeSem?{semesterId:S.activeSem}:{}))
-    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const [staffRaw,studentsRaw]=await Promise.all([
+    DB.listUsers(), DB.list("students", S.activeSem?{semesterId:S.activeSem}:{})]);
+  const staff=staffRaw.sort((a,b)=>String(a.name||a.email).localeCompare(String(b.name||b.email)));
+  const students=studentsRaw.sort((a,b)=>String(a.name).localeCompare(String(b.name)));
 
   const host=el("div",{});
   v.append(host);
@@ -12573,13 +12698,14 @@ async function viewPeople(v){
       EMPLOYMENTS.map(e=>e.label).join(", ")+" \u2014 which shows here, in Contacts, "+
       "beside the person on the CoC panel screens and in the panel export. Records saved before "+
       "this show as \u201CNot set\u201D until you edit them; nothing depends on it being filled in.")));
-  await refreshAllocCounts();
-  const users=await DB.listUsers();
   /* The panels of the selected semester, so the list can say who is
-     already seated on one — and filter on it. */
-  let semGroups=[];
-  try{ if(S.activeSem) semGroups=await DB.list("panelGroups",{semesterId:S.activeSem}); }
-  catch(e){ console.warn("panels unavailable for the staff list",e); }
+     already seated on one — and filter on it. The three reads are
+     independent and go out together. */
+  const [, users, semGroups]=await Promise.all([
+    refreshAllocCounts(),
+    DB.listUsers(),
+    (S.activeSem?DB.list("panelGroups",{semesterId:S.activeSem}):Promise.resolve([]))
+      .catch(e=>{ console.warn("panels unavailable for the staff list",e); return []; })]);
   const seatsOf=u=>seatedPanelsOf(u,semGroups);
   /* ---- PIN access ----
      The PIN column and its buttons are the office's half of the read-only
@@ -13813,9 +13939,8 @@ async function copyForward(fromSem,done){
         start:start.value||"",end:cfEnd.value||"",
         backWeeks:(fromSem.backWeeks===undefined||fromSem.backWeeks===null)?2:fromSem.backWeeks});
       const students=await DB.list("students",{semesterId:fromSem.id});
-      for(const s of students){
-        const {id,...rest}=s; await DB.add("students",{...rest,semesterId:newId});
-      }
+      // all copies sent together rather than one round trip per student
+      await Promise.all(students.map(s=>{ const {id,...rest}=s; return DB.add("students",{...rest,semesterId:newId}); }));
       S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1)); S.activeSem=newId;
       toast(`Carried ${students.length} students forward.`); done(); return true;
     },"Carry forward");
@@ -13964,16 +14089,20 @@ async function studentPortalData(en,sems){
   const unitIds=en.unitIds||[];
   const units=unitIds.map(id=>unitById(sem,id)).filter(Boolean);
   let classes=[], cons=[], classErr=false, consErr=false;
-  try{
-    classes=(await DB.list("timetables",{semesterId:en.semesterId}))
+  /* The four reads behind the portal are independent, so they are sent
+     together — the page waits for the slowest, not for the sum. */
+  const [ttR,consR,coc,msgs]=await Promise.all([
+    DB.list("timetables",{semesterId:en.semesterId}).then(r=>({ok:true,r}),e=>({ok:false,e})),
+    DB.list("consultations",{semesterId:en.semesterId}).then(r=>({ok:true,r}),e=>({ok:false,e})),
+    studentCocLoad(en),
+    studentNotesLoad(en)]);
+  if(ttR.ok){
+    classes=ttR.r
       .filter(t=>t.status==="approved" && unitIds.includes(t.unitId) && t.supervisorUid===en.principalUid)
       .sort((a,b)=>spDayIdx(a.day)-spDayIdx(b.day)||minsOf(a.start)-minsOf(b.start));
-  }catch(e){ classErr=true; console.warn("classes unavailable",e); }
-  try{
-    cons=(await DB.list("consultations",{semesterId:en.semesterId})).filter(c=>c.studentDocId===en.id);
-  }catch(e){ consErr=true; console.warn("consultations unavailable",e); }
-  const coc=await studentCocLoad(en);
-  const msgs=await studentNotesLoad(en);
+  }else{ classErr=true; console.warn("classes unavailable",ttR.e); }
+  if(consR.ok) cons=consR.r.filter(c=>c.studentDocId===en.id);
+  else{ consErr=true; console.warn("consultations unavailable",consR.e); }
   return {en,sem,weeks,units,classes,cons,classErr,consErr,coc,msgs};
 }
 
@@ -14019,8 +14148,8 @@ async function studentNotesLoad(en){
 /* ---- Page -------------------------------------------------------------- */
 async function renderStudentView(sid,enrolments,sems){
   S.studentSid=sid; S.studentName=enrolments[0]?.name||"";
-  const data=[];
-  for(const en of enrolments) data.push(await studentPortalData(en,sems));
+  // every enrolment loads at once rather than one semester after another
+  const data=await Promise.all(enrolments.map(en=>studentPortalData(en,sems)));
   data.sort((a,b)=>(String(a.sem?.label||"")>String(b.sem?.label||"")?-1:1));
   // Open on the semester that is teaching right now, if there is one.
   const running=data.findIndex(d=>currentWeekOf(d.sem)!==null);
@@ -14573,7 +14702,21 @@ async function renderStudentView(sid,enrolments,sems){
 async function pinBlocksFor(u,sems,preload){
   const out=[];
   const mine=emailsOf(u).map(e=>e.toLowerCase());
-  for(const sem of [...(sems||[])].sort((a,b)=>(a.label>b.label?-1:1))){
+  const semList=[...(sems||[])].sort((a,b)=>(a.label>b.label?-1:1));
+  /* Without a preload, every semester needs three reads. They used to run
+     one after another — three round trips per semester, so a site with a
+     few years of history made the PIN page wait for dozens in a row. They
+     are independent, so all of them now go out at once. */
+  let live=null;
+  if(!preload){
+    const safe=(p,what)=>p.catch(e=>{ console.warn(what+" unavailable",e); return []; });
+    const rows=await Promise.all(semList.map(sem=>Promise.all([
+      safe(DB.list("students",{semesterId:sem.id}),"students"),
+      safe(DB.list("panelGroups",{semesterId:sem.id}),"panels"),
+      safe(DB.list("consultations",{semesterId:sem.id}),"consultations")])));
+    live=new Map(semList.map((sem,i)=>[sem.id,rows[i]]));
+  }
+  for(const sem of semList){
     const weeks=sem?.weeks||12;
     let students=[],groups=[],cons=[];
     if(preload){
@@ -14581,9 +14724,7 @@ async function pinBlocksFor(u,sems,preload){
       groups  =(preload.groups  ||[]).filter(g=>g.semesterId===sem.id);
       cons    =(preload.cons    ||[]).filter(c=>c.semesterId===sem.id);
     }else{
-      try{ students=await DB.list("students",{semesterId:sem.id}); }catch(e){ console.warn("students unavailable",e); }
-      try{ groups  =await DB.list("panelGroups",{semesterId:sem.id}); }catch(e){ console.warn("panels unavailable",e); }
-      try{ cons    =await DB.list("consultations",{semesterId:sem.id}); }catch(e){ console.warn("consultations unavailable",e); }
+      [students,groups,cons]=live.get(sem.id);
     }
     /* Am I on this panel? Staff match on their account id; a panel member
        typed in by hand before they had an account matches on either of
@@ -15079,23 +15220,32 @@ function confirmDelete(coll,id,name,done,custom){
     async()=>{
       if(custom){ await done(); return true; }
       if(coll==="students"){
-        const cs=await DB.list("consultations",{studentDocId:id});
-        for(const c of cs) await DB.remove("consultations",c.id);
-        const ns=await DB.list("notes",{studentDocId:id});
-        for(const n of ns) await DB.remove("notes",n.id);
-        const ats=await DB.list("attendance",{studentDocId:id});
-        for(const a of ats) await DB.remove("attendance",a.id);
-        const pnl=await DB.list("panels",{studentDocId:id});
-        for(const x of pnl) await DB.remove("panels",x.id);
-        // take the student off any panel group, and off its timetable
-        const gs=await DB.list("panelGroups",{});
-        for(const g of gs){
-          if(!(g.studentIds||[]).includes(id)) continue;
-          await DB.update("panelGroups",g.id,{
+        /* Every linked record is looked up at once, then everything —
+           the student included — is removed in one batch. Deleting them one
+           at a time took a round trip per record, and a failure half-way
+           left the student in place with some of their history gone. The
+           legacy `attendance` and `panels` collections may be closed by the
+           site's rules, which should not block the delete. */
+        const legacyOk=p=>p.catch(e=>{ console.warn("legacy records unavailable",e); return []; });
+        const [cs,ns,ats,pnl,gs]=await Promise.all([
+          DB.list("consultations",{studentDocId:id}),
+          DB.list("notes",{studentDocId:id}),
+          legacyOk(DB.list("attendance",{studentDocId:id})),
+          legacyOk(DB.list("panels",{studentDocId:id})),
+          DB.list("panelGroups",{})]);
+        const ops=[
+          ...cs.map(c=>({type:"delete",coll:"consultations",id:c.id})),
+          ...ns.map(n=>({type:"delete",coll:"notes",id:n.id})),
+          ...ats.map(a=>({type:"delete",coll:"attendance",id:a.id})),
+          ...pnl.map(x=>({type:"delete",coll:"panels",id:x.id})),
+          // take the student off any panel group, and off its timetable
+          ...gs.filter(g=>(g.studentIds||[]).includes(id)).map(g=>({type:"update",coll:"panelGroups",id:g.id,data:{
             studentIds:(g.studentIds||[]).filter(x=>x!==id),
             slots:(g.slots||[]).filter(sl=>sl.studentDocId!==id),
-            updatedAt:Date.now()});
-        }
+            updatedAt:Date.now()}})),
+          {type:"delete",coll:"students",id}];
+        await DB.batchWrite(ops);
+        toast("Deleted."); done(); return true;
       }
       await DB.remove(coll,id); toast("Deleted."); done(); return true;
     },"Delete");
@@ -15111,17 +15261,29 @@ if(DEMO){
 } else {
   onAuthStateChanged(auth, async (fbUser)=>{
     if(!fbUser){ renderLogin(); return; }
-    const u=await DB.getUser(fbUser.uid);
-    if(!u){ toast("No staff profile found for this login.",true); await signOut(auth); renderLogin(); return; }
-    S.user={email:fbUser.email}; S.uid=fbUser.uid; S.role=roleOf(u); S.userName=u.name;
-    await afterLogin();
+    /* Anything failing here (offline, a rules change, a slow network that
+       times out) used to leave the page on "Loading…" for good, with the
+       only clue in the console. Show the sign-in screen and say why. */
+    try{
+      const u=await DB.getUser(fbUser.uid);
+      if(!u){ toast("No staff profile found for this login.",true); await signOut(auth); renderLogin(); return; }
+      S.user={email:fbUser.email}; S.uid=fbUser.uid; S.role=roleOf(u); S.userName=u.name;
+      await afterLogin();
+    }catch(err){
+      console.error("sign-in load failed",err);
+      document.body.innerHTML="";
+      document.body.append(el("div",{class:"auth-wrap"},el("div",{class:"auth-card ui"},
+        el("h1",{style:"font-size:20px;margin:0 0 6px"},"Couldn't load the hub"),
+        el("p",{class:"muted"},/permission/i.test(err?.message||"")
+          ? "You're signed in, but your account can't read the hub's records. Ask the coordinator to check access."
+          : "Check your connection and try again."),
+        el("div",{class:"row",style:"gap:8px;margin-top:10px"},
+          el("button",{class:"btn",onclick:()=>location.reload()},"Try again"),
+          el("button",{class:"btn ghost",onclick:()=>signOut(auth)},"Sign out")))),toastNode());
+    }
   });
 }
 window.addEventListener("error",e=>console.error(e));
 </script>
-
-</head>
-<body>
-  <div class="auth-wrap"><div class="muted ui">Loading…</div></div>
 </body>
 </html>
