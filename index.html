@@ -1140,6 +1140,165 @@
     .sp-card{break-inside:avoid}
   }
 </style>
+<style id="refresh-2026">
+  /* ============================================================
+     REFRESH — a lighter, calmer layer over "Register"
+     Kept as its own block so it can be read (or removed) in one piece.
+     Nothing here changes behaviour; it only changes how things look.
+
+     • Colour on a button is now a TINT. Solid colour is saved for the one
+       decisive action in a dialog, so a table of students no longer shows
+       a column of red "Delete" slabs louder than the data.
+     • Metrics read label-first in sentence case, with big numbers in the
+       UI face (tabular) — mono stays where it earns its keep: times, week
+       numbers, codes and PINs.
+     • Glyph labels on buttons are real line icons (see glyphize()).
+     • Sign-in is a two-panel screen that explains the three ways in.
+     ============================================================ */
+
+  /* ---- Buttons: tinted status colours ---- */
+  .btn.danger{background:var(--clay-soft);color:var(--clay-ink);border-color:transparent;box-shadow:none}
+  .btn.danger:hover{background:var(--clay);color:#fff;box-shadow:none}
+  .btn.blue{background:var(--blue-soft);color:var(--blue-ink);border-color:transparent;box-shadow:none}
+  .btn.blue:hover{background:var(--blue);color:#fff;box-shadow:none}
+  .btn.amber{background:var(--amber-soft);color:var(--amber-ink);border-color:transparent;box-shadow:none}
+  .btn.amber:hover{background:var(--amber);color:#fff;box-shadow:none}
+  html[data-theme="dark"] .btn.danger{color:var(--clay-ink)}
+  html[data-theme="dark"] .btn.blue{color:var(--blue-ink)}
+  html[data-theme="dark"] .btn.amber{color:var(--amber-ink)}
+  html[data-theme="dark"] .btn.danger:hover,html[data-theme="dark"] .btn.blue:hover{color:#fff}
+  html[data-theme="dark"] .btn.amber:hover{color:#1b1305}
+  /* …except the confirming button of a dialog, which stays solid */
+  .modal .btn.danger{background:var(--clay);color:#fff}
+  .modal .btn.danger:hover{background:var(--clay-ink)}
+  .sp-alert .btn{background:var(--blue);color:#fff}
+  .btn{border-radius:10px}
+  .btn.ghost:hover{background:var(--accent-tint)}
+  .btn .bi{display:inline-grid;place-items:center;width:16px;height:16px;flex:0 0 auto;margin-left:-2px}
+  .btn .bi svg{width:16px;height:16px}
+  .btn.xs .bi,.btn.xs .bi svg{width:14px;height:14px}
+  .iconbtn svg{width:18px;height:18px}
+
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  .tscroll > table{min-width:100%}
+  @media print{ .tscroll{overflow:visible} }
+  @media (min-width:641px){
+    table.overflows > thead > tr > th:last-child,
+    table.overflows > tbody > tr > td:last-child{position:sticky;right:0;z-index:1;background:var(--paper-2);
+      box-shadow:-12px 0 12px -12px rgba(16,24,40,.28)}
+    table.overflows > thead > tr > th:last-child{background:var(--sunken)}
+    table.overflows > tbody > tr:hover > td:last-child{background:linear-gradient(var(--accent-tint),var(--accent-tint)),var(--paper-2)}
+    html[data-theme="dark"] table.overflows > tbody > tr > td:last-child{box-shadow:-12px 0 12px -12px rgba(0,0,0,.8)}
+  }
+  /* Row actions sit on one line instead of stacking into a tall column. */
+  @media (min-width:641px){
+    td:last-child > .row{flex-wrap:nowrap;gap:6px}
+    td:last-child .btn{white-space:nowrap}
+    td > .btn + .btn{margin-left:6px}
+  }
+
+  /* ---- Metrics ---- */
+  .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat .b{display:flex;flex-direction:column;gap:6px;min-width:0;padding:15px 18px 16px;
+    border-radius:14px;box-shadow:var(--shadow)}
+  .stat .b::before{content:none}
+  .stat .l{order:-1;font-size:12.5px;font-weight:500;text-transform:none;letter-spacing:0;margin:0;
+    color:var(--ink-soft);line-height:1.3}
+  .stat .n{font-family:var(--sans);font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:1.05;
+    font-variant-numeric:tabular-nums}
+  .sp-stats .n{font-family:var(--sans);font-weight:700;letter-spacing:-.02em}
+
+  /* ---- Surfaces ---- */
+  .card{border-radius:14px}
+  .section-title h2{font-size:28px;font-weight:750;letter-spacing:-.035em}
+  .eyebrow{letter-spacing:.1em}
+  th{font-weight:600;letter-spacing:.05em}
+  tbody tr{transition:background .12s}
+  .inbox-banner{border-radius:14px!important}
+  nav.tabs .navgroup{letter-spacing:.09em}
+  /* A screen fades in as it arrives, so a tab change reads as a change. */
+  #view > div{animation:viewIn .22s cubic-bezier(.2,.8,.25,1)}
+  @keyframes viewIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* Week planner: one column per teaching day, so Friday isn't orphaned. */
+  .weekgrid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+
+  /* Toast: a floating card with a status dot. */
+  #toast{display:flex;align-items:center;gap:10px;border-radius:14px;padding:12px 18px 12px 14px;
+    background:var(--ink);color:var(--paper-2)}
+  #toast::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);flex:0 0 auto}
+  #toast.err::before{background:#fff}
+  html[data-theme="dark"] #toast{background:var(--paper-2);color:var(--ink);border:1px solid var(--line-strong)}
+  html[data-theme="dark"] #toast.err{background:var(--clay);color:#fff;border-color:transparent}
+
+  /* ---- Sign in: brand panel + form ---- */
+  .auth-wrap.auth-split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    place-items:stretch;padding:0;background:var(--paper)}
+  .auth-aside{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;
+    gap:36px;padding:40px 52px;color:#e6e9ff;
+    background:
+      radial-gradient(820px 480px at 0% 0%,#6366f170,transparent 60%),
+      radial-gradient(700px 460px at 100% 100%,#06b6d445,transparent 60%),
+      linear-gradient(160deg,#0f172a 0%,#1e1b4b 55%,#2e1065 100%)}
+  .auth-aside::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(#ffffff0d 1px,transparent 1px),linear-gradient(90deg,#ffffff0d 1px,transparent 1px);
+    background-size:44px 44px;
+    -webkit-mask-image:radial-gradient(ellipse at 25% 35%,#000 15%,transparent 72%);
+    mask-image:radial-gradient(ellipse at 25% 35%,#000 15%,transparent 72%)}
+  .auth-aside > *{position:relative;z-index:1}
+  .auth-brand{display:flex;align-items:center;gap:13px}
+  .auth-brand .mark-lg{margin:0;width:44px;height:44px;border-radius:13px;font-size:15px;color:#fff;font-weight:800;
+    display:grid;place-items:center;flex:0 0 auto;letter-spacing:.02em;
+    background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#06b6d4 100%);box-shadow:inset 0 1px 0 #ffffff40,0 8px 20px -8px #6366f1}
+  .auth-bname{font-weight:700;font-size:16px;color:#fff;letter-spacing:-.01em}
+  .auth-bsub{font-size:12.5px;color:#c7cdf5b3}
+  .auth-copy h2{font-size:clamp(28px,3vw,40px);line-height:1.1;font-weight:750;letter-spacing:-.035em;color:#fff;max-width:540px}
+  .auth-copy > p{margin:14px 0 0;font-size:15.5px;color:#d6daf8cc;max-width:500px;line-height:1.55}
+  .auth-ways{display:grid;gap:10px;margin-top:30px;max-width:500px}
+  .auth-way{display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;padding:14px 16px;
+    border-radius:14px;border:1px solid #ffffff1f;background:#ffffff0d;color:#e6e9ff;
+    transition:background .15s,border-color .15s,transform .1s}
+  .auth-way:hover{background:#ffffff17;border-color:#ffffff33}
+  .auth-way.on{background:#ffffff24;border-color:#a5b4fc99;box-shadow:0 0 0 1px #a5b4fc66}
+  .auth-way:focus-visible{outline:2px solid #a5b4fc;outline-offset:2px}
+  .aw-ic{width:36px;height:36px;border-radius:10px;background:#ffffff1a;display:grid;place-items:center;flex:0 0 auto}
+  .aw-ic svg{width:18px;height:18px}
+  .auth-way.on .aw-ic{background:#6366f1;color:#fff}
+  .aw-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .aw-t strong{font-size:14.5px;color:#fff;font-weight:650}
+  .aw-t span{font-size:13px;color:#d6daf8b3;line-height:1.45}
+  .auth-foot{font-size:12.5px;color:#c7cdf599}
+  .auth-main{display:grid;place-items:center;padding:40px 24px;
+    background:
+      radial-gradient(700px 420px at 100% 0%,#6366f11f,transparent 62%),
+      radial-gradient(600px 380px at 0% 100%,#06b6d414,transparent 60%),var(--paper)}
+  .auth-split .auth-card{max-width:440px;border-radius:20px;box-shadow:var(--shadow-md)}
+  .auth-title{font-size:26px;font-weight:750;letter-spacing:-.035em;margin:2px 0 0}
+  .auth-split .seg button{white-space:nowrap}
+  .auth-forgot{margin-top:14px;font-size:13.5px}
+  .auth-forgot > summary{cursor:pointer;color:var(--accent-deep);font-weight:600;list-style:none;display:inline-flex;align-items:center;gap:6px}
+  .auth-forgot > summary::-webkit-details-marker{display:none}
+  .auth-forgot > summary::after{content:"";width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+  .auth-forgot[open] > summary::after{transform:rotate(225deg) translate(-1px,-1px)}
+  @media (min-width:1024px){ .auth-split .seg{display:none} .auth-split .auth-card .seg + *{margin-top:20px} }
+  @media (max-width:1023px){
+    .auth-wrap.auth-split{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .auth-aside{padding:18px 20px;gap:0}
+    .auth-copy,.auth-foot{display:none}
+    .auth-main{place-items:start center;padding:22px 16px 40px}
+  }
+  @media (max-width:640px){
+    .toolbar > div:not(.field){flex:1 1 100%;min-width:0}
+    .toolbar > div:not(.field) input{width:100%}
+    .toolbar input,.toolbar select{min-width:0!important;width:100%!important}
+    .toolbar > .field:first-child{flex-basis:100%}
+    .stat{grid-template-columns:1fr 1fr;gap:8px}
+    .stat .n{font-size:23px}
+    .auth-split .auth-card{padding:22px 20px}
+    .auth-title{font-size:22px}
+  }
+  @media print{ #view > div{animation:none} }
+</style>
 </head>
 <body>
   <!-- Shown the moment the page arrives, while the app below is read. -->
@@ -1769,6 +1928,55 @@ const S = { user:null, role:null, uid:null, semesters:[], activeSem:null, tab:"s
             allocCounts:{} }; // uid -> students still allocated to them
 
 const $ = s=>document.querySelector(s);
+
+/* ---- Button icons ----
+   Buttons across the hub were labelled with typographic glyphs ("✉ Email",
+   "⤓ Excel", "+ Add student"). Those render differently on every platform
+   and sit off the text baseline. el() now swaps a leading glyph on a button
+   for a matching line icon from the same family as the menu icons, so the
+   hundreds of existing labels stay exactly as written in the code. */
+const BTN_ICONS={
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/>',
+  print:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  refresh:'<path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/>',
+  key:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  flag:'<path d="M4 22V4a1 1 0 0 1 1-1h13l-2 5 2 5H5"/>',
+  alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  message:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  cap:'<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>'
+};
+const GLYPH_ICON={"\u2709":"mail","\uD83D\uDCE7":"mail","\u2913":"download","\u2B73":"download",
+  "\u21E9":"download","\u2399":"print","\u2380":"print","\uD83D\uDDA8":"print","\u23F1":"clock","\u23F2":"clock",
+  "\u29C9":"copy","\u21BB":"refresh","\u21BA":"refresh","\u26BF":"key","\u270E":"edit","\u270F":"edit",
+  "\u2691":"flag","\u21EA":"upload","\u26A0":"alert","\u2713":"check","\u2714":"check","+":"plus","\uFF0B":"plus",
+  "\uD83D\uDCAC":"message"};
+function btnIcon(name){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(BTN_ICONS[name]||"")+'</svg>';
+}
+function glyphize(n){
+  const t=n.firstChild; if(!t||t.nodeType!==3) return n;
+  const i=t.data.search(/\s/); if(i<1||i>3) return n;
+  const g=t.data.slice(0,i).replace(/\uFE0F/g,""), name=GLYPH_ICON[g];
+  if(!name||!/\S/.test(t.data.slice(i))) return n;
+  t.data=t.data.slice(i).replace(/^\s+/,"");
+  n.insertBefore(Object.assign(document.createElement("span"),{className:"bi",innerHTML:btnIcon(name)}),t);
+  return n;
+}
+/* For the few buttons whose label is rewritten after a save. */
+function setBtnLabel(b,text){ b.textContent=text; glyphize(b); }
+
 const el = (tag,props={},...kids)=>{
   const n=document.createElement(tag);
   for(const[k,v]of Object.entries(props)){
@@ -1778,6 +1986,7 @@ const el = (tag,props={},...kids)=>{
     else n.setAttribute(k,v);
   }
   kids.flat().forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c??"")));
+  if(tag==="button"||(tag==="a"&&/\bbtn\b/.test(n.className))) glyphize(n);
   return n;
 };
 /* One timer at a time: a second toast used to be cut short by the first
@@ -1803,9 +2012,14 @@ function initTheme(){
   }catch(e){}
 }
 function themeButton(cls="btn ghost sm"){
+  if(!/\biconbtn\b/.test(cls)) cls+=" iconbtn";
+  const paint=()=>{
+    b.innerHTML=btnIcon(S.theme==="dark"?"sun":"moon");
+    b.setAttribute("aria-label",S.theme==="dark"?"Switch to light theme":"Switch to dark theme");
+  };
   const b=el("button",{class:cls,title:"Switch light / dark theme",
-    onclick:()=>{ const t=S.theme==="dark"?"light":"dark"; applyTheme(t); themeSave(t); b.textContent=t==="dark"?"\u2600":"\u263E"; }},
-    S.theme==="dark"?"\u2600":"\u263E");
+    onclick:()=>{ const t=S.theme==="dark"?"light":"dark"; applyTheme(t); themeSave(t); paint(); }});
+  paint();
   return b;
 }
 
@@ -1821,7 +2035,26 @@ function labelTable(t){
     [...tr.children].forEach((td,i)=>td.setAttribute("data-label",heads[i]??""));
   });
   t.classList.add("resp");
+  /* Wide tables (staff, panels, reports) scroll sideways inside their own
+     frame instead of pushing their action buttons past the card's edge. */
+  let par=t.parentElement;
+  if(par && !par.classList.contains("tscroll")){
+    const ox=getComputedStyle(par).overflowX;
+    if(ox!=="auto"&&ox!=="scroll"){
+      const w=document.createElement("div"); w.className="tscroll";
+      par.insertBefore(w,t); w.append(t); par=w;
+    }
+  }
+  /* When a table is wider than its frame, its last column (the row's
+     actions) is pinned to the right edge so Edit / Delete never scroll
+     out of sight. */
+  if(par && !t.__watched){ t.__watched=true; par.__tbl=t; tableFit.observe(t); tableFit.observe(par); }
 }
+const tableFit=new ResizeObserver(entries=>entries.forEach(e=>{
+  const t=e.target.tagName==="TABLE"?e.target:e.target.__tbl; if(!t) return;
+  const c=t.parentElement; if(!c) return;
+  t.classList.toggle("overflows", t.offsetWidth>c.clientWidth+1);
+}));
 /* Each table is labelled once per batch of changes, however many of its
    rows arrived — and rows added to a table that is already on the page
    (a tbody refilled by a filter) are labelled too, which they weren't. */
@@ -7975,16 +8208,44 @@ async function myNoteStudents(){
 function renderLogin(){
   document.body.innerHTML="";
   let mode="supervisor";
-  const wrap=el("div",{class:"auth-wrap"});
+  const wrap=el("div",{class:"auth-wrap auth-split"});
   const card=el("div",{class:"auth-card ui"});
+  /* The three ways in, described once. The brand panel lists them (and
+     each one switches the form); the card's heading follows the choice. */
+  const WAYS=[
+    ["supervisor","Staff login","user","Manage students, timetables, attendance, messages and CoC panels."],
+    ["pin","Staff PIN","key","A read-only view of your panels and your students' times — no password."],
+    ["student","Student lookup","cap","Your meeting times, attendance, CoC and messages, with just your ID."]];
+  const waysList=el("div",{class:"auth-ways"});
+  const aside=el("section",{class:"auth-aside ui"},
+    el("div",{class:"auth-brand"},
+      el("div",{class:"mark-lg"},"SH"),
+      el("div",{},el("div",{class:"auth-bname"},"MRes Supervision Hub"),
+        el("div",{class:"auth-bsub"},"Research supervision coordination"))),
+    el("div",{class:"auth-copy"},
+      el("h2",{},"Every student, supervisor and panel in one register."),
+      el("p",{},"Allocation, weekly consultations, attendance, messages and Confirmation of Candidature — from the first week of semester to the last panel."),
+      waysList),
+    el("div",{class:"auth-foot"},"Choose how you'd like to get in"));
+  function drawWays(){
+    waysList.replaceChildren(...WAYS.map(([id,title,ic,sub])=>{
+      const b=el("button",{type:"button",class:"auth-way"+(mode===id?" on":""),onclick:()=>{mode=id;draw();}},
+        el("span",{class:"aw-ic",html:btnIcon(ic)}),
+        el("span",{class:"aw-t"},el("strong",{},title),el("span",{},sub)));
+      return b;
+    }));
+  }
   function draw(){
     card.innerHTML="";
+    drawWays();
+    const way=WAYS.find(w=>w[0]===mode)||WAYS[0];
     card.append(
-      el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start"},
-        el("div",{class:"mark-lg"},"SH"), themeButton()),
-      el("div",{class:"eyebrow"},"Research supervision coordination"),
-      el("h1",{style:"font-size:24px;margin:2px 0 4px;font-weight:700;letter-spacing:-.03em"},"MRes Supervision Hub"),
-      el("p",{class:"muted"},"Sign in to manage students, timetables and meetings.")
+      el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"},
+        el("div",{},
+          el("div",{class:"eyebrow"},"Welcome"),
+          el("h1",{class:"auth-title"},mode==="student"?"Open your portal":mode==="pin"?"View your timetable":"Sign in to the hub")),
+        themeButton()),
+      el("p",{class:"muted",style:"margin:6px 0 0"},way[3])
     );
     const seg=el("div",{class:"seg"},
       el("button",{class:mode==="supervisor"?"active":"",onclick:()=>{mode="supervisor";draw();}},"Staff login"),
@@ -8034,9 +8295,10 @@ function renderLogin(){
                 toast(r.msg,true);
               }
             }},"Email me a reset link");
-          return el("div",{},
-            el("p",{class:"muted",style:"margin-top:10px;font-size:12.5px"},
-              "Forgotten your password? Type your address above and send yourself a reset link. "+
+          return el("details",{class:"auth-forgot"},
+            el("summary",{},"Forgotten your password?"),
+            el("p",{class:"muted",style:"margin-top:8px;font-size:12.5px"},
+              "Type your address above and send yourself a reset link. "+
               "It has to go to your main address — a second address on your record can sign you in, but can't receive the link. "+
               "Meanwhile ",el("strong",{style:"font-weight:600"},"Staff PIN"),
               " above shows your panels and your students' times without a password."),
@@ -8090,7 +8352,7 @@ function renderLogin(){
     }
   }
   draw();
-  wrap.append(card);
+  wrap.append(aside, el("div",{class:"auth-main"},card));
   document.body.append(wrap, toastNode());
 }
 function authMsg(e){
@@ -10157,7 +10419,7 @@ async function viewSchedule(v){
   });
   v.append(wrap);
   v.append(el("p",{class:"muted ui",style:"margin-top:12px;font-size:13px"},
-    "Teal = weekly class · blue = student consultation. The .ics download adds every recurring slot to Outlook, Google or Apple Calendar for the whole semester, plus each changed week as a one-off event."));
+    "Indigo = weekly class · blue = student consultation. The .ics download adds every recurring slot to Outlook, Google or Apple Calendar for the whole semester, plus each changed week as a one-off event."));
 
   // Every week that has been moved — so a changed week is visible even when
   // you are not looking at it.
@@ -13162,7 +13424,7 @@ async function pinBulkDialog(done){
       await syncStudentCoc(gs,sts,{full:true});
     }catch(e){ console.warn("student CoC refresh failed",e); }
     await reload();
-    republish.disabled=false; republish.textContent="↻ Refresh what the PINs show";
+    republish.disabled=false; setBtnLabel(republish,"↻ Refresh what the PINs show");
     draw();
   }},"↻ Refresh what the PINs show");
   const copyAll=el("button",{class:"btn ghost sm",type:"button",onclick:async()=>{
@@ -13329,7 +13591,7 @@ async function pinMergeDialog(done){
         held+" panel"+(held===1?" is":"s are")+" not released to "+(held===1?"its":"their")+" assessors and left out — their PIN page would not show those panels yet."));
     }
     const n=rows.length;
-    copyBtn.textContent="⧉ Copy "+n+" row"+(n===1?"":"s");
+    setBtnLabel(copyBtn,"⧉ Copy "+n+" row"+(n===1?"":"s"));
   }
   const fileBase=()=>("CoC_PIN_mail_merge_"+(sem?.label||"")).replace(/[^A-Za-z0-9]+/g,"_").replace(/_+$/,"");
   const copyBtn=el("button",{class:"btn sm",onclick:async()=>{
@@ -13799,7 +14061,7 @@ function staffForm(existing,done){
         "Their current password keeps working until they use the link.")) return;
       resetBtn.disabled=true; resetBtn.textContent="Sending…";
       const r=await sendReset(existing?.email);
-      resetBtn.disabled=false; resetBtn.textContent="✉ Send password reset email";
+      resetBtn.disabled=false; setBtnLabel(resetBtn,"✉ Send password reset email");
       toast(r.msg,!r.ok);
       if(r.ok) resetNote.textContent="Sent. The link expires after a while — send another if they don't get to it in time. "+
         "Tell them to check junk mail; it comes from Firebase, not from your own address.";
