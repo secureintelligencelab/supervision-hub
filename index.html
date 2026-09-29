@@ -1410,7 +1410,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
-  updateDoc, deleteDoc, query, where, writeBatch, serverTimestamp
+  updateDoc, deleteDoc, query, where, writeBatch, serverTimestamp, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ============================================================
@@ -1758,16 +1758,58 @@ function pinGateClear(){ pinGateSave({n:0,until:0}); }
 /* Identical reads that are already on their way share one round trip.
    On sign-in the first screen, the unread badge and the inbox banner all ask
    for this semester's students and notes at the same moment; without this
-   each of them pays for the same query. Nothing is cached once the answer
-   arrives — the next call always goes to the server — so no screen can be
-   shown stale data by it. */
+   each of them pays for the same query. Finished answers are then kept
+   briefly by the read cache below. */
 const _inflight=new Map();
 /* A read started early and awaited later. Marking it handled up front keeps
    an early failure from being reported as unhandled when the screen bails
    out before reaching the await; the await itself still throws. */
 function prefetch(p){ p.catch(()=>{}); return p; }
+
+/* ---- Short-lived read cache ----------------------------------------------
+   Every tab switch used to re-download the whole semester (students,
+   panels, consultations …) from the server, even when the user had left
+   that tab two seconds earlier. Lists are now kept for READ_TTL_MS, and ANY
+   write this page makes to a collection drops that collection's cached
+   lists at once, so your own changes always show immediately. Changes made
+   by somebody else on another computer show up within READ_TTL_MS, or as
+   soon as this browser tab is brought back to the front. Set READ_TTL_MS
+   to 0 to turn the cache off entirely.
+
+   A per-collection generation number guards the one real hazard: a read
+   that STARTED before a write and finishes after it must not put the
+   pre-write rows into the cache. */
+const READ_TTL_MS=30000;
+const _cache=new Map();          // key -> {at, rows}
+const _gen=new Map();            // coll -> write generation
+let _epoch=0;                    // bumped whenever everything is dropped
+const genOf=coll=>_epoch+":"+(_gen.get(coll)||0);
+function cloneRows(rows){
+  try{ return structuredClone(rows); }catch(e){ return rows.map(o=>({...o})); }
+}
 function forgetInflight(coll){
+  _gen.set(coll,(_gen.get(coll)||0)+1);
   for(const k of [..._inflight.keys()]) if(k.startsWith(coll+"|")) _inflight.delete(k);
+  for(const k of [..._cache.keys()]) if(k.startsWith(coll+"|")) _cache.delete(k);
+}
+function forgetAllReads(){ _epoch++; _cache.clear(); _inflight.clear(); }
+/* Coming back to the tab after a while is when stale data is most likely,
+   so start fresh then. */
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") forgetAllReads(); });
+/* Cached list read: served from memory while fresh, otherwise one shared
+   round trip (see inflight below). Each caller gets its own deep copy, so a
+   screen that edits a record in place can never leak that edit into the
+   cache or into another screen. */
+async function cachedRows(coll,key,fetchRows){
+  const hit=READ_TTL_MS>0?_cache.get(key):null;
+  if(hit&&Date.now()-hit.at<READ_TTL_MS) return cloneRows(hit.rows);
+  const rows=await inflight(key,async()=>{
+    const g0=genOf(coll);
+    const r=await fetchRows();
+    if(READ_TTL_MS>0&&genOf(coll)===g0) _cache.set(key,{at:Date.now(),rows:r});
+    return r;
+  });
+  return cloneRows(rows);
 }
 function inflight(key,fn){
   if(_inflight.has(key)) return _inflight.get(key);
@@ -1805,12 +1847,13 @@ const DB = {
       return e?{uid:e[0],id:e[0],...e[1]}:null;
     }
     const raw=String(email).trim();
-    // the two cheap indexed reads first — exactly as typed, on either field
-    for(const field of ["email","email2"]){
-      try{
-        const r=await getDocs(query(collection(db,"users"),where(field,"==",raw)));
-        if(!r.empty) return {uid:r.docs[0].id,id:r.docs[0].id,...r.docs[0].data()};
-      }catch(err){ console.warn("email lookup on "+field+" failed",err); }
+    // the two cheap indexed reads first — exactly as typed, on either field,
+    // sent together rather than one after the other
+    const tries=await Promise.all(["email","email2"].map(field=>
+      getDocs(query(collection(db,"users"),where(field,"==",raw)))
+        .catch(err=>{ console.warn("email lookup on "+field+" failed",err); return null; })));
+    for(const r of tries){
+      if(r&&!r.empty) return {uid:r.docs[0].id,id:r.docs[0].id,...r.docs[0].data()};
     }
     // then a case-insensitive scan, which also catches a stored stray capital
     try{
@@ -1886,26 +1929,46 @@ const DB = {
   },
   async listUsers(){
     if(DEMO){ return Object.entries(mem.users).map(([id,v])=>({id,...v})); }
-    const rows=await inflight("users|*",async()=>{
+    return cachedRows("users","users|*",async()=>{
       const r=await getDocs(collection(db,"users")); return r.docs.map(d=>({id:d.id,...d.data()}));
     });
-    return rows.map(o=>({...o}));
   },
+  /* Filters are {field: value} for "==". Two other shapes are understood:
+     {field: {$in: [...]}} (Firestore allows up to 30 values) and
+     {field: {$contains: value}} for array-contains. */
   async list(coll, filters={}){
+    const fs=Object.entries(filters||{});
+    const isIn=v=>v&&typeof v==="object"&&Array.isArray(v.$in);
+    const isHas=v=>v&&typeof v==="object"&&!Array.isArray(v)&&"$contains" in v;
     if(DEMO){
       return Object.entries(mem[coll]||{}).map(([id,v])=>({id,...v}))
-        .filter(o=>Object.entries(filters).every(([k,val])=>o[k]===val));
+        .filter(o=>fs.every(([k,val])=>isIn(val)?val.$in.includes(o[k])
+          :isHas(val)?(Array.isArray(o[k])&&o[k].includes(val.$contains)):o[k]===val));
     }
-    const fs=Object.entries(filters||{});
     const key=coll+"|"+JSON.stringify(fs.slice().sort((a,b)=>a[0]<b[0]?-1:1).map(([k,v])=>[k,v===undefined?{u:1}:v]));
-    const rows=await inflight(key,async()=>{
+    return cachedRows(coll,key,async()=>{
       let qref=collection(db,coll);
-      if(fs.length){ qref=query(qref,...fs.map(([k,v])=>where(k,"==",v))); }
+      if(fs.length){ qref=query(qref,...fs.map(([k,v])=>
+        isIn(v)?where(k,"in",v.$in):isHas(v)?where(k,"array-contains",v.$contains):where(k,"==",v))); }
       const r=await getDocs(qref); return r.docs.map(d=>({id:d.id,...d.data()}));
     });
-    // each caller gets its own top-level copies, so one screen mutating a
-    // record (s.proposalTitle=…) can't leak into another caller's list
-    return rows.map(o=>({...o}));
+  },
+  /* How many documents match — counted on the server, so nothing but the
+     number crosses the network (one billed read per 1,000 matches). */
+  async count(coll, filters={}){
+    const fs=Object.entries(filters||{});
+    if(DEMO) return Object.values(mem[coll]||{}).filter(o=>fs.every(([k,v])=>o[k]===v)).length;
+    let qref=collection(db,coll);
+    if(fs.length) qref=query(qref,...fs.map(([k,v])=>where(k,"==",v)));
+    const s=await getCountFromServer(qref);
+    return s.data().count;
+  },
+  /* A fresh document id, made on this device without a round trip, so a
+     record can be referred to (by a student, a panel seat) before it is
+     written, and everything can then go in one batch. */
+  newId(coll){
+    if(DEMO) return "x"+Math.random().toString(36).slice(2,9);
+    return doc(collection(db,coll)).id;
   },
   // Case-insensitive student-ID lookup, used by the student portal sign-in.
   // Firestore's "==" is case-sensitive, so this tries the cheap indexed
@@ -2025,6 +2088,23 @@ const DB = {
     return list.length;
   }
 };
+/* Each write already drops the cached lists of its collection before it
+   starts. Drop them again once it has landed (or failed), so a list read
+   that raced the write can't leave pre-write rows in the cache. */
+{
+  const collsOf={
+    setUser:()=>["users"], updateUser:()=>["users"], removeUser:()=>["users"],
+    add:a=>[a[0]], set:a=>[a[0]], update:a=>[a[0]], remove:a=>[a[0]],
+    updateWeek:()=>["consultations"],
+    batchWrite:a=>[...new Set((a[0]||[]).filter(Boolean).map(o=>o.coll))]};
+  Object.entries(collsOf).forEach(([name,colls])=>{
+    const fn=DB[name];
+    DB[name]=async function(...a){
+      try{ return await fn.apply(DB,a); }
+      finally{ colls(a).forEach(c=>forgetInflight(c)); }
+    };
+  });
+}
 
 /* ============================================================
    3. APP STATE & HELPERS
@@ -5588,13 +5668,15 @@ async function viewPanelAdmin(v){
   async function finaliseAll(list){
     if(!window.confirm("Release "+list.length+" panel"+(list.length===1?"":"s")+" ("+
       list.map(g=>g.label||"Panel").join(", ")+") to BOTH audiences?\n\nThe assessors will see which students they have been given, and the students' supervisors will see the assessors, times and links. Use the buttons on a card to release just one side.")) return;
-    let n=0;
-    for(const g of list){
-      try{ await saveGroup({...g,finalized:true,finalizedAt:Date.now(),
-                            assessorsReleased:true,assessorsReleasedAt:Date.now()}); n++; }
-      catch(err){ toast(err?.message||"Could not finalise "+(g.label||"a panel")+".",true); break; }
-    }
-    if(n) toast(n+" panel"+(n===1?"":"s")+" released.");
+    /* All sent at once — the SDK pipelines them, so ten panels cost about
+       one round trip instead of ten. */
+    const res=await Promise.allSettled(list.map(g=>saveGroup({...g,finalized:true,finalizedAt:Date.now(),
+                            assessorsReleased:true,assessorsReleasedAt:Date.now()})));
+    const n=res.filter(r=>r.status==="fulfilled").length;
+    const bad=list.filter((g,i)=>res[i].status==="rejected");
+    if(bad.length) toast("Could not finalise "+bad.map(g=>g.label||"a panel").join(", ")+" — "+
+      (res.find(r=>r.status==="rejected").reason?.message||"please try again."),true);
+    else if(n) toast(n+" panel"+(n===1?"":"s")+" released.");
     if(n) await refreshPinViews();
     reload();
   }
@@ -5604,12 +5686,12 @@ async function viewPanelAdmin(v){
   async function releaseStudentsAll(list){
     if(!window.confirm("Release "+list.length+" panel"+(list.length===1?"":"s")+" ("+
       list.map(g=>g.label||"Panel").join(", ")+") to their students?\n\nEach student will see their own time — and only their own — when they look themselves up by student ID. Sending them the email is a separate step.")) return;
-    let n=0;
-    for(const g of list){
-      try{ await saveGroup({...g,studentsReleased:true,studentsReleasedAt:Date.now()}); n++; }
-      catch(err){ toast(err?.message||"Could not release "+(g.label||"a panel")+".",true); break; }
-    }
-    if(n) toast(n+" panel"+(n===1?"":"s")+" released to students.");
+    const res=await Promise.allSettled(list.map(g=>saveGroup({...g,studentsReleased:true,studentsReleasedAt:Date.now()})));
+    const n=res.filter(r=>r.status==="fulfilled").length;
+    const bad=list.filter((g,i)=>res[i].status==="rejected");
+    if(bad.length) toast("Could not release "+bad.map(g=>g.label||"a panel").join(", ")+" — "+
+      (res.find(r=>r.status==="rejected").reason?.message||"please try again."),true);
+    else if(n) toast(n+" panel"+(n===1?"":"s")+" released to students.");
     reload();
   }
 
@@ -6846,14 +6928,20 @@ async function viewPanelAdmin(v){
           soft.flatMap(x=>x.cl.map(c=>"  \u2022 "+(x.r.g.label||"Panel")+": "+(c.m.name||"?")+" \u2014 "+c.label)).join("\n")+
           "\n\nGo ahead anyway? The clash stays flagged on the panel card.")) return false;
         let saved=0, short=0;
-        for(const x of ok){
-          try{ await saveGroup(x.next); saved++; if(x.lay.unplaced.length) short++; }
-          catch(err){ toast((x.r.g.label||"Panel")+": "+(err?.message||"could not save."),true); }
-        }
+        // every panel's save sent at once rather than one after another
+        const res=await Promise.allSettled(ok.map(x=>saveGroup(x.next)));
+        const failedNames=[];
+        res.forEach((r,i)=>{ const x=ok[i];
+          if(r.status==="fulfilled"){ saved++; if(x.lay.unplaced.length) short++; }
+          else failedNames.push((x.r.g.label||"Panel")+": "+(r.reason?.message||"could not save."));
+        });
         await reload();
         toast(saved+" panel"+(saved===1?"":"s")+" booked and laid out."+
           (short?" "+short+" still "+(short===1?"has":"have")+" students who don't fit \u2014 see the card.":"")+
-          (hard.length?" "+hard.length+" held back for a clash.":""));
+          (hard.length?" "+hard.length+" held back for a clash.":"")+
+          // in the same message: a separate error toast was replaced by this
+          // one a moment later, before anyone could read it
+          (failedNames.length?" NOT saved: "+failedNames.join(" · "):""),failedNames.length>0);
         return true;
       },"Save sessions");
     const mm=document.querySelectorAll(".modal"); if(mm.length){ mm[mm.length-1].classList.add("wide"); mm[mm.length-1].style.maxWidth="980px"; }
@@ -7803,18 +7891,7 @@ async function viewPanelAdmin(v){
         if(would.length&&!window.confirm(
           would.map(x=>x.name+" would have "+x.n+" students").join("\n")+
           "\n\nAn assessor should normally take no more than "+PANEL_CAP+". Save anyway?")) return false;
-        /* Take anyone we've claimed off their previous panel, including its
-           timetable, so two panels can never both think they have a student. */
         const moved=chosen.filter(id=>elsewhere.has(id));
-        for(const id of moved){
-          const from=elsewhere.get(id);
-          try{
-            await DB.update("panelGroups",from.id,{
-              studentIds:groupStudents(from).filter(x=>x!==id),
-              slots:(from.slots||[]).filter(sl=>sl.studentDocId!==id),
-              updatedAt:Date.now()});
-          }catch(err){ toast(err?.message||"Could not move the student.",true); return false; }
-        }
         // keep hand-edited slots; only re-lay-out the students actually added
         const keep=(g.slots||[]).filter(sl=>!sl.studentDocId||chosen.includes(sl.studentDocId));
         const seated=new Set(keep.map(sl=>sl.studentDocId).filter(Boolean));
@@ -7840,6 +7917,27 @@ async function viewPanelAdmin(v){
             if(!confirmNoClash(g,{date:sess.date,start:sess.end,end:hhmm(t)},
                 "Running the session on to "+prettyTime(hhmm(t)))) return false;
           }
+        }
+        /* Take anyone we've claimed off their previous panel, including its
+           timetable, so two panels can never both think they have a student.
+           Done only now, after every "Save anyway?" question has been
+           answered: it used to happen first, so cancelling the overrun
+           question left the students on NO panel. And it is one write per
+           source panel with all its departing students removed together —
+           one write per student rebuilt the list from the same unchanged
+           copy each time, so moving two students off one panel put the
+           first one straight back. */
+        if(moved.length){
+          const bySource=new Map();
+          moved.forEach(id=>{ const from=elsewhere.get(id);
+            if(!bySource.has(from.id)) bySource.set(from.id,{from,ids:new Set()});
+            bySource.get(from.id).ids.add(id); });
+          try{
+            await DB.batchWrite([...bySource.values()].map(({from,ids})=>({type:"update",coll:"panelGroups",id:from.id,data:{
+              studentIds:groupStudents(from).filter(x=>!ids.has(x)),
+              slots:(from.slots||[]).filter(sl=>!ids.has(sl.studentDocId)),
+              updatedAt:Date.now()}})));
+          }catch(err){ toast(err?.message||"Could not move the student.",true); return false; }
         }
         const ok=await persist({...g,studentIds:chosen,slots},
           "Students updated."+(moved.length?" "+moved.length+" moved from another panel.":"")+
@@ -8273,7 +8371,16 @@ function isUnread(n,meId){ return !(n.readBy&&n.readBy[meId]) && n.authorUid!==m
 async function loadNotes(semesterId,studentIds){
   let all;
   try{
-    all=await DB.list("notes", semesterId?{semesterId}:{});
+    /* One student's thread (the student portal) is asked for by student,
+       so the page receives that thread and nothing else — not every
+       message in the semester. Anything wider reads the semester once,
+       which the badge, the banner and the Messages tab then share. */
+    if(semesterId&&studentIds&&studentIds.length===1){
+      all=await DB.list("notes",{semesterId,studentDocId:studentIds[0]})
+        .catch(()=>DB.list("notes",{semesterId}));
+    }else{
+      all=await DB.list("notes", semesterId?{semesterId}:{});
+    }
   }catch(err){
     console.error("loadNotes failed",err);
     const e=new Error(err?.message||"Could not read messages");
@@ -8343,6 +8450,8 @@ async function myNoteStudents(){
 function renderLogin(opts){
   opts=opts||{};
   S.cocLastSig=null;
+  /* Nothing read under one person's sign-in is served to the next. */
+  forgetAllReads();
   document.body.innerHTML="";
   let mode=opts.mode||"supervisor";
   /* Sent here from the PIN view to assess: land on that tab after sign-in. */
@@ -8631,26 +8740,32 @@ async function staffPinLookup(pin){
 
 async function afterLogin(){
   S.cocLastSig=null;
+  forgetAllReads();
   S.studentSid=null; S.studentName=""; S.bannerShown=false;
   /* The four start-up reads don't depend on one another, so they go out
      together: sign-in now waits for the slowest one, not for all four in
      a row. */
-  const [, sems, allStudents] = await Promise.all([
+  /* Default to the semester that actually has students (fall back to the
+     first). This used to download EVERY student record from every
+     semester ever run just to count them, which made sign-in slower each
+     term. The server now counts them per semester and sends back only the
+     numbers; the counts go out as soon as the semester list arrives,
+     alongside the staff read. */
+  const counts={};
+  const [, sems] = await Promise.all([
     loadEmploymentConfig(),
-    DB.list("semesters"),
-    DB.list("students").catch(()=>null),
+    DB.list("semesters").then(async list=>{
+      if(list.length>1) await Promise.all(list.map(s=>DB.count("students",{semesterId:s.id})
+        .then(n=>{ counts[s.id]=n; }).catch(()=>{})));
+      return list;
+    }),
     reloadStaffCaches()
   ]);
   S.semesters=sems;
   S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
-  // default to the semester that actually has students (fall back to first)
   let defaultSem=S.semesters[0]?.id||null;
-  if(allStudents){
-    const counts={};
-    allStudents.forEach(s=>{ counts[s.semesterId]=(counts[s.semesterId]||0)+1; });
-    const best=S.semesters.filter(s=>counts[s.id]).sort((a,b)=>counts[b.id]-counts[a.id])[0];
-    if(best) defaultSem=best.id;
-  }
+  const best=S.semesters.filter(s=>counts[s.id]).sort((a,b)=>counts[b.id]-counts[a.id])[0];
+  if(best) defaultSem=best.id;
   S.activeSem=defaultSem;
   if(S.nextTab){ S.tab=S.nextTab; S.nextTab=null; }
   renderApp();
@@ -9942,17 +10057,38 @@ function importCSV(done){
       if(!rows.length){ toast("Choose a CSV file or paste rows first.",true); return false; }
       if(!S.activeSem){ toast("Create a semester first.",true); return false; }
       const units=unitsOf(sem);
-      const existing=await DB.list("students",{semesterId:S.activeSem});
+      /* The staff list is refreshed alongside, so a person added on another
+         computer since this page loaded is matched instead of duplicated. */
+      const [existing]=await Promise.all([
+        DB.list("students",{semesterId:S.activeSem}),
+        reloadStaffCaches().catch(()=>null)]);
       const batchArea=areaSel.value;
+      /* Everything is collected into ONE batch and written at the end. The
+         import used to await a round trip per student (and per new
+         supervisor), so a 120-row list took a couple of minutes and a
+         failure half-way left half the list imported. */
+      const ops=[];
+      /* Existing students by normalised ID, kept up to date as rows are
+         handled, so the same student twice in one file is added once and
+         then updated — not added twice. */
+      const bySid=new Map(existing.map(s=>[normSid(s.sid),s]));
+      const notSup=new Set();
 
-      // find a supervisor by email; create a profile record if unknown
-      async function ensureSupervisor(email,name,rowArea){
+      /* Find a staff member by EITHER address, across every role; create a
+         supervisor profile only when nobody has that address. Matching only
+         supervisors' primary addresses used to create a second, duplicate
+         profile for anyone recorded under their other address or as a
+         panel member — and sign-in then found whichever came first. */
+      const staffAll=()=>[...(S.supervisors||[]),...(S.panellists||[]),...(S.admins||[])];
+      function ensureSupervisor(email,name,rowArea){
         email=(email||"").trim(); if(!email) return null;
-        let u=S.supervisors.find(x=>(x.email||"").toLowerCase()===email.toLowerCase());
-        if(u) return u;
+        const want=email.toLowerCase();
+        let u=staffAll().find(x=>[x.email,x.email2].some(e=>String(e||"").trim().toLowerCase()===want));
+        if(u){ if(!isSupervisor(u)) notSup.add(u.name||email); return u; }
         const profile={email,name:(name||"").trim()||email,role:"supervisor",supRole:"both",
           area:rowArea||batchArea,mobile:"",pendingLogin:true};
-        const id=await DB.add("users",profile);
+        const id=DB.newId("users");
+        ops.push({type:"set",coll:"users",id,data:profile,merge:false});
         u={id,...profile};
         S.supervisors.push(u);
         return u;
@@ -9962,8 +10098,8 @@ function importCSV(done){
       for(const row of rows){
         if(!row.name||!row.sid) continue;
         const rowArea=AREAS.find(a=>a.toLowerCase()===(row.area||"").trim().toLowerCase())||batchArea;
-        let p=await ensureSupervisor(row.principal_email,row.principal_name,rowArea);
-        let c=await ensureSupervisor(row.co_email,row.co_name,rowArea);
+        let p=ensureSupervisor(row.principal_email,row.principal_name,rowArea);
+        let c=ensureSupervisor(row.co_email,row.co_name,rowArea);
         if(p&&!canBePrincipal(p)) p=null;
         if(c&&!canBeCo(c)) c=null;
         const codes=(row.units||"").split(/[;|]/).map(x=>x.trim().toLowerCase()).filter(Boolean);
@@ -9977,22 +10113,30 @@ function importCSV(done){
           principalUid:p?.id||"",coUid:c?.id||"",
           principalName:p?.name||p?.email||"",coName:c?.name||c?.email||""
         };
-        const prev=existing.find(s=>normSid(s.sid)===normSid(sid));
+        const prev=bySid.get(normSid(sid));
         if(prev){
           // keep existing unit enrolments and proposal title unless the
           // import actually supplies them: the allocation spreadsheet the
           // coordinator re-imports each term carries neither.
-          await DB.update("students",prev.id,{...data,
+          const patch={...data,
             unitIds:unitIds.length?unitIds:(prev.unitIds||[]),
-            proposalTitle:data.proposalTitle||prev.proposalTitle||""});
-          updated++;
+            proposalTitle:data.proposalTitle||prev.proposalTitle||""};
+          ops.push({type:"set",coll:"students",id:prev.id,data:patch});
+          Object.assign(prev,patch);
+          if(!prev._new) updated++;
         } else {
-          await DB.add("students",{...data,unitIds});
+          const id=DB.newId("students");
+          const rec={...data,unitIds};
+          ops.push({type:"set",coll:"students",id,data:rec,merge:false});
+          bySid.set(normSid(sid),{id,...rec,_new:true});
           added++;
         }
       }
+      await DB.batchWrite(ops);
       await reloadStaffCaches();
-      toast(`Imported ${added} new, updated ${updated} existing student${(added+updated)===1?"":"s"}.`);
+      toast(`Imported ${added} new, updated ${updated} existing student${(added+updated)===1?"":"s"}.`+
+        (notSup.size?` Not allocated as supervisor (not a supervisor in Staff): ${[...notSup].join(", ")}.`:""),
+        notSup.size>0);
       done(); return true;
     },"Import");
 }
@@ -10248,21 +10392,26 @@ function importPanels(done){
 
       try{
         // ---- 1. make sure every named assessor exists as a staff record
-        const created=[];
+        /* Ids are made here, so every new record goes in ONE batch instead
+           of a round trip per person, and the panel list is read alongside. */
+        const created=[], userOps=[];
         for(const w of plan.newPeople){
           const profile={email:w.email||"",name:w.name,role:"panellist",
                          area:areaSel.value,mobile:"",pendingLogin:true};
-          const id=await DB.add("users",profile);
+          const id=DB.newId("users");
+          userOps.push({type:"set",coll:"users",id,data:profile,merge:false});
           w.user={id,...profile};
           created.push(w.name);
         }
+        let [live]=await Promise.all([
+          DB.list("panelGroups",{semesterId:S.activeSem}),
+          DB.batchWrite(userOps)]);
         await reloadStaffCaches();
         // the resolved records inside each panel point at the same objects,
         // so they now carry .user too
 
-        let live=await DB.list("panelGroups",{semesterId:S.activeSem});
         if(modeSel.value==="replace"){
-          for(const g of live) await DB.remove("panelGroups",g.id);
+          await DB.batchWrite(live.map(g=>({type:"delete",coll:"panelGroups",id:g.id})));
           live=[];
         }
 
@@ -10272,6 +10421,7 @@ function importPanels(done){
         plan.panels.forEach(P=>P.students.forEach(sid=>claimed.set(sid,panelKey(P.label))));
 
         let made=0,updated=0;
+        const saves=[];
         for(const P of plan.panels){
           const members=P.people.map(r=>cleanMember({
             kind:"internal", uid:r.user.id,
@@ -10294,21 +10444,21 @@ function importPanels(done){
                re-import doesn't wipe a booked session. */
             slots:(base.slots||[]).filter(sl=>!sl.studentDocId||P.students.includes(sl.studentDocId))
           };
-          await saveGroup(rec);
+          saves.push(saveGroup(rec));   // sent together, awaited below
           prev?updated++:made++;
         }
+        await Promise.all(saves);
 
         // ---- 3. drop students from panels this file didn't name, if the
         //         file has moved them somewhere else
         const after=await DB.list("panelGroups",{semesterId:S.activeSem});
-        for(const g of after){
+        await Promise.all(after.map(g=>{
           const mine=panelKey(g.label);
           const keep=(g.studentIds||[]).filter(sid=>!claimed.has(sid)||claimed.get(sid)===mine);
-          if(keep.length!==(g.studentIds||[]).length){
-            await saveGroup({...g,studentIds:keep,
-              slots:(g.slots||[]).filter(sl=>!sl.studentDocId||keep.includes(sl.studentDocId))});
-          }
-        }
+          if(keep.length===(g.studentIds||[]).length) return null;
+          return saveGroup({...g,studentIds:keep,
+            slots:(g.slots||[]).filter(sl=>!sl.studentDocId||keep.includes(sl.studentDocId))});
+        }));
 
         toast("Imported "+made+" new panel"+(made===1?"":"s")+
           (updated?", updated "+updated:"")+
@@ -13550,12 +13700,18 @@ async function pinBulkDialog(done){
     const targets=inScope();
     if(!targets.length){ toast("Nobody needs a PIN.",true); return; }
     const taken=users.map(u=>u.pin).filter(Boolean);
+    const at=Date.now(), ops=[];
     for(const u of targets){
       const p=uniquePin(taken,PIN_LEN);
       taken.push(p);
-      await DB.updateUser(u.id,{pin:p,pinSetAt:Date.now()});
-      u.pin=p;
+      ops.push({type:"update",coll:"users",id:u.id,data:{pin:p,pinSetAt:at},_u:u,_p:p});
     }
+    // one round trip for everybody, not one per person
+    issue.disabled=true;
+    try{ await DB.batchWrite(ops); }
+    catch(err){ issue.disabled=false; toast(err?.message||"Could not issue the PINs.",true); return; }
+    ops.forEach(o=>{ o._u.pin=o._p; });
+    issue.disabled=false;
     await publishSignInKeys({quiet:true});
     await reload();
     toast(targets.length+" PIN"+(targets.length===1?"":"s")+" issued and published.");
@@ -13709,8 +13865,11 @@ async function pinMergeDialog(done){
       const b=el("button",{class:"btn sm amber",onclick:async()=>{
         b.disabled=true; b.textContent="Issuing…";
         const taken=users.map(x=>x.pin).filter(Boolean);
-        for(const r of noPin){ const p=uniquePin(taken,PIN_LEN); taken.push(p);
-          await DB.updateUser(r.u.id,{pin:p,pinSetAt:Date.now()}); }
+        const at=Date.now();
+        try{
+          await DB.batchWrite(noPin.map(r=>{ const p=uniquePin(taken,PIN_LEN); taken.push(p);
+            return {type:"update",coll:"users",id:r.u.id,data:{pin:p,pinSetAt:at}}; }));
+        }catch(err){ b.disabled=false; setBtnLabel(b,"⚿ Issue PINs to these "+noPin.length); toast(err?.message||"Could not issue the PINs.",true); return; }
         await publishSignInKeys({quiet:true});
         users=(await DB.listUsers()).sort(byName);
         toast(noPin.length+" PIN"+(noPin.length===1?"":"s")+" issued and published."); build();
@@ -13904,13 +14063,45 @@ async function relinkStaffUid(oldId,newId){
      are read together. Read one after another this was six round trips
      before a single byte was written. */
   const safe=(what,p)=>p.catch(e=>{ console.warn("relink: "+what,e); failed.push(what); return []; });
-  const [students,cons,groups,pools,legacy,notes]=await Promise.all([
+  const [students,cons,groups,pools,legacy,notes,cocReps,cocMarks]=await Promise.all([
     safe("students",DB.list("students")),
     safe("consultations",DB.list("consultations")),
     safe("panelGroups",DB.list("panelGroups")),
     safe("panelPool",DB.list("panelPool")),
     safe("panels",DB.list("panels")),
-    safe("notes",DB.list("notes"))]);
+    safe("notes",DB.list("notes")),
+    safe("CoC reports",DB.list("cocReports")),
+    safe("CoC mark sheets",DB.list("cocMarks"))]);
+
+  /* ---- CoC examination reports and mark sheets ----
+     These were missed. The report lists who may read it (memberUids,
+     chairUid) and each mark sheet is filed under "<panel>__u_<uid>" with
+     the owner's uid inside it — the database rules check both. Left on the
+     old id, the person could not open their panel's report after getting
+     a login, and the next visit to CoC reports made them a fresh, empty
+     sheet under the new id while anything already entered sat orphaned. */
+  cocReps.forEach(r=>{
+    const patch={};
+    if(r.chairUid===oldId) patch.chairUid=newId;
+    if(r.chairKey===oldKey) patch.chairKey=newKey;
+    if(Array.isArray(r.memberUids)&&r.memberUids.includes(oldId)) patch.memberUids=r.memberUids.map(x=>x===oldId?newId:x);
+    if(Array.isArray(r.memberKeys)&&r.memberKeys.includes(oldKey)) patch.memberKeys=r.memberKeys.map(x=>x===oldKey?newKey:x);
+    if(Object.keys(patch).length) ops.push({type:"set",coll:"cocReports",id:r.id,data:patch});
+  });
+  cocMarks.forEach(m=>{
+    if(!(m.uid===oldId||m.memberKey===oldKey)) return;
+    const {id,...data}=m;
+    const toId=cocMarkId(m.groupId,newKey);
+    const there=cocMarks.find(x=>x.id===toId);
+    // never overwrite a sheet that already has work on it under the new id
+    const busy=there&&(there.submitted||Object.keys(there.cand||{}).length);
+    if(busy||toId===id){
+      if(toId===id) ops.push({type:"set",coll:"cocMarks",id,data:{uid:newId}});
+      return;
+    }
+    ops.push({type:"set",coll:"cocMarks",id:toId,merge:false,data:{...data,uid:newId,memberKey:newKey}});
+    ops.push({type:"delete",coll:"cocMarks",id});
+  });
 
   // ---- students: allocations ----
   students.forEach(s=>{
@@ -14505,7 +14696,13 @@ async function studentPortalData(en,sems){
      together — the page waits for the slowest, not for the sum. */
   const [ttR,consR,coc,msgs,outcome]=await Promise.all([
     DB.list("timetables",{semesterId:en.semesterId}).then(r=>({ok:true,r}),e=>({ok:false,e})),
-    DB.list("consultations",{semesterId:en.semesterId}).then(r=>({ok:true,r}),e=>({ok:false,e})),
+    /* Only this student's own record. It used to read every consultation
+       in the semester — everyone's attendance and supervisor comments —
+       into a signed-out page and filter it here. The semester-wide read is
+       kept only as a fallback for rules written for that query shape. */
+    DB.list("consultations",{semesterId:en.semesterId,studentDocId:en.id})
+      .catch(()=>DB.list("consultations",{semesterId:en.semesterId}))
+      .then(r=>({ok:true,r}),e=>({ok:false,e})),
     studentCocLoad(en),
     studentNotesLoad(en),
     /* The CoC outcome, once the office releases it (staffKeys/cocout:<id>). */
@@ -17450,11 +17647,14 @@ async function viewCocAdmin(v){
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>{ S.cocOpenGid=null; viewCocAdmin(v); })); v.append(bar);
   if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
   let students,groups,reps,allMarks;
+  /* All four reads go out together; the two pairs are still checked
+     separately so each failure gets its own help text. */
+  const cocP=prefetch(Promise.all([DB.list("cocReports",{semesterId:S.activeSem}),DB.list("cocMarks",{semesterId:S.activeSem})]));
   try{
     [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]);
   }catch(err){ v.append(panelRuleHelp(err)); return; }
   try{
-    [reps,allMarks]=await Promise.all([DB.list("cocReports",{semesterId:S.activeSem}),DB.list("cocMarks",{semesterId:S.activeSem})]);
+    [reps,allMarks]=await cocP;
   }catch(err){ v.append(cocRuleHelp(err)); return; }
   const sem=activeSemester();
   const repOf=gid=>reps.find(r=>r.id===gid)||null;
@@ -17465,7 +17665,8 @@ async function viewCocAdmin(v){
   const isLockedRep=r=>r&&(r.status==="approved"||r.status==="received");
   const sync=groups.filter(g=>!isLockedRep(repOf(g.id))).filter(g=>cocNeedsSync(g,repOf(g.id))||(repOf(g.id)&&cocCoded(g).some(cd=>!allMarks.some(m=>m.id===cocMarkId(g.id,cd.key)))));
   if(sync.length){
-    try{ await DB.batchWrite(sync.flatMap(g=>cocEnsureOps(g))); reps=await DB.list("cocReports",{semesterId:S.activeSem}); allMarks=await DB.list("cocMarks",{semesterId:S.activeSem}); }
+    try{ await DB.batchWrite(sync.flatMap(g=>cocEnsureOps(g)));
+      [reps,allMarks]=await Promise.all([DB.list("cocReports",{semesterId:S.activeSem}),DB.list("cocMarks",{semesterId:S.activeSem})]); }
     catch(e){ console.warn("report sync failed",e); }
   }
 
@@ -18215,15 +18416,22 @@ function cocOutcomesView(v,ctx,redraw){
       const pick=approvedRows.filter(r=>sel.has(r.st.id)&&!r.c?._absent);
       if(!pick.length){ toast("Tick approved students first.",true); return; }
       if(!window.confirm("Release the outcome to the portal (and supervisors) for "+pick.length+" student"+(pick.length===1?"":"s")+"? No office note is added and no email is sent — use “Release…” on a row for that.")) return;
-      const byG=new Map();
+      /* Every outcome and every report stamp in ONE batch: it used to be a
+         round trip per student and per panel, with no error handling, so a
+         failure part-way left some students released without the report
+         recording it (and nothing on screen said so). */
+      const byG=new Map(), ops=[];
       for(const r of pick){
         const o=cocOutcomeData(r.g0,r.rep,r.marks,r.st,sem,{note:r.rel?.note||"",assessors:r.rel?.assessors!==false});
-        await DB.setStaffKey(cocOutKeyOf(r.st.id),o);
+        ops.push({type:"set",coll:"staffKeys",id:cocOutKeyOf(r.st.id),data:o,merge:false});
         const rel={at:Date.now(),by:S.userName||"",note:o.note,assessors:r.rel?.assessors!==false,portal:true,emailedAt:r.rel?.emailedAt||0,outcome:o.outcome.code};
         if(!byG.has(r.g0.id)) byG.set(r.g0.id,{r,release:{...(r.rep.release||{})}});
         byG.get(r.g0.id).release[r.st.id]=rel;
       }
-      for(const {r,release} of byG.values()) await DB.set("cocReports",r.g0.id,{release,updatedAt:Date.now(),history:cocHist(r.rep,"outcomes released to the portal")});
+      for(const {r,release} of byG.values()) ops.push({type:"set",coll:"cocReports",id:r.g0.id,
+        data:{release,updatedAt:Date.now(),history:cocHist(r.rep,"outcomes released to the portal")}});
+      try{ await DB.batchWrite(ops); }
+      catch(err){ console.error("bulk release failed",err); toast("Nothing was released — "+(err?.message||"please try again."),true); return; }
       sel.clear(); toast(pick.length+" outcome"+(pick.length===1?"":"s")+" released to the portal."); redraw();
     }},"Release approved to portal")));
   const c=cardShell("Outcomes — "+(sem?.label||"")+(scope?" · "+scope:""),el("span",{class:"muted ui"},
@@ -18314,7 +18522,9 @@ function confirmDelete(coll,id,name,done,custom){
           DB.list("notes",{studentDocId:id}),
           legacyOk(DB.list("attendance",{studentDocId:id})),
           legacyOk(DB.list("panels",{studentDocId:id})),
-          DB.list("panelGroups",{})]);
+          // only the panels this student sits on, not every panel ever made
+          DB.list("panelGroups",{studentIds:{$contains:id}})
+            .catch(()=>DB.list("panelGroups",{}))]);
         const ops=[
           ...cs.map(c=>({type:"delete",coll:"consultations",id:c.id})),
           ...ns.map(n=>({type:"delete",coll:"notes",id:n.id})),
