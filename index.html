@@ -15843,13 +15843,31 @@ function cocCand(rep,g,st,marks,sem){
      answered — a member noted the candidate as absent. */
   c._absent=c.present?c.present==="N":ag.absentBy.length>0;
   const avg=ag.avg.total;
-  const capped=v=>v==null?null:(c.det.resub?Math.min(v,10):v);
-  c._finalDefault=capped(avg);
-  c._final=cocNum(c.det.finalMark)!=null?cocNum(c.det.finalMark):c._finalDefault;
-  c._outcome=c.det.outcome||ag.majority||"";
+  /* A resubmission after Major Revisions. Either the Chair re-marks on
+     behalf of the panel (their marks, kept on the report, are the basis)
+     or every member re-marks (the panel average is, as usual). Confirmed
+     after an MRR resubmission, the mark is capped at 10/20 (Part B). */
+  const rs=c.resub||null;
+  c._resub=rs;
+  let base=avg;
+  if(rs&&rs.mode==="chair"){ const m=rs.marks||{}; const a=[m.rq,m.fe,m.pr].map(cocNum); base=a.every(x=>x!=null)?a.reduce((t,x)=>t+x,0):null; }
+  c._base=base;
+  /* At approval the mark and outcome are frozen onto the report. Ones the
+     Chair left at their defaults are flagged "auto": while approved they
+     read exactly as approved, and once reopened they follow the panel's
+     marks again, so a later change to a member's marks carries through. */
+  const lockedRep=!!rep&&(rep.status==="approved"||rep.status==="received");
+  const detOutcome=c.det.outcomeAuto&&!lockedRep?"":c.det.outcome;
+  c._outcome=detOutcome||(rs&&rs.mode==="chair"?(rs.marks?.rec||""):ag.majority)||"";
+  const capOn=!!c.det.resub||(!!rs&&(c._outcome==="C"||c._outcome==="CMR"));
+  c._capOn=capOn;
+  const capped=v=>v==null?null:(capOn?Math.min(v,10):v);
+  c._finalDefault=capped(base);
+  const detFinal=c.det.finalAuto&&!lockedRep?null:cocNum(c.det.finalMark);
+  c._final=detFinal!=null?detFinal:c._finalDefault;
   const o=cocOutcome(c._outcome);
   c._dueBy=c.det.dueBy||(o&&o.weeks?cocAddDays(ymdOf(new Date()),o.weeks*7):"");
-  c._differs=avg!=null&&c._final!=null&&Math.abs(c._final-avg)>0.05&&!(c.det.resub&&c._final===capped(avg));
+  c._differs=base!=null&&c._final!=null&&Math.abs(c._final-base)>0.05&&!(capOn&&c._final===capped(base));
   return c;
 }
 function cocChairMissing(c){
@@ -15858,6 +15876,8 @@ function cocChairMissing(c){
     if(!cocT(c.absentNote)) out.push("what happened and what happens next (absent candidate)");
     return out;
   }
+  if(c._resub&&c._resub.mode==="chair"&&c._base==null) out.push("resubmission marks (the Chair, on behalf of the panel)");
+  if(c._resub&&c._resub.mode==="chair"&&!cocT(c._resub.marks?.comments)) out.push("resubmission comments");
   if(c._agg.absentBy.length) out.push("a member recorded this candidate as absent \u2014 they need to withdraw and mark their sheet, or the office can unlock it");
   if(!c._mode) out.push("seminar mode");
   if(!c.priAtt) out.push("principal supervisor attendance");
@@ -15961,7 +15981,7 @@ function cocGroupView(g,rep){
 }
 
 /* ---- rules help, the same shape as the panel screens' ---- */
-const COC_RULES="// Paste inside  match /databases/{database}/documents { ... }  (e.g. after panelGroups).\n// Uses the isSignedIn() and isAdmin() helpers already defined at the top of the rules file.\n// ============================================================\n// CoC examination reports  (cocReports, cocMarks)\n// The online CoC Panel Examination Report. Two collections:\n//\n//   cocReports/{panelGroupId}   ONE per panel \u2014 Part A, the Chair's\n//     C1.1\u2013C1.6 work, the marking window, the Chair's approval and\n//     signature, the Research Office section (D2) and a history list.\n//     Carries chairUid and a flat memberUids array purely so the rules\n//     below can tell who is on the panel (same trick as panelGroups).\n//\n//   cocMarks/{panelGroupId}__{memberKey}   ONE per panel member \u2014 that\n//     member's own marks, recommended outcome, conflict of interest\n//     declaration, comments and e-signature. `uid` is the member's login,\n//     or null for an external assessor with no hub account.\n//\n// Who may do what:\n//   admin   \u2014 everything: opens/closes marking, edits or reopens any\n//             report, completes D2, unlocks a member's submitted sheet.\n//   member  \u2014 reads the report of a panel they sit on; reads and writes\n//             ONLY their own mark sheet, and only while marking is open\n//             and the Chair has not approved the report. They cannot read\n//             a colleague's marks.\n//   Chair   \u2014 additionally reads every mark sheet on their panel, may\n//             enter the sheet of an assessor with NO login (external),\n//             and may edit the report's Part A / Part C, approve and sign\n//             it, or withdraw their own approval. They cannot move the\n//             marking window, change who is on the panel, touch the\n//             office section, or mark a report as received.\n//   students / PIN view \u2014 nothing. Neither carries an auth token, and\n//             the PIN view never reads these collections.\n//\n// Documents are created by the admin when marking is opened (one report\n// plus one sheet per member, in a single batch), so a member normally\n// only ever updates. Reading a report that has not been created yet is\n// denied rather than \"not found\"; the app treats that as \"marking not\n// opened yet\".\n// ============================================================\nfunction cocReport(gid) {\n  return get(/databases/$(database)/documents/cocReports/$(gid)).data;\n}\nfunction isCocChair(gid) {\n  return isSignedIn() && cocReport(gid).get('chairUid', '') == request.auth.uid;\n}\n// Approved by the Chair, or received by the office: members are locked out.\nfunction cocLocked(rep) {\n  return rep.get('status', '') in ['approved', 'received'];\n}\n// Inside the marking window set by the office (times are stored in ms).\nfunction cocOpenNow(rep) {\n  let w = rep.get('window', {});\n  let opens = w.get('opensAt', 0);\n  let closes = w.get('closesAt', 0);\n  return opens > 0\n    && request.time.toMillis() >= opens\n    && (closes == 0 || request.time.toMillis() < closes);\n}\n// A mark-sheet write may only touch the sheet's own content, never whose\n// sheet it is (uid, memberKey, groupId, semesterId stay put).\nfunction cocMarkFieldsOnly() {\n  return request.resource.data.diff(resource.data).affectedKeys()\n           .hasOnly(['cand', 'submitted', 'submittedAt', 'sign', 'onBehalf', 'updatedAt']);\n}\n\nmatch /cocReports/{gid} {\n  allow read: if isAdmin()\n    || (isSignedIn()\n        && resource.data.get('memberUids', []).hasAny([request.auth.uid]));\n\n  allow create, delete: if isAdmin();\n\n  allow update: if isAdmin()\n    // the Chair: report content, approval and their own signature only\n    || (isSignedIn()\n        && resource.data.get('chairUid', '') == request.auth.uid\n        && resource.data.get('status', '') != 'received'\n        && request.resource.data.get('status', '') in ['', 'approved']\n        && request.resource.data.diff(resource.data).affectedKeys()\n             .hasOnly(['partA', 'cand', 'status', 'chairSign', 'approvedAt',\n                       'history', 'snap', 'updatedAt']));\n}\n\nmatch /cocMarks/{id} {\n  allow read: if isAdmin()\n    || (isSignedIn()\n        && (resource.data.uid == request.auth.uid\n            || isCocChair(resource.data.groupId)));\n\n  // Normally made by the admin when marking opens. A member added to a\n  // panel afterwards may open their own sheet, while marking is open.\n  allow create: if isAdmin()\n    || (isSignedIn()\n        && request.resource.data.uid == request.auth.uid\n        && id == request.resource.data.groupId + '__' + request.resource.data.memberKey\n        && cocReport(request.resource.data.groupId)\n             .get('memberUids', []).hasAny([request.auth.uid])\n        && cocOpenNow(cocReport(request.resource.data.groupId)));\n\n  allow update: if isAdmin()\n    // the member, on their own sheet, while marking is open\n    || (isSignedIn()\n        && resource.data.uid == request.auth.uid\n        && cocMarkFieldsOnly()\n        && !cocLocked(cocReport(resource.data.groupId))\n        && cocOpenNow(cocReport(resource.data.groupId)))\n    // the Chair, entering the sheet of an assessor with no hub login\n    || (isCocChair(resource.data.groupId)\n        && resource.data.uid == null\n        && cocMarkFieldsOnly()\n        && !cocLocked(cocReport(resource.data.groupId)));\n\n  allow delete: if isAdmin();\n}";
+const COC_RULES="// Paste inside  match /databases/{database}/documents { ... }  (e.g. after panelGroups).\n// Uses the isSignedIn() and isAdmin() helpers already defined at the top of the rules file.\n// ============================================================\n// CoC examination reports  (cocReports, cocMarks)\n// The online CoC Panel Examination Report. Two collections:\n//\n//   cocReports/{panelGroupId}   ONE per panel \u2014 Part A, the Chair's\n//     C1.1\u2013C1.6 work, the marking window, the Chair's approval and\n//     signature, the Research Office section (D2) and a history list.\n//     Carries chairUid and a flat memberUids array purely so the rules\n//     below can tell who is on the panel (same trick as panelGroups).\n//\n//   cocMarks/{panelGroupId}__{memberKey}   ONE per panel member \u2014 that\n//     member's own marks, recommended outcome, conflict of interest\n//     declaration, comments and e-signature. `uid` is the member's login,\n//     or null for an external assessor with no hub account.\n//\n// Who may do what:\n//   admin   \u2014 everything: opens/closes marking, edits or reopens any\n//             report, completes D2, unlocks a member's submitted sheet.\n//   member  \u2014 reads the report of a panel they sit on; reads and writes\n//             ONLY their own mark sheet, and only while marking is open\n//             and the Chair has not approved the report. They cannot read\n//             a colleague's marks.\n//   Chair   \u2014 additionally reads every mark sheet on their panel, may\n//             return any member's signed sheet to them (reopen + reason,\n//             never the marks), may\n//             enter the sheet of an assessor with NO login (external),\n//             and may edit the report's Part A / Part C, approve and sign\n//             it, or withdraw their own approval. They cannot move the\n//             marking window, change who is on the panel, touch the\n//             office section, or mark a report as received.\n//   students / PIN view \u2014 nothing. Neither carries an auth token, and\n//             the PIN view never reads these collections.\n//\n// Documents are created by the admin when marking is opened (one report\n// plus one sheet per member, in a single batch), so a member normally\n// only ever updates. Reading a report that has not been created yet is\n// denied rather than \"not found\"; the app treats that as \"marking not\n// opened yet\".\n// ============================================================\nfunction cocReport(gid) {\n  return get(/databases/$(database)/documents/cocReports/$(gid)).data;\n}\nfunction isCocChair(gid) {\n  return isSignedIn() && cocReport(gid).get('chairUid', '') == request.auth.uid;\n}\n// Approved by the Chair, or received by the office: members are locked out.\nfunction cocLocked(rep) {\n  return rep.get('status', '') in ['approved', 'received'];\n}\n// Inside the marking window set by the office (times are stored in ms).\nfunction cocOpenNow(rep) {\n  let w = rep.get('window', {});\n  let opens = w.get('opensAt', 0);\n  let closes = w.get('closesAt', 0);\n  return opens > 0\n    && request.time.toMillis() >= opens\n    && (closes == 0 || request.time.toMillis() < closes);\n}\n// A mark-sheet write may only touch the sheet's own content, never whose\n// sheet it is (uid, memberKey, groupId, semesterId stay put).\nfunction cocMarkFieldsOnly() {\n  return request.resource.data.diff(resource.data).affectedKeys()\n           .hasOnly(['cand', 'submitted', 'submittedAt', 'sign', 'onBehalf', 'returnNote', 'updatedAt']);\n}\n// The Chair sending a member's signed sheet back to them: it may only\n// reopen the sheet and attach the reason, never change the marks.\nfunction cocChairReturnOnly() {\n  return request.resource.data.diff(resource.data).affectedKeys()\n           .hasOnly(['submitted', 'submittedAt', 'sign', 'onBehalf', 'returnNote', 'updatedAt'])\n    && request.resource.data.submitted == false;\n}\n\nmatch /cocReports/{gid} {\n  allow read: if isAdmin()\n    || (isSignedIn()\n        && resource.data.get('memberUids', []).hasAny([request.auth.uid]));\n\n  allow create, delete: if isAdmin();\n\n  allow update: if isAdmin()\n    // the Chair: report content, approval and their own signature only\n    || (isSignedIn()\n        && resource.data.get('chairUid', '') == request.auth.uid\n        && resource.data.get('status', '') != 'received'\n        && request.resource.data.get('status', '') in ['', 'approved']\n        && request.resource.data.diff(resource.data).affectedKeys()\n             .hasOnly(['partA', 'cand', 'status', 'chairSign', 'approvedAt',\n                       'history', 'snap', 'updatedAt']));\n}\n\nmatch /cocMarks/{id} {\n  allow read: if isAdmin()\n    || (isSignedIn()\n        && (resource.data.uid == request.auth.uid\n            || isCocChair(resource.data.groupId)));\n\n  // Normally made by the admin when marking opens. A member added to a\n  // panel afterwards may open their own sheet, while marking is open.\n  allow create: if isAdmin()\n    || (isSignedIn()\n        && request.resource.data.uid == request.auth.uid\n        && id == request.resource.data.groupId + '__' + request.resource.data.memberKey\n        && cocReport(request.resource.data.groupId)\n             .get('memberUids', []).hasAny([request.auth.uid])\n        && cocOpenNow(cocReport(request.resource.data.groupId)));\n\n  allow update: if isAdmin()\n    // the member, on their own sheet, while marking is open\n    || (isSignedIn()\n        && resource.data.uid == request.auth.uid\n        && cocMarkFieldsOnly()\n        && !cocLocked(cocReport(resource.data.groupId))\n        && cocOpenNow(cocReport(resource.data.groupId)))\n    // the Chair, entering the sheet of an assessor with no hub login\n    || (isCocChair(resource.data.groupId)\n        && resource.data.uid == null\n        && cocMarkFieldsOnly()\n        && !cocLocked(cocReport(resource.data.groupId)))\n    // the Chair, returning any member's signed sheet to them\n    || (isCocChair(resource.data.groupId)\n        && cocChairReturnOnly()\n        && !cocLocked(cocReport(resource.data.groupId)));\n\n  allow delete: if isAdmin();\n}";
 function cocRuleHelp(err){
   const card=el("div",{class:"card",style:"border-left:4px solid var(--clay,#c2410c)"});
   card.append(
@@ -16294,13 +16314,29 @@ function cocDocxBuild(ctx){
     body+=tbl(mw,[
       {cells:[titleCell("C1.3 Panel marks","Recorded by each panel member in the Supervision Hub. Domains and mark bands are defined in Part B.",{span:7})]},
       {header:true,cells:[hd("Code"),hd("Panel member name"),hd("Research quality /10"),hd("Feasibility /5"),hd("Presentation /5"),hd("Total /20"),hd("Recommended outcome code (refer to B3)")]},
-      ...ag.rows.map((rw,i)=>({cells:[V(rw.code),V(rw.name+(rw.md?.onBehalf?"\n(entered by the Chair on their behalf)":""),{run:{sz:17}}),
+      ...ag.rows.map((rw,i)=>({cells:[V(rw.code),V(rw.name+(rw.md?.onBehalf?"\n(entered by the Chair on their behalf)":"")+(rw.md?.officeAmended?"\n(amended by the MRes office, "+cocDay(rw.md.officeAmended.at)+")":""),{run:{sz:17}}),
         ...(rw.withdrew||rw.absent?[{c:p(r(rw.absent?"Recorded the candidate as absent":"Withdrew — conflict of interest",{i:true,sz:16})),span:4}]
           :[V(cocFmt(rw.rq)),V(cocFmt(rw.fe)),V(cocFmt(rw.pr)),V(cocFmt(rw.total),{run:{b:true}})]),
         V(rw.rec?(cocOutcome(rw.rec)?.c||rw.rec):"")].map(cl=>({...cl,fill:i%2?COC_ALT:undefined}))})),
       {cells:[L("Panel average (total ÷ "+(ag.n||3)+")",{span:2}),V(cocFmt(ag.avg.rq)),V(cocFmt(ag.avg.fe)),V(cocFmt(ag.avg.pr)),V(cocFmt(ag.avg.total),{run:{b:true}}),
         V(ag.majority?"Majority: "+ag.majority:"")]}]);
     body+=note("Round the panel average to one decimal place. The Chair determines the final mark in C1.6 and must record a reason where it differs from this average.");
+    if(c._resub){
+      /* Re-assessment of a revised proposal after Major Revisions. */
+      const rs=c._resub, pv=rs.prev||{}, m=rs.marks||{};
+      const rsRows=[
+        {cells:[titleCell("C1.3a Resubmission after Major Revisions \u2014 round "+(rs.round||2),
+          rs.mode==="chair"?"Re-assessed by the Panel Chair on behalf of the panel.":"Re-assessed by every panel member; their updated marks are in C1.3 above.",{span:2})]},
+        {cells:[L("Previous outcome"),V((pv.outcome||"MRR")+(pv.final!=null&&pv.final!==""?" \u00B7 final mark "+cocFmt(cocNum(pv.final))+"/20":"")+(pv.approvedAt?" \u00B7 approved "+cocDay(pv.approvedAt):""))]},
+        {cells:[L("Re-assessment opened"),V(cocDay(rs.at)+(rs.by?" by "+rs.by:""))]}];
+      if(rs.mode==="chair") rsRows.push(
+        {cells:[L("Marks on the revised proposal"),V("Research quality "+cocFmt(cocNum(m.rq))+"/10 \u00B7 Feasibility "+cocFmt(cocNum(m.fe))+"/5 \u00B7 Presentation "+cocFmt(cocNum(m.pr))+"/5 \u00B7 Total "+cocFmt(c._base)+"/20"+(m.rec?" \u00B7 recommends "+m.rec:""))]},
+        {cells:[L("Chair's comments on the revised proposal"),V(cocT(m.comments),{padV:90})]});
+      if(pv.agg) rsRows.push({cells:[L("Original seminar panel average"),V(cocFmt(cocNum(pv.agg))+"/20")]});
+      rsRows.push({cells:[L("Mark cap"),V(c._capOn?"Confirmed after a Major Revision re-submission: the final mark is capped at 10/20.":"The 10/20 cap applies if the candidate is confirmed (C or CMR).")]});
+      body+=tbl([3000,W-3000],rsRows);
+      body+=gap(120);
+    }
     const fw=[3000,W-3000];
     body+=tbl(fw,[
       {cells:[titleCell("C1.4 Panel feedback to the candidate","Consolidated by the Chair from the comments of all panel members.",{span:2})]},
@@ -16311,10 +16347,10 @@ function cocDocxBuild(ctx){
       ...COC_ITEMS.map(([k,lab])=>({cells:[L(lab),{c:p(box(c.notes[k]==="Y","Yes",{sz:17})+r("        ",{sz:17})+box(c.notes[k]==="N","No",{sz:17}))}]}))]);
     body+=gap(140);
     const det=c.det||{};
-    const reasonTxt=c._differs&&cocT(det.reason)?"\nReason the final mark differs from the panel average ("+cocFmt(ag.avg.total)+"): "+cocT(det.reason):"";
+    const reasonTxt=c._differs&&cocT(det.reason)?"\nReason the final mark differs from the "+(c._resub?.mode==="chair"?"Chair's resubmission marks":"panel average")+" ("+cocFmt(c._base)+"): "+cocT(det.reason):"";
     body+=tbl([3000,W-3000],[
       {cells:[titleCell("C1.6 Panel Chair’s determination","The Chair decides the outcome having considered the marks and comments of all panel members.",{span:2})]},
-      {cells:[L("Final mark determined / 20"),V((c._final==null?"":cocFmt(c._final))+(det.resub?"  (re-submission — capped at 10/20)":"")+reasonTxt)]},
+      {cells:[L("Final mark determined / 20"),V((c._final==null?"":cocFmt(c._final))+(c._capOn?"  (re-submission after MRR — capped at 10/20)":"")+reasonTxt)]},
       {cells:[L("Candidature Outcome"),{c:COC_OUTCOMES.map(o=>p(box(c._outcome===o.c,o.long,{sz:17}))).join("")}]},
       {cells:[L("Conditions, Revisions or actions required by Candidate",{sub:"Attach additional documents if required"}),V(cocT(det.conditions),{padV:90})]},
       {cells:[L("Revisions due by (refer to B3)"),V((c._outcome==="CMR"||c._outcome==="MRR")&&c._dueBy?longDate(c._dueBy):"")]},
@@ -16352,6 +16388,8 @@ function cocDocxBuild(ctx){
   body+=tbl([3212,3213,W-6425],[
     {cells:[L("Name"),L("Signature"),L("Date")]},
     {cells:[V(cs0(rep)?.name||chairCd?.m?.name||""),{c:p(cs0(rep)?sigImg(cs0(rep)):""),v:"center"},V(cs0(rep)?cocDay(cs0(rep).at):"")]}]);
+  if(Array.isArray(rep?.amendments)&&rep.amendments.length)
+    body+=note("Amended by the MRes office after the Chair\u2019s approval: "+rep.amendments.map(x=>cocDay(x.at)+(x.by?" ("+x.by+")":"")+(x.what?" \u2014 "+x.what:"")).join("; ")+".");
   body+=note("Return the completed and signed off report to the Research Office at "+ro+" within 4 business days of the panel’s final seminar. The Research Office records the outcomes and advises each candidate and their Principal Supervisor, normally within 5 business days.");
   body+=gap(100);
   const of=rep?.office||{}, chk=of.chk||{};
@@ -16530,11 +16568,15 @@ function cocMemberSheet(host,o){
   md.cand=md.cand||{};
   const cands=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean);
   const approved=rep?.status==="approved"||rep?.status==="received";
-  const canEdit=()=>!md.submitted&&!approved&&(o.mode==="behalf"||cocOpen(rep));
+  /* mode "office": the MRes office amending a member's sheet at any
+     stage, even signed and approved. The signature stays; the amendment
+     is recorded on the sheet and printed on the Word form. */
+  const canEdit=()=>o.mode==="office"||(!md.submitted&&!approved&&(o.mode==="behalf"||cocOpen(rep)));
   const ss=cocSaveState();
   const save=cocDebounce(async()=>{
     ss.set("Saving…");
-    try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{cand:md.cand,updatedAt:Date.now()}); ss.set("✓ Saved "+clockTime(pad2(new Date().getHours())+":"+pad2(new Date().getMinutes()))); }
+    try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{cand:md.cand,updatedAt:Date.now(),
+        ...(o.mode==="office"?{officeAmended:{at:Date.now(),by:S.userName||""}}:{})}); ss.set("✓ Saved "+clockTime(pad2(new Date().getHours())+":"+pad2(new Date().getMinutes()))); }
     catch(e){ console.error(e); ss.set("Not saved — "+(e?.message||"check your connection"),true); }
   },800);
   const pills=new Map();
@@ -16650,7 +16692,14 @@ function cocMemberSheet(host,o){
   function draw(){
     host.replaceChildren();
     const w=cocWin(rep);
-    if(md.submitted){
+    if(o.mode==="office"){
+      host.append(noticeBar("amber","You are amending "+(cd.m.name||"this member")+"\u2019s sheet as the MRes office. Changes save as you type"+
+        (md.submitted?"; their signature stays, and the sheet and Word form record that the office amended it.":".")));
+    }else if(!md.submitted&&md.returnNote&&cocT(md.returnNote.text)){
+      host.append(noticeBar("amber","Your sheet was returned to you by "+(md.returnNote.by||"the Chair")+" on "+cocDay(md.returnNote.at)+": \u201C"+
+        cocT(md.returnNote.text)+"\u201D Make the changes, then sign and submit again"+(w.state==="open"&&rep?.window?.closesAt?" before "+cocDT(rep.window.closesAt):"")+"."));
+    }
+    if(md.submitted&&o.mode!=="office"){
       host.append(noticeBar("green",
         (o.mode==="behalf"?"Entered on "+(cd.m.name||"the member")+"’s behalf and submitted ":"You submitted your marks and comments ")+cocDT(md.submittedAt)+"."+
         (approved?" The Chair has approved the report, so it is locked.":" The Chair can now see them."),
@@ -16675,7 +16724,7 @@ function cocMemberSheet(host,o){
     if(!md.submitted&&reopenedFor.length) host.append(noticeBar("amber",
       "This report has been reopened for "+reopenedFor.map(s=>s.name).join(", ")+", who presented later. Everything you entered for the other candidates is kept \u2014 add (or check) your marks and comments for "+
       (reopenedFor.length===1?"them":"these candidates")+", then sign and submit again."));
-    if(!md.submitted&&o.mode!=="behalf"&&cands.length){
+    if(!md.submitted&&o.mode==="self"&&cands.length){
       const closes=rep?.window?.closesAt;
       host.append(cocGuide("member","How to complete your assessment",[
         ["Read the proposal and slides first.",docsLinkOf(g)?"They are in the panel's shared folder (link above).":"The MRes office shares them with the panel."],
@@ -16688,7 +16737,12 @@ function cocMemberSheet(host,o){
     }
     cands.forEach(st=>{ host.append(card(st)); paintPill(st.id); });
     if(!cands.length) host.append(emptyState("No candidates on this panel","The coordinator hasn't seated any students on it yet."));
-    if(canEdit()&&cands.length){
+    if(o.mode==="office"&&cands.length){
+      bar=el("div",{class:"coc-bar ui"},
+        el("span",{class:"cnt"},""),ss.node,el("span",{style:"flex:1"}),
+        el("button",{class:"btn",onclick:async()=>{ await save.flush(); if(o.onDone) o.onDone(); }},"\u2713 Done"));
+      host.append(bar); paintBar();
+    }else if(canEdit()&&cands.length){
       bar=el("div",{class:"coc-bar ui"},
         el("span",{class:"cnt"},""),ss.node,el("span",{style:"flex:1"}),
         el("button",{class:"btn go",onclick:submit},o.mode==="behalf"?"✓ Submit on their behalf":"✓ Sign & submit to the Chair"));
@@ -16708,14 +16762,14 @@ function cocMemberSheet(host,o){
         const bg=[...document.querySelectorAll(".modal-bg")].pop();
         const ob=new MutationObserver(()=>{ if(!bg.isConnected){ ob.disconnect(); res(false); } }); ob.observe(document.body,{childList:true}); });
       if(!ok) return;
-      patch={submitted:true,submittedAt:Date.now(),sign:null,onBehalf:{by:S.uid||"",byName:S.userName||"",how:cocT(how.value),at:Date.now()}};
+      patch={submitted:true,submittedAt:Date.now(),sign:null,returnNote:null,onBehalf:{by:S.uid||"",byName:S.userName||"",how:cocT(how.value),at:Date.now()}};
     }else{
       const sig=await cocSignDialog({title:"Sign and submit your assessment",name:S.userName||cd.m.name||"",
         intro:"Your marks, outcome recommendations, conflict of interest declarations and comments for "+cands.length+" candidate"+(cands.length===1?"":"s")+" go to the Panel Chair, who uses them to complete the report.",
         declaration:"I confirm these are my own independent marks and comments, and that my conflict of interest declarations for each candidate are accurate and complete.",
         saveLabel:"Sign & submit"});
       if(!sig) return;
-      patch={submitted:true,submittedAt:Date.now(),sign:sig,onBehalf:null};
+      patch={submitted:true,submittedAt:Date.now(),sign:sig,onBehalf:null,returnNote:null};
     }
     try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{...patch,cand:md.cand,updatedAt:Date.now()}); }
     catch(e){ toast(e?.message||"Could not submit.",true); return; }
@@ -16745,17 +16799,32 @@ function cocReportEditor(host,o){
     cands=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean); };
   view();
   const locked=()=>rep.status==="approved"||rep.status==="received";
-  const ro=()=>locked();
+  /* The office can edit an approved (or received) report directly, at any
+     time, without returning it to the Chair. The Chair's approval stays;
+     each editing session is recorded as an amendment and printed on the
+     Word form under D1. */
+  let officeEdit=false, amendLogged=false;
+  const ro=()=>locked()&&!(role==="admin"&&officeEdit);
   const ss=cocSaveState();
+  function amendOnce(what){
+    if(!(locked()&&role==="admin")) return {};
+    const out={amendedAt:Date.now()};
+    if(!amendLogged){ amendLogged=true;
+      rep.amendments=[...(rep.amendments||[]),{at:Date.now(),by:S.userName||"",what}];
+      rep.history=cocHist(rep,"approved report amended by the office ("+what+")");
+      out.amendments=rep.amendments; out.history=rep.history; }
+    return out;
+  }
   const save=cocDebounce(async()=>{
     ss.set("Saving…");
-    try{ await DB.set("cocReports",g.id,{partA:rep.partA,cand:rep.cand,updatedAt:Date.now()}); ss.set("✓ Saved"); paintD(); candRefresh.forEach(f=>f()); }
+    try{ await DB.set("cocReports",g.id,{partA:rep.partA,cand:rep.cand,updatedAt:Date.now(),...amendOnce("report edited")}); ss.set("✓ Saved"); paintD(); candRefresh.forEach(f=>f()); }
     catch(e){ console.error(e); ss.set("Not saved — "+(e?.message||"check your connection"),true); }
   },900);
   const candOf=sid=>{ const c=rep.cand[sid]=rep.cand[sid]||{}; c.fb=c.fb||{}; c.notes=c.notes||{}; c.det=c.det||{}; c.pre=c.pre||{}; c.preNA=c.preNA||{}; return c; };
   const openState=S.cocOpenCands=S.cocOpenCands||{};
   const candRefresh=new Map();
   let behalf=null; // cd being entered on behalf
+  let behalfMode="behalf"; // or "office": amending a signed sheet
 
   async function refreshMarks(){ marks=await cocGetMarks(g); }
 
@@ -16769,8 +16838,10 @@ function cocReportEditor(host,o){
       [coded.find(c=>c.isChair)?"Chair: "+coded.find(c=>c.isChair).m.name:"No chair set",cands.length+" candidate"+(cands.length===1?"":"s"),
        pd.date?"Report due "+prettyDate(pd.date):""].filter(Boolean).join("  ·  "),
       el("span",{class:"pill "+st.cls},st.txt)));
+    if(officeEdit&&locked()) host.append(noticeBar("amber","You are editing an approved report as the MRes office. Changes save as you type and are recorded as an office amendment on the report and its Word form; the Chair's approval and signature stay.",
+      el("button",{class:"btn sm",onclick:()=>{ officeEdit=false; amendLogged=false; draw(); }},"\u2713 Finish office edits")));
     if(role==="chair"&&!locked()) host.append(cocGuide("chair","How to complete and approve the panel report",[
-      ["Wait for every mark sheet.","The first table shows who has submitted. Use \u201C\u2709 Remind\u201D for anyone outstanding. If an assessor has no hub login (usually an external), press \u201C\u270E Enter for them\u201D, type in the marks and comments they sent you, and record how you confirmed them."],
+      ["Wait for every mark sheet.","The first table shows who has submitted. Use \u201C\u2709 Remind\u201D for anyone outstanding, or \u201C\u21A9 Return to member\u201D to send a signed sheet back with a reason (while marking is open). If an assessor has no hub login (usually an external), press \u201C\u270E Enter for them\u201D, type in the marks and comments they sent you, and record how you confirmed them."],
       ["Check Part A.","Filled in from the panel record. Add the Course Coordinator if it is blank and any notes about the round (A3)."],
       ["Work through each candidate (click a name to open it).","Most of it is already filled in from the members' sheets. You add: supervisor attendance, seminar mode, the pre-seminar checklist (C1.1); how any declared interest was managed (C1.2); the four \u201CItems to note\u201D (C1.5); and in C1.6 the conditions, revision date and whether the candidate must present again."],
       ["A candidate didn't present?","Set \u201CCandidate presented?\u201D to \u201CDid not present\u201D in C1.1 (it is pre-set if a member recorded them absent) and write what happened and what should happen next. Nothing else is needed for them, and you can approve the report for everyone else. The MRes office then arranges their later presentation \u2014 with this panel or a follow-up panel."],
@@ -16782,6 +16853,8 @@ function cocReportEditor(host,o){
     if(role==="admin") host.append(cocGuide("adminReport","Working on a report as the MRes office",[
       ["You can edit everything here.","The same screen the Chair uses, plus the Research Office section (D2) at the bottom. Edits save as you type."],
       ["Missing sheets.","Use \u201C\u2709 Remind\u201D, or \u201C\u270E Enter for them\u201D to type in marks an assessor sent you; \u201CUnlock\u201D reopens a submitted sheet so its member can correct it."],
+      ["Editing after approval.","\u201C\u270E Edit as the office\u201D (Part D) lets you change an approved report directly; \u201C\u270E Amend\u201D on a member's row changes their signed marks. Both are recorded as office amendments on the report and its Word form. \u201CReturn to the Chair\u201D sends it back for the Chair to change and re-sign instead."],
+      ["Major Revisions resubmission.","When the revised proposal arrives, press \u201C\u21BB Re-assess the revised proposal\u2026\u201D (Part D, or on the Outcomes tab). Choose whether the Chair re-marks on behalf of the panel or every member re-marks, and set the window (4 weeks by default). If confirmed, the mark is capped at 10/20."],
       ["Approval.","The Chair normally approves. If the Chair has no hub login, use \u201CApprove on the Chair's behalf\u201D once they have confirmed the report to you \u2014 it is recorded in the history."],
       ["After approval.","Download the Word form, complete D2 (date received, checklist, notes, your signature) and press \u201CMark as received\u201D. \u201CReturn to the Chair\u201D reopens an approved report for changes."],
       ["Testing.","\u201C\u2691 Fill with test marks\u201D (only while the panel is empty) and \u201C\u21BA Reset report\u2026\u201D are in the bar at the top of the page."]],{open:false}));
@@ -16814,14 +16887,15 @@ function cocReportEditor(host,o){
         if(!locked()&&(role==="admin"||!cd.uid)) acts.append(el("button",{class:"btn xs ghost",
           title:cd.uid?"Enter this member's marks for them":"This assessor has no hub login — enter their marks for them",
           onclick:()=>{ behalf=cd; draw(); }},"✎ Enter for them"));
-      }else if(role==="admin"&&!locked()){
-        acts.append(el("button",{class:"btn xs ghost",onclick:async()=>{
-          if(!window.confirm("Unlock "+(cd.m.name||"this member")+"'s submitted sheet so it can be changed? They will need to sign again.")) return;
-          try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:Date.now()}); await refreshMarks(); }
-          catch(e){ toast(e?.message||"Could not unlock.",true); return; }
-          toast("Unlocked."); draw();
-        }},"Unlock"));
+      }else if(!locked()&&(role==="admin"||(role==="chair"&&cd.uid!==S.uid))){
+        /* Send a signed sheet back to its member, with the reason. */
+        acts.append(el("button",{class:"btn xs ghost",title:"Send this signed sheet back to "+(cd.m.name||"the member")+" to change and sign again",
+          onclick:()=>returnSheet(cd)},"\u21A9 Return to member"));
       }
+      if(role==="admin"&&md&&(md.submitted||locked())) acts.append(el("button",{class:"btn xs ghost",
+        title:"Change this member's marks or comments yourself, as the MRes office \u2014 their signature stays and the change is recorded",
+        onclick:()=>{ behalf=cd; behalfMode="office"; draw(); }},"\u270E Amend"));
+      if(md?.returnNote&&!md.submitted) acts.append(el("span",{class:"pill pending",style:"font-size:11px",title:cocT(md.returnNote.text)},"Returned "+cocDay(md.returnNote.at)));
       tb.append(el("tr",{},
         el("td",{},el("strong",{},cd.code)),
         el("td",{},cd.m.name||"—",cd.isChair?el("span",{class:"pill blue",style:"margin-left:6px"},"Chair"):"",
@@ -16839,13 +16913,44 @@ function cocReportEditor(host,o){
     host.append(c);
   }
 
+  function returnSheet(cd){
+    const w=cocWin(rep);
+    if(w.state!=="open"&&role!=="admin"){ toast("Marking is closed, so "+(cd.m.name||"the member")+" couldn't change their sheet. Ask the MRes office to extend the marking window first.",true); return; }
+    const reason=el("textarea",{rows:"3",placeholder:"e.g. Please revisit your feasibility mark for Rahul Mehta \u2014 the panel agreed the data access is now confirmed."});
+    const mail=el("input",{type:"checkbox",style:"width:auto;margin:0",...(memberEmails(cd.m).length?{checked:"checked"}:{disabled:"disabled"})});
+    modal("Return "+(cd.m.name||"this member")+"\u2019s sheet",
+      el("div",{class:"grid",style:"gap:10px"},
+        cocTip("Their sheet reopens with everything they entered. They make the change and sign and submit again"+
+          (w.state==="open"&&rep.window?.closesAt?" before marking closes on "+cocDT(rep.window.closesAt):"")+". The reason is shown on their sheet."),
+        w.state!=="open"?el("div",{class:"locknote",style:"margin:0"},"Marking is "+(w.state==="closed"?"closed":"not open")+" \u2014 extend the marking window (Window on the Panel reports row) so they can edit."):"",
+        el("div",{},el("label",{},"Reason (shown to the member)"),reason),
+        el("label",{class:"coc-chk"},mail,el("span",{},"Then email "+(memberEmails(cd.m).join(", ")||"them")))),
+      async()=>{
+        const text=cocT(reason.value);
+        if(!text){ toast("Give the reason so they know what to change.",true); return false; }
+        const note={text,by:S.userName||"",at:Date.now()};
+        await DB.set("cocMarks",cocMarkId(g.id,cd.key),{submitted:false,submittedAt:0,sign:null,onBehalf:null,returnNote:note,updatedAt:Date.now()});
+        try{ const h=cocHist(rep,cd.code+" "+(cd.m.name||"")+"'s sheet returned: "+text); await DB.set("cocReports",g.id,{history:h,updatedAt:Date.now()}); rep.history=h; }catch(e){}
+        await refreshMarks();
+        toast("Sheet returned to "+(cd.m.name||"the member")+".");
+        if(mail.checked) openEmail(memberEmails(cd.m).join(","),"CoC examination report \u2014 "+(g.label||"panel")+": please review your marks",
+          "Dear "+(cd.m.name||"")+",\n\nI have returned your mark sheet for "+(g.label||"our CoC panel")+" in the MRes Supervision Hub:\n\n\u201C"+text+"\u201D\n\n"+
+          "Please open \u201CCoC assessment\u201D, make the change and sign and submit again"+(rep.window?.closesAt?" by "+cocDT(rep.window.closesAt):"")+".\n\nThank you,\n"+(S.userName||""));
+        draw(); return true;
+      },"Return sheet");
+  }
+
   function drawBehalf(){
     host.append(el("div",{class:"row",style:"margin-bottom:12px"},
       el("button",{class:"btn ghost sm",onclick:async()=>{ await sheet.flush(); behalf=null; await refreshMarks(); draw(); }},"← Back to the report"),
       el("strong",{class:"ui"},behalf.code+" · "+(behalf.m.name||""))));
     const box=el("div",{}); host.append(box);
-    const sheet=cocMemberSheet(box,{g,rep,students,cd:behalf,md:marks[behalf.key]||{},mode:"behalf",
-      onSubmitted:async()=>{ await refreshMarks(); }});
+    const sheet=cocMemberSheet(box,{g,rep,students,cd:behalf,md:marks[behalf.key]||{},mode:behalfMode,
+      onSubmitted:async()=>{ await refreshMarks(); },
+      onDone:async()=>{
+        if(locked()){ const ex=amendOnce(behalf.code+" "+(behalf.m.name||"")+"'s marks amended");
+          if(ex.amendments){ amendLogged=false; try{ await DB.set("cocReports",g.id,{...ex,updatedAt:Date.now()}); }catch(e){} } }
+        behalf=null; behalfMode="behalf"; await refreshMarks(); draw(); }});
   }
 
   function drawPartA(){
@@ -16986,6 +17091,42 @@ function cocReportEditor(host,o){
     mt.append(mb);
     body.append(cocSec("C1.3 Panel marks","from the members' signed sheets",
       cocTip("Read-only: exactly what each member submitted. The average counts only members who assessed (anyone who withdrew is left out). To correct a mark, the member withdraws and resubmits their sheet."),mt));
+    if(c._resub){
+      /* Re-assessing the revised proposal after Major Revisions. */
+      const rs=raw.resub=raw.resub||{}; rs.marks=rs.marks||{};
+      const pv=rs.prev||{};
+      const rb=el("div",{});
+      rb.append(el("div",{class:"row",style:"gap:8px;margin-bottom:8px"},
+        el("span",{class:"pill blue"},"Round "+(rs.round||2)),
+        el("span",{class:"muted ui",style:"font-size:13px"},"Previous outcome "+(pv.outcome||"MRR")+(pv.final!==""&&pv.final!=null?" \u00B7 final mark "+cocFmt(cocNum(pv.final))+"/20":"")+
+          (pv.approvedAt?" \u00B7 approved "+cocDay(pv.approvedAt):"")+" \u00B7 reopened "+cocDay(rs.at)+(rs.by?" by "+rs.by:""))));
+      if(cocT(rs.note)) rb.append(el("div",{class:"coc-quote"},el("strong",{},"From the MRes office: "),rs.note));
+      if(cocT(pv.conditions)) rb.append(el("div",{class:"coc-quote"},el("strong",{},"The revisions that were required: "),pv.conditions));
+      if(rs.mode==="chair"){
+        rb.append(cocTip("Mark the revised proposal on behalf of the panel. These marks, not the original seminar marks above, are the basis for the final mark in C1.6. If you confirm the candidate, the mark is capped at 10/20."));
+        const tot=el("div",{class:"coc-total"});
+        const paintT=()=>{ const t=[rs.marks.rq,rs.marks.fe,rs.marks.pr].map(cocNum); const v=t.every(x=>x!=null)?t.reduce((a,b)=>a+b,0):null;
+          tot.replaceChildren(el("div",{class:"v"},v==null?"\u2014":cocFmt(v),el("small",{}," / 20")),el("div",{class:"l"},v==null?"Total":cocBand(v))); };
+        const grid=el("div",{class:"coc-marks"});
+        COC_DOMAINS.forEach(d=>{
+          const inp=cocInput(rs.marks[d.k]??"",v=>{ const n=cocNum(v); rs.marks[d.k]=v===""?"":n; paintT(); save(); },
+            {type:"number",ro:R,attrs:{min:"0",max:String(d.max),step:"0.5",inputmode:"decimal"}});
+          grid.append(el("div",{class:"coc-mk",title:d.what},el("label",{},d.short+" /"+d.max),inp));
+        });
+        paintT(); grid.append(tot);
+        const rec=el("select",{...(R?{disabled:"disabled"}:{})});
+        rec.append(el("option",{value:""},"Recommended outcome\u2026"));
+        COC_OUTCOMES.forEach(x=>rec.append(el("option",{value:x.c,...(rs.marks.rec===x.c?{selected:"selected"}:{})},x.c+" \u2014 "+x.label)));
+        rec.addEventListener("change",()=>{ rs.marks.rec=rec.value; save(); redraw(); });
+        rb.append(grid,el("div",{style:"margin-top:10px;max-width:520px"},el("label",{},"Recommended outcome on the revised proposal"),rec),
+          el("div",{style:"margin-top:10px"},el("label",{},"Comments on the revised proposal (how the required revisions were addressed)"),
+            cocArea(rs.marks.comments,v=>{ rs.marks.comments=v; save(); },{ro:R,rows:3})));
+      }else{
+        rb.append(cocTip("Every member is re-marking this candidate: their sheets were returned to them. The C1.3 table above shows their updated marks once they submit again"+
+          (pv.agg!==""&&pv.agg!=null?"; the original seminar panel average was "+cocFmt(cocNum(pv.agg))+"/20":"")+". If you confirm the candidate, the mark is capped at 10/20."));
+      }
+      body.append(cocSec("C1.3a Resubmission after Major Revisions",rs.mode==="chair"?"re-marked by the Chair on behalf of the panel":"re-marked by every member",rb));
+    }
     // C1.4
     const fb=el("div",{class:"grid",style:"gap:12px"});
     COC_FB.forEach(([k,lab])=>{
@@ -17010,13 +17151,14 @@ function cocReportEditor(host,o){
     body.append(cocSec("C1.5 Items to note",null,cocTip("Answer all four. If additional supervision or support is needed, say what in the conditions box in C1.6."),it));
     // C1.6
     const det=raw.det;
-    const fin=cocInput(cocNum(det.finalMark)!=null?det.finalMark:"",v=>{ det.finalMark=v===""?"":cocNum(v); save(); redraw(); },
+    const finManual=cocNum(det.finalMark)!=null&&!(det.finalAuto&&!locked());
+    const fin=cocInput(finManual?det.finalMark:"",v=>{ det.finalMark=v===""?"":cocNum(v); det.finalAuto=false; save(); redraw(); },
       {type:"number",ro:R,onChange:true,ph:c._finalDefault==null?"":cocFmt(c._finalDefault),attrs:{min:"0",max:"20",step:"0.1",style:"max-width:130px;font-family:var(--mono);font-size:17px"}});
     const outs=el("div",{class:"grid",style:"gap:6px"});
     COC_OUTCOMES.forEach(x=>{
       const on=c._outcome===x.c;
       outs.append(el("button",{type:"button",class:"coc-opt"+(on?" on":""),disabled:R?"disabled":null,onclick:()=>{
-        det.outcome=x.c; if((x.c==="CMR"||x.c==="MRR")&&!det.dueBy) det.dueBy=cocAddDays(ymdOf(new Date()),x.weeks*7);
+        det.outcome=x.c; det.outcomeAuto=false; if((x.c==="CMR"||x.c==="MRR")&&!det.dueBy) det.dueBy=cocAddDays(ymdOf(new Date()),x.weeks*7);
         save(); redraw(); }},
         el("strong",{},x.c),el("span",{},x.label),ag.tally[x.c]?el("span",{class:"pill none",style:"margin-left:auto"},ag.tally[x.c]+" recommend"):""));
     });
@@ -17024,8 +17166,8 @@ function cocReportEditor(host,o){
     body.append(cocSec("C1.6 Panel Chair’s determination",null,
       cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. For CMR, list the minor revisions (due within 2 weeks); for MRR, the major revisions (resubmission within 4 weeks) \u2014 the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. If the candidate is confirmed after an MRR resubmission, tick the cap box: the mark is capped at 10/20."),
       cocKV(["Final mark / 20",el("div",{},el("div",{class:"row"},fin,
-          el("span",{class:"muted ui"},c._finalDefault!=null?(cocNum(det.finalMark)==null?"Using the panel average ":"Panel average ")+cocFmt(ag.avg.total)+(det.resub?" (capped at 10)":""):"Waiting for the members' marks")),
-          el("div",{style:"margin-top:6px"},cocCheck(!!det.resub,"Confirmed after a Major Revision re-submission — mark capped at 10/20",v=>{ det.resub=v; save(); redraw(); },{ro:R})),
+          el("span",{class:"muted ui"},c._finalDefault!=null?(!finManual?"Using the ":"The ")+(c._resub?.mode==="chair"?"Chair's resubmission total ":"panel average ")+cocFmt(c._base)+(c._capOn?" (capped at 10)":""):"Waiting for the members' marks")),
+          c._resub?cocTip(c._capOn?"Confirmed after an MRR resubmission \u2014 the mark is capped at 10/20 automatically.":"If this resubmission is confirmed (C or CMR), the mark is capped at 10/20 automatically."):el("div",{style:"margin-top:6px"},cocCheck(!!det.resub,"Confirmed after a Major Revision re-submission — mark capped at 10/20",v=>{ det.resub=v; save(); redraw(); },{ro:R})),
           c._differs?el("div",{style:"margin-top:8px"},el("label",{},"Reason the final mark differs from the panel average"),
             cocArea(det.reason,v=>{ det.reason=v; save(); },{ro:R,rows:2})):"")],
         ["Candidature outcome",el("div",{},outs,!det.outcome&&ag.majority?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"Pre-selected from the panel's majority recommendation."):"")],
@@ -17064,13 +17206,23 @@ function cocReportEditor(host,o){
       const ro_=researchOfficeEmail(sem)||"research.office@cihe.edu.au";
       acts.append(el("button",{class:"btn ghost",onclick:()=>openEmail(ro_,"CoC Panel Examination Report — "+(g.label||"Panel"),
         "Dear Research Office,\n\nPlease find attached the completed and signed CoC Panel Examination Report for "+(g.label||"the panel")+" ("+cands.length+" candidate"+(cands.length===1?"":"s")+": "+cands.map(s=>s.name).join(", ")+").\n\nThe report was approved in the MRes Supervision Hub on "+cocDay(rep.approvedAt)+".\n\nKind regards,\n"+(S.userName||""))},"✉ Email the Research Office"));
-      if(rep.status==="approved"&&(role==="admin"||role==="chair")) acts.append(el("button",{class:"btn ghost",onclick:async()=>{
+      if(role==="admin") acts.append(el("button",{class:"btn ghost",onclick:()=>{ officeEdit=!officeEdit; amendLogged=false; draw(); }},
+        officeEdit?"\u2713 Finish office edits":"\u270E Edit as the office"));
+      if((rep.status==="approved"&&role==="chair")||role==="admin") acts.append(el("button",{class:"btn ghost",onclick:async()=>{
         if(!window.confirm(role==="admin"?"Return this report to the Chair? Their approval and signature are removed and they can edit again.":"Withdraw your approval to make changes? You will need to sign again.")) return;
         const patch={status:"",chairSign:null,approvedAt:0,snap:null,history:cocHist(rep,role==="admin"?"returned to the Chair":"approval withdrawn by the Chair"),updatedAt:Date.now()};
         try{ await DB.set("cocReports",g.id,patch); }catch(e){ toast(e?.message||"Could not update.",true); return; }
         Object.assign(rep,patch); toast(role==="admin"?"Returned to the Chair.":"Approval withdrawn."); draw();
       }},role==="admin"?"Return to the Chair":"✎ Withdraw approval to edit"));
       b.append(acts);
+      /* Major Revisions: when the revised proposal comes in, the office
+         reopens the report so it can be re-assessed. */
+      const mrr=cands.filter(s=>{ const cv=cocCand(rep,g,s,marks,sem); return !cv._absent&&cv._outcome==="MRR"; });
+      if(role==="admin"&&mrr.length) b.append(el("div",{class:"coc-decl",style:"margin-top:14px;border-left:3px solid var(--blue)"},
+        el("strong",{},"Major Revisions \u2014 resubmission"),
+        ...mrr.map(st=>el("div",{class:"row",style:"margin-top:8px"},
+          el("span",{style:"flex:1;min-width:200px"},st.name+" was given MRR"+(rep.cand?.[st.id]?.det?.dueBy?" (resubmission due "+longDate(rep.cand[st.id].det.dueBy)+")":"")+". When the revised proposal arrives, reopen the report for it to be re-assessed."),
+          el("button",{class:"btn sm blue",onclick:()=>cocResubDialog(g0,rep,st,marks,sem,()=>o.onChange?o.onChange():draw())},"\u21BB Re-assess the revised proposal\u2026")))));
       const defs=cocDeferred(g0,rep,students);
       if(defs.length) b.append(el("div",{class:"coc-decl",style:"margin-top:14px;border-left:3px solid var(--amber)"},
         el("strong",{},"Deferred candidate"+(defs.length===1?"":"s")),
@@ -17105,6 +17257,8 @@ function cocReportEditor(host,o){
         cands.forEach(s=>{ const cv=cocCand(rep,g,s,marks,sem), rw=candOf(s.id);
           rw.present=cv._absent?"N":"Y"; rw.mode=cv._mode; rw.time=cv._time; rw.title=cv._title;
           if(cv._absent) return;
+          const fAuto=cocNum(rw.det.finalMark)==null||!!rw.det.finalAuto, oAuto=!rw.det.outcome||!!rw.det.outcomeAuto;
+          rw.det.finalAuto=fAuto; rw.det.outcomeAuto=oAuto;
           rw.det.finalMark=cv._final; rw.det.outcome=cv._outcome; if(cv._dueBy&&(cv._outcome==="CMR"||cv._outcome==="MRR")) rw.det.dueBy=cv._dueBy; });
         const patch={partA:rep.partA,cand:rep.cand,status:"approved",approvedAt:Date.now(),chairSign:{...sig,by:S.uid||""},snap:cocSnapOf(g0),
           history:cocHist(rep,role==="admin"?"approved by the office on the Chair's behalf":"approved and signed by the Chair"),updatedAt:Date.now()};
@@ -17700,6 +17854,79 @@ function cocFollowUpDialog(g0,rep,st,marks,done){
   paint();
 }
 
+/* ============================================================
+   RE-ASSESSING A RESUBMISSION after Major Revisions (office)
+   The report is reopened for the Chair with a marking window (4 weeks by
+   default, which the office can change). Either:
+     "chair" — the Chair re-marks the revised proposal on behalf of the
+               panel, on the report itself (members' sheets stay as signed);
+     "panel" — every member's sheet is returned to them with a note, they
+               update their marks for this candidate and sign again.
+   The previous outcome and marks are kept on the report and printed in a
+   "Resubmission after Major Revisions" block on the Word form. If the
+   candidate is then confirmed, the final mark is capped at 10/20.
+   ============================================================ */
+function cocResubDialog(g0,rep,st,marks,sem,done){
+  let mode="chair";
+  const g=cocGroupView(g0,rep);
+  const cv=cocCand(rep,g,st,marks,sem);
+  const coded=cocCoded(g0);
+  const chair=coded.find(x=>x.isChair);
+  const opt=(val,title,sub)=>{
+    const r=el("input",{type:"radio",name:"cocrs",style:"width:auto;margin:3px 0 0",...(val===mode?{checked:"checked"}:{})});
+    r.addEventListener("change",()=>{ if(r.checked) mode=val; });
+    return el("label",{class:"coc-chk",style:"align-items:flex-start;margin:0 0 12px;cursor:pointer"},r,
+      el("span",{},el("strong",{},title),el("div",{class:"muted",style:"font-size:13px;font-weight:400"},sub)));
+  };
+  const closes=el("input",{type:"datetime-local",value:cocAddDays(ymdOf(new Date()),28)+"T17:00"});
+  const note=el("textarea",{rows:"2",placeholder:"e.g. The revised proposal is in the panel folder (“Revised — "+(st.name||"")+"”)."});
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+  modal("Re-assess the revised proposal — "+(st.name||""),
+    el("div",{class:"grid",style:"gap:12px"},
+      el("p",{class:"muted",style:"margin:0"},(st.name||"The candidate")+" was given Major Revisions & Re-submission"+
+        (cv._final!=null?" (final mark "+cocFmt(cv._final)+"/20)":"")+". This reopens "+(g0.label||"the panel")+"'s report so the revised proposal can be assessed. Everything else in the report is kept; the Chair re-approves it at the end, and you release the new outcome as usual."),
+      el("div",{},
+        opt("chair","The Chair re-marks on behalf of the panel (recommended)",
+          "The Chair enters marks, a recommendation and comments on the revised proposal in the report. Members' signed sheets stay as they are."),
+        opt("panel","Every panel member re-marks",
+          "Each member's sheet is returned to them with your note; they update their marks for "+(st.name||"this candidate")+" and sign again.")),
+      el("div",{},el("label",{},"Re-assessment window closes"),closes,
+        cocTip("4 weeks from today by default — change it if the Research Office has set a different date. The Chair can finish and re-approve the report after it closes.")),
+      el("div",{},el("label",{},"Note to the "+(chair?"Chair":"panel")+" (optional)"),note),
+      el("label",{class:"coc-chk"},mail,el("span",{},"Then email "+(chair?chair.m.name:"the Chair")+" (and the members, if they re-mark)"))),
+    async()=>{
+      const now=Date.now(), cl=cocLocalOut(closes.value);
+      if(!cl||cl<=now){ toast("Choose when the window closes — it must be in the future.",true); return false; }
+      const cand=JSON.parse(JSON.stringify(rep.cand||{}));
+      const c0=cand[st.id]=cand[st.id]||{}; c0.det=c0.det||{};
+      const prevRound=c0.resub?.round||1;
+      c0.resub={round:prevRound+1,mode,at:now,by:S.userName||"",closesAt:cl,note:cocT(note.value),
+        prev:{outcome:cv._outcome||"MRR",final:cv._final==null?"":cv._final,agg:cv._agg.avg.total==null?"":cv._agg.avg.total,
+          approvedAt:rep.approvedAt||0,conditions:cocT(c0.det.conditions),dueBy:c0.det.dueBy||""},
+        marks:{}};
+      /* the Chair decides afresh: outcome and mark are cleared, conditions kept for reference */
+      c0.det.outcome=""; c0.det.finalMark=""; c0.det.reason=""; c0.det.resub=false; c0.det.dueBy="";
+      const ops=[{type:"set",coll:"cocReports",id:g0.id,data:{cand,status:"",chairSign:null,approvedAt:0,snap:null,
+        window:{opensAt:now,closesAt:cl},updatedAt:now,
+        history:cocHist(rep,"reopened to re-assess "+(st.name||"")+"'s revised proposal (round "+(prevRound+1)+", "+(mode==="chair"?"Chair on behalf of the panel":"all members")+")")}}];
+      if(mode==="panel") coded.forEach(cd=>{ if(!marks[cd.key]) return;
+        ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g0.id,cd.key),data:{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:now,
+          returnNote:{text:"Please re-assess "+(st.name||"the candidate")+"'s revised proposal (after Major Revisions) and update your marks and comments for them."+(cocT(note.value)?" "+cocT(note.value):""),by:S.userName||"the MRes office",at:now}}}); });
+      await DB.batchWrite(ops);
+      toast("Report reopened for re-assessment until "+cocDT(cl)+".");
+      if(mail.checked){
+        const to=mode==="panel"?coded.flatMap(cd=>memberEmails(cd.m)):(chair?memberEmails(chair.m):[]);
+        openEmail([...new Set(to)].join(","),"CoC re-assessment — "+(st.name||"")+"'s revised proposal",
+          "Dear "+(mode==="panel"?"panel members":(chair?.m?.name||"Chair"))+",\n\n"+(st.name||"The candidate")+" has submitted their revised proposal after Major Revisions. "+
+          "The "+(g0.label||"panel")+" report has been reopened in the MRes Supervision Hub so it can be re-assessed"+
+          (mode==="chair"?" by the Chair on behalf of the panel. Please open “CoC assessment” → Panel report (Chair), enter your marks, recommendation and comments on the revised proposal for "+(st.name||"the candidate")+", complete C1.6 and approve and sign the report again."
+            :" by every panel member. Please open “CoC assessment”, update your marks and comments for "+(st.name||"the candidate")+" and sign and submit again; the Chair then re-approves the report.")+
+          "\n\nPlease complete this by "+cocDT(cl)+". If the candidate is confirmed, the final mark is capped at 10/20."+(cocT(note.value)?"\n\n"+cocT(note.value):"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
+      }
+      done(); return true;
+    },"Reopen for re-assessment");
+}
+
 
 /* ============================================================
    OUTCOMES TO STUDENTS, and MARKS FOR MOODLE (office)
@@ -18014,6 +18241,9 @@ function cocOutcomesView(v,ctx,redraw){
     const acts=el("div",{class:"row",style:"gap:5px"});
     if(approved) acts.append(el("button",{class:"btn xs"+(rel?" ghost":""),onclick:()=>cocReleaseDialog(r,sem,redraw)},rel?"Update…":"Release…"));
     if(rel) acts.append(el("button",{class:"btn xs ghost",onclick:()=>cocWithdrawRelease(r,redraw)},"Withdraw"));
+    if(approved&&cv&&!cv._absent&&cv._outcome==="MRR") acts.append(el("button",{class:"btn xs blue",
+      title:"The revised proposal has arrived \u2014 reopen the report so it can be re-assessed",
+      onclick:()=>cocResubDialog(r.g0,rep,st,r.marks,sem,redraw)},"\u21BB Re-assess\u2026"));
     tb.append(el("tr",{},
       el("td",{},cb),
       el("td",{style:"min-width:150px"},el("strong",{},st.name||""),el("div",{class:"muted ui",style:"font-size:12px"},st.sid||"")),
