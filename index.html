@@ -1299,6 +1299,69 @@
   }
   @media print{ #view > div{animation:none} }
 </style>
+<style id="coc-report">
+  /* ---- CoC examination report (13E) ---- */
+  .coc-band{background:#1F1F5C;color:#fff;border-radius:var(--r,14px);padding:14px 16px;display:flex;gap:14px;align-items:center;margin:0 0 14px;flex-wrap:wrap}
+  .coc-band img{width:48px;height:48px;border-radius:6px;flex:none}
+  .coc-band .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8;font-weight:700}
+  .coc-band .n{font-size:18px;font-weight:700;letter-spacing:-.01em;color:#fff}
+  .coc-band .s{font-size:13px;opacity:.88;margin-top:2px}
+  .coc-band .pill{background:#ffffff26;color:#fff}
+  .coc-sec{padding:14px 16px;border-top:1px solid var(--line)}
+  .coc-sec h4{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin:0 0 10px;font-weight:700}
+  .coc-sec h4 .s{text-transform:none;letter-spacing:0;font-weight:500}
+  .coc-kv{display:grid;grid-template-columns:minmax(150px,230px) minmax(0,1fr);gap:10px 16px;align-items:center}
+  .coc-kv > .k{font-size:13px;font-weight:600;color:var(--ink-soft)}
+  .coc-marks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.1fr);gap:10px;align-items:end}
+  .coc-mk input{font-family:var(--mono);font-size:20px;text-align:center;padding:10px}
+  .coc-mk input.bad{border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-soft)}
+  .coc-total{background:var(--sunken);border:1px solid var(--line);border-radius:10px;padding:8px 12px;text-align:center}
+  .coc-total .v{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--ink)}
+  .coc-total .v small{font-size:13px;color:var(--ink-soft)}
+  .coc-total .l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft)}
+  .coc-yn{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--sunken);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .coc-yn button{border:none;background:none;padding:6px 12px;border-radius:7px;font-weight:600;font-size:13.5px;color:var(--ink-soft);cursor:pointer;font-family:inherit}
+  .coc-yn button.on{background:var(--paper-2);color:var(--ink);box-shadow:var(--shadow);outline:2px solid var(--accent)}
+  .coc-yn.ro button{cursor:default}
+  .coc-chk{display:inline-flex;gap:7px;align-items:center;font-weight:500;margin:0;color:var(--ink);font-size:14px;cursor:pointer}
+  .coc-opt{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid var(--line-strong);background:var(--paper-2);border-radius:10px;padding:9px 12px;cursor:pointer;font:inherit;color:var(--ink);font-size:14px}
+  .coc-opt strong{font-family:var(--mono);min-width:38px}
+  .coc-opt.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);background:var(--accent-tint,var(--sunken))}
+  .coc-opt[disabled]{cursor:default}
+  .coc-quote{font-size:13.5px;background:var(--sunken);border-left:3px solid var(--line-strong);padding:7px 10px;border-radius:6px;margin:6px 0;white-space:pre-wrap}
+  .coc-guide{margin-top:8px}
+  .coc-guide > summary{cursor:pointer;font-size:13px;color:var(--accent-deep,var(--ink-soft));font-weight:600}
+  .coc-guide p{font-size:13px;margin:6px 0;color:var(--ink-soft)}
+  .coc-bar{position:sticky;bottom:10px;z-index:5;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--paper-2);border:1px solid var(--line-strong);border-radius:14px;padding:10px 14px;box-shadow:var(--shadow-lg,0 8px 30px rgba(0,0,0,.12));margin-top:14px}
+  .coc-bar .cnt{font-weight:600}
+  .coc-saved{font-size:12.5px}
+  .coc-saved.err{color:var(--clay-ink)}
+  .coc-sig{height:54px;max-width:220px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+  .coc-sig.sm{height:34px;max-width:140px}
+  .coc-sigview{display:grid;gap:4px}
+  .coc-pad canvas{width:100%;aspect-ratio:900/260;background:#fff;border:1px dashed var(--line-strong);border-radius:10px;touch-action:none;cursor:crosshair;display:block}
+  details.coc-cand{padding:0;overflow:hidden;margin-bottom:12px}
+  details.coc-cand > summary{list-style:none;display:flex;gap:10px;align-items:center;padding:12px 16px;cursor:pointer;background:var(--sunken);flex-wrap:wrap}
+  details.coc-cand > summary::-webkit-details-marker{display:none}
+  details.coc-cand > summary .chev{transition:transform .15s;font-size:20px;color:var(--ink-soft)}
+  details.coc-cand[open] > summary .chev{transform:rotate(90deg)}
+  .coc-num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#1F1F5C;color:#fff;font-weight:700;font-size:13px;flex:none}
+  table.coc-mt td,table.coc-mt th{white-space:nowrap}
+  table.coc-mt tr.pend td{color:var(--ink-soft)}
+  table.coc-mt tr.avg td{background:var(--sunken)}
+  .coc-decl{background:var(--sunken);border-radius:10px;padding:12px 14px;font-size:14px}
+  .coc-decl ul{margin:6px 0 0 18px;padding:0}
+  .coc-chip{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--neutral-soft);color:var(--neutral-ink);white-space:nowrap}
+  .coc-chip.ok{background:var(--green-soft);color:var(--green-ink)}
+  .coc-chip.ok::before{content:"\2713 "}
+  .coc-chip.mid{background:var(--amber-soft);color:var(--amber-ink)}
+  .sp-assess{border-left:4px solid #1F1F5C}
+  @media (max-width:700px){
+    .coc-marks{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .coc-kv{grid-template-columns:minmax(0,1fr)}
+    .coc-kv > .k{margin-top:4px}
+  }
+</style>
 </head>
 <body>
   <!-- Shown the moment the page arrives, while the app below is read. -->
@@ -1460,7 +1523,7 @@ function getFactoryAuth(){
    ============================================================ */
 
 const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, notes:{},
-              panelPool:{}, panels:{}, panelGroups:{}, staffKeys:{} };
+              panelPool:{}, panels:{}, panelGroups:{}, staffKeys:{}, cocReports:{}, cocMarks:{} };
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
@@ -1578,6 +1641,34 @@ function seedDemo(){
       {id:"n1b",kind:"internal",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",mobile:"+61 400 777 888",org:"Internal"},
       {id:"n1c",kind:"external",name:"Dr Priya Raman",email:"p.raman@uow.edu.au",mobile:"+61 433 090 121",org:"University of Wollongong"}
     ]};
+  /* A second candidate on Dr Jones's panel and its examination report,
+     half done: marking is open, Dr Novak has signed and submitted, the
+     Chair has started, and the external assessor (no login) has not. */
+  mk("st4",{semesterId:"s2-2026",sid:"45004",name:"Rahul Mehta",email:"rahul@stu.edu",mobile:"",campus:"NSW",area:"IT",
+    proposalTitle:"Explainable anomaly detection for smart-grid telemetry",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+  mem.panelGroups["pg1"].studentIds.push("st4");
+  mem.panelGroups["pg1"].slots.push({start:"13:20",qaStart:"13:30",end:"13:40",studentDocId:"st4"});
+  mem.cocReports["pg1"]={semesterId:"s2-2026",groupId:"pg1",panelLabel:"Dr Jones Panel",chairKey:"u_supB",chairUid:"supB",
+    memberUids:["supB","supD"],memberKeys:["u_supB","u_supD","e_p_raman_uow_edu_au"],
+    window:{opensAt:dayAgo(2),closesAt:Date.now()+5*86400000},partA:{},cand:{},status:"",updatedAt:dayAgo(2)};
+  mem.cocMarks["pg1__u_supD"]={semesterId:"s2-2026",groupId:"pg1",memberKey:"u_supD",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",
+    cand:{
+      st1:{rq:8,fe:4,pr:4,rec:"CMR",coi:"none",strengths:"A well-scoped problem with a clear gap in privacy-preserving IDS for small enterprises; confident presentation.",
+        concerns:"The evaluation plan relies on one public dataset; ethics implications of collecting real traffic are not yet addressed.",
+        improvements:"Add a second dataset or a synthetic-traffic plan and a short ethics section.",dissent:""},
+      st4:{rq:6.5,fe:3,pr:4,rec:"CMR",coi:"none",strengths:"Relevant industry problem and a sensible choice of explainability methods.",
+        concerns:"Research questions are broad and the data-access arrangement with the utility is not confirmed.",
+        improvements:"Narrow RQ2 and attach written confirmation of data access.",dissent:""}},
+    submitted:true,submittedAt:dayAgo(1),sign:{name:"Dr Novak",img:cocDemoSig("D. Novak"),at:dayAgo(1)},updatedAt:dayAgo(1)};
+  mem.cocMarks["pg1__u_supB"]={semesterId:"s2-2026",groupId:"pg1",memberKey:"u_supB",uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu",
+    cand:{st1:{rq:8.5,fe:4,pr:4.5,rec:"C",coi:"none",strengths:"Strong literature review and a well-justified federated design.",concerns:"Timeline for the second experiment is tight.",improvements:"",dissent:""}},
+    submitted:false,updatedAt:dayAgo(0.2)};
+  mem.cocMarks["pg1__e_p_raman_uow_edu_au"]={semesterId:"s2-2026",groupId:"pg1",memberKey:"e_p_raman_uow_edu_au",uid:null,name:"Dr Priya Raman",email:"p.raman@uow.edu.au",cand:{},submitted:false};
+}
+function cocDemoSig(name){
+  try{ const c=document.createElement("canvas"); c.width=900; c.height=260; const x=c.getContext("2d");
+    x.fillStyle="#fff"; x.fillRect(0,0,900,260); x.font="italic 88px 'Segoe Script','Brush Script MT',cursive";
+    x.fillStyle="#17215e"; x.textBaseline="middle"; x.fillText(name,30,130); return cocTrimSig(c); }catch(e){ return ""; }
 }
 
 /* Student IDs are typed by hand at the portal sign-in, so "CIHE45001",
@@ -3787,6 +3878,9 @@ async function viewPanels(v){
         "If the folder asks for permission, tell the MRes office which address you use for OneDrive / Google Drive."));
       c.append(strip);
     }
+    if(asMember.some(isAssessorReleased)) c.append(el("div",{class:"row",style:"padding:10px 16px;border-bottom:1px solid var(--line)"},
+      el("span",{class:"ui",style:"flex:1;min-width:200px;font-size:13.5px"},"Enter your marks, comments and signature for each candidate in the online examination report."),
+      el("button",{class:"btn sm",onclick:()=>goTab("cocreports")},"Open CoC assessment \u2192")));
     const t=el("table",{});
     t.append(el("thead",{},el("tr",{},...["Student","Proposal title","Principal","Panel","My role","Time"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
@@ -8205,9 +8299,12 @@ async function myNoteStudents(){
 /* ============================================================
    4. AUTH FLOW
    ============================================================ */
-function renderLogin(){
+function renderLogin(opts){
+  opts=opts||{};
   document.body.innerHTML="";
-  let mode="supervisor";
+  let mode=opts.mode||"supervisor";
+  /* Sent here from the PIN view to assess: land on that tab after sign-in. */
+  S.nextTab=opts.then||null;
   const wrap=el("div",{class:"auth-wrap auth-split"});
   const card=el("div",{class:"auth-card ui"});
   /* The three ways in, described once. The brand panel lists them (and
@@ -8256,6 +8353,8 @@ function renderLogin(){
 
     if(mode==="supervisor"){
       const email=el("input",{type:"email",placeholder:"you@uni.edu",autocomplete:"username"});
+      if(opts.email) email.value=opts.email;
+      if(opts.notice) card.append(el("div",{class:"locknote",style:"margin:12px 0 4px;color:var(--blue-ink);background:var(--blue-soft)"},opts.notice));
       const pass=el("input",{type:"password",placeholder:"Password",autocomplete:"current-password"});
       const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:6px"},"Sign in");
       btn.onclick=async()=>{
@@ -8324,6 +8423,10 @@ function renderLogin(){
         el("p",{class:"muted",style:"margin-top:12px"},
           "Read-only. Shows the panels you are sitting on, your students' Confirmation of Candidature times "+
           "and their consultation times — no password needed, and nothing can be changed from this view."),
+        el("p",{class:"muted",style:"margin-top:8px;font-size:12.5px"},
+          "Marking CoC candidates? The examination report needs your signature, so use ",
+          el("a",{href:"#",onclick:e=>{ e.preventDefault(); S.nextTab="cocreports"; mode="supervisor"; draw(); }},"Staff login"),
+          " with your email and password."),
         el("p",{class:"muted",style:"margin-top:8px;font-size:12.5px"},
           "Keep it to yourself: anyone with your PIN sees your students' details. "+
           "Tell the office if you think someone else has it and they will issue a new one.")
@@ -8506,6 +8609,7 @@ async function afterLogin(){
     if(best) defaultSem=best.id;
   }
   S.activeSem=defaultSem;
+  if(S.nextTab){ S.tab=S.nextTab; S.nextTab=null; }
   renderApp();
 }
 
@@ -8557,6 +8661,7 @@ const NAV_ICONS={
   book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   layers:'<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  clipboard:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
   menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>'
 };
@@ -8593,15 +8698,15 @@ function renderApp(){
     ? [["Supervision",[["students","Students","users"],["schedule","Week planner","calendar"],
           ["timetables","Class timetables","clock"],["consultations","Consultation times","chat"],
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
-       ["Confirmation of Candidature",[["panels","CoC panels","award"]]],
+       ["Confirmation of Candidature",[["panels","CoC panels","award"],["cocreports","CoC reports","clipboard"]]],
        ["Reports & records",[["report","Summary report","chart"],["export","Moodle export","download"],["contacts","Contacts","book"]]],
        ["Administration",[["people","Semesters & staff","layers"],["settings","Settings","gear"]]]]
     : S.role==="panellist"
-    ? [["Confirmation of Candidature",[["panels","My CoC panels","award"]]]]
+    ? [["Confirmation of Candidature",[["panels","My CoC panels","award"],["cocreports","CoC assessment","clipboard"]]]]
     : [["My supervision",[["students","My students","users"],["schedule","My week","calendar"],["timetables","My class time","clock"],
           ["consultations",coOnly?"View consultation time":"Set consultation time","chat"],
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
-       ["Confirmation of Candidature",[["panels","CoC panel","award"]]]];
+       ["Confirmation of Candidature",[["panels","CoC panel","award"],["cocreports","CoC assessment","clipboard"]]]];
   const TABS=GROUPS.flatMap(g=>g[1]);
   S.navIndex={};
   GROUPS.forEach(([gl,items])=>items.forEach(([id,label])=>{ S.navIndex[id]={label,group:gl}; }));
@@ -8727,7 +8832,8 @@ async function drawMain(){
   const views={students:viewStudents, schedule:viewSchedule, timetables:viewTimetables,
     consultations:viewConsultations, meetinglog:viewMeetingLog, notes:viewNotes,
     panels:S.role==="admin"?viewPanelAdmin:viewPanels, report:viewReport, export:viewExport,
-    contacts:viewContacts, people:viewPeople, settings:viewSettings};
+    contacts:viewContacts, people:viewPeople, settings:viewSettings,
+    cocreports:S.role==="admin"?viewCocAdmin:viewCocAssess};
   const fn=views[S.tab]; if(!fn) return;
   try{ return await fn(v); }
   catch(err){
@@ -15268,6 +15374,7 @@ function renderStaffPinView(who,blocks,opts={}){
       el("span",{},"Showing the timetable as the MRes office last published it, "+relTime(opts.at)+
         ". If something has changed since, ask them to refresh it.")));
     main.append(hero());
+    if(allPanels.length) main.append(assessCard());
 
     if(!blocks.length){
       main.append(el("section",{class:"sp-card",style:"margin-top:16px"},
@@ -15306,6 +15413,23 @@ function renderStaffPinView(who,blocks,opts={}){
     panels.forEach(p=>secP.append(panelCard(p)));
     studentsSection(secS,studs,bl);
     main.append(secP,secS,footer());
+  }
+
+  /* The PIN is read-only by design, and an examination report carries a
+     signature, so marking cannot happen here. Say so where a panel member
+     will look, and take them to the sign-in with their address filled in. */
+  function assessCard(){
+    const em=(who.emails||[])[0]||"";
+    const chairs=allPanels.some(p=>p.youChair);
+    return el("section",{class:"sp-card sp-assess",style:"margin-top:16px"},
+      cardHead("award","blue","Assessing CoC candidates? Sign in to mark",
+        "Marks, comments and signatures are entered in the hub, not in this PIN view"),
+      el("p",{class:"sp-note",style:"margin:0 0 12px"},
+        "Sign in with your email and password to enter your marks, conflict of interest declaration and comments for each candidate and sign them"+
+        (chairs?" — and, as Chair, to approve the panel's report and download the Word form":"")+
+        ". Forgotten your password? The sign-in page can email you a reset link."),
+      el("button",{class:"btn",onclick:()=>renderLogin({mode:"supervisor",email:em,then:"cocreports",
+        notice:"Sign in to open your CoC assessment. Your PIN only opens the read-only view."})},"Sign in to assess"));
   }
 
   function cardHead(icon,tone,title,sub,right){
@@ -15445,6 +15569,1603 @@ function renderStaffPinView(who,blocks,opts={}){
 
   draw();
 }
+/* ============================================================
+   13E. CoC EXAMINATION REPORT — online marking, sign-off, Word form
+   ------------------------------------------------------------
+   The paper process: each assessor sends marks and comments to the
+   Panel Chair, the Chair transcribes them into the Word form, checks
+   each number back with each person, writes the consolidated feedback,
+   signs every candidate block and emails the form to the Research
+   Office. Most of that is copying.
+
+   Here each panel member (signed in with their normal login) records
+   their OWN marks, outcome recommendation, conflict-of-interest
+   position and comments for every candidate, and signs them. The
+   Chair's form then fills itself: Part A from the panel record, C1.1
+   from the student record and running order, C1.2 from the members'
+   declarations, C1.3 from their marks with the average worked out,
+   C1.4 pre-drafted from their comments, C1.6 pre-set to the average
+   and the majority outcome. The Chair reviews, adjusts, signs ONCE for
+   the whole report and downloads the finished Word form, laid out as
+   the CIHE form with its logo.
+
+   The MRes office (admin) opens and closes marking, sees every report,
+   chases or emails members, can edit or reopen any report, completes
+   the Research Office section and downloads any or all forms.
+
+   Two collections:
+     cocReports/{panelGroupId}  -> {
+         semesterId, groupId, panelLabel, chairKey, chairUid,
+         memberUids:[uid],            // who may READ this report (rules)
+         memberKeys:[availKey],
+         window:{opensAt, closesAt},  // ms; 0 = not set. Admin-set.
+         partA:{panelRef, school, coordinator, notes,
+                positions:{<key>:text}, variations:[{code,name,org,actsFor,forCands}]},
+         cand:{<studentDocId>:{title, commencement, mode, time,
+                priAtt:'Y'|'N', coAtt:'Y'|'N', pre:{1..5:bool}, preNA:{3,4:bool},
+                coiManaged, fb:{strengths,concerns,improvements,dissent},
+                notes:{ethics,permits,rcr,support:'Y'|'N'},
+                det:{finalMark, outcome, conditions, dueBy, represent:'Y'|'N',
+                     reason, resub:bool}}},
+         status:''|'approved'|'received',
+         chairSign:{name,img,at,by}, approvedAt,
+         office:{receivedDate, receivedBy, chk:{...}, advisedDate,
+                 ethicsRef:'Y'|'N'|'NA', notes, sign:{name,img,at}},
+         history:[{at,by,what}], updatedAt }
+     cocMarks/{panelGroupId}__{availKey}  -> {        // ONE per member
+         semesterId, groupId, memberKey, uid|null, name, email,
+         cand:{<studentDocId>:{rq,fe,pr, rec, coi:'none'|'declared',
+                coiDetail, withdrew, strengths, concerns, improvements, dissent}},
+         submitted, submittedAt, sign:{name,img,at},
+         onBehalf:{by,byName,how,at}, updatedAt }
+   One document per member so the rules can keep a member's marks
+   private to them, the Chair and the office until the report is done.
+   ============================================================ */
+
+const COC_LOGO_B64="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";
+const COC_LOGO_SRC="data:image/png;base64,"+COC_LOGO_B64;
+const COC_DOMAINS=[
+  {k:"rq",label:"Research quality",short:"Research quality",max:10,
+   what:"Extensive and critical understanding of the topic · awareness of key complexities, controversies or limitations in the literature · a clear problem or gap and a worthwhile contribution · clear, focused research questions and aims appropriately scoped for a Master of Research · appropriate and justified methods for collecting and analysing data · benefits and limitations of the proposed methods identified · standard of the written proposal (structure, clarity, referencing)."},
+  {k:"fe",label:"Feasibility and capacity",short:"Feasibility",max:5,
+   what:"Feasible within the candidature timeframe (2-year FTE Master of Research), budget and ethical constraints · required data can realistically be collected in the time available · resources are accessible (software, equipment, datasets, participants) · awareness of ethical issues and how they will be addressed · clear and realistic timeline and research plan · capacity to complete by the expected submission date."},
+  {k:"pr",label:"Oral presentation and responses to questions",short:"Presentation",max:5,
+   what:"Standard of the oral presentation of the research proposal, and of the responses to the panel’s questions, as appropriate to the degree."}];
+const COC_TOTAL=20;
+const COC_OUTCOMES=[
+  {c:"C",  label:"Candidature Confirmed",               long:"C — candidature to be Confirmed", weeks:0,
+   meaning:"The candidate has met the requirements and should progress as a confirmed candidate."},
+  {c:"CMR",label:"Confirmed subject to minor Revisions",long:"CMR — confirmed subject to Minor Revisions", weeks:2,
+   meaning:"The candidate should address the revisions outlined by the Panel within 2 weeks of the panel’s report. A completion date must be recorded. Course Coordinator reviews the response to satisfaction"},
+  {c:"MRR",label:"Major Revisions & Re-submission",     long:"MRR — Major Revision & Re-submission", weeks:4,
+   meaning:"The candidate re-attempts confirmation within 4 weeks of the panel’s report, addressing the major recommendations, and may be asked to re-present. CoC Chair or Panel reviews the response."},
+  {c:"NC", label:"Candidature not confirmed",           long:"NC — candidature Not Confirmed", weeks:0,
+   meaning:"The candidate is invited to ‘show cause’ as to why candidature should not be discontinued. Student will receive a Fail in RES915 unit."}];
+const COC_SCHOOLS=["IT","Accounting","Business","Early Childhood"];
+const COC_PREREQ=[
+  ["1","CoC research written proposal","Required"],
+  ["2","Research Data Management Plan completed in the Research Proposal","Required"],
+  ["3","Ethics application or exemption request submitted or ready to submit to the Research Office after CoC completion","If applicable"],
+  ["4","Resources required to complete on time identified","If applicable"],
+  ["5","Oral presentation delivered and questions taken","Confirmed at the seminar"]];
+const COC_ITEMS=[
+  ["ethics","Ethics approval required? (See CIHE’s Human Research Ethics procedure.)"],
+  ["permits","Permits or external approvals required (site, data, third-party access)?"],
+  ["rcr","Responsible Conduct of Research Policy and data management obligations understood?"],
+  ["support","Additional supervision or support required? (If yes, detail in C1.6.)"]];
+const COC_FB=[
+  ["strengths","Strengths of the proposal and presentation"],
+  ["concerns","Concerns, weaknesses or gaps identified"],
+  ["improvements","Improvements required"],
+  ["dissent","Any minority or dissenting view"]];
+const COC_OFFICE_CHK=[
+  ["a","All candidates CoC complete and signed off by the Chair"],
+  ["b","Conflict of interest position recorded for every candidate"],
+  ["c","Outcomes recorded in the student record and the MRes Supervision Hub"],
+  ["d","Candidates and supervisors advised"],
+  ["f","Conditions and second seminar dates diarised"]];
+const COC_MODES=["On campus","Online (Teams)","Hybrid"];
+const cocOutcome=c=>COC_OUTCOMES.find(o=>o.c===c)||null;
+function cocBand(t){
+  if(t==null) return "";
+  return t>=17?"Excellent":t>=13?"Good":t>=10?"Satisfactory":"Not yet satisfactory";
+}
+const cocMarkId=(gid,key)=>String(gid)+"__"+String(key);
+const cocNum=v=>{ if(v===""||v==null) return null; const n=Number(v); return Number.isFinite(n)?n:null; };
+const cocR1=n=>n==null?null:Math.round(n*10)/10;
+const cocFmt=n=>n==null?"":(Math.round(n*10)/10).toString();
+const cocT=s=>String(s==null?"":s).trim();
+
+/* The panel in form order: P1 is the Chair, then everyone else in the
+   order the coordinator seated them. Codes are fixed from this. */
+function cocCoded(g){
+  const ms=groupMembers(g);
+  const chair=ms.find(m=>isChair(g,m))||null;
+  const order=chair?[chair,...ms.filter(m=>m!==chair)]:ms.slice();
+  return order.map((m,i)=>({code:"P"+(i+1),m,key:availKey(m),isChair:m===chair,
+    uid:m.kind==="internal"&&m.uid?m.uid:""}));
+}
+const cocMe=g=>cocCoded(g).find(c=>c.uid&&c.uid===S.uid)||null;
+
+/* ---- dates ---- */
+const COC_MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function cocDT(ms){
+  if(!ms) return "";
+  const d=new Date(ms); if(isNaN(d)) return "";
+  return d.getDate()+" "+COC_MON[d.getMonth()]+" "+d.getFullYear()+", "+clockTime(pad2(d.getHours())+":"+pad2(d.getMinutes()));
+}
+const cocDay=ms=>{ if(!ms) return ""; const d=new Date(ms); return isNaN(d)?"":longDate(ymdOf(d)); };
+const cocLocalIn=ms=>{ if(!ms) return ""; const d=new Date(ms); return isNaN(d)?"":ymdOf(d)+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes()); };
+const cocLocalOut=s=>{ if(!s) return 0; const d=new Date(s); return isNaN(d)?0:d.getTime(); };
+const cocAddDays=(ymd,n)=>{ const d=new Date(String(ymd||ymdOf(new Date()))+"T00:00:00"); if(isNaN(d)) return ""; d.setDate(d.getDate()+n); return ymdOf(d); };
+
+/* ---- the marking window ----
+   Set by the office per panel. Nothing is open until it is opened, so no
+   one marks against a panel whose seating is still moving. A report
+   whose chair has approved it is closed to members whatever the dates. */
+function cocWin(rep){
+  if(!rep) return {state:"none",cls:"none",txt:"Not opened yet"};
+  const w=rep.window||{}, now=Date.now();
+  if(!w.opensAt) return {state:"none",cls:"none",txt:"Not opened yet"};
+  if(now<w.opensAt) return {state:"scheduled",cls:"blue",txt:"Opens "+cocDT(w.opensAt)};
+  if(w.closesAt&&now>=w.closesAt) return {state:"closed",cls:"missed",txt:"Closed "+cocDT(w.closesAt)};
+  return {state:"open",cls:"approved",txt:w.closesAt?"Open until "+cocDT(w.closesAt):"Open"};
+}
+const cocOpen=rep=>cocWin(rep).state==="open";
+
+/* ---- a member's entry for one candidate ---- */
+function cocMemberMissing(c){
+  c=c||{};
+  const out=[];
+  if(c.coi!=="none"&&c.coi!=="declared") out.push("conflict of interest");
+  if(c.coi==="declared"&&!cocT(c.coiDetail)) out.push("nature of the interest");
+  if(c.coi==="declared"&&c.withdrew) return out;
+  COC_DOMAINS.forEach(d=>{ const n=cocNum(c[d.k]); if(n==null||n<0||n>d.max) out.push(d.short.toLowerCase()+" mark"); });
+  if(!c.rec) out.push("recommended outcome");
+  if(!cocT(c.strengths)) out.push("strengths");
+  if(!cocT(c.concerns)) out.push("concerns");
+  return out;
+}
+const cocMemberDone=c=>!cocMemberMissing(c).length;
+function cocTotal(c){
+  if(!c||(c.coi==="declared"&&c.withdrew)) return null;
+  const a=COC_DOMAINS.map(d=>cocNum(c[d.k]));
+  return a.every(x=>x!=null)?a.reduce((s,x)=>s+x,0):null;
+}
+
+/* ---- what the panel said about one candidate ---- */
+function cocAgg(g,marks,sid){
+  const coded=cocCoded(g);
+  const rows=coded.map(cd=>{
+    const md=marks[cd.key]||null, c=md?.cand?.[sid]||{};
+    const withdrew=c.coi==="declared"&&!!c.withdrew;
+    return {code:cd.code,cd,name:cd.m.name||"",c,md,withdrew,
+      submitted:!!md?.submitted,
+      rq:withdrew?null:cocNum(c.rq),fe:withdrew?null:cocNum(c.fe),pr:withdrew?null:cocNum(c.pr),
+      total:cocTotal(c),rec:withdrew?"":(c.rec||"")};
+  });
+  const counted=rows.filter(r=>r.submitted&&!r.withdrew&&r.total!=null);
+  const avg=k=>counted.length?cocR1(counted.reduce((s,r)=>s+r[k],0)/counted.length):null;
+  const tally={}; counted.forEach(r=>{ if(r.rec) tally[r.rec]=(tally[r.rec]||0)+1; });
+  const ranked=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  const majority=ranked.length&&(ranked.length===1||ranked[0][1]>ranked[1][1])?ranked[0][0]:"";
+  const declared=rows.filter(r=>r.c.coi==="declared");
+  return {rows,counted,n:counted.length,
+    avg:{rq:avg("rq"),fe:avg("fe"),pr:avg("pr"),total:avg("total")},
+    majority,tally,declared,anyCoi:declared.length>0,
+    allAnsweredCoi:rows.every(r=>r.submitted&&(r.c.coi==="none"||r.c.coi==="declared"))};
+}
+
+/* ---- the Chair's view of a candidate, defaults filled in ----
+   Nothing here is written back until someone changes it, so a later
+   member edit still flows through to an untouched field. */
+function cocCand(rep,g,st,marks,sem){
+  const c=JSON.parse(JSON.stringify(rep?.cand?.[st.id]||{}));
+  const sl=slotOfStudent(g,st.id), day=sl?slotDate(g,sl):"";
+  c.fb=c.fb||{}; c.notes=c.notes||{}; c.det=c.det||{}; c.pre=c.pre||{}; c.preNA=c.preNA||{};
+  c._title=cocT(c.title)||titleOf(st);
+  c._seminarDate=day;
+  c._time=cocT(c.time)||(sl?clockRange(sl.start,sl.end):"");
+  const link=slotLink(g,sl);
+  c._mode=c.mode||(link?"Online (Teams)":"");
+  c._principal=st.principalName||supName(st.principalUid)||"";
+  c._co=st.coName||(st.coUid?supName(st.coUid):"")||"";
+  const ag=cocAgg(g,marks,st.id);
+  c._agg=ag;
+  const avg=ag.avg.total;
+  const capped=v=>v==null?null:(c.det.resub?Math.min(v,10):v);
+  c._finalDefault=capped(avg);
+  c._final=cocNum(c.det.finalMark)!=null?cocNum(c.det.finalMark):c._finalDefault;
+  c._outcome=c.det.outcome||ag.majority||"";
+  const o=cocOutcome(c._outcome);
+  c._dueBy=c.det.dueBy||(o&&o.weeks?cocAddDays(ymdOf(new Date()),o.weeks*7):"");
+  c._differs=avg!=null&&c._final!=null&&Math.abs(c._final-avg)>0.05&&!(c.det.resub&&c._final===capped(avg));
+  return c;
+}
+function cocChairMissing(c){
+  const out=[];
+  if(!c._mode) out.push("seminar mode");
+  if(!c.priAtt) out.push("principal supervisor attendance");
+  if(c._co&&!c.coAtt) out.push("associate supervisor attendance");
+  if(c._agg.anyCoi&&!cocT(c.coiManaged)) out.push("how the declared interest was managed");
+  COC_ITEMS.forEach(([k])=>{ if(!c.notes[k]) out.push("C1.5 items to note"); });
+  if(c._final==null||c._final<0||c._final>COC_TOTAL) out.push("final mark");
+  if(!c._outcome) out.push("outcome");
+  if((c._outcome==="CMR"||c._outcome==="MRR")&&!cocT(c.det.conditions)) out.push("conditions / revisions");
+  if((c._outcome==="CMR"||c._outcome==="MRR")&&!c._dueBy) out.push("revisions due date");
+  if(!c.det.represent) out.push("re-presentation");
+  if(c._differs&&!cocT(c.det.reason)) out.push("reason the final mark differs from the average");
+  if(!cocT(c.fb.strengths)||!cocT(c.fb.concerns)) out.push("panel feedback");
+  return [...new Set(out)];
+}
+
+/* ---- status of a whole report, for pills and the admin table ---- */
+function cocStatus(g,rep,marks){
+  const coded=cocCoded(g);
+  const sub=coded.filter(cd=>marks?.[cd.key]?.submitted).length;
+  if(!rep) return {key:"none",cls:"none",txt:"Not opened",sub,of:coded.length};
+  if(rep.status==="received") return {key:"received",cls:"approved",txt:"Received by office",sub,of:coded.length};
+  if(rep.status==="approved") return {key:"approved",cls:"approved",txt:"Approved by Chair",sub,of:coded.length};
+  const w=cocWin(rep);
+  if(w.state==="none") return {key:"none",cls:"none",txt:"Not opened",sub,of:coded.length};
+  if(w.state==="scheduled") return {key:"scheduled",cls:"blue",txt:"Opens "+cocDay(rep.window.opensAt),sub,of:coded.length};
+  if(sub===coded.length&&coded.length) return {key:"chair",cls:"pending",txt:"With the Chair",sub,of:coded.length};
+  if(w.state==="closed") return {key:"closed",cls:"missed",txt:"Closed",sub,of:coded.length};
+  return {key:"marking",cls:"blue",txt:"Marking",sub,of:coded.length};
+}
+
+/* ---- reads & writes ---- */
+async function cocGetReport(gid){ return await DB.get("cocReports",gid); }
+async function cocGetMarks(g){
+  const coded=cocCoded(g), out={};
+  await Promise.all(coded.map(async cd=>{
+    try{ const d=await DB.get("cocMarks",cocMarkId(g.id,cd.key)); if(d) out[cd.key]=d; }
+    catch(e){ console.warn("marks unreadable for",cd.key,e?.message||e); }
+  }));
+  return out;
+}
+/* The report and one mark sheet per member, created (or brought up to
+   date after a seating change) in one batch. Merges, so nothing already
+   entered is touched. */
+function cocEnsureOps(g,extra){
+  const coded=cocCoded(g), chair=coded.find(c=>c.isChair);
+  const ops=[{type:"set",coll:"cocReports",id:g.id,data:{
+    semesterId:g.semesterId||S.activeSem||"",groupId:g.id,panelLabel:g.label||"Panel",
+    chairKey:g.chairKey||"",chairUid:chair?.uid||"",
+    memberUids:coded.map(c=>c.uid).filter(Boolean),memberKeys:coded.map(c=>c.key),
+    ...(extra||{})}}];
+  coded.forEach(cd=>ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g.id,cd.key),data:{
+    semesterId:g.semesterId||S.activeSem||"",groupId:g.id,memberKey:cd.key,uid:cd.uid||null,
+    name:cd.m.name||"",email:memberEmails(cd.m)[0]||""}}));
+  return ops;
+}
+const cocNeedsSync=(g,rep)=>{
+  if(!rep) return false;
+  const coded=cocCoded(g), chair=coded.find(c=>c.isChair);
+  return (rep.chairUid||"")!==(chair?.uid||"")
+    || JSON.stringify(rep.memberKeys||[])!==JSON.stringify(coded.map(c=>c.key))
+    || (rep.panelLabel||"")!==(g.label||"Panel");
+};
+function cocHist(rep,what){
+  const h=Array.isArray(rep?.history)?rep.history.slice(-40):[];
+  h.push({at:Date.now(),by:S.userName||S.user?.email||"",what});
+  return h;
+}
+/* Wait-then-save, so typing in a box is one write when you pause rather
+   than one per key. `flush()` saves at once (before submit / leaving). */
+function cocDebounce(fn,ms){
+  let t=0, pending=false;
+  const run=async()=>{ t=0; if(!pending) return; pending=false; await fn(); };
+  const f=()=>{ pending=true; clearTimeout(t); t=setTimeout(run,ms||900); };
+  f.flush=async()=>{ clearTimeout(t); await run(); };
+  return f;
+}
+
+/* ---- rules help, the same shape as the panel screens' ---- */
+const COC_RULES="// Paste inside  match /databases/{database}/documents { ... }  (e.g. after panelGroups).\n// Uses the isSignedIn() and isAdmin() helpers already defined at the top of the rules file.\n// ============================================================\n// CoC examination reports  (cocReports, cocMarks)\n// The online CoC Panel Examination Report. Two collections:\n//\n//   cocReports/{panelGroupId}   ONE per panel \u2014 Part A, the Chair's\n//     C1.1\u2013C1.6 work, the marking window, the Chair's approval and\n//     signature, the Research Office section (D2) and a history list.\n//     Carries chairUid and a flat memberUids array purely so the rules\n//     below can tell who is on the panel (same trick as panelGroups).\n//\n//   cocMarks/{panelGroupId}__{memberKey}   ONE per panel member \u2014 that\n//     member's own marks, recommended outcome, conflict of interest\n//     declaration, comments and e-signature. `uid` is the member's login,\n//     or null for an external assessor with no hub account.\n//\n// Who may do what:\n//   admin   \u2014 everything: opens/closes marking, edits or reopens any\n//             report, completes D2, unlocks a member's submitted sheet.\n//   member  \u2014 reads the report of a panel they sit on; reads and writes\n//             ONLY their own mark sheet, and only while marking is open\n//             and the Chair has not approved the report. They cannot read\n//             a colleague's marks.\n//   Chair   \u2014 additionally reads every mark sheet on their panel, may\n//             enter the sheet of an assessor with NO login (external),\n//             and may edit the report's Part A / Part C, approve and sign\n//             it, or withdraw their own approval. They cannot move the\n//             marking window, change who is on the panel, touch the\n//             office section, or mark a report as received.\n//   students / PIN view \u2014 nothing. Neither carries an auth token, and\n//             the PIN view never reads these collections.\n//\n// Documents are created by the admin when marking is opened (one report\n// plus one sheet per member, in a single batch), so a member normally\n// only ever updates. Reading a report that has not been created yet is\n// denied rather than \"not found\"; the app treats that as \"marking not\n// opened yet\".\n// ============================================================\nfunction cocReport(gid) {\n  return get(/databases/$(database)/documents/cocReports/$(gid)).data;\n}\nfunction isCocChair(gid) {\n  return isSignedIn() && cocReport(gid).get('chairUid', '') == request.auth.uid;\n}\n// Approved by the Chair, or received by the office: members are locked out.\nfunction cocLocked(rep) {\n  return rep.get('status', '') in ['approved', 'received'];\n}\n// Inside the marking window set by the office (times are stored in ms).\nfunction cocOpenNow(rep) {\n  let w = rep.get('window', {});\n  let opens = w.get('opensAt', 0);\n  let closes = w.get('closesAt', 0);\n  return opens > 0\n    && request.time.toMillis() >= opens\n    && (closes == 0 || request.time.toMillis() < closes);\n}\n// A mark-sheet write may only touch the sheet's own content, never whose\n// sheet it is (uid, memberKey, groupId, semesterId stay put).\nfunction cocMarkFieldsOnly() {\n  return request.resource.data.diff(resource.data).affectedKeys()\n           .hasOnly(['cand', 'submitted', 'submittedAt', 'sign', 'onBehalf', 'updatedAt']);\n}\n\nmatch /cocReports/{gid} {\n  allow read: if isAdmin()\n    || (isSignedIn()\n        && resource.data.get('memberUids', []).hasAny([request.auth.uid]));\n\n  allow create, delete: if isAdmin();\n\n  allow update: if isAdmin()\n    // the Chair: report content, approval and their own signature only\n    || (isSignedIn()\n        && resource.data.get('chairUid', '') == request.auth.uid\n        && resource.data.get('status', '') != 'received'\n        && request.resource.data.get('status', '') in ['', 'approved']\n        && request.resource.data.diff(resource.data).affectedKeys()\n             .hasOnly(['partA', 'cand', 'status', 'chairSign', 'approvedAt',\n                       'history', 'updatedAt']));\n}\n\nmatch /cocMarks/{id} {\n  allow read: if isAdmin()\n    || (isSignedIn()\n        && (resource.data.uid == request.auth.uid\n            || isCocChair(resource.data.groupId)));\n\n  // Normally made by the admin when marking opens. A member added to a\n  // panel afterwards may open their own sheet, while marking is open.\n  allow create: if isAdmin()\n    || (isSignedIn()\n        && request.resource.data.uid == request.auth.uid\n        && id == request.resource.data.groupId + '__' + request.resource.data.memberKey\n        && cocReport(request.resource.data.groupId)\n             .get('memberUids', []).hasAny([request.auth.uid])\n        && cocOpenNow(cocReport(request.resource.data.groupId)));\n\n  allow update: if isAdmin()\n    // the member, on their own sheet, while marking is open\n    || (isSignedIn()\n        && resource.data.uid == request.auth.uid\n        && cocMarkFieldsOnly()\n        && !cocLocked(cocReport(resource.data.groupId))\n        && cocOpenNow(cocReport(resource.data.groupId)))\n    // the Chair, entering the sheet of an assessor with no hub login\n    || (isCocChair(resource.data.groupId)\n        && resource.data.uid == null\n        && cocMarkFieldsOnly()\n        && !cocLocked(cocReport(resource.data.groupId)));\n\n  allow delete: if isAdmin();\n}";
+function cocRuleHelp(err){
+  const card=el("div",{class:"card",style:"border-left:4px solid var(--clay,#c2410c)"});
+  card.append(
+    el("h3",{style:"margin:0 0 6px"},"CoC reports can't be loaded"),
+    el("p",{class:"muted",style:"margin:0 0 10px"},"Firestore reported: "+(err?.message||"unknown error")),
+    el("p",{style:"margin:0 0 8px;font-size:14px"},
+      "The examination reports live in two new collections, cocReports and cocMarks. Anything the security rules don't mention is denied, so add these under Firestore Database → Rules and publish. They let each member read and write only their own mark sheet, the Chair read the panel's sheets and complete the report, and the office do everything."),
+    el("pre",{style:"white-space:pre-wrap;background:rgba(127,127,127,.1);padding:12px;border-radius:8px;font-size:12px;margin:0 0 10px;max-height:320px;overflow:auto"},COC_RULES),
+    el("div",{class:"row",style:"gap:8px"},
+      el("button",{class:"btn sm",onclick:()=>navigator.clipboard?.writeText(COC_RULES).then(()=>toast("Rules copied."),()=>toast("Copy failed — select the text manually.",true))},"⧉ Copy rules"),
+      el("button",{class:"btn ghost sm",onclick:()=>drawMain()},"↻ Retry")));
+  return card;
+}
+
+/* ============================================================
+   SIGNATURE — draw with a finger / mouse, or type a name
+   Stored as a small PNG with the typed full name and the time, and
+   placed in the Word form's signature cells.
+   ============================================================ */
+function cocSignDialog(opts){
+  return new Promise(resolve=>{
+    let mode="draw", drawn=false, done=false;
+    const name=el("input",{value:opts.name||"",placeholder:"Full name"});
+    const cv=el("canvas",{width:"900",height:"260"});
+    const ctx=cv.getContext("2d");
+    const clear=()=>{ ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height); drawn=false; if(mode==="type") typeIt(); };
+    function typeIt(){
+      ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+      const t=cocT(name.value); if(!t) return;
+      let size=96;
+      const face=s=>"italic "+s+"px 'Segoe Script','Brush Script MT','Lucida Handwriting','Apple Chancery','Snell Roundhand',cursive";
+      ctx.font=face(size); while(ctx.measureText(t).width>cv.width-60&&size>30){ size-=4; ctx.font=face(size); }
+      ctx.fillStyle="#17215e"; ctx.textBaseline="middle"; ctx.fillText(t,30,cv.height/2);
+    }
+    let last=null;
+    const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
+    cv.addEventListener("pointerdown",e=>{ if(mode!=="draw") return; cv.setPointerCapture(e.pointerId); last=pt(e); e.preventDefault(); });
+    cv.addEventListener("pointermove",e=>{
+      if(mode!=="draw"||!last) return;
+      const p=pt(e); ctx.strokeStyle="#17215e"; ctx.lineWidth=5; ctx.lineCap="round"; ctx.lineJoin="round";
+      ctx.beginPath(); ctx.moveTo(last[0],last[1]); ctx.lineTo(p[0],p[1]); ctx.stroke(); last=p; drawn=true; });
+    const up=()=>{ last=null; };
+    cv.addEventListener("pointerup",up); cv.addEventListener("pointerleave",up); cv.addEventListener("pointercancel",up);
+    name.addEventListener("input",()=>{ if(mode==="type") typeIt(); });
+    const segD=el("button",{class:"active",type:"button"},"Draw");
+    const segT=el("button",{type:"button"},"Type my name");
+    const setMode=m=>{ mode=m; segD.classList.toggle("active",m==="draw"); segT.classList.toggle("active",m==="type");
+      hint.textContent=m==="draw"?"Sign in the box with your mouse, finger or stylus.":"Your typed name is used as your signature.";
+      clear(); };
+    segD.onclick=()=>setMode("draw"); segT.onclick=()=>setMode("type");
+    const hint=el("div",{class:"muted ui",style:"font-size:12.5px;margin:6px 0 0"},"Sign in the box with your mouse, finger or stylus.");
+    const agree=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"});
+    const body=el("div",{class:"coc-pad"},
+      opts.intro?el("p",{class:"muted",style:"margin:0 0 12px;font-size:14px"},opts.intro):"",
+      el("label",{},"Full name"),name,
+      el("div",{class:"seg",style:"margin:12px 0 8px"},segD,segT),
+      cv, el("div",{class:"row",style:"justify-content:space-between"},hint,
+        el("button",{class:"btn xs ghost",type:"button",onclick:clear},"Clear")),
+      el("label",{class:"coc-chk",style:"margin-top:12px;align-items:flex-start;font-size:13.5px;color:var(--ink)"},agree,
+        el("span",{},opts.declaration||"I confirm the information above is accurate.")));
+    clear();
+    modal(opts.title||"Sign",body,async()=>{
+      if(!cocT(name.value)){ toast("Type your full name.",true); return false; }
+      if(mode==="draw"&&!drawn){ toast("Draw your signature in the box, or choose “Type my name”.",true); return false; }
+      if(mode==="type") typeIt();
+      if(!agree.checked){ toast("Tick the declaration to sign.",true); return false; }
+      done=true; resolve({name:cocT(name.value),img:cocTrimSig(cv),at:Date.now()}); return true;
+    },opts.saveLabel||"Sign");
+    const bg=[...document.querySelectorAll(".modal-bg")].pop();
+    const m=bg?.querySelector(".modal"); if(m) m.classList.add("wide");
+    // resolve null when the dialog goes away without signing
+    const obs=new MutationObserver(()=>{ if(!bg.isConnected){ obs.disconnect(); if(!done) resolve(null); } });
+    if(bg) obs.observe(document.body,{childList:true});
+  });
+}
+/* Crop to the ink and scale down: a signature PNG of a few KB. */
+function cocTrimSig(cv){
+  const ctx=cv.getContext("2d"), {width:w,height:h}=cv, d=ctx.getImageData(0,0,w,h).data;
+  let x0=w,y0=h,x1=0,y1=0;
+  for(let y=0;y<h;y+=2) for(let x=0;x<w;x+=2){ const i=(y*w+x)*4; if(d[i]<200||d[i+1]<200||d[i+2]<200){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+  if(x1<=x0||y1<=y0){ x0=0;y0=0;x1=w;y1=h; }
+  const pad=12; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(w,x1+pad); y1=Math.min(h,y1+pad);
+  const sw=x1-x0, sh=y1-y0, sc=Math.min(1,420/sw,120/sh);
+  const o=document.createElement("canvas"); o.width=Math.max(1,Math.round(sw*sc)); o.height=Math.max(1,Math.round(sh*sc));
+  const oc=o.getContext("2d"); oc.fillStyle="#fff"; oc.fillRect(0,0,o.width,o.height);
+  oc.drawImage(cv,x0,y0,sw,sh,0,0,o.width,o.height);
+  return o.toDataURL("image/png");
+}
+function cocSigView(sig,extra){
+  if(!sig||!sig.img) return el("span",{class:"muted"},"Not signed");
+  return el("div",{class:"coc-sigview"},el("img",{src:sig.img,alt:"Signature of "+(sig.name||""),class:"coc-sig"}),
+    el("div",{class:"muted ui",style:"font-size:12px"},(sig.name||"")+" · "+cocDT(sig.at)+(extra?" · "+extra:"")));
+}
+
+/* ============================================================
+   WORD FORM (.docx) — built in the browser, laid out as the CIHE
+   "CoC Panel Examination Report" form: navy section bands, shaded
+   label cells, the CIHE logo in the header band and the CRICOS footer.
+   Uses the store-only zip already used for the Excel exports.
+   ============================================================ */
+const COC_NAVY="1F1F5C", COC_LABEL="EDEDF2", COC_ALT="F7F7FA", COC_BORDER="BFC3D1", COC_PAGE_W=9638;
+const cocB64Bytes=b64=>{ const s=atob(b64), a=new Uint8Array(s.length); for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i); return a; };
+function cocPngSize(bytes){ // width/height from the IHDR chunk
+  const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  return {w:v.getUint32(16),h:v.getUint32(20)};
+}
+function cocDocxBuild(ctx){
+  const X=xmlEsc;
+  const media=[]; // {name, bytes, rid}
+  const addImg=bytes=>{ const n=media.length+1; const rid="rIdImg"+n; media.push({name:"image"+n+".png",bytes,rid}); return rid; };
+  let picId=10;
+  const img=(bytes,wIn,hIn)=>{
+    const rid=addImg(bytes), cx=Math.round(wIn*914400), cy=Math.round(hIn*914400), id=picId++;
+    return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/>'+
+      '<wp:docPr id="'+id+'" name="Picture '+id+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'+
+      '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'+
+      '<pic:nvPicPr><pic:cNvPr id="'+id+'" name="img'+id+'.png"/><pic:cNvPicPr/></pic:nvPicPr>'+
+      '<pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
+      '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'+
+      '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+  };
+  const sigImg=(sig,maxW=1.55,maxH=0.42)=>{
+    if(!sig?.img||!/^data:image\/png;base64,/.test(sig.img)) return "";
+    try{
+      const bytes=cocB64Bytes(sig.img.split(",")[1]), sz=cocPngSize(bytes);
+      const sc=Math.min(maxW/sz.w,maxH/sz.h);
+      return img(bytes,sz.w*sc,sz.h*sc);
+    }catch(e){ return ""; }
+  };
+  // run: text may contain \n
+  const r=(t,o={})=>{
+    const rp='<w:rPr>'+(o.font?'<w:rFonts w:ascii="'+o.font+'" w:hAnsi="'+o.font+'" w:eastAsia="'+o.font+'"/>':'')+
+      (o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+
+      (o.color?'<w:color w:val="'+o.color+'"/>':'')+'<w:sz w:val="'+(o.sz||18)+'"/><w:szCs w:val="'+(o.sz||18)+'"/>'+(o.u?'<w:u w:val="single"/>':'')+'</w:rPr>';
+    return String(t==null?"":t).split("\n").map((ln,i)=>(i?'<w:r>'+rp+'<w:br/></w:r>':'')+'<w:r>'+rp+'<w:t xml:space="preserve">'+X(ln)+'</w:t></w:r>').join("");
+  };
+  const box=(on,label,o={})=>r(on?"☒":"☐",{...o,font:"MS Gothic"})+r(" "+label,o);
+  const p=(runs,o={})=>'<w:p><w:pPr>'+(o.keep?'<w:keepNext/>':'')+'<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after??0)+'" w:line="'+(o.line||252)+'" w:lineRule="auto"/>'+
+    (o.align?'<w:jc w:val="'+o.align+'"/>':'')+'</w:pPr>'+(runs||"")+'</w:p>';
+  const cellXml=(content,o={})=>{
+    const w=o.w||1000;
+    const brd=o.noBorder?'<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>':'';
+    const inner=Array.isArray(content)?content.join(""):(String(content||"").startsWith("<w:p")?content:p(content));
+    return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+(o.span>1?'<w:gridSpan w:val="'+o.span+'"/>':'')+brd+
+      (o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+
+      '<w:tcMar><w:top w:w="'+(o.padV??60)+'" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="'+(o.padV??60)+'" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tcMar>'+
+      '<w:vAlign w:val="'+(o.v||"top")+'"/></w:tcPr>'+(inner||p(""))+'</w:tc>';
+  };
+  /* rows: [{cells:[{c, span, fill, ...}], header?, cant?}] */
+  const tbl=(widths,rows,o={})=>{
+    const tw=widths.reduce((a,b)=>a+b,0);
+    const bc=o.noBorder?'nil':'single';
+    let x='<w:tbl><w:tblPr><w:tblW w:w="'+tw+'" w:type="dxa"/><w:tblBorders>'+
+      ['top','left','bottom','right','insideH','insideV'].map(s=>'<w:'+s+' w:val="'+bc+'" w:sz="4" w:space="0" w:color="'+COC_BORDER+'"/>').join("")+
+      '</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'+
+      widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join("")+'</w:tblGrid>';
+    rows.forEach(row=>{
+      x+='<w:tr><w:trPr><w:cantSplit/>'+(row.header?'<w:tblHeader/>':'')+'</w:trPr>';
+      let gi=0;
+      row.cells.forEach(cell=>{
+        const span=cell.span||1, w=widths.slice(gi,gi+span).reduce((a,b)=>a+b,0); gi+=span;
+        x+=cellXml(cell.c,{...cell,w,span});
+      });
+      x+='</w:tr>';
+    });
+    return x+'</w:tbl>';
+  };
+  const W=COC_PAGE_W;
+  const gap=(n=120)=>p("",{after:n});
+  // navy band with a title and optional italic subtitle
+  const titleCell=(title,sub,o={})=>({c:p(r(title,{b:true,color:"FFFFFF",sz:o.sz||22,...(o.suffix?{}:{})})+(o.suffix?r(" "+o.suffix,{i:true,color:"FFFFFF",sz:16}):""),{keep:true})+
+    (sub?p(r(sub,{i:true,color:"FFFFFF",sz:16}),{keep:true}):""),fill:COC_NAVY,span:o.span||1,padV:90});
+  const band=(title,sub,suffix)=>tbl([W],[{cells:[titleCell(title,sub,{sz:26,suffix})]}]);
+  const L=(t,o={})=>({c:p(r(t,{b:true,sz:18})+(o.sub?r("\n"+o.sub,{i:true,sz:15,color:"595959"}):""),{keep:o.keep}),fill:COC_LABEL,...o});
+  const V=(t,o={})=>({c:typeof t==="string"&&t.startsWith("<w:")?t:p(r(t==null||t===""?"":t,{sz:18,...(o.run||{})})),...o});
+  const hd=(t,o={})=>({c:p(r(t,{b:true,sz:17,color:"FFFFFF"})),fill:COC_NAVY,...o});
+  const pageBreak='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+  const note=t=>p(r(t,{i:true,sz:15,color:"595959"}),{before:40,after:80});
+
+  const {g,rep,marks,students,sem}=ctx;
+  const coded=cocCoded(g);
+  const partA=rep?.partA||{};
+  const chairCd=coded.find(c=>c.isChair);
+  const cands=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+  let body="";
+
+  /* ---- header band with the logo ---- */
+  const logo=cocB64Bytes(COC_LOGO_B64);
+  body+=tbl([1300,W-1300],[{cells:[
+    {c:p(img(logo,0.63,0.63)),fill:COC_NAVY,v:"center",padV:120},
+    {c:p(r("Confirmation of Candidature (CoC) — Panel Examination Report",{b:true,color:"FFFFFF",sz:26}))+
+       p(r("Master of Research| CIHE Australia | www.cihe.edu.au",{color:"FFFFFF",sz:17})),fill:COC_NAVY,v:"center",padV:120}]}],{noBorder:true});
+  body+=gap(160);
+  const ro=researchOfficeEmail(sem)||"research.office@cihe.edu.au";
+  body+=tbl([W],[{cells:[{c:[
+    p(r("How this form is used",{b:true,sz:18})),
+    p(r("One report relates to a single panel and all candidates assessed by that panel. The Panel’s ",{sz:17})+r("Chair",{sz:17,u:true})+
+      r(" completes and signs the report on behalf of the entire panel. Panel members provide their marks and comments to the Chair, who must verify with each member that the information recorded here is accurate before signing.",{sz:17})),
+    p(r("Part A",{b:true,sz:17})+r(": records the panel details. ",{sz:17})+r("Part B",{b:true,sz:17})+r(": sets out the marking guide; ",{sz:17})+
+      r("Part C:",{b:true,sz:17})+r(" contains separate sheets for each candidate, including the seminar date, conflict of interest declaration, assessment marks, feedback and outcome. ",{sz:17})+
+      r("Part D:",{b:true,sz:17})+r(" contains the final sign-off.",{sz:17})),
+    p(r("Note: Please return the completed and signed report to the Research Office at "+ro+" within 4 business days of the panel’s final seminar.",{i:true,u:true,sz:17})),
+    p(r("Generated from the MRes Supervision Hub on "+cocDT(Date.now())+". Panel members recorded and e-signed their own marks and comments in the hub; the Chair’s verification below relies on those signed records.",{i:true,sz:15,color:"595959"}),{before:40})
+  ],fill:"F2F5FA"}]}]);
+  body+=gap(200);
+
+  /* ---- Part A ---- */
+  body+=band("Part A — Panel details",null,"(Completed once by the Panel’s Chair)");
+  body+=gap(100);
+  const cw=[3000,W-3000];
+  body+=tbl(cw,[
+    {cells:[titleCell("A1_ Panel details",null,{span:2})]},
+    {cells:[L("Panel reference / ID"),V(cocT(partA.panelRef)||(g.label||"Panel"))]},
+    {cells:[L("Program"),V("Master of Research")]},
+    {cells:[L("School / discipline"),V(cocT(partA.school)||cocDefaultSchool(g,students))]},
+    {cells:[L("Number of candidates examined in this report"),V(String(cands.length))]},
+    {cells:[L("Panel’s Chair"),V(chairCd?.m?.name||"")]},
+    {cells:[L("Course Coordinator"),V(cocT(partA.coordinator)||cocT(sem?.cocCoordinator))]}]);
+  body+=gap(160);
+  const a2w=[800,2800,3238,2800];
+  body+=tbl(a2w,[
+    {cells:[titleCell("A2_ Panel Composition","This table lists the three members appointed to this panel. Each member is assigned a code (P1, P2, P3), which is used consistently throughout this form. P1 is the Panel Chair and serves in this capacity for all candidates in this report.",{span:4})]},
+    {header:true,cells:[hd("Code"),hd("Name"),hd("Position / organisation"),hd("Email")]},
+    ...coded.map((cd,i)=>({cells:[V(cd.code),V(cd.m.name||""),V(cocPosition(partA,cd)),V(memberEmails(cd.m).join(", "))].map(c=>({...c,fill:i%2?COC_ALT:undefined}))}))]);
+  body+=gap(120);
+  const vars=cocVariations(partA);
+  const vw=[800,2200,2438,2100,2100];
+  body+=tbl(vw,[
+    {cells:[{c:p(r("Approved variations: ",{b:true,sz:17})+r("Complete only where a member was replaced after appointment and approved by the Research Office",{i:true,sz:16})),span:5}]},
+    {header:true,cells:[hd("Code"),hd("Name"),hd("Position / organisation"),hd("Acts in place of"),hd("For candidate no(s).")]},
+    ...vars.map(v=>({cells:[V(v.code),V(v.name),V(v.org),V(v.actsFor),V(v.forCands)]}))]);
+  body+=gap(160);
+  body+=tbl([W],[
+    {cells:[titleCell("A3_ Notes — Panel Chair")]},
+    {cells:[L("Deferrals, non-attendance, changes of panel membership, or any matter affecting the round as a whole")]},
+    {cells:[V(cocT(partA.notes),{padV:100})]}]);
+  body+=pageBreak;
+
+  /* ---- Part B: the marking guide, static ---- */
+  body+=band("Part B — Marking guide");
+  body+=gap(100);
+  body+=tbl([2100,6338,1200],[
+    {cells:[{...titleCell("B1_Assessment domains",null,{span:3}),c:p(r("B1_Assessment domains ",{b:true,color:"FFFFFF",sz:22})+r("(Each panel member awards a mark in every domain)",{i:true,color:"FFFFFF",sz:16}))}]},
+    {header:true,cells:[hd("Domain"),hd("What is being assessed"),hd("Marks")]},
+    ...COC_DOMAINS.map(d=>({cells:[V(d.label),V(d.what,{run:{sz:16}}),V("/ "+d.max,{run:{b:true,sz:22},v:"center"})]})),
+    {cells:[L("Total"),V("Note: If a candidates confirmed after a Major Revision and resubmission, the mark is capped at 50%, i.e. 10/20.",{run:{i:true,sz:16}}),V("/ 20",{run:{b:true,sz:22}})]}]);
+  body+=gap(140);
+  const q=W/4;
+  body+=tbl([q,q,q,W-3*q],[
+    {cells:[titleCell("B2_Mark bands",null,{span:4})]},
+    {cells:["17–20","13–16","10–12","Below 10"].map(t=>hd(t))},
+    {cells:["Excellent","Good","Satisfactory","Not yet satisfactory"].map(t=>V(t))}]);
+  body+=note("The bands describe the standard of the work. They do not by themselves determine the outcome: the Chair decides the outcome under B3, having considered the marks together with the panel’s comments. A total below 10 would not normally support confirmation without conditions, and any departure from that expectation must be explained in Part C of the form (see Panel Chair’s determination table).");
+  body+=gap(60);
+  body+=tbl([900,2700,W-3600],[
+    {cells:[titleCell("B3_CoC outcome",null,{span:3})]},
+    {header:true,cells:[hd("Code"),hd("Recommendation"),hd("Meaning")]},
+    ...COC_OUTCOMES.map(o=>({cells:[V(o.c),V(o.label,{run:{b:true}}),V(o.meaning,{run:{sz:16}})]}))]);
+  body+=gap(140);
+  body+=tbl([600,W-2800,2200],[
+    {cells:[{...titleCell("",null,{span:3}),c:p(r("B4 Pre-seminar requirements ",{b:true,color:"FFFFFF",sz:22})+r("(Recorded for each candidate)",{i:true,color:"FFFFFF",sz:16}))}]},
+    {header:true,cells:[hd("#"),hd("Requirement"),hd("Status")]},
+    ...COC_PREREQ.map(([n,t,s])=>({cells:[V(n),V(t),V(s,{run:{b:s==="Required"}})]}))]);
+  body+=pageBreak;
+
+  /* ---- Part C: one block per candidate ---- */
+  cands.forEach((st,ci)=>{
+    const c=cocCand(rep,g,st,marks,sem);
+    const ag=c._agg;
+    body+=band("Part C — Candidate CoC Assessments","Candidate "+(ci+1)+" of "+cands.length+" — "+(st.name||"")+". One block per candidate. Each block records that candidate’s seminar date, conflict of interest position, marks, feedback and outcome.");
+    body+=gap(100);
+    const c1=[2400,4600,W-7000];
+    const yn=(v)=>r("In attendance?  ",{sz:17})+box(v==="Y","Y",{sz:17})+r("   ",{sz:17})+box(v==="N","N",{sz:17});
+    const pre=c.pre||{}, pna=c.preNA||{};
+    body+=tbl(c1,[
+      {cells:[titleCell("C1.1 Candidate and Seminar details",null,{span:3})]},
+      {cells:[L("Candidate name"),V(st.name||"",{span:2})]},
+      {cells:[L("Student ID"),V(st.sid||"",{span:2})]},
+      {cells:[L("Thesis / research title"),V(c._title,{span:2})]},
+      {cells:[L("Principal Supervisor"),V(c._principal),{c:p(yn(c.priAtt))}]},
+      {cells:[L("Associate Supervisor(s)"),V(c._co||"—"),{c:p(c._co?yn(c.coAtt):r("Not applicable",{sz:17,i:true}))}]},
+      {cells:[L("Commencement date"),V(c.commencement?longDate(c.commencement):"",{span:2})]},
+      {cells:[L("Seminar date"),V(c._seminarDate?longDate(c._seminarDate):"",{span:2})]},
+      {cells:[L("Seminar time and mode"),{span:2,c:p(r((c._time||"__________")+"      ",{sz:17})+COC_MODES.map(m=>box(c._mode===m,m,{sz:17})).join(r("   ",{sz:17})))}]},
+      {cells:[L("Pre-seminar requirements (B4)"),{span:2,c:p(r("Received / completed:  ",{sz:17})+["1","2","3","4","5"].map(n=>box(!!pre[n],n,{sz:17})).join(r("  ",{sz:17})))+
+        p(r("Not applicable:  ",{sz:17})+["3","4"].map(n=>box(!!pna[n],n,{sz:17})).join(r("  ",{sz:17})))}]}]);
+    body+=gap(140);
+    const coiLines=ag.declared.map(rw=>rw.code+" ("+rw.name+"): "+cocT(rw.c.coiDetail)+(rw.withdrew?" — withdrew from assessing this candidate.":""));
+    body+=tbl([4400,W-4400],[
+      {cells:[titleCell("C1.2 Conflict of interest — this candidate","Declared by the whole panel. The Chair confirms the position of every member.",{span:2})]},
+      {cells:[L("All panel members have declared no actual, potential or perceived conflict of interest in relation to this candidate."),
+        {c:p(box(ag.allAnsweredCoi&&!ag.anyCoi,"Yes — no conflict declared by any member of the panel.",{sz:17}))+
+           p(box(ag.anyCoi,"No — one or more members declared an interest. Complete the row below.",{sz:17}))}]},
+      {cells:[L("If No: which member(s) by code, the nature of the interest, and how it was managed"),
+        V(ag.anyCoi?(coiLines.join("\n")+(cocT(c.coiManaged)?"\nManaged: "+cocT(c.coiManaged):"")):"")]}]);
+    body+=note("A declared interest does not by itself invalidate the assessment. Record here how it was managed — for example, the member withdrew from the assessment of this candidate, or the Course Coordinator approved their continued participation.");
+    const mw=[700,2338,1300,1100,1200,1000,2000];
+    body+=tbl(mw,[
+      {cells:[titleCell("C1.3 Panel marks","Recorded by each panel member in the Supervision Hub. Domains and mark bands are defined in Part B.",{span:7})]},
+      {header:true,cells:[hd("Code"),hd("Panel member name"),hd("Research quality /10"),hd("Feasibility /5"),hd("Presentation /5"),hd("Total /20"),hd("Recommended outcome code (refer to B3)")]},
+      ...ag.rows.map((rw,i)=>({cells:[V(rw.code),V(rw.name+(rw.md?.onBehalf?"\n(entered by the Chair on their behalf)":""),{run:{sz:17}}),
+        ...(rw.withdrew?[{c:p(r("Withdrew — conflict of interest",{i:true,sz:16})),span:4}]
+          :[V(cocFmt(rw.rq)),V(cocFmt(rw.fe)),V(cocFmt(rw.pr)),V(cocFmt(rw.total),{run:{b:true}})]),
+        V(rw.rec?(cocOutcome(rw.rec)?.c||rw.rec):"")].map(cl=>({...cl,fill:i%2?COC_ALT:undefined}))})),
+      {cells:[L("Panel average (total ÷ "+(ag.n||3)+")",{span:2}),V(cocFmt(ag.avg.rq)),V(cocFmt(ag.avg.fe)),V(cocFmt(ag.avg.pr)),V(cocFmt(ag.avg.total),{run:{b:true}}),
+        V(ag.majority?"Majority: "+ag.majority:"")]}]);
+    body+=note("Round the panel average to one decimal place. The Chair determines the final mark in C1.6 and must record a reason where it differs from this average.");
+    const fw=[3000,W-3000];
+    body+=tbl(fw,[
+      {cells:[titleCell("C1.4 Panel feedback to the candidate","Consolidated by the Chair from the comments of all panel members.",{span:2})]},
+      ...COC_FB.map(([k,lab])=>({cells:[L(lab),V(cocT(c.fb[k]),{padV:90})]}))]);
+    body+=gap(140);
+    body+=tbl([6200,W-6200],[
+      {cells:[titleCell("C1.5 Items to note",null,{span:2})]},
+      ...COC_ITEMS.map(([k,lab])=>({cells:[L(lab),{c:p(box(c.notes[k]==="Y","Yes",{sz:17})+r("        ",{sz:17})+box(c.notes[k]==="N","No",{sz:17}))}]}))]);
+    body+=gap(140);
+    const det=c.det||{};
+    const reasonTxt=c._differs&&cocT(det.reason)?"\nReason the final mark differs from the panel average ("+cocFmt(ag.avg.total)+"): "+cocT(det.reason):"";
+    body+=tbl([3000,W-3000],[
+      {cells:[titleCell("C1.6 Panel Chair’s determination","The Chair decides the outcome having considered the marks and comments of all panel members.",{span:2})]},
+      {cells:[L("Final mark determined / 20"),V((c._final==null?"":cocFmt(c._final))+(det.resub?"  (re-submission — capped at 10/20)":"")+reasonTxt)]},
+      {cells:[L("Candidature Outcome"),{c:COC_OUTCOMES.map(o=>p(box(c._outcome===o.c,o.long,{sz:17}))).join("")}]},
+      {cells:[L("Conditions, Revisions or actions required by Candidate",{sub:"Attach additional documents if required"}),V(cocT(det.conditions),{padV:90})]},
+      {cells:[L("Revisions due by (refer to B3)"),V((c._outcome==="CMR"||c._outcome==="MRR")&&c._dueBy?longDate(c._dueBy):"")]},
+      {cells:[L("Re-Presentation required?"),{c:p(box(det.represent==="Y","Yes",{sz:17})+r("       ",{sz:17})+box(det.represent==="N","No",{sz:17}))}]},
+      {cells:[L("Chair verification"),{c:p(box(!!rep?.chairSign?.img,"I have verified the marks and comments recorded above with each panel member, and confirm they accurately reflect the panel’s assessment of this candidate.",{sz:17,b:true}))}]}]);
+    body+=p(r("Panel Chair",{b:true,sz:18}),{before:140,after:60,keep:true});
+    const s3=[3212,3213,W-6425];
+    const cs=rep?.chairSign;
+    body+=tbl(s3,[
+      {header:true,cells:[L("Name"),L("Signature"),L("Date")]},
+      {cells:[V(cs?.name||chairCd?.m?.name||""),{c:p(cs?sigImg(cs):""),v:"center"},V(cs?cocDay(cs.at):"")]}]);
+    body+=pageBreak;
+  });
+
+  /* ---- Part D ---- */
+  body+=band("Part D — Sign-off","Completed once for the whole report.");
+  body+=gap(100);
+  /* Not on the paper form: each member's own e-signature over their
+     marks and comments, which is what the Chair's verification now rests on. */
+  body+=tbl([800,2600,2600,W-6000],[
+    {cells:[titleCell("Panel members’ confirmation","Each member recorded and signed their own marks, recommendations, conflict of interest declarations and comments in the Supervision Hub.",{span:4})]},
+    {header:true,cells:[hd("Code"),hd("Name"),hd("Signature"),hd("Date")]},
+    ...coded.map((cd,i)=>{ const md=marks[cd.key]||{};
+      const sg=md.submitted?(md.sign||null):null;
+      return {cells:[V(cd.code),V(cd.m.name||""),
+        {c:p(sg?sigImg(sg,1.4,0.38):(md.submitted&&md.onBehalf?r("Entered by the Chair on the member’s behalf — confirmed "+cocT(md.onBehalf.how||"by email"),{i:true,sz:15}):r(md.submitted?"":"Not submitted",{i:true,sz:16,color:"808080"}))),v:"center"},
+        V(md.submitted?cocDay(md.submittedAt):"")].map(cl=>({...cl,fill:i%2?COC_ALT:undefined}))}; })]);
+  body+=gap(160);
+  body+=tbl([W],[
+    {cells:[titleCell("D1 Panel Chair declaration")]},
+    {cells:[{c:[p(r("As a Panel Chair, I confirm that:",{b:true,sz:18})),
+      p(r("•  I have completed this report and verified all marks, comments and determinations with the panel members.",{sz:17})),
+      p(r("•  Each candidate was assessed by three panel members.",{sz:17})),
+      p(r("•  The conflict of interest recorded for each candidate is accurate, and any declared interest was managed as recorded.",{sz:17}))]}]}]);
+  body+=tbl([3212,3213,W-6425],[
+    {cells:[L("Name"),L("Signature"),L("Date")]},
+    {cells:[V(cs0(rep)?.name||chairCd?.m?.name||""),{c:p(cs0(rep)?sigImg(cs0(rep)):""),v:"center"},V(cs0(rep)?cocDay(cs0(rep).at):"")]}]);
+  body+=note("Return the completed and signed off report to the Research Office at "+ro+" within 4 business days of the panel’s final seminar. The Research Office records the outcomes and advises each candidate and their Principal Supervisor, normally within 5 business days.");
+  body+=gap(100);
+  const of=rep?.office||{}, chk=of.chk||{};
+  body+=tbl([3000,W-3000],[
+    {cells:[titleCell("D2 Research Office — office use",null,{span:2})]},
+    {cells:[L("Date report received"),V(of.receivedDate?longDate(of.receivedDate):"")]},
+    {cells:[L("Received by"),V(cocT(of.receivedBy))]},
+    {cells:[L("Processing checklist"),{c:[
+      p(box(chk.a,COC_OFFICE_CHK[0][1],{sz:17})),p(box(chk.b,COC_OFFICE_CHK[1][1],{sz:17})),p(box(chk.c,COC_OFFICE_CHK[2][1],{sz:17})),
+      p(box(chk.d,"Candidates and supervisors advised, Date: "+(of.advisedDate?longDate(of.advisedDate):"______________________"),{sz:17})),
+      p(r("Ethics or permit matters referred  ",{sz:17})+box(of.ethicsRef==="Y","Yes",{sz:17})+r("    ",{sz:17})+box(of.ethicsRef==="N","No",{sz:17})+r("    ",{sz:17})+box(of.ethicsRef==="NA","N/A",{sz:17})),
+      p(box(chk.f,COC_OFFICE_CHK[4][1],{sz:17}))]}]},
+    {cells:[L("Notes"),V(cocT(of.notes),{padV:90})]}]);
+  body+=p(r("Course Coordinator / Research Office",{b:true,sz:18}),{before:140,after:60,keep:true});
+  const os=of.sign;
+  body+=tbl([3212,3213,W-6425],[
+    {cells:[L("Name"),L("Signature"),L("Date")]},
+    {cells:[V(os?.name||""),{c:p(os?sigImg(os):""),v:"center"},V(os?cocDay(os.at):"")]}]);
+
+  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '+
+    'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '+
+    'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const P='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const doc=P+'<w:document '+NS+'><w:body>'+body+p("")+
+    '<w:sectPr><w:footerReference w:type="default" r:id="rIdFooter"/><w:pgSz w:w="11906" w:h="16838"/>'+
+    '<w:pgMar w:top="720" w:right="1134" w:bottom="720" w:left="1134" w:header="708" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  const fld=code=>'<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:instrText xml:space="preserve"> '+code+' </w:instrText></w:r>'+
+    '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:t>1</w:t></w:r>'+
+    '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>';
+  const fr=t=>'<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:t xml:space="preserve">'+X(t)+'</w:t></w:r>';
+  const footer=P+'<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/></w:pPr>'+
+    fr("CRICOS Provider No. 03744B   |   CoC Panel Examination Report — "+(g.label||"Panel")+"   |   Page ")+fld("PAGE")+fr(" of ")+fld("NUMPAGES")+'</w:p></w:ftr>';
+  const styles=P+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault>'+
+    '<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+    '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'+
+    '</w:styles>';
+  const settings=P+'<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>';
+  const RELNS="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const docRels=P+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rIdStyles" Type="'+RELNS+'/styles" Target="styles.xml"/>'+
+    '<Relationship Id="rIdSettings" Type="'+RELNS+'/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rIdFooter" Type="'+RELNS+'/footer" Target="footer1.xml"/>'+
+    media.map(m=>'<Relationship Id="'+m.rid+'" Type="'+RELNS+'/image" Target="media/'+m.name+'"/>').join("")+'</Relationships>';
+  const ct=P+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>';
+  const rootRels=P+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="'+RELNS+'/officeDocument" Target="word/document.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>';
+  const iso=new Date().toISOString().replace(/\.\d+Z$/,"Z");
+  const core=P+'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'+
+    '<dc:title>'+X("CoC Panel Examination Report — "+(g.label||"Panel"))+'</dc:title><dc:creator>MRes Supervision Hub</dc:creator>'+
+    '<dcterms:created xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:modified></cp:coreProperties>';
+  const enc=new TextEncoder(), U=s=>enc.encode(s);
+  const files=[
+    {name:"[Content_Types].xml",data:U(ct)},{name:"_rels/.rels",data:U(rootRels)},
+    {name:"docProps/core.xml",data:U(core)},
+    {name:"word/document.xml",data:U(doc)},{name:"word/_rels/document.xml.rels",data:U(docRels)},
+    {name:"word/styles.xml",data:U(styles)},{name:"word/settings.xml",data:U(settings)},
+    {name:"word/footer1.xml",data:U(footer)},
+    ...media.map(m=>({name:"word/media/"+m.name,data:m.bytes}))];
+  return zipStore(files,"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+const cs0=rep=>rep?.chairSign||null;
+function cocPosition(partA,cd){
+  const t=cocT(partA?.positions?.[cd.key]);
+  if(t) return t;
+  const emp=memberEmployment(cd.m);
+  return [cd.m.org||(cd.m.kind==="external"?"External":"CIHE"),emp].filter(Boolean).join(" · ");
+}
+function cocVariations(partA){
+  const v=Array.isArray(partA?.variations)?partA.variations:[];
+  return ["P4","P5"].map((code,i)=>({code,name:"",org:"",actsFor:"",forCands:"",...(v[i]||{}),code}));
+}
+function cocDefaultSchool(g,students){
+  const areas=groupStudents(g).map(id=>students.find(s=>s.id===id)?.area).filter(Boolean);
+  const top=[...new Set(areas)];
+  if(top.length===1){ const hit=COC_SCHOOLS.find(s=>s.toLowerCase()===String(top[0]).toLowerCase()); return hit||top[0]; }
+  return top.join(" / ");
+}
+function cocFileName(g,sem){
+  return ("CoC_Panel_Report_"+(g.label||"Panel")+"_"+(sem?.label||"")).replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").replace(/_$/,"")+".docx";
+}
+async function cocDownload(g,sem,students,rep,marks){
+  try{
+    const r0=rep||await cocGetReport(g.id), m0=marks||await cocGetMarks(g);
+    const blob=cocDocxBuild({g,rep:r0,marks:m0,students,sem});
+    saveBlob(blob,cocFileName(g,sem));
+    toast("Word form downloaded.");
+  }catch(e){ console.error(e); toast("Couldn't build the Word form: "+(e?.message||e),true); }
+}
+
+/* ---- small form controls bound to a model ------------------------------ */
+function cocYN(cur,onPick,opts={}){
+  const vals=opts.vals||[["Y","Yes"],["N","No"]];
+  const w=el("div",{class:"coc-yn"+(opts.ro?" ro":"")});
+  vals.forEach(([v,l])=>w.append(el("button",{type:"button",class:cur===v?"on":"",disabled:opts.ro?"disabled":null,
+    onclick:()=>{ if(opts.ro) return; onPick(cur===v&&opts.toggle?"":v); }},l)));
+  return w;
+}
+function cocArea(val,onIn,opts={}){
+  const t=el("textarea",{rows:String(opts.rows||3),placeholder:opts.ph||"",...(opts.ro?{readonly:"readonly"}:{})});
+  t.value=val||"";
+  t.addEventListener("input",()=>onIn(t.value));
+  return t;
+}
+function cocInput(val,onIn,opts={}){
+  const i=el("input",{type:opts.type||"text",placeholder:opts.ph||"",...(opts.attrs||{}),...(opts.ro?{readonly:"readonly",disabled:"disabled"}:{})});
+  i.value=val==null?"":val;
+  i.addEventListener(opts.onChange?"change":"input",()=>onIn(i.value));
+  return i;
+}
+function cocCheck(on,label,onT,opts={}){
+  const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(on?{checked:"checked"}:{}),...(opts.ro?{disabled:"disabled"}:{})});
+  cb.addEventListener("change",()=>onT(cb.checked));
+  return el("label",{class:"coc-chk"},cb,el("span",{},label));
+}
+const cocKV=(...pairs)=>{ const k=el("div",{class:"coc-kv"}); pairs.forEach(([a,b])=>k.append(el("div",{class:"k"},a),el("div",{},b))); return k; };
+const cocSec=(title,sub,...kids)=>el("div",{class:"coc-sec"},el("h4",{},title,sub?el("span",{class:"s"}," · "+sub):""),...kids);
+function cocSaveState(){
+  const n=el("span",{class:"coc-saved muted ui"},"");
+  return {node:n,set(t,err){ n.textContent=t; n.classList.toggle("err",!!err); }};
+}
+function cocBandHead(g,rep,sub,right){
+  return el("div",{class:"coc-band ui"},
+    el("img",{src:COC_LOGO_SRC,alt:"CIHE"}),
+    el("div",{style:"min-width:0;flex:1"},
+      el("div",{class:"t"},"CoC Panel Examination Report"),
+      el("div",{class:"n"},g.label||"Panel"),
+      sub?el("div",{class:"s"},sub):""),
+    right||"");
+}
+
+/* ============================================================
+   A MEMBER'S MARK SHEET — one card per candidate
+   mode "self": the signed-in member marking for themselves.
+   mode "behalf": the Chair or office entering an assessor's marks
+   (an external with no login, say), confirmed with them another way.
+   ============================================================ */
+function cocMemberSheet(host,o){
+  const {g,rep,students,cd}=o;
+  let md=JSON.parse(JSON.stringify(o.md||{}));
+  md.cand=md.cand||{};
+  const cands=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+  const approved=rep?.status==="approved"||rep?.status==="received";
+  const canEdit=()=>!md.submitted&&!approved&&(o.mode==="behalf"||cocOpen(rep));
+  const ss=cocSaveState();
+  const save=cocDebounce(async()=>{
+    ss.set("Saving…");
+    try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{cand:md.cand,updatedAt:Date.now()}); ss.set("✓ Saved "+clockTime(pad2(new Date().getHours())+":"+pad2(new Date().getMinutes()))); }
+    catch(e){ console.error(e); ss.set("Not saved — "+(e?.message||"check your connection"),true); }
+  },800);
+  const pills=new Map();
+  function paintPill(sid){
+    const p=pills.get(sid); if(!p) return;
+    const miss=cocMemberMissing(md.cand[sid]);
+    p.className="pill "+(miss.length?"pending":"approved");
+    p.textContent=miss.length?miss.length+" to complete":"Complete";
+    p.title=miss.length?"Still needed: "+miss.join(", "):"";
+    paintBar();
+  }
+  let bar=null;
+  function paintBar(){
+    if(!bar) return;
+    const done=cands.filter(s=>cocMemberDone(md.cand[s.id])).length;
+    bar.querySelector(".cnt").textContent=done+" of "+cands.length+" candidates complete";
+    const b=bar.querySelector(".go"); if(b) b.disabled=!(done===cands.length&&cands.length);
+  }
+  function card(st){
+    const c=md.cand[st.id]=md.cand[st.id]||{};
+    const ro=!canEdit();
+    const pill=el("span",{class:"pill"}); pills.set(st.id,pill);
+    const box=cardShell(st.name+(st.sid?"  ·  "+st.sid:""),pill,"main");
+    const sl=slotOfStudent(g,st.id), day=sl?slotDate(g,sl):"";
+    const body=el("div",{});
+    body.append(el("div",{class:"coc-sec",style:"border-top:none"},
+      cocKV(["Research title",titleOf(st)||el("span",{class:"muted"},"No title on record")],
+            ["Seminar",day?prettyDate(day)+(sl?", "+clockRange(sl.start,sl.end):""):"Not scheduled"],
+            ["Supervisors",[st.principalName||supName(st.principalUid),st.coName].filter(Boolean).join(" · ")||"—"])));
+    // conflict of interest
+    const coiBox=el("div",{});
+    const drawCoi=()=>{
+      coiBox.replaceChildren(
+        cocYN(c.coi||"",v=>{ c.coi=v; if(v!=="declared"){ c.withdrew=false; } save(); drawCoi(); drawMarks(); paintPill(st.id); },
+          {vals:[["none","No conflict of interest"],["declared","I have an interest to declare"]],ro}));
+      if(c.coi==="declared"){
+        coiBox.append(el("label",{style:"margin-top:10px"},"Nature of the interest"),
+          cocArea(c.coiDetail,v=>{ c.coiDetail=v; save(); paintPill(st.id); },{ro,rows:2,ph:"e.g. I co-authored a paper with the candidate in 2025."}),
+          el("div",{style:"margin-top:8px"},cocCheck(!!c.withdrew,"I withdrew from assessing this candidate (no marks from me)",v=>{ c.withdrew=v; save(); drawMarks(); paintPill(st.id); },{ro})));
+      }
+    };
+    drawCoi();
+    body.append(cocSec("Conflict of interest","actual, potential or perceived",coiBox));
+    // marks
+    const marksBox=el("div",{});
+    const drawMarks=()=>{
+      marksBox.replaceChildren();
+      if(c.coi==="declared"&&c.withdrew){ marksBox.append(el("p",{class:"muted",style:"margin:0"},"You withdrew from assessing this candidate, so no marks or outcome are recorded from you.")); return; }
+      const tot=el("div",{class:"coc-total"});
+      const paintTot=()=>{ const t=cocTotal(c); tot.replaceChildren(el("div",{class:"v"},t==null?"—":cocFmt(t),el("small",{}," / 20")),el("div",{class:"l"},t==null?"Total":cocBand(t))); };
+      const grid=el("div",{class:"coc-marks"});
+      COC_DOMAINS.forEach(d=>{
+        const inp=cocInput(c[d.k]??"",v=>{
+          const n=cocNum(v); c[d.k]=v===""?"":n;
+          inp.classList.toggle("bad",n!=null&&(n<0||n>d.max));
+          save(); paintTot(); paintPill(st.id);
+        },{type:"number",ro,attrs:{min:"0",max:String(d.max),step:"0.5",inputmode:"decimal"}});
+        grid.append(el("div",{class:"coc-mk",title:d.what},el("label",{},d.short+" /"+d.max),inp));
+      });
+      paintTot(); grid.append(tot);
+      const rec=el("select",{...(ro?{disabled:"disabled"}:{})});
+      rec.append(el("option",{value:""},"Choose an outcome…"));
+      COC_OUTCOMES.forEach(x=>rec.append(el("option",{value:x.c,...(c.rec===x.c?{selected:"selected"}:{})},x.c+" — "+x.label)));
+      rec.addEventListener("change",()=>{ c.rec=rec.value; save(); paintPill(st.id); });
+      marksBox.append(grid,el("div",{style:"margin-top:12px;max-width:460px"},el("label",{},"Recommended outcome (B3)"),rec));
+      marksBox.append(el("details",{class:"coc-guide"},el("summary",{},"Marking guide (Part B)"),
+        el("div",{},...COC_DOMAINS.map(d=>el("p",{},el("strong",{},d.label+" /"+d.max+": "),d.what)),
+          el("p",{},el("strong",{},"Bands: "),"17–20 Excellent · 13–16 Good · 10–12 Satisfactory · below 10 Not yet satisfactory. A total below 10 would not normally support confirmation without conditions."))));
+    };
+    drawMarks();
+    body.append(cocSec("Marks and recommendation",null,marksBox));
+    // comments
+    const cm=el("div",{class:"grid",style:"gap:10px"});
+    [["strengths","Strengths of the proposal and presentation",true],["concerns","Concerns, weaknesses or gaps identified",true],
+     ["improvements","Improvements required",false],["dissent","Anything else for the Chair (e.g. a view you expect to differ from the panel's)",false]]
+      .forEach(([k,l,req])=>cm.append(el("div",{},el("label",{},l+(req?"":" (optional)")),
+        cocArea(c[k],v=>{ c[k]=v; save(); paintPill(st.id); },{ro,rows:3}))));
+    body.append(cocSec("Comments for the Chair","used to draft the panel feedback",cm));
+    box.append(body);
+    return box;
+  }
+  function draw(){
+    host.replaceChildren();
+    const w=cocWin(rep);
+    if(md.submitted){
+      host.append(noticeBar("green",
+        (o.mode==="behalf"?"Entered on "+(cd.m.name||"the member")+"’s behalf and submitted ":"You submitted your marks and comments ")+cocDT(md.submittedAt)+"."+
+        (approved?" The Chair has approved the report, so it is locked.":" The Chair can now see them."),
+        md.sign?el("img",{src:md.sign.img,class:"coc-sig",alt:"Signature"}):"",
+        o.mode==="self"&&(o.chairEmails||[]).length&&!approved?emailButton(o.chairEmails,"CoC marks submitted \u2014 "+(g.label||"panel"),
+          "Dear "+(o.chairName||"Chair")+",\n\nI have submitted my marks and comments for "+(g.label||"our CoC panel")+" in the MRes Supervision Hub.\n\nKind regards,\n"+(S.userName||""),"\u2709 Let the Chair know","btn sm ghost"):"",
+        (!approved&&(o.mode==="behalf"||w.state==="open"))?el("button",{class:"btn sm ghost",onclick:async()=>{
+          if(!window.confirm("Withdraw this submission so it can be changed? It will need to be signed and submitted again.")) return;
+          try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:Date.now()}); }
+          catch(e){ toast(e?.message||"Could not update.",true); return; }
+          md.submitted=false; md.sign=null; md.onBehalf=null; toast("Submission withdrawn — you can edit again."); draw();
+        }},"✎ Withdraw to edit"):""));
+    }else if(!canEdit()&&!approved){
+      host.append(noticeBar(w.state==="closed"?"clay":"blue",
+        w.state==="closed"?"Marking for this panel closed "+cocDT(rep.window.closesAt)+". Ask the MRes office to reopen it if you still need to submit."
+        :w.state==="scheduled"?"Marking opens "+cocDT(rep.window.opensAt)+". You can read the candidates below until then."
+        :"The MRes office hasn't opened marking for this panel yet."));
+    }else if(o.mode==="behalf"){
+      host.append(noticeBar("amber","You are entering "+cd.code+" "+(cd.m.name||"")+"’s marks and comments on their behalf. Record how you confirmed them before submitting."));
+    }
+    cands.forEach(st=>{ host.append(card(st)); paintPill(st.id); });
+    if(!cands.length) host.append(emptyState("No candidates on this panel","The coordinator hasn't seated any students on it yet."));
+    if(canEdit()&&cands.length){
+      bar=el("div",{class:"coc-bar ui"},
+        el("span",{class:"cnt"},""),ss.node,el("span",{style:"flex:1"}),
+        el("button",{class:"btn go",onclick:submit},o.mode==="behalf"?"✓ Submit on their behalf":"✓ Sign & submit to the Chair"));
+      host.append(bar); paintBar();
+    }else bar=null;
+  }
+  async function submit(){
+    await save.flush();
+    const bad=cands.filter(s=>!cocMemberDone(md.cand[s.id]));
+    if(bad.length){ toast("Still to complete: "+bad.map(s=>s.name).join(", "),true); return; }
+    let patch;
+    if(o.mode==="behalf"){
+      const how=el("input",{placeholder:"e.g. by email on "+longDate(ymdOf(new Date()))});
+      const ok=await new Promise(res=>{ modal("Submit on "+(cd.m.name||"their")+"’s behalf",
+        el("div",{},el("p",{class:"muted",style:"margin:0 0 10px"},"How did you confirm these marks and comments with "+(cd.m.name||"the member")+"? This is printed on the report."),how),
+        async()=>{ if(!cocT(how.value)){ toast("Say how they were confirmed.",true); return false; } res(true); return true; },"Submit");
+        const bg=[...document.querySelectorAll(".modal-bg")].pop();
+        const ob=new MutationObserver(()=>{ if(!bg.isConnected){ ob.disconnect(); res(false); } }); ob.observe(document.body,{childList:true}); });
+      if(!ok) return;
+      patch={submitted:true,submittedAt:Date.now(),sign:null,onBehalf:{by:S.uid||"",byName:S.userName||"",how:cocT(how.value),at:Date.now()}};
+    }else{
+      const sig=await cocSignDialog({title:"Sign and submit your assessment",name:S.userName||cd.m.name||"",
+        intro:"Your marks, outcome recommendations, conflict of interest declarations and comments for "+cands.length+" candidate"+(cands.length===1?"":"s")+" go to the Panel Chair, who uses them to complete the report.",
+        declaration:"I confirm these are my own independent marks and comments, and that my conflict of interest declarations for each candidate are accurate and complete.",
+        saveLabel:"Sign & submit"});
+      if(!sig) return;
+      patch={submitted:true,submittedAt:Date.now(),sign:sig,onBehalf:null};
+    }
+    try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{...patch,cand:md.cand,updatedAt:Date.now()}); }
+    catch(e){ toast(e?.message||"Could not submit.",true); return; }
+    Object.assign(md,patch);
+    toast("Submitted. Thank you.");
+    if(o.onSubmitted) o.onSubmitted(md);
+    draw();
+  }
+  draw();
+  return {flush:()=>save.flush()};
+}
+
+/* ============================================================
+   THE REPORT — Chair's editor (also the office's, with more powers)
+   ============================================================ */
+function cocReportEditor(host,o){
+  const {g,students,sem}=o;
+  const role=o.role; // "chair" | "admin"
+  let rep=JSON.parse(JSON.stringify(o.rep||{}));
+  let marks=o.marks||{};
+  rep.partA=rep.partA||{}; rep.cand=rep.cand||{};
+  const coded=cocCoded(g);
+  const cands=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+  const locked=()=>rep.status==="approved"||rep.status==="received";
+  const ro=()=>locked();
+  const ss=cocSaveState();
+  const save=cocDebounce(async()=>{
+    ss.set("Saving…");
+    try{ await DB.set("cocReports",g.id,{partA:rep.partA,cand:rep.cand,updatedAt:Date.now()}); ss.set("✓ Saved"); paintD(); }
+    catch(e){ console.error(e); ss.set("Not saved — "+(e?.message||"check your connection"),true); }
+  },900);
+  const candOf=sid=>{ const c=rep.cand[sid]=rep.cand[sid]||{}; c.fb=c.fb||{}; c.notes=c.notes||{}; c.det=c.det||{}; c.pre=c.pre||{}; c.preNA=c.preNA||{}; return c; };
+  const openState=S.cocOpenCands=S.cocOpenCands||{};
+  let behalf=null; // cd being entered on behalf
+
+  async function refreshMarks(){ marks=await cocGetMarks(g); }
+
+  function draw(){
+    host.replaceChildren();
+    if(behalf){ drawBehalf(); return; }
+    const st=cocStatus(g,rep,marks);
+    const pd=panelReportDue(g,sem);
+    if(!o.noBand) host.append(cocBandHead(g,rep,
+      [coded.find(c=>c.isChair)?"Chair: "+coded.find(c=>c.isChair).m.name:"No chair set",cands.length+" candidate"+(cands.length===1?"":"s"),
+       pd.date?"Report due "+prettyDate(pd.date):""].filter(Boolean).join("  ·  "),
+      el("span",{class:"pill "+st.cls},st.txt)));
+    if(role==="chair"&&!locked()) host.append(noticeBar("blue",
+      "Everything the panel members entered is already in this report. Review each candidate, adjust the feedback and determination where needed, then sign once at the bottom to approve. Changes save as you go."));
+    drawMembers();
+    drawPartA();
+    cands.forEach((s,i)=>drawCand(s,i));
+    drawPartD();
+    if(role==="admin") drawOffice();
+    if(!locked()) host.append(el("div",{class:"coc-bar ui"},el("span",{class:"muted"},"Changes save automatically."),ss.node));
+  }
+
+  function drawMembers(){
+    const c=cardShell("Panel members' mark sheets",el("span",{class:"muted ui"},
+      coded.filter(cd=>marks[cd.key]?.submitted).length+" of "+coded.length+" submitted"),"info");
+    const t=el("table",{});
+    t.append(el("thead",{},el("tr",{},...["Code","Member","Mark sheet","Signed",""].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    const outstanding=[];
+    coded.forEach(cd=>{
+      const md=marks[cd.key];
+      const started=md&&Object.keys(md.cand||{}).length;
+      const stp=md?.submitted?el("span",{class:"pill approved"},"Submitted "+cocDay(md.submittedAt))
+        :started?el("span",{class:"pill pending"},"In progress"):el("span",{class:"pill none"},"Not started");
+      if(!md?.submitted) outstanding.push(cd);
+      const acts=el("div",{class:"row",style:"gap:5px"});
+      if(!md?.submitted){
+        acts.append(emailButton(memberEmails(cd.m),"CoC examination report — "+(g.label||"panel")+": your marks",
+          "Dear "+(cd.m.name||"")+",\n\nCould you please enter your marks and comments for the "+(g.label||"CoC panel")+" candidates in the MRes Supervision Hub (CoC assessment tab) and sign and submit them?\n\n"+
+          (cocWin(rep).state==="open"&&rep.window?.closesAt?"Marking closes "+cocDT(rep.window.closesAt)+".\n\n":"")+"Thank you,\n"+(S.userName||""),"✉ Remind"));
+        if(!locked()&&(role==="admin"||!cd.uid)) acts.append(el("button",{class:"btn xs ghost",
+          title:cd.uid?"Enter this member's marks for them":"This assessor has no hub login — enter their marks for them",
+          onclick:()=>{ behalf=cd; draw(); }},"✎ Enter for them"));
+      }else if(role==="admin"&&!locked()){
+        acts.append(el("button",{class:"btn xs ghost",onclick:async()=>{
+          if(!window.confirm("Unlock "+(cd.m.name||"this member")+"'s submitted sheet so it can be changed? They will need to sign again.")) return;
+          try{ await DB.set("cocMarks",cocMarkId(g.id,cd.key),{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:Date.now()}); await refreshMarks(); }
+          catch(e){ toast(e?.message||"Could not unlock.",true); return; }
+          toast("Unlocked."); draw();
+        }},"Unlock"));
+      }
+      tb.append(el("tr",{},
+        el("td",{},el("strong",{},cd.code)),
+        el("td",{},cd.m.name||"—",cd.isChair?el("span",{class:"pill blue",style:"margin-left:6px"},"Chair"):"",
+          !cd.uid?el("div",{class:"muted ui",style:"font-size:12px"},"No hub login"):""),
+        el("td",{},stp),
+        el("td",{},md?.submitted?(md.sign?el("img",{src:md.sign.img,class:"coc-sig sm",alt:"Signature"})
+          :el("span",{class:"muted ui",style:"font-size:12.5px"},md.onBehalf?"Entered by "+(md.onBehalf.byName||"the Chair")+" — confirmed "+md.onBehalf.how:"")):el("span",{class:"muted"},"—")),
+        el("td",{},acts)));
+    });
+    t.append(tb); c.append(t);
+    if(outstanding.length>1) c.append(el("div",{class:"row",style:"padding:10px 16px;border-top:1px solid var(--line)"},
+      el("span",{class:"muted ui",style:"flex:1"},outstanding.length+" members still to submit."),
+      emailButton(outstanding.flatMap(cd=>memberEmails(cd.m)),"CoC examination report — "+(g.label||"panel")+": marks needed",
+        "Dear colleagues,\n\nCould you please enter your marks and comments for the "+(g.label||"CoC panel")+" candidates in the MRes Supervision Hub (CoC assessment tab), then sign and submit them?\n\nThank you,\n"+(S.userName||""),"✉ Remind all","btn sm ghost")));
+    host.append(c);
+  }
+
+  function drawBehalf(){
+    host.append(el("div",{class:"row",style:"margin-bottom:12px"},
+      el("button",{class:"btn ghost sm",onclick:async()=>{ await sheet.flush(); behalf=null; await refreshMarks(); draw(); }},"← Back to the report"),
+      el("strong",{class:"ui"},behalf.code+" · "+(behalf.m.name||""))));
+    const box=el("div",{}); host.append(box);
+    const sheet=cocMemberSheet(box,{g,rep,students,cd:behalf,md:marks[behalf.key]||{},mode:"behalf",
+      onSubmitted:async()=>{ await refreshMarks(); }});
+  }
+
+  function drawPartA(){
+    const A=rep.partA; A.positions=A.positions||{};
+    const R=ro();
+    const c=cardShell("Part A — Panel details",el("span",{class:"muted ui"},"Filled in from the panel record"),"main");
+    const sch=el("select",{...(R?{disabled:"disabled"}:{})});
+    const defSchool=cocDefaultSchool(g,students);
+    [...new Set([...COC_SCHOOLS,defSchool].filter(Boolean))].forEach(x=>sch.append(el("option",{value:x,...((cocT(A.school)||defSchool)===x?{selected:"selected"}:{})},x)));
+    sch.addEventListener("change",()=>{ A.school=sch.value; save(); });
+    c.append(el("div",{class:"coc-sec",style:"border-top:none"},el("h4",{},"A1 Panel details"),
+      cocKV(["Panel reference / ID",cocInput(cocT(A.panelRef)||g.label||"",v=>{ A.panelRef=v; save(); },{ro:R})],
+        ["Program","Master of Research"],["School / discipline",sch],
+        ["Candidates examined",String(cands.length)],
+        ["Panel’s Chair",coded.find(x=>x.isChair)?.m.name||el("span",{class:"pill missed"},"No chair set on the panel")],
+        ["Course Coordinator",cocInput(cocT(A.coordinator)||cocT(sem?.cocCoordinator),v=>{ A.coordinator=v; save(); },{ro:R,ph:"Name"})])));
+    const t=el("table",{});
+    t.append(el("thead",{},el("tr",{},...["Code","Name","Position / organisation","Email"].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    coded.forEach(cd=>tb.append(el("tr",{},el("td",{},el("strong",{},cd.code)),el("td",{},cd.m.name||""),
+      el("td",{},cocInput(cocPosition(A,cd),v=>{ A.positions[cd.key]=v; save(); },{ro:R})),
+      el("td",{class:"muted"},memberEmails(cd.m).join(", ")||"—"))));
+    t.append(tb);
+    const vars=cocVariations(A);
+    const vt=el("table",{});
+    vt.append(el("thead",{},el("tr",{},...["Code","Name","Position / organisation","Acts in place of","For candidate no(s)."].map(h=>el("th",{},h)))));
+    const vb=el("tbody",{});
+    vars.forEach((v,i)=>{
+      const upd=(k,val)=>{ const arr=cocVariations(A); arr[i][k]=val; A.variations=arr; save(); };
+      vb.append(el("tr",{},el("td",{},el("strong",{},v.code)),
+        ...["name","org","actsFor","forCands"].map(k=>el("td",{},cocInput(v[k],val=>upd(k,val),{ro:R})))));
+    });
+    vt.append(vb);
+    c.append(el("div",{class:"coc-sec"},el("h4",{},"A2 Panel composition"),t,
+      el("details",{class:"coc-guide",style:"margin-top:10px"},el("summary",{},"Approved variations (only where a member was replaced)"),vt)));
+    c.append(cocSec("A3 Notes — Panel Chair","deferrals, non-attendance, membership changes",
+      cocArea(A.notes,v=>{ A.notes=v; save(); },{ro:R,rows:2})));
+    host.append(c);
+  }
+
+  function combine(k,sid){
+    return coded.map(cd=>cocT(marks[cd.key]?.cand?.[sid]?.[k])).filter(Boolean).map(t=>"• "+t.replace(/\n+/g," ")).join("\n");
+  }
+
+  function drawCand(st,idx){
+    const R=ro();
+    const raw=candOf(st.id);
+    // first visit with every sheet in: draft the feedback from the members' comments
+    const allIn=coded.every(cd=>marks[cd.key]?.submitted);
+    if(!R&&allIn&&!raw.fbDrafted&&COC_FB.every(([k])=>!cocT(raw.fb[k]))){
+      COC_FB.forEach(([k])=>{ raw.fb[k]=combine(k,st.id); });
+      raw.fbDrafted=true; save();
+    }
+    const c=cocCand(rep,g,st,marks,sem);
+    const miss=cocChairMissing(c);
+    const d=el("details",{class:"coc-cand card","data-sid":st.id});
+    if(openState[g.id+st.id]!==undefined?openState[g.id+st.id]:idx===0) d.open=true;
+    d.addEventListener("toggle",()=>{ openState[g.id+st.id]=d.open; });
+    const redraw=()=>{ const n=drawCandNode(); d.replaceWith(n); paintD(); };
+    function drawCandNode(){ const tmp=el("div",{}); const keep=host; hostSwap(tmp,()=>drawCand(st,idx)); return tmp.firstChild; }
+    d.append(el("summary",{class:"ui"},
+      el("span",{class:"coc-num"},String(idx+1)),
+      el("span",{style:"flex:1;min-width:0"},el("strong",{},st.name),el("span",{class:"muted",style:"margin-left:8px;font-size:13px"},st.sid||"")),
+      c._final!=null?el("span",{class:"pill blue"},cocFmt(c._final)+"/20"):"",
+      c._outcome?el("span",{class:"pill "+(c._outcome==="NC"?"missed":c._outcome==="C"?"approved":"pending")},c._outcome):"",
+      el("span",{class:"pill "+(miss.length?"pending":"approved"),title:miss.length?"Still needed: "+miss.join(", "):""},miss.length?miss.length+" to complete":"Ready"),
+      el("span",{class:"chev"},"›")));
+    const body=el("div",{});
+    // C1.1
+    const yn=(k)=>cocYN(raw[k]||"",v=>{ raw[k]=v; save(); redraw(); },{ro:R});
+    const modeSel=cocYN(c._mode,v=>{ raw.mode=v; save(); redraw(); },{vals:COC_MODES.map(m=>[m,m]),ro:R});
+    const pre=el("div",{class:"row",style:"gap:12px"});
+    ["1","2","3","4","5"].forEach(n=>pre.append(cocCheck(!!raw.pre[n],n,v=>{ raw.pre[n]=v; save(); },{ro:R})));
+    const pna=el("div",{class:"row",style:"gap:12px"});
+    ["3","4"].forEach(n=>pna.append(cocCheck(!!raw.preNA[n],n,v=>{ raw.preNA[n]=v; save(); },{ro:R})));
+    body.append(el("div",{class:"coc-sec",style:"border-top:none"},el("h4",{},"C1.1 Candidate and seminar details"),
+      cocKV(["Candidate",st.name+(st.sid?" · "+st.sid:"")],
+        ["Thesis / research title",cocInput(c._title,v=>{ raw.title=v; save(); },{ro:R})],
+        ["Principal Supervisor",el("div",{class:"row"},el("span",{style:"min-width:140px"},c._principal||"—"),el("span",{class:"muted ui"},"Attended?"),yn("priAtt"))],
+        ["Associate Supervisor(s)",c._co?el("div",{class:"row"},el("span",{style:"min-width:140px"},c._co),el("span",{class:"muted ui"},"Attended?"),yn("coAtt")):el("span",{class:"muted"},"None")],
+        ["Commencement date",cocInput(raw.commencement||"",v=>{ raw.commencement=v; save(); },{type:"date",ro:R,attrs:{style:"max-width:200px"}})],
+        ["Seminar date",c._seminarDate?longDate(c._seminarDate):el("span",{class:"pill pending"},"Not scheduled")],
+        ["Seminar time",cocInput(c._time,v=>{ raw.time=v; save(); },{ro:R,attrs:{style:"max-width:220px"}})],
+        ["Mode",modeSel],
+        ["Pre-seminar requirements (B4)",el("div",{},el("div",{class:"row",style:"gap:8px"},el("span",{class:"muted ui"},"Received / completed:"),pre,
+            R?"":el("button",{class:"btn xs ghost",onclick:()=>{ ["1","2","5"].forEach(n=>raw.pre[n]=true); save(); redraw(); }},"Tick 1, 2 & 5")),
+          el("div",{class:"row",style:"gap:8px;margin-top:6px"},el("span",{class:"muted ui"},"Not applicable:"),pna))])));
+    // C1.2
+    const ag=c._agg;
+    const coi=el("div",{});
+    if(!ag.anyCoi) coi.append(el("div",{class:"row"},el("span",{class:"pill "+(ag.allAnsweredCoi?"approved":"pending")},
+      ag.allAnsweredCoi?"Yes — no conflict declared by any member":"Waiting for every member's declaration")));
+    else{
+      coi.append(el("div",{class:"row",style:"margin-bottom:8px"},el("span",{class:"pill missed"},"No — an interest was declared")));
+      ag.declared.forEach(rw=>coi.append(el("div",{class:"coc-quote"},el("strong",{},rw.code+" "+rw.name+": "),cocT(rw.c.coiDetail)||"(no detail)",rw.withdrew?el("em",{}," — withdrew from assessing this candidate"):"")));
+      coi.append(el("label",{style:"margin-top:8px"},"How it was managed"),
+        cocArea(raw.coiManaged,v=>{ raw.coiManaged=v; save(); },{ro:R,rows:2,ph:"e.g. P3 withdrew from the assessment of this candidate."}));
+    }
+    body.append(cocSec("C1.2 Conflict of interest","declared by each member",coi));
+    // C1.3
+    const mt=el("table",{class:"coc-mt"});
+    mt.append(el("thead",{},el("tr",{},...["Code","Member","Research /10","Feasibility /5","Presentation /5","Total /20","Recommends"].map(h=>el("th",{},h)))));
+    const mb=el("tbody",{});
+    ag.rows.forEach(rw=>mb.append(el("tr",{class:rw.submitted?"":"pend"},
+      el("td",{},rw.code),el("td",{},rw.name,rw.submitted?"":el("div",{class:"muted ui",style:"font-size:12px"},"not submitted yet")),
+      ...(rw.withdrew?[el("td",{colspan:"4",class:"muted"},"Withdrew — conflict of interest")]
+        :[el("td",{},cocFmt(rw.rq)),el("td",{},cocFmt(rw.fe)),el("td",{},cocFmt(rw.pr)),el("td",{},el("strong",{},cocFmt(rw.total)))]),
+      el("td",{},rw.rec||""))));
+    mb.append(el("tr",{class:"avg"},el("td",{colspan:"2"},el("strong",{},"Panel average (total ÷ "+(ag.n||"–")+")")),
+      el("td",{},cocFmt(ag.avg.rq)),el("td",{},cocFmt(ag.avg.fe)),el("td",{},cocFmt(ag.avg.pr)),
+      el("td",{},el("strong",{},cocFmt(ag.avg.total))),el("td",{},ag.majority?"Majority "+ag.majority:"")));
+    mt.append(mb);
+    body.append(cocSec("C1.3 Panel marks","from the members' signed sheets",mt));
+    // C1.4
+    const fb=el("div",{class:"grid",style:"gap:12px"});
+    COC_FB.forEach(([k,lab])=>{
+      const srcK=k;
+      const quotes=coded.map(cd=>({cd,t:cocT(marks[cd.key]?.cand?.[st.id]?.[srcK])})).filter(x=>x.t);
+      const ta=cocArea(raw.fb[k],v=>{ raw.fb[k]=v; save(); },{ro:R,rows:4});
+      fb.append(el("div",{},
+        el("div",{class:"row",style:"justify-content:space-between;align-items:flex-end"},el("label",{style:"margin:0"},lab),
+          quotes.length&&!R?el("button",{class:"btn xs ghost",onclick:()=>{
+            if(cocT(ta.value)&&!window.confirm("Replace what is written here with the members' comments?")) return;
+            ta.value=combine(k,st.id); raw.fb[k]=ta.value; save(); }},"↻ Draft from members"):""),
+        ta,
+        quotes.length?el("details",{class:"coc-guide"},el("summary",{},"What the members wrote ("+quotes.length+")"),
+          el("div",{},...quotes.map(q=>el("div",{class:"coc-quote"},el("strong",{},q.cd.code+" "+(q.cd.m.name||"")+": "),q.t)))):""));
+    });
+    body.append(cocSec("C1.4 Panel feedback to the candidate","consolidated by the Chair",fb));
+    // C1.5
+    const it=el("div",{class:"grid",style:"gap:8px"});
+    COC_ITEMS.forEach(([k,lab])=>it.append(el("div",{class:"row",style:"justify-content:space-between;flex-wrap:nowrap;gap:12px"},
+      el("span",{style:"font-size:14px"},lab),cocYN(raw.notes[k]||"",v=>{ raw.notes[k]=v; save(); redraw(); },{ro:R}))));
+    body.append(cocSec("C1.5 Items to note",null,it));
+    // C1.6
+    const det=raw.det;
+    const fin=cocInput(cocNum(det.finalMark)!=null?det.finalMark:"",v=>{ det.finalMark=v===""?"":cocNum(v); save(); redraw(); },
+      {type:"number",ro:R,onChange:true,ph:c._finalDefault==null?"":cocFmt(c._finalDefault),attrs:{min:"0",max:"20",step:"0.1",style:"max-width:130px;font-family:var(--mono);font-size:17px"}});
+    const outs=el("div",{class:"grid",style:"gap:6px"});
+    COC_OUTCOMES.forEach(x=>{
+      const on=c._outcome===x.c;
+      outs.append(el("button",{type:"button",class:"coc-opt"+(on?" on":""),disabled:R?"disabled":null,onclick:()=>{
+        det.outcome=x.c; if((x.c==="CMR"||x.c==="MRR")&&!det.dueBy) det.dueBy=cocAddDays(ymdOf(new Date()),x.weeks*7);
+        save(); redraw(); }},
+        el("strong",{},x.c),el("span",{},x.label),ag.tally[x.c]?el("span",{class:"pill none",style:"margin-left:auto"},ag.tally[x.c]+" recommend"):""));
+    });
+    const needsRev=c._outcome==="CMR"||c._outcome==="MRR";
+    body.append(cocSec("C1.6 Panel Chair’s determination",null,
+      cocKV(["Final mark / 20",el("div",{},el("div",{class:"row"},fin,
+          el("span",{class:"muted ui"},c._finalDefault!=null?(cocNum(det.finalMark)==null?"Using the panel average ":"Panel average ")+cocFmt(ag.avg.total)+(det.resub?" (capped at 10)":""):"Waiting for the members' marks")),
+          el("div",{style:"margin-top:6px"},cocCheck(!!det.resub,"Confirmed after a Major Revision re-submission — mark capped at 10/20",v=>{ det.resub=v; save(); redraw(); },{ro:R})),
+          c._differs?el("div",{style:"margin-top:8px"},el("label",{},"Reason the final mark differs from the panel average"),
+            cocArea(det.reason,v=>{ det.reason=v; save(); },{ro:R,rows:2})):"")],
+        ["Candidature outcome",el("div",{},outs,!det.outcome&&ag.majority?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"Pre-selected from the panel's majority recommendation."):"")],
+        ["Conditions, revisions or actions",cocArea(det.conditions,v=>{ det.conditions=v; save(); },{ro:R,rows:3,ph:needsRev?"Required for "+c._outcome:"If any"})],
+        ...(needsRev?[["Revisions due by",cocInput(c._dueBy,v=>{ det.dueBy=v; save(); },{type:"date",ro:R,attrs:{style:"max-width:200px"}})]]:[]),
+        ["Re-presentation required?",cocYN(det.represent||"",v=>{ det.represent=v; save(); redraw(); },{ro:R})])));
+    if(miss.length&&!R) body.append(el("div",{class:"locknote",style:"margin:0 16px 14px"},"Still needed for this candidate: "+miss.join(", ")+"."));
+    d.append(body);
+    host.append(d);
+  }
+  // draw a candidate into a scratch node (for redraws)
+  function hostSwap(tmp,fn){ const real=host; host=tmp; try{ fn(); } finally{ host=real; } }
+
+  let dBox=null;
+  function paintD(){
+    if(!dBox||!dBox.isConnected) return;
+    const tmp=el("div",{}); hostSwap(tmp,drawPartDInner);
+    dBox.replaceChildren(...tmp.childNodes);
+  }
+  function drawPartD(){
+    dBox=el("div",{}); host.append(dBox);
+    const tmp=el("div",{}); hostSwap(tmp,drawPartDInner); dBox.append(...tmp.childNodes);
+  }
+  function drawPartDInner(){
+    const c=cardShell("Part D — Sign-off",null,locked()?"ok":"act");
+    const b=el("div",{style:"padding:14px 16px"});
+    const cs=rep.chairSign;
+    const notIn=coded.filter(cd=>!marks[cd.key]?.submitted);
+    const perCand=cands.map(s=>({s,miss:cocChairMissing(cocCand(rep,g,s,marks,sem))})).filter(x=>x.miss.length);
+    if(locked()){
+      b.append(el("div",{class:"row",style:"align-items:flex-start;gap:18px"},
+        el("div",{},el("div",{class:"muted ui",style:"font-size:12px;margin-bottom:4px"},"D1 Panel Chair declaration"),cocSigView(cs,rep.chairSign?.by&&rep.chairSign.by!==coded.find(x=>x.isChair)?.uid?"recorded by the office":"")),
+        el("span",{style:"flex:1"})));
+      const acts=el("div",{class:"row",style:"margin-top:14px"});
+      acts.append(el("button",{class:"btn",onclick:()=>cocDownload(g,sem,students,rep,marks)},"⤓ Download the Word form"));
+      const ro_=researchOfficeEmail(sem)||"research.office@cihe.edu.au";
+      acts.append(el("button",{class:"btn ghost",onclick:()=>openEmail(ro_,"CoC Panel Examination Report — "+(g.label||"Panel"),
+        "Dear Research Office,\n\nPlease find attached the completed and signed CoC Panel Examination Report for "+(g.label||"the panel")+" ("+cands.length+" candidate"+(cands.length===1?"":"s")+": "+cands.map(s=>s.name).join(", ")+").\n\nThe report was approved in the MRes Supervision Hub on "+cocDay(rep.approvedAt)+".\n\nKind regards,\n"+(S.userName||""))},"✉ Email the Research Office"));
+      if(rep.status==="approved"&&(role==="admin"||role==="chair")) acts.append(el("button",{class:"btn ghost",onclick:async()=>{
+        if(!window.confirm(role==="admin"?"Return this report to the Chair? Their approval and signature are removed and they can edit again.":"Withdraw your approval to make changes? You will need to sign again.")) return;
+        const patch={status:"",chairSign:null,approvedAt:0,history:cocHist(rep,role==="admin"?"returned to the Chair":"approval withdrawn by the Chair"),updatedAt:Date.now()};
+        try{ await DB.set("cocReports",g.id,patch); }catch(e){ toast(e?.message||"Could not update.",true); return; }
+        Object.assign(rep,patch); toast(role==="admin"?"Returned to the Chair.":"Approval withdrawn."); draw();
+      }},role==="admin"?"Return to the Chair":"✎ Withdraw approval to edit"));
+      b.append(acts);
+      b.append(el("p",{class:"muted ui",style:"margin:10px 0 0;font-size:12.5px"},
+        "Word can't be attached by a web page, so the email opens with the text ready — attach the downloaded form before sending."));
+    }else{
+      if(notIn.length) b.append(noticeBar("amber","Waiting for "+notIn.map(cd=>cd.code+" "+cd.m.name).join(", ")+" to submit their mark sheet"+(notIn.length===1?"":"s")+"."));
+      if(perCand.length) b.append(el("div",{class:"locknote",style:"margin:0 0 12px"},
+        "To complete: "+perCand.map(x=>x.s.name+" ("+x.miss.join(", ")+")").join("; ")+"."));
+      b.append(el("div",{class:"coc-decl"},el("strong",{},"As Panel Chair, I confirm that:"),
+        el("ul",{},el("li",{},"I have completed this report and verified all marks, comments and determinations with the panel members."),
+          el("li",{},"Each candidate was assessed by three panel members."),
+          el("li",{},"The conflict of interest recorded for each candidate is accurate, and any declared interest was managed as recorded."))));
+      const ready=!notIn.length&&!perCand.length&&cands.length>0;
+      const chairCd=coded.find(x=>x.isChair);
+      const btn=el("button",{class:"btn",disabled:ready?null:"disabled",onclick:async()=>{
+        await save.flush();
+        const sig=await cocSignDialog({title:role==="admin"?"Approve on the Chair's behalf":"Approve and sign the report",
+          name:role==="admin"?(chairCd?.m.name||""):(S.userName||chairCd?.m.name||""),
+          intro:role==="admin"?"Use this only where the Chair has confirmed the report to the office (for example, an external Chair without a hub login). The office's approval is recorded in the report history.":
+            "Your signature is placed in every candidate's C1.6 verification and in D1, and the report is locked.",
+          declaration:"As Panel Chair, I confirm that I have completed this report and verified all marks, comments and determinations with the panel members, that each candidate was assessed by three panel members, and that the conflict of interest recorded for each candidate is accurate.",
+          saveLabel:"Sign & approve"});
+        if(!sig) return;
+        // freeze the defaults so the stored report says exactly what was approved
+        cands.forEach(s=>{ const cv=cocCand(rep,g,s,marks,sem), rw=candOf(s.id);
+          rw.det.finalMark=cv._final; rw.det.outcome=cv._outcome; if(cv._dueBy&&(cv._outcome==="CMR"||cv._outcome==="MRR")) rw.det.dueBy=cv._dueBy;
+          rw.mode=cv._mode; rw.time=cv._time; rw.title=cv._title; });
+        const patch={partA:rep.partA,cand:rep.cand,status:"approved",approvedAt:Date.now(),chairSign:{...sig,by:S.uid||""},
+          history:cocHist(rep,role==="admin"?"approved by the office on the Chair's behalf":"approved and signed by the Chair"),updatedAt:Date.now()};
+        try{ await DB.set("cocReports",g.id,patch); }catch(e){ toast(e?.message||"Could not approve.",true); return; }
+        Object.assign(rep,patch);
+        toast("Report approved. Download the Word form below.");
+        draw();
+        setTimeout(()=>host.querySelector(".coc-dl-focus")?.scrollIntoView({behavior:"smooth",block:"center"}),50);
+      }},role==="admin"?"✓ Approve on the Chair's behalf…":"✓ Approve & sign the report");
+      b.append(el("div",{class:"row",style:"margin-top:14px"},btn,
+        el("button",{class:"btn ghost",onclick:async()=>{ await save.flush(); cocDownload(g,sem,students,rep,marks); }},"⤓ Download draft (Word)"),
+        ready?"":el("span",{class:"muted ui",style:"font-size:12.5px"},"Approving opens once every sheet is in and every candidate is complete.")));
+    }
+    c.append(b); c.classList.add("coc-dl-focus"); host.append(c);
+  }
+
+  function drawOffice(){
+    const of=rep.office=rep.office||{}; of.chk=of.chk||{};
+    const c=cardShell("D2 Research Office — office use",rep.status==="received"?el("span",{class:"pill approved"},"Received"):null,"info");
+    const sv=cocDebounce(async()=>{ try{ await DB.set("cocReports",g.id,{office:of,updatedAt:Date.now()}); ss.set("✓ Saved"); }catch(e){ toast(e?.message||"Not saved",true); } },700);
+    const chks=el("div",{class:"grid",style:"gap:6px"});
+    COC_OFFICE_CHK.forEach(([k,l])=>chks.append(cocCheck(!!of.chk[k],l,v=>{ of.chk[k]=v; sv(); })));
+    const b=el("div",{class:"coc-sec",style:"border-top:none"},
+      cocKV(["Date report received",cocInput(of.receivedDate||"",v=>{ of.receivedDate=v; sv(); },{type:"date",attrs:{style:"max-width:200px"}})],
+        ["Received by",cocInput(of.receivedBy||S.userName||"",v=>{ of.receivedBy=v; sv(); })],
+        ["Processing checklist",chks],
+        ["Candidates and supervisors advised on",cocInput(of.advisedDate||"",v=>{ of.advisedDate=v; sv(); },{type:"date",attrs:{style:"max-width:200px"}})],
+        ["Ethics or permit matters referred",cocYN(of.ethicsRef||"",v=>{ of.ethicsRef=v; sv(); draw(); },{vals:[["Y","Yes"],["N","No"],["NA","N/A"]]})],
+        ["Notes",cocArea(of.notes,v=>{ of.notes=v; sv(); },{rows:2})],
+        ["Course Coordinator / Research Office",el("div",{},cocSigView(of.sign),
+          el("button",{class:"btn sm ghost",style:"margin-top:6px",onclick:async()=>{
+            const sig=await cocSignDialog({title:"Sign for the Research Office",name:S.userName||"",declaration:"I have received and processed this report.",saveLabel:"Sign"});
+            if(!sig) return; of.sign=sig; sv(); await sv.flush(); draw(); }},of.sign?"Sign again":"✎ Sign"))]));
+    c.append(b);
+    if(rep.status==="approved") c.append(el("div",{class:"row",style:"padding:0 16px 14px"},el("button",{class:"btn",onclick:async()=>{
+      if(!of.receivedDate) of.receivedDate=ymdOf(new Date());
+      const patch={status:"received",office:of,history:cocHist(rep,"marked received by the office"),updatedAt:Date.now()};
+      try{ await DB.set("cocReports",g.id,patch); }catch(e){ toast(e?.message||"Could not update.",true); return; }
+      Object.assign(rep,patch); toast("Marked as received."); draw(); }},"✓ Mark as received")));
+    if(Array.isArray(rep.history)&&rep.history.length) c.append(el("details",{class:"coc-guide",style:"margin:0 16px 14px"},el("summary",{},"History"),
+      el("div",{},...rep.history.slice().reverse().map(h=>el("div",{class:"muted ui",style:"font-size:12.5px"},cocDT(h.at)+" — "+h.what+(h.by?" ("+h.by+")":""))))));
+    host.append(c);
+  }
+
+  draw();
+  return {flush:()=>save.flush(),get rep(){ return rep; }};
+}
+
+/* ============================================================
+   CoC ASSESSMENT TAB — supervisors and panel members
+   ============================================================ */
+async function viewCocAssess(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),el("h2",{},"CoC assessment"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewCocAssess(v))); v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Ask the coordinator to set one up first.")); return; }
+  let students,groups;
+  try{
+    [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]);
+  }catch(err){ v.append(panelRuleHelp(err)); return; }
+  const mine=groups.filter(g=>isAssessorReleased(g)&&cocMe(g))
+    .sort((a,b)=>String(a.label).localeCompare(String(b.label)));
+  if(!mine.length){
+    v.append(emptyState("No CoC panels to assess","Panels you sit on appear here once the MRes office releases them to their assessors."));
+    return;
+  }
+  const reps={}, errs={};
+  await Promise.all(mine.map(async g=>{ try{ reps[g.id]=await cocGetReport(g.id); }catch(e){ errs[g.id]=e; reps[g.id]=null; } }));
+  if(!S.cocPanel||!mine.some(g=>g.id===S.cocPanel)) S.cocPanel=(mine.find(g=>cocOpen(reps[g.id]))||mine[0]).id;
+  const sem=activeSemester();
+
+  // overview tiles
+  v.append(el("div",{class:"stat"},
+    statBox(mine.length,"Panels I assess"),
+    statBox(mine.filter(g=>cocOpen(reps[g.id])).length,"Open for marking"),
+    statBox(mine.filter(g=>cocMe(g)?.isChair).length,"Panels I chair")));
+
+  if(mine.length>1){
+    const tabs=el("div",{class:"subtabs ui",style:"margin-bottom:14px;flex-wrap:wrap"});
+    mine.forEach(g=>tabs.append(el("button",{class:S.cocPanel===g.id?"active":"",onclick:()=>{ S.cocPanel=g.id; S.cocMode="marks"; viewCocAssess(v); }},
+      g.label||"Panel",cocMe(g).isChair?" · Chair":"",
+      el("span",{class:"pill "+cocWin(reps[g.id]).cls,style:"margin-left:8px;font-size:11px"},cocWin(reps[g.id]).state==="open"?"Open":cocWin(reps[g.id]).state==="closed"?"Closed":"Not open"))));
+    v.append(tabs);
+  }
+  const g=mine.find(x=>x.id===S.cocPanel);
+  const me=cocMe(g);
+  let rep=reps[g.id];
+  const w=cocWin(rep);
+  const pd=panelReportDue(g,sem);
+  v.append(cocBandHead(g,rep,
+    ["You are "+me.code+(me.isChair?" · Panel Chair":" · Panel member"),
+     "Chair: "+(cocCoded(g).find(c=>c.isChair)?.m.name||"not set"),
+     pd.date?"Report due "+prettyDate(pd.date):""].filter(Boolean).join("  ·  "),
+    el("span",{class:"pill "+w.cls},w.txt)));
+  if(errs[g.id]&&!rep){
+    v.append(noticeBar("blue","Marking hasn't been opened for this panel yet — or the site's database rules don't include the CoC reports yet. If the office says marking is open, ask them to check the rules.",
+      el("button",{class:"btn xs ghost",onclick:()=>modal("Database rules for CoC reports",cocRuleHelp(errs[g.id]),async()=>true,"Close")},"Show the rules")));
+  }
+  if(docsLinkOf(g)) v.append(el("div",{class:"row",style:"margin:-4px 0 14px"},joinLink(docsLinkOf(g),DOCS_OPEN),
+    el("span",{class:"muted ui",style:"font-size:12.5px"},"Proposals and slides for the candidates you are assessing.")));
+
+  if(me.isChair){
+    const mode=S.cocMode==="chair"?"chair":"marks";
+    const t=el("div",{class:"subtabs ui",style:"margin-bottom:14px"});
+    [["marks","My marks"],["chair","Panel report (Chair)"]].forEach(([id,l])=>t.append(el("button",{class:mode===id?"active":"",
+      onclick:()=>{ S.cocMode=id; viewCocAssess(v); }},l)));
+    v.append(t);
+    if(mode==="chair"){
+      if(!rep){ v.append(emptyState("The report opens with marking","The MRes office opens marking for the panel; the report fills in as members submit.")); return; }
+      const host=el("div",{}); v.append(host);
+      let marks={};
+      try{ marks=await cocGetMarks(g); }catch(e){}
+      cocReportEditor(host,{g,rep,marks,students,sem,role:"chair",noBand:true});
+      return;
+    }
+  }
+  const host=el("div",{}); v.append(host);
+  if(!rep){
+    cocMemberSheet(host,{g,rep:null,students,cd:me,md:{},mode:"self"});
+    return;
+  }
+  let md=null;
+  try{ md=await DB.get("cocMarks",cocMarkId(g.id,me.key)); }catch(e){ console.warn("own sheet unreadable",e); }
+  if(!md&&cocOpen(rep)){
+    const init={semesterId:g.semesterId||S.activeSem,groupId:g.id,memberKey:me.key,uid:S.uid,name:me.m.name||"",email:memberEmails(me.m)[0]||"",cand:{},updatedAt:Date.now()};
+    try{ await DB.set("cocMarks",cocMarkId(g.id,me.key),init); md=init; }catch(e){ v.append(cocRuleHelp(e)); return; }
+  }
+  cocMemberSheet(host,{g,rep,students,cd:me,md:md||{},mode:"self",onSubmitted:()=>{
+    const chair=cocCoded(g).find(c=>c.isChair);
+    if(chair&&!chair.uid!==undefined&&chair.uid!==S.uid) toast("Submitted — the Chair can now see your marks.");
+  }});
+}
+
+/* ============================================================
+   CoC REPORTS — the office's view of every panel's report
+   ============================================================ */
+async function viewCocAdmin(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),el("h2",{},"CoC reports"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>{ S.cocOpenGid=null; viewCocAdmin(v); })); v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
+  let students,groups,reps,allMarks;
+  try{
+    [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]);
+  }catch(err){ v.append(panelRuleHelp(err)); return; }
+  try{
+    [reps,allMarks]=await Promise.all([DB.list("cocReports",{semesterId:S.activeSem}),DB.list("cocMarks",{semesterId:S.activeSem})]);
+  }catch(err){ v.append(cocRuleHelp(err)); return; }
+  const sem=activeSemester();
+  const repOf=gid=>reps.find(r=>r.id===gid)||null;
+  const marksOf=g=>{ const o={}; cocCoded(g).forEach(cd=>{ const d=allMarks.find(m=>m.id===cocMarkId(g.id,cd.key)); if(d) o[cd.key]=d; }); return o; };
+  groups.sort((a,b)=>String(a.label).localeCompare(String(b.label)));
+
+  // keep reports in step with seating changes, quietly
+  const sync=groups.filter(g=>cocNeedsSync(g,repOf(g.id))||(repOf(g.id)&&cocCoded(g).some(cd=>!allMarks.some(m=>m.id===cocMarkId(g.id,cd.key)))));
+  if(sync.length){
+    try{ await DB.batchWrite(sync.flatMap(g=>cocEnsureOps(g))); reps=await DB.list("cocReports",{semesterId:S.activeSem}); allMarks=await DB.list("cocMarks",{semesterId:S.activeSem}); }
+    catch(e){ console.warn("report sync failed",e); }
+  }
+
+  // one report open in full
+  const openG=S.cocOpenGid&&groups.find(g=>g.id===S.cocOpenGid);
+  if(openG){
+    const rp=repOf(openG.id);
+    v.append(el("div",{class:"row",style:"margin-bottom:12px"},
+      el("button",{class:"btn ghost sm",onclick:async()=>{ await ed?.flush(); S.cocOpenGid=null; viewCocAdmin(v); }},"← All reports"),
+      el("span",{style:"flex:1"}),
+      el("button",{class:"btn ghost sm",onclick:async()=>{ await ed?.flush(); cocDownload(openG,sem,students,null,null); }},"⤓ Word form")));
+    if(!rp){ v.append(emptyState("Marking isn't open for this panel","Open marking from the list first.")); return; }
+    const host=el("div",{}); v.append(host);
+    const ed=cocReportEditor(host,{g:openG,rep:rp,marks:marksOf(openG),students,sem,role:"admin"});
+    return;
+  }
+
+  const rows=groups.map(g=>({g,rep:repOf(g.id),marks:marksOf(g)})).map(x=>({...x,st:cocStatus(x.g,x.rep,x.marks)}));
+  const count=k=>rows.filter(x=>x.st.key===k).length;
+  v.append(el("div",{class:"stat"},
+    statBox(groups.length,"Panels"),
+    statBox(rows.filter(x=>x.rep&&cocWin(x.rep).state==="open").length,"Open for marking"),
+    statBox(rows.reduce((n,x)=>n+x.st.sub,0)+" / "+rows.reduce((n,x)=>n+(x.rep?x.st.of:0),0),"Sheets submitted"),
+    statBox(count("chair"),"With the Chair"),
+    statBox(count("approved")+count("received"),"Approved"),
+    statBox(count("received"),"Received")));
+
+  // settings: coordinator name & research office address live on the semester
+  const coord=el("input",{value:cocT(sem?.cocCoordinator),placeholder:"e.g. Dr Jane Citizen"});
+  const roIn=el("input",{type:"email",value:researchOfficeEmail(sem),placeholder:"research.office@cihe.edu.au"});
+  const saveSet=el("button",{class:"btn sm ghost",onclick:async()=>{
+    try{ await DB.update("semesters",sem.id,{cocCoordinator:cocT(coord.value),researchOfficeEmail:cocT(roIn.value)});
+      S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1)); toast("Saved."); }
+    catch(e){ toast(e?.message||"Could not save.",true); } }},"Save");
+  v.append(el("details",{class:"cfold",style:"margin-bottom:14px"},el("summary",{},el("div",{class:"csection"},el("div",{class:"cs-mark"},"⚙"),
+      el("div",{class:"cs-body"},el("h3",{},"Report settings for "+(sem?.label||"this semester")),el("p",{},"Printed on every report: the Course Coordinator (A1) and the Research Office address."))),el("div",{class:"cfold-right"},el("span",{class:"chev"},"›"))),
+    el("div",{class:"cfold-body"},el("div",{class:"card",style:"padding:14px 16px"},
+      el("div",{class:"row",style:"align-items:flex-end"},el("div",{class:"field",style:"flex:1"},el("label",{},"Course Coordinator"),coord),
+        el("div",{class:"field",style:"flex:1"},el("label",{},"Research Office email"),roIn),saveSet)))));
+
+  // bulk actions
+  const sel=new Set(S.cocSel||[]);
+  S.cocSel=sel;
+  const bulk=el("div",{class:"row",style:"margin-bottom:12px"});
+  const selectedGroups=()=>groups.filter(g=>sel.has(g.id));
+  const paintBulk=()=>{
+    const n=sel.size;
+    bulk.replaceChildren(
+      el("span",{class:"muted ui"},n?n+" selected":"Select panels to act on several at once"),
+      el("span",{style:"flex:1"}),
+      el("button",{class:"btn sm",disabled:n?null:"disabled",onclick:()=>windowDialog(selectedGroups())},"⏱ Set marking window…"),
+      el("button",{class:"btn sm ghost",disabled:n?null:"disabled",onclick:()=>closeNow(selectedGroups())},"Close now"),
+      el("button",{class:"btn sm ghost",disabled:n?null:"disabled",onclick:()=>chase(selectedGroups())},"✉ Chase outstanding"),
+      el("button",{class:"btn sm ghost",disabled:n?null:"disabled",onclick:()=>zipAll(selectedGroups())},"⤓ Word forms (ZIP)"));
+  };
+  paintBulk();
+  v.append(bulk);
+
+  const c=cardShell("Panel reports — "+(sem?.label||""),el("div",{class:"row",style:"gap:6px"},
+    el("button",{class:"btn xs ghost",onclick:()=>{ groups.forEach(g=>sel.add(g.id)); viewCocAdmin(v); }},"Select all"),
+    el("button",{class:"btn xs ghost",onclick:()=>{ sel.clear(); viewCocAdmin(v); }},"Clear")),"main");
+  if(!groups.length){ c.append(el("p",{class:"muted",style:"padding:16px;margin:0"},"No panels in this semester yet — build them under CoC panels.")); v.append(c); return; }
+  const t=el("table",{});
+  t.append(el("thead",{},el("tr",{},...["","Panel","Members' sheets","Marking window","Report due","Status",""].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  rows.forEach(({g,rep,marks,st})=>{
+    const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(sel.has(g.id)?{checked:"checked"}:{})});
+    cb.addEventListener("change",()=>{ cb.checked?sel.add(g.id):sel.delete(g.id); paintBulk(); });
+    const coded=cocCoded(g);
+    const chips=el("div",{class:"row",style:"gap:4px"});
+    coded.forEach(cd=>{ const md=marks[cd.key];
+      chips.append(el("span",{class:"coc-chip "+(md?.submitted?"ok":md&&Object.keys(md.cand||{}).length?"mid":""),title:(cd.m.name||"")+(md?.submitted?" — submitted "+cocDT(md.submittedAt):md?" — in progress":" — not started")},
+        cd.code+" "+String(cd.m.name||"").replace(/^(Dr|Prof|A\/Prof|Mr|Ms|Mrs)\.?\s+/i,"").split(/\s+/)[0])); });
+    const w=cocWin(rep);
+    const pd=panelReportDue(g,sem);
+    const acts=el("div",{class:"row",style:"gap:5px"});
+    if(rep) acts.append(el("button",{class:"btn xs",onclick:()=>{ S.cocOpenGid=g.id; viewCocAdmin(v); }},"Open"));
+    acts.append(el("button",{class:"btn xs ghost",onclick:()=>windowDialog([g])},rep?"Window":"Open marking…"));
+    if(rep) acts.append(el("button",{class:"btn xs ghost",onclick:()=>cocDownload(g,sem,students,rep,marks)},"⤓ Word"));
+    acts.append(emailButton(coded.flatMap(cd=>memberEmails(cd.m)),"CoC examination report — "+(g.label||"panel"),"Dear panel members,\n\n","✉ Panel"));
+    tb.append(el("tr",{},
+      el("td",{},cb),
+      el("td",{style:"min-width:160px"},el("strong",{},g.label||"Panel"),
+        el("div",{class:"muted ui",style:"font-size:12.5px"},groupStudents(g).length+" candidate"+(groupStudents(g).length===1?"":"s")+
+          (isAssessorReleased(g)?"":" · not released to assessors"))),
+      el("td",{},chips),
+      el("td",{},el("span",{class:"pill "+w.cls,style:"font-size:11.5px"},w.txt)),
+      el("td",{},pd.date?el("span",{class:"pill "+dueState(pd.date).cls,style:"font-size:11.5px"},prettyDate(pd.date)):el("span",{class:"muted"},"—")),
+      el("td",{},el("span",{class:"pill "+st.cls},st.txt)),
+      el("td",{},acts)));
+  });
+  t.append(tb); c.append(t); v.append(c);
+
+  /* ---- actions ---- */
+  function windowDialog(gs){
+    if(!gs.length) return;
+    const unrel=gs.filter(g=>!isAssessorReleased(g));
+    const first=repOf(gs[0].id)?.window||{};
+    const opens=el("input",{type:"datetime-local",value:cocLocalIn(gs.length===1&&first.opensAt?first.opensAt:Date.now())});
+    const due=gs.map(g=>panelReportDue(g,sem).date).filter(Boolean).sort().pop();
+    const closes=el("input",{type:"datetime-local",value:gs.length===1&&first.closesAt?cocLocalIn(first.closesAt):(due?due+"T17:00":"")});
+    const notify=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+    modal(gs.length===1?"Marking window — "+(gs[0].label||"panel"):"Marking window for "+gs.length+" panels",
+      el("div",{},
+        el("p",{class:"muted",style:"margin:0 0 12px"},"Panel members can enter and submit marks between these times. Leave the close empty for no deadline. The Chair can finish and approve the report after marking closes."),
+        unrel.length?el("div",{class:"locknote",style:"margin:0 0 12px"},unrel.map(g=>g.label).join(", ")+(unrel.length===1?" is":" are")+" not released to assessors yet — its members won't see it until you release it."):"",
+        el("div",{class:"row"},el("div",{class:"field",style:"flex:1"},el("label",{},"Opens"),opens),
+          el("div",{class:"field",style:"flex:1"},el("label",{},"Closes"),closes)),
+        el("div",{class:"row",style:"gap:6px;margin-top:8px"},
+          el("button",{class:"btn xs ghost",type:"button",onclick:()=>{ opens.value=cocLocalIn(Date.now()); }},"Open now"),
+          due?el("button",{class:"btn xs ghost",type:"button",onclick:()=>{ closes.value=due+"T17:00"; }},"Close at the report deadline"):"",
+          el("button",{class:"btn xs ghost",type:"button",onclick:()=>{ closes.value=""; }},"No closing time")),
+        el("label",{class:"coc-chk",style:"margin-top:14px"},notify,el("span",{},"Then email the panel members that marking is open"))),
+      async()=>{
+        const o=cocLocalOut(opens.value), cl=cocLocalOut(closes.value);
+        if(!o){ toast("Choose when marking opens.",true); return false; }
+        if(cl&&cl<=o){ toast("The closing time must be after the opening time.",true); return false; }
+        const ops=gs.flatMap(g=>cocEnsureOps(g,{window:{opensAt:o,closesAt:cl},updatedAt:Date.now(),
+          history:cocHist(repOf(g.id),"marking window set: "+cocDT(o)+(cl?" → "+cocDT(cl):""))}));
+        await DB.batchWrite(ops);
+        toast("Marking window saved for "+gs.length+" panel"+(gs.length===1?"":"s")+".");
+        if(notify.checked){
+          const to=[...new Set(gs.flatMap(g=>cocCoded(g).flatMap(cd=>memberEmails(cd.m))))];
+          openEmail("", "CoC examination reports — marking is open",
+            "Dear panel members,\n\nMarking for the Confirmation of Candidature panel"+(gs.length===1?" "+(gs[0].label||""):"s")+" is open in the MRes Supervision Hub from "+cocDT(o)+(cl?" until "+cocDT(cl):"")+".\n\n"+
+            "Please sign in with your email and password, open “CoC assessment”, enter your marks, recommended outcome, conflict of interest declaration and comments for each candidate, then sign and submit. The Panel Chair then reviews, approves and signs the report.\n\n"+
+            "If you usually use a PIN, you'll need your email and password to assess — use “Forgotten your password?” on the sign-in page if needed.\n\nThank you,\nMRes Coordination\n","",to.join(","));
+        }
+        viewCocAdmin(v); return true;
+      },"Save window");
+  }
+  async function closeNow(gs){
+    const live=gs.filter(g=>repOf(g.id));
+    if(!live.length){ toast("None of these panels is open.",true); return; }
+    if(!window.confirm("Close marking now for "+live.length+" panel"+(live.length===1?"":"s")+"? Members who haven't submitted won't be able to until you reopen it.")) return;
+    try{ await DB.batchWrite(live.map(g=>{ const w=repOf(g.id).window||{};
+      return {type:"set",coll:"cocReports",id:g.id,data:{window:{opensAt:w.opensAt||Date.now()-1000,closesAt:Date.now()},history:cocHist(repOf(g.id),"marking closed"),updatedAt:Date.now()}}; })); }
+    catch(e){ toast(e?.message||"Could not close.",true); return; }
+    toast("Marking closed."); viewCocAdmin(v);
+  }
+  function chase(gs){
+    const out=[];
+    gs.forEach(g=>{ const m=marksOf(g); cocCoded(g).forEach(cd=>{ if(!m[cd.key]?.submitted) out.push(...memberEmails(cd.m)); }); });
+    const to=[...new Set(out)];
+    if(!to.length){ toast("Everyone on these panels has submitted."); return; }
+    openEmail("","CoC examination reports — your marks are needed",
+      "Dear colleagues,\n\nOur records show your marks for one or more Confirmation of Candidature panels haven't been submitted yet. Please sign in to the MRes Supervision Hub, open “CoC assessment”, complete each candidate and sign and submit.\n\nThank you,\nMRes Coordination\n","",to.join(","));
+  }
+  async function zipAll(gs){
+    const live=gs.filter(g=>repOf(g.id));
+    if(!live.length){ toast("None of these panels has a report yet.",true); return; }
+    try{
+      const files=[], used=new Set();
+      for(const g of live){
+        const blob=cocDocxBuild({g,rep:repOf(g.id),marks:marksOf(g),students,sem});
+        let nm=cocFileName(g,sem); while(used.has(nm)) nm=nm.replace(/\.docx$/,"_"+used.size+".docx"); used.add(nm);
+        files.push({name:nm,data:new Uint8Array(await blob.arrayBuffer())});
+      }
+      saveBlob(zipStore(files,"application/zip"),("CoC_Reports_"+(sem?.label||"")).replace(/[^\w\-]+/g,"_")+".zip");
+      toast(files.length+" Word form"+(files.length===1?"":"s")+" downloaded.");
+    }catch(e){ console.error(e); toast("Couldn't build the ZIP: "+(e?.message||e),true); }
+  }
+}
+
 /* ============================================================
    14. SHARED MODAL + DELETE
    ============================================================ */
