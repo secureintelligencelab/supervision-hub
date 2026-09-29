@@ -1985,7 +1985,7 @@ const DB = {
       list.forEach(o=>{
         mem[o.coll]=mem[o.coll]||{};
         if(o.type==="delete") delete mem[o.coll][o.id];
-        else mem[o.coll][o.id]={...(mem[o.coll][o.id]||{}),...o.data};
+        else mem[o.coll][o.id]=o.merge===false?{...o.data}:{...(mem[o.coll][o.id]||{}),...o.data};
       });
       return list.length;
     }
@@ -17009,13 +17009,21 @@ async function viewCocAdmin(v){
   const openG=S.cocOpenGid&&groups.find(g=>g.id===S.cocOpenGid);
   if(openG){
     const rp=repOf(openG.id);
+    let ed=null;
+    const mk=marksOf(openG);
+    const anyEntered=cocCoded(openG).some(cd=>{ const d=mk[cd.key]; return d&&(d.submitted||Object.keys(d.cand||{}).length); });
     v.append(el("div",{class:"row",style:"margin-bottom:12px"},
       el("button",{class:"btn ghost sm",onclick:async()=>{ await ed?.flush(); S.cocOpenGid=null; viewCocAdmin(v); }},"← All reports"),
       el("span",{style:"flex:1"}),
+      rp?el("button",{class:"btn ghost sm",title:anyEntered?"Only available while no member has entered anything":"Fill every member's sheet with made-up marks and comments, so you can check the Word form",
+        disabled:anyEntered?"disabled":null,
+        onclick:async()=>{ await ed?.flush(); await cocFillTest(openG,students,mk); viewCocAdmin(v); }},"⚑ Fill with test marks"):"",
+      rp?el("button",{class:"btn ghost sm",onclick:async()=>{ await ed?.flush(); cocResetDialog(openG,rp,()=>viewCocAdmin(v)); }},"↺ Reset report…"):"",
       el("button",{class:"btn ghost sm",onclick:async()=>{ await ed?.flush(); cocDownload(openG,sem,students,null,null); }},"⤓ Word form")));
     if(!rp){ v.append(emptyState("Marking isn't open for this panel","Open marking from the list first.")); return; }
+    if(rp.testData) v.append(noticeBar("amber","This report contains TEST marks filled in by the office. Reset it before the real marking starts."));
     const host=el("div",{}); v.append(host);
-    const ed=cocReportEditor(host,{g:openG,rep:rp,marks:marksOf(openG),students,sem,role:"admin"});
+    ed=cocReportEditor(host,{g:openG,rep:rp,marks:mk,students,sem,role:"admin"});
     return;
   }
 
@@ -17164,6 +17172,90 @@ async function viewCocAdmin(v){
       toast(files.length+" Word form"+(files.length===1?"":"s")+" downloaded.");
     }catch(e){ console.error(e); toast("Couldn't build the ZIP: "+(e?.message||e),true); }
   }
+}
+
+/* ============================================================
+   TESTING A REPORT — for the office
+   "Fill with test marks" puts made-up marks, comments and a TEST
+   signature on every member's sheet and pre-answers the Chair's
+   boxes, so the whole report can be approved and the Word form checked
+   in a couple of minutes. "Reset report" then wipes it clean. Filling is
+   only offered while nobody has entered anything, so real marks are
+   never overwritten.
+   ============================================================ */
+async function cocFillTest(g,students,marks){
+  const coded=cocCoded(g);
+  const cands=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+  if(!cands.length){ toast("This panel has no candidates to test with.",true); return; }
+  if(coded.some(cd=>{ const d=marks[cd.key]; return d&&(d.submitted||Object.keys(d.cand||{}).length); })){
+    toast("Someone has already entered marks on this panel — reset it first.",true); return; }
+  if(!window.confirm("Fill every member's sheet on "+(g.label||"this panel")+" with TEST marks, comments and signatures?\n\n"+
+    "Use this only to check the Word form, then use “Reset report” before real marking starts.")) return;
+  const step=(lo,hi)=>Math.round((lo+Math.random()*(hi-lo))*2)/2;
+  const recOf=t=>t>=16?"C":t>=12?"CMR":t>=10?"MRR":"NC";
+  const now=Date.now();
+  const ops=cocEnsureOps(g);
+  coded.forEach((cd,i)=>{
+    const cand={};
+    cands.forEach(st=>{
+      const rq=step(5,9.5), fe=step(2.5,4.5), pr=step(2.5,5);
+      cand[st.id]={rq,fe,pr,rec:recOf(rq+fe+pr),coi:"none",coiDetail:"",withdrew:false,
+        strengths:"[TEST "+cd.code+"] Clear research problem and a well-organised written proposal.",
+        concerns:"[TEST "+cd.code+"] The data collection timeline looks tight for the candidature.",
+        improvements:"[TEST "+cd.code+"] Add a risk plan for data access and a short ethics section.",dissent:""};
+    });
+    ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g.id,cd.key),data:{cand,submitted:true,submittedAt:now,
+      sign:{name:"TEST — "+(cd.m.name||cd.code),img:cocDemoSig("TEST "+cd.code),at:now},onBehalf:null,updatedAt:now}});
+  });
+  const rc={};
+  cands.forEach(st=>{
+    rc[st.id]={mode:"Online (Teams)",priAtt:"Y",coAtt:(st.coName||st.coUid)?"Y":"",pre:{"1":true,"2":true,"5":true},preNA:{},
+      notes:{ethics:"N",permits:"N",rcr:"Y",support:"N"},
+      det:{conditions:"[TEST] Address the panel's comments and resubmit the revised proposal to the Chair.",represent:"N"}};
+  });
+  ops.push({type:"set",coll:"cocReports",id:g.id,data:{cand:rc,testData:true,updatedAt:now,
+    history:[{at:now,by:S.userName||"",what:"TEST marks filled in by the office"}]}});
+  try{ await DB.batchWrite(ops); }
+  catch(e){ toast(e?.message||"Could not fill the test marks.",true); return; }
+  toast("Test marks filled in. Review the report, approve it on the Chair's behalf and download the Word form.");
+}
+
+function cocResetDialog(g,rep,done){
+  let mode="clear";
+  const opt=(val,title,sub)=>{
+    const r=el("input",{type:"radio",name:"cocreset",style:"width:auto;margin:3px 0 0",...(val===mode?{checked:"checked"}:{})});
+    r.addEventListener("change",()=>{ if(r.checked) mode=val; });
+    return el("label",{class:"coc-chk",style:"align-items:flex-start;margin:0 0 12px;cursor:pointer"},r,
+      el("span",{},el("strong",{},title),el("div",{class:"muted",style:"font-size:13px;font-weight:400"},sub)));
+  };
+  const agree=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"});
+  modal("Reset "+(g.label||"this report"),
+    el("div",{},
+      opt("clear","Clear everything, keep marking open",
+        "Every member's marks, comments and signatures, the Chair's work, the approval and the office section are wiped. The marking window stays as it is, so the panel can start again straight away."),
+      opt("remove","Remove the report completely",
+        "Deletes the report and all mark sheets. The panel goes back to “Not opened” until you open marking again."),
+      el("label",{class:"coc-chk",style:"align-items:flex-start;margin-top:6px;color:var(--clay-ink)"},agree,
+        el("span",{},"I understand this permanently deletes everything entered for this panel and cannot be undone."))),
+    async()=>{
+      if(!agree.checked){ toast("Tick the box to confirm.",true); return false; }
+      const coded=cocCoded(g), now=Date.now();
+      let ops;
+      if(mode==="remove"){
+        ops=[{type:"delete",coll:"cocReports",id:g.id},
+             ...coded.map(cd=>({type:"delete",coll:"cocMarks",id:cocMarkId(g.id,cd.key)}))];
+      }else{
+        ops=cocEnsureOps(g).map(o=>({...o,merge:false,data:o.coll==="cocReports"
+          ? {...o.data,window:rep?.window||{opensAt:0,closesAt:0},status:"",partA:{},cand:{},
+             history:[{at:now,by:S.userName||"",what:"report reset by the office"}],updatedAt:now}
+          : {...o.data,cand:{},submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:now}}));
+      }
+      await DB.batchWrite(ops);
+      toast(mode==="remove"?"Report removed — the panel is back to Not opened.":"Report reset — marking can start again.");
+      if(mode==="remove") S.cocOpenGid=null;
+      done(); return true;
+    },"Reset");
+  const btns=document.querySelectorAll(".modal .btn"); btns[btns.length-1].classList.add("danger");
 }
 
 /* ============================================================
