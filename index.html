@@ -16598,7 +16598,7 @@ function cocDocxBuild(ctx){
       p(box(chk.a,COC_OFFICE_CHK[0][1],{sz:17})),p(box(chk.b,COC_OFFICE_CHK[1][1],{sz:17})),p(box(chk.c,COC_OFFICE_CHK[2][1],{sz:17})),
       p(box(chk.d,"Candidates and supervisors advised, Date: "+(of.advisedDate?longDate(of.advisedDate):"______________________"),{sz:17})),
       p(r("Ethics or permit matters referred  ",{sz:17})+box(of.ethicsRef==="Y","Yes",{sz:17})+r("    ",{sz:17})+box(of.ethicsRef==="N","No",{sz:17})+r("    ",{sz:17})+box(of.ethicsRef==="NA","N/A",{sz:17})),
-      p(box(chk.f,COC_OFFICE_CHK[4][1],{sz:17}))]}]},
+      p(box(chk.f,COC_OFFICE_CHK[4][1]+(of.secondSemDate?", Second seminar date: "+longDate(of.secondSemDate):""),{sz:17}))]}]},
     {cells:[L("Notes"),V(cocT(of.notes),{padV:90})]}]);
   body+=p(r("Course Coordinator / Research Office",{b:true,sz:18}),{before:140,after:60,keep:true});
   const os=of.sign;
@@ -17053,7 +17053,7 @@ function cocReportEditor(host,o){
       ["Editing after approval.","\u201C\u270E Edit as the office\u201D (Part D) lets you change an approved report directly; \u201C\u270E Amend\u201D on a member's row changes their signed marks. Both are recorded as office amendments on the report and its Word form. \u201CReturn to the Chair\u201D sends it back for the Chair to change and re-sign instead."],
       ["Major Revisions resubmission.","When the revised proposal arrives, press \u201C\u21BB Re-assess the revised proposal\u2026\u201D (Part D, or on the Outcomes tab). Choose whether the Chair re-marks on behalf of the panel or every member re-marks, and set the window (4 weeks by default). If confirmed, the mark is capped at 10/20."],
       ["Approval.","The Chair normally approves. If the Chair has no hub login, use \u201CApprove on the Chair's behalf\u201D once they have confirmed the report to you \u2014 it is recorded in the history."],
-      ["After approval.","Download the Word form, complete D2 (date received, checklist, notes, your signature) and press \u201CMark as received\u201D. \u201CReturn to the Chair\u201D reopens an approved report for changes."],
+      ["After approval.","Download the Word form, complete D2 (date received, checklist, second seminar date if required, notes, your signature) and press \u201CMark as received\u201D. \u201CReturn to the Chair\u201D reopens an approved report for changes."],
       ["Testing.","\u201C\u2691 Fill with test marks\u201D (only while the panel is empty) and \u201C\u21BA Reset report\u2026\u201D are in the bar at the top of the page."]],{open:false}));
     drawMembers();
     drawPartA();
@@ -17483,6 +17483,7 @@ function cocReportEditor(host,o){
         ["Received by",cocInput(of.receivedBy||S.userName||"",v=>{ of.receivedBy=v; sv(); })],
         ["Processing checklist",chks],
         ["Candidates and supervisors advised on",cocInput(of.advisedDate||"",v=>{ of.advisedDate=v; sv(); },{type:"date",attrs:{style:"max-width:200px"}})],
+        ["Second seminar date (if required)",cocInput(of.secondSemDate||"",v=>{ of.secondSemDate=v; sv(); },{type:"date",attrs:{style:"max-width:200px"}})],
         ["Ethics or permit matters referred",cocYN(of.ethicsRef||"",v=>{ of.ethicsRef=v; sv(); draw(); },{vals:[["Y","Yes"],["N","No"],["NA","N/A"]]})],
         ["Notes",cocArea(of.notes,v=>{ of.notes=v; sv(); },{rows:2})],
         ["Course Coordinator / Research Office",el("div",{},cocSigView(of.sign),
@@ -17490,6 +17491,10 @@ function cocReportEditor(host,o){
             const sig=await cocSignDialog({title:"Sign for the Research Office",name:S.userName||"",declaration:"I have received and processed this report.",saveLabel:"Sign"});
             if(!sig) return; of.sign=sig; sv(); await sv.flush(); draw(); }},of.sign?"Sign again":"✎ Sign"))]));
     c.append(b);
+    /* Reminder shown on screen only once D2 is signed; it is never written into the Word form. */
+    if(of.sign) c.append(el("div",{style:"padding:0 16px"},noticeBar("amber",
+      el("span",{},el("b",{},"Reminder: "),"D2 is complete and signed. Please download the completed report and save a copy to the Research Office OneDrive."),
+      el("button",{class:"btn sm",onclick:async()=>{ await sv.flush(); cocDownload(g,sem,students,rep,marks); }},"⤓ Download the completed report"))));
     if(rep.status==="approved") c.append(el("div",{class:"row",style:"padding:0 16px 14px"},el("button",{class:"btn",onclick:async()=>{
       if(!of.receivedDate) of.receivedDate=ymdOf(new Date());
       const patch={status:"received",office:of,history:cocHist(rep,"marked received by the office"),updatedAt:Date.now()};
