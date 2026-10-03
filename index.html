@@ -1555,6 +1555,84 @@
     .cx-step .st{display:none}
     .cx-steps .tx b{white-space:normal}
   }
+<style id="coc-panel-ux">
+  /* ---- CoC panel screen (staff): sub-menu, groups, assessing cards ---- */
+  nav.tabs .navcaret{margin-left:auto;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+    font-size:16px;line-height:1;color:var(--side-soft);transition:transform .15s,background .15s;flex:none}
+  nav.tabs .navcaret:hover{background:var(--side-hover);color:#fff}
+  nav.tabs button.subopen .navcaret{transform:rotate(90deg)}
+  nav.tabs .navsub{display:flex;flex-direction:column;gap:1px;margin:2px 0 6px 21px;padding-left:9px;border-left:1px solid var(--side-line)}
+  nav.tabs .navsub button.sub{font-size:13px;padding:7px 10px;gap:9px;color:var(--side-soft);font-weight:500}
+  nav.tabs .navsub button.sub:hover{color:#fff}
+  nav.tabs .navsub button.sub.on{color:#fff;background:var(--side-hover);font-weight:600}
+  nav.tabs .navsub button.sub.on::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:2px;border-radius:2px;background:var(--side-mark)}
+  nav.tabs .navsub .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;flex:none}
+  nav.tabs .navsub button.sub.on .dot{background:var(--side-mark);opacity:1}
+  nav.tabs .navsub button.attn .dot{background:var(--amber);opacity:1}
+  nav.tabs .navsub .sbadge{margin-left:auto;font-size:11px;font-weight:700;min-width:20px;height:18px;padding:0 6px;border-radius:99px;
+    display:inline-grid;place-items:center;background:#ffffff14;color:var(--side-ink)}
+  nav.tabs .navsub .sbadge.attn{background:var(--amber);color:#1b1305}
+  /* group headings on the page */
+  .cx-ghead{display:flex;align-items:center;gap:10px;margin:26px 0 2px}
+  .cx-ghead:first-of-type{margin-top:12px}
+  .cx-ghead .gi{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:14px;flex:none}
+  .cx-ghead.as-member .gi{background:var(--accent);color:#fff}
+  .cx-ghead.as-sup .gi{background:var(--blue-soft);color:var(--blue-ink)}
+  .cx-ghead .gt{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+  .cx-ghead .gt b{color:var(--ink)}
+  .cx-ghead .gs{font-size:12.5px;color:var(--ink-soft)}
+  .cx-ghead::after{content:"";flex:1;height:1px;background:var(--line);margin-left:6px}
+  /* fold role tags and highlight */
+  .cx-tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-bottom:3px}
+  .cx-tag.member{background:var(--accent-tint);color:var(--accent-deep)}
+  .cx-tag.sup{background:var(--blue-soft);color:var(--blue-ink)}
+  details.cfold.cx-hl{border:1px solid var(--accent);box-shadow:0 0 0 3px var(--ring),var(--shadow-md)}
+  details.cfold.cx-hl > summary{background:linear-gradient(90deg,var(--accent-tint),transparent 70%)}
+  details.cfold.cx-hl > summary .cs-mark{background:var(--accent);color:#fff;border-color:transparent}
+  .cx-start{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--accent);color:#fff;padding:3px 8px;border-radius:99px;white-space:nowrap}
+  details.cfold{scroll-margin-top:76px}
+  /* assessing: one card per panel */
+  .cx-acta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:var(--accent-tint);
+    border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);margin-bottom:14px}
+  .cx-acta .t{flex:1;min-width:220px;font-size:13.5px;color:var(--ink)}
+  .cx-acta .t b{display:block;font-size:14.5px;margin-bottom:2px}
+  .cx-pcard{border:1px solid var(--line);border-radius:14px;background:var(--paper-2);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .cx-phead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:12px 16px;background:var(--sunken);border-bottom:1px solid var(--line)}
+  .cx-phead .pn{font-weight:700;font-size:15px;color:var(--ink)}
+  .cx-phead .ps{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .cx-phead .pr{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .cx-pmeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px}
+  .cx-pmeta .lb{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-right:2px}
+  .cx-mate{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:3px 9px 3px 3px;border-radius:99px;background:var(--sunken);border:1px solid var(--line)}
+  .cx-mate i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:700;background:var(--neutral-soft);color:var(--neutral-ink)}
+  .cx-mate.me{background:var(--accent-tint);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+  .cx-mate.me i{background:var(--accent);color:#fff}
+  .cx-arow{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:16px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .cx-arow:last-child{border-bottom:none}
+  .cx-arow.next{background:linear-gradient(90deg,var(--accent-tint),transparent 80%);box-shadow:inset 3px 0 0 var(--accent)}
+  .cx-arow.past{opacity:.78}
+  .cx-when .d{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-deep)}
+  .cx-when .h{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ink);margin-top:2px}
+  .cx-when .p{font-size:11.5px;color:var(--ink-soft);margin-top:3px;line-height:1.35}
+  .cx-who .n{font-weight:700;font-size:14.5px;color:var(--ink)}
+  .cx-who .n small{font-weight:500;color:var(--ink-soft);font-size:12.5px;margin-left:6px}
+  .cx-who .ti{font-size:13.5px;color:var(--ink);margin-top:3px;line-height:1.4}
+  .cx-who .sv{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
+  .cx-aside{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .cx-num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--neutral-soft);color:var(--neutral-ink);font-size:11.5px;font-weight:700;margin-right:6px;vertical-align:1px}
+  .cx-arow.next .cx-num{background:var(--accent);color:#fff}
+  .stat .b.cx-jump{cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .stat .b.cx-jump:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  @media (max-width:600px){
+    details.cfold > summary{flex-wrap:wrap;row-gap:8px}
+    details.cfold > summary .csection{flex:1 1 100%}
+    details.cfold > summary .cfold-right{margin-left:44px;flex-wrap:wrap}
+  }
+  @media (max-width:700px){
+    .cx-arow{grid-template-columns:minmax(0,1fr)}
+    .cx-aside{align-items:flex-start;flex-direction:row;flex-wrap:wrap}
+    .cx-phead .pr{margin-left:0}
+  }
 </style>
 </head>
 <body>
@@ -3789,21 +3867,29 @@ async function viewPanels(v){
   const FOLD_KEY="sh-coc-fold";
   const foldState=(()=>{ try{ return JSON.parse(window.localStorage.getItem(FOLD_KEY)||"{}")||{}; }catch(e){ return {}; } })();
   const saveFold=()=>{ try{ window.localStorage.setItem(FOLD_KEY,JSON.stringify(foldState)); }catch(e){} };
-  function fold(key,drawFn,summary,defOpen){
+  /* opts.tag: "member" | "sup" — a small label saying whose students the
+     section is about. opts.hl: highlight it as the place to start. */
+  function fold(key,drawFn,summary,defOpen,opts={}){
     const box=el("div",{}); host=box;
     try{ drawFn(); } finally{ host=realHost; }
-    if(!box.firstElementChild) return;
+    if(!box.firstElementChild) return null;
     const head=box.firstElementChild.classList.contains("csection")?box.firstElementChild:null;
-    const d=el("details",{class:"cfold","data-fold":key});
+    const d=el("details",{class:"cfold"+(opts.hl?" cx-hl":""),"data-fold":key});
     if(foldState[key]!==undefined?foldState[key]:defOpen) d.open=true;
     d.addEventListener("toggle",()=>{ foldState[key]=d.open; saveFold(); });
     const sm=el("summary",{});
-    if(head) sm.append(head);
+    if(head){
+      if(opts.tag){ const hb=head.querySelector(".cs-body");
+        if(hb) hb.prepend(el("div",{class:"cx-tag "+opts.tag},opts.tag==="member"?"As a panel member":"As a supervisor")); }
+      sm.append(head);
+    }
     sm.append(el("div",{class:"cfold-right"},
+      opts.hl?el("span",{class:"cx-start"},opts.hlTxt||"Start here"):"",
       summary?el("span",{class:"pill "+(summary.cls||"none")},summary.txt):el("span",{}),
       el("span",{class:"chev"},"\u203A")));
     const body=el("div",{class:"cfold-body"}); body.append(...box.childNodes);
     d.append(sm,body); realHost.append(d);
+    return d;
   }
   function foldBar(){
     const setAll=open=>{ realHost.querySelectorAll("details.cfold").forEach(d=>{ d.open=open; foldState[d.dataset.fold]=open; }); saveFold(); };
@@ -3841,34 +3927,84 @@ async function viewPanels(v){
      supervisor-facing sections are simply not drawn for them \u2014 they would
      be permanently empty and read as something broken. */
   const panellistOnly=S.role==="panellist";
+  /* The page is split by whose students each section is about:
+       As a panel member — students on panels you sit on, your availability
+       As a supervisor   — your own students' CoC, your suggested assessors
+     Once a panel you sit on is released, "Students you're assessing" moves
+     to the top, opens and is highlighted, because it is what you come back
+     for. Before that, whatever is waiting on you comes first. The sidebar's
+     CoC panel sub-menu mirrors the same sections in the same order. */
   function draw(){
     host.innerHTML="";
     const sem=activeSemester();
-    drawSummary();
-    foldBar();
     const meIn=g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid);
     const asMember=groups.filter(meIn);
-    if(!availabilityOff(sem)){
-      const pend=asMember.filter(g=>{ const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
-        return groupSessions(g).some(x=>availOf(g,me,x.id)===undefined); }).length;
-      fold("avail",drawAvailability,pend?{cls:"pending",txt:pend+" waiting for you"}:{cls:"approved",txt:"All answered"},pend>0);
+    const released=asMember.filter(isAssessorReleased);
+    const nAss=released.reduce((k,g)=>k+groupStudents(g).length,0);
+    const pend=asMember.filter(g=>{ const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
+      return groupSessions(g).some(x=>availOf(g,me,x.id)===undefined); }).length;
+    const n=members.length;
+    const sch=mine.filter(x=>{ const g=groupOfStudent(groups,x.id); return g&&isFinal(g)&&isScheduled(g,x.id); }).length;
+    const finalMine=mine.some(x=>{ const g=groupOfStudent(groups,x.id); return g&&isFinal(g); });
+    const memberFirst=panellistOnly||released.length>0||pend>0;
+    /* Suggestions only count as a to-do for someone with students whose
+       panels are not settled yet. */
+    const needsNom=mine.length>0&&n<PANEL_MIN&&!finalMine;
+    drawSummary(memberFirst);
+    foldBar();
+    const SEC={
+      avail:()=>availabilityOff(sem)?null:fold("avail",drawAvailability,pend?{cls:"pending",txt:pend+" waiting for you"}:{cls:"approved",txt:"All answered"},pend>0),
+      assessing:()=>fold(released.length?"assessing-r":"assessing",drawAssessing,
+        released.length?{cls:"blue",txt:nAss+" student"+(nAss===1?"":"s")+(asMember.length>released.length?" + unreleased":"")}
+          :{cls:"none",txt:asMember.length?"Not released yet":"None this semester"},
+        panellistOnly||released.length>0,{hl:released.length>0}),
+      nominate:()=>panellistOnly||nominationsOff(sem)?null:fold("nominate",drawNominations,{cls:n<PANEL_MIN?"pending":"approved",txt:n+" of "+PANEL_TARGET+" suggested"},needsNom),
+      mystudents:()=>panellistOnly?null:fold("mystudents",drawMyStudents,{cls:"blue",txt:sch+" of "+mine.length+" scheduled"},finalMine&&!released.length)};
+    const memberOrder=released.length?["assessing","avail"]:["avail","assessing"];
+    const supOrder=finalMine?["mystudents","nominate"]:["nominate","mystudents"];
+    const plan=panellistOnly?[["member",memberOrder]]
+      :memberFirst?[["member",memberOrder],["sup",supOrder]]:[["sup",supOrder],["member",memberOrder]];
+    const shown=[];
+    plan.forEach(([grp,keys])=>{
+      const hd=panellistOnly?null:(grp==="member"
+        ?el("div",{class:"cx-ghead as-member ui"},el("span",{class:"gi"},"\u2637"),
+            el("div",{},el("div",{class:"gt"},"As a ",el("b",{},"panel member")),el("div",{class:"gs"},"Students you assess on panels you sit on")))
+        :el("div",{class:"cx-ghead as-sup ui"},el("span",{class:"gi"},"\u25CE"),
+            el("div",{},el("div",{class:"gt"},"As a ",el("b",{},"supervisor")),el("div",{class:"gs"},"Your own students' CoC and the assessors you suggested"))));
+      if(hd) realHost.append(hd);
+      let any=false;
+      keys.forEach(k=>{ const d=SEC[k](); if(d){ any=true; shown.push(k); } });
+      if(hd&&!any) hd.remove();
+    });
+    /* Sidebar sub-menu: same sections, same order, live counts. */
+    const SUB={
+      assessing:{label:"Students I assess",badge:released.length?nAss:"",title:released.length?nAss+" students on panels you sit on":"Shown once the coordinator releases your panel"},
+      avail:{label:"My availability",badge:pend||"",attn:pend>0,title:pend?pend+" panel(s) waiting for your availability":"All answered"},
+      mystudents:{label:"My students' CoC",badge:mine.length?sch+"/"+mine.length:"",title:sch+" of "+mine.length+" of your students scheduled"},
+      nominate:{label:"My suggestions",badge:n+"/"+PANEL_TARGET,attn:needsNom,title:n+" of "+PANEL_TARGET+" assessors suggested"}};
+    paintCocSubnav(shown.map(k=>({key:k,...SUB[k]})));
+    if(S.panelSec) panelSecReveal();
+    /* Light up the sub-menu item for the section in view. */
+    if(S.panelObs){ S.panelObs.disconnect(); S.panelObs=null; }
+    if("IntersectionObserver" in window){
+      const obs=new IntersectionObserver(es=>{
+        if(S.tab!=="panels") return;
+        const vis=es.filter(e=>e.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top)[0];
+        if(!vis) return;
+        const k=String(vis.target.dataset.fold||"").replace(/-r$/,"");
+        if(k&&k!==S.panelSecOn){ S.panelSecOn=k; paintCocSubnav(); }
+      },{rootMargin:"-70px 0px -60% 0px"});
+      realHost.querySelectorAll("details.cfold").forEach(d=>obs.observe(d));
+      S.panelObs=obs;
     }
-    if(!panellistOnly&&!nominationsOff(sem)){
-      const n=members.length;
-      fold("nominate",drawNominations,{cls:n<PANEL_MIN?"pending":"approved",txt:n+" of "+PANEL_TARGET+" suggested"},n<PANEL_MIN);
-    }
-    if(!panellistOnly){
-      const sch=mine.filter(x=>{ const g=groupOfStudent(groups,x.id); return g&&isFinal(g)&&isScheduled(g,x.id); }).length;
-      fold("mystudents",drawMyStudents,{cls:"blue",txt:sch+" of "+mine.length+" scheduled"},false);
-    }
-    const nAss=asMember.filter(isAssessorReleased).reduce((k,g)=>k+groupStudents(g).length,0);
-    fold("assessing",drawAssessing,{cls:"blue",txt:nAss+" student"+(nAss===1?"":"s")+(asMember.some(g=>!isAssessorReleased(g))?" + unreleased":"")},panellistOnly);
   }
 
   /* Three tiles answering the only questions a supervisor opens this tab
      with: have I done my bit, is anything waiting on me, and when are my
      students on. Everything below is the detail behind these. */
-  function drawSummary(){
+  function drawSummary(memberFirst){
+    const jt=(b,key)=>{ if(!b) return b; b.classList.add("cx-jump"); b.setAttribute("role","button"); b.tabIndex=0; b.title="Go to this section";
+      const go=()=>goPanelSec(key); b.addEventListener("click",go); b.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } }); return b; };
     const asMember=groups.filter(g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid));
     const pending=asMember.filter(g=>{
       const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
@@ -3882,23 +4018,23 @@ async function viewPanels(v){
     /* A tile for a switched-off step would count work nobody is asking
        for, so it goes with the step. */
     const semNow=activeSemester();
-    const availTile=availabilityOff(semNow)?null:statBox(pending,"Availability to answer");
+    const availTile=availabilityOff(semNow)?null:jt(statBox(pending,"Availability to answer"),"avail");
     if(panellistOnly){
       host.append(el("div",{class:"stat"},
-        statBox(asMember.length,"Panels I'm on"),
+        jt(statBox(asMember.filter(isAssessorReleased).reduce((n,g)=>n+groupStudents(g).length,0),"Students I assess"),"assessing"),
         availTile,
-        statBox(asMember.reduce((n,g)=>n+groupStudents(g).length,0),"Students I assess")));
+        jt(statBox(asMember.length,"Panels I'm on"),"assessing")));
       return;
     }
+    /* Drafts contribute nothing here either: a load that ticks up before
+       the coordinator has released the panel is still telling the
+       assessor who they have been given. */
+    const assessTile=jt(statBox(asMember.filter(isAssessorReleased).reduce((n,g)=>n+groupStudents(g).length,0)
+              +(asMember.some(g=>!isAssessorReleased(g))?" +":""),"Students I assess"),"assessing");
+    const supTiles=[nominationsOff(semNow)?null:jt(statBox(members.length+" / "+PANEL_TARGET,"Names nominated"),"nominate"),
+      jt(statBox(scheduled+" / "+mine.length,"My students scheduled"),"mystudents")];
     host.append(el("div",{class:"stat"},
-      nominationsOff(semNow)?null:statBox(members.length+" / "+PANEL_TARGET,"Names nominated"),
-      availTile,
-      statBox(scheduled+" / "+mine.length,"My students scheduled"),
-      /* Drafts contribute nothing here either: a load that ticks up before
-         the coordinator has released the panel is still telling the
-         assessor who they have been given. */
-      statBox(asMember.filter(isAssessorReleased).reduce((n,g)=>n+groupStudents(g).length,0)
-              +(asMember.some(g=>!isAssessorReleased(g))?" +":""),"Students I assess")));
+      ...(memberFirst?[assessTile,availTile,...supTiles]:[...supTiles,availTile,assessTile])));
   }
 
   /* ---- the availability request, first because it's time-critical ---- */
@@ -4119,109 +4255,107 @@ async function viewPanels(v){
     t.append(tb); c.append(t); host.append(c);
   }
 
-  /* ---- what I've been asked to assess ---- */
+  /* ---- what I've been asked to assess ----
+     One card per panel: when it sits, your role, who you sit with, the
+     shared folder and the report deadline; then its candidates in running
+     order, with the next presentation across all panels flagged. */
   function drawAssessing(){
     const asMember=groups.filter(g=>groupMembers(g).some(m=>m.kind==="internal"&&m.uid===S.uid));
     /* Counted over released panels only \u2014 an unreleased one is not yet
        a commitment, and its size is not yet the assessor's business. */
-    const total=asMember.filter(isAssessorReleased).reduce((n,g)=>n+groupStudents(g).length,0);
-    const held=asMember.filter(g=>!isAssessorReleased(g)).length;
+    const rel=asMember.filter(isAssessorReleased);
+    const total=rel.reduce((n,g)=>n+groupStudents(g).length,0);
+    const held=asMember.filter(g=>!isAssessorReleased(g));
     host.append(sectionHead("\u2637","Students you're assessing",
-      "CoCs you have been asked to sit on, and your slot times.",
+      rel.length?"The candidates on the panels you sit on \u2014 your times, links and report deadlines."
+        :"CoCs you have been asked to sit on, and your slot times.",
       total>PANEL_CAP?"act":""));
-    const c=cardShell("Students I'm assessing",
-      el("span",{class:total>PANEL_CAP?"pill missed":"muted ui"},
-        total+" of "+PANEL_CAP+" usual maximum"+(held?" \u00B7 "+held+" panel"+(held===1?"":"s")+" not released":"")),
-      total>PANEL_CAP?"act":"main");
     if(!asMember.length){
-      c.append(el("p",{class:"muted",style:"padding:16px;margin:0"},"You haven't been put on any CoC panel this semester."));
-      host.append(c); return;
+      host.append(el("p",{class:"muted",style:"margin:0 0 14px"},"You haven't been put on any CoC panel this semester."));
+      return;
     }
-    /* The shared examination report for each released panel, above the
-       student list — it is the one thing an assessor comes back to this
-       screen for after the presentations. Released panels only, for the
-       same reason the students are hidden until then. */
-    const semA=activeSemester();
-    const forms=asMember.filter(g=>isAssessorReleased(g)&&(docsLinkOf(g)||panelReportDue(g,semA).date));
-    if(forms.length){
-      const strip=el("div",{style:"padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(127,127,127,.05)"});
-      strip.append(el("div",{class:"ui",style:"font-weight:700;font-size:13px;margin-bottom:6px"},
-        DOCS_NAME+" & report deadline"+(forms.length===1?"":"s")));
-      forms.forEach(g=>{
-        const pd=panelReportDue(g,semA), ds=dueState(pd.date);
-        strip.append(el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0"},
-          el("span",{class:"ui",style:"font-size:13.5px;min-width:140px"},g.label||"Panel"),
-          docsLinkOf(g)?joinLink(docsLinkOf(g),DOCS_OPEN):el("span",{class:"pill none",style:"font-size:11.5px"},"Folder not shared yet"),
-          pd.date?el("span",{class:"pill "+ds.cls,style:"font-size:11.5px",
-            title:pd.auto?"Worked out automatically: "+dueRuleText(semA)+(pd.multi?" (latest presentation day)":""):"Set by the MRes office for this panel"},
-            "Report due "+prettyDate(pd.date)+(ds.txt?" · "+ds.txt:"")):el("span",{})));
-      });
-      const ro=researchOfficeEmail(semA);
-      strip.append(el("p",{class:"muted ui",style:"margin:6px 0 0;font-size:12.5px"},
-        "The folder holds "+DOCS_CONTENTS+" \u2014 read them before the presentations. "+
-        "There is no Word form to fill in: after each presentation, enter your marks, conflict of interest declaration and comments "+
-        "in the hub (CoC assessment tab), then sign and submit them. The Panel Chair reviews everyone's entries, approves and signs the report in the hub, "+
-        "and sends it to the Research Office"+(ro?" ("+ro+")":"")+
-        (reportDueDays(semA)?" within "+dueRuleText(semA)+" \u2014 each student's own deadline is under their time below, so please submit well before it":"")+". "+
-        "If the folder asks for permission, tell the MRes office which address you use for OneDrive / Google Drive."));
-      c.append(strip);
-    }
-    if(asMember.some(isAssessorReleased)) c.append(el("div",{class:"row",style:"padding:10px 16px;border-bottom:1px solid var(--line)"},
-      el("span",{class:"ui",style:"flex:1;min-width:200px;font-size:13.5px"},"Enter your marks, comments and signature for each candidate in the online examination report."),
+    const semA=activeSemester(), today=ymdOf(new Date());
+    if(rel.length) host.append(el("div",{class:"cx-acta ui"},
+      el("div",{class:"t"},el("b",{},"Assess "+total+" candidate"+(total===1?"":"s")+" online"),
+        "After each presentation, enter your marks, conflict of interest declaration and comments in the hub, then sign and submit. There is no Word form to fill in."),
       el("button",{class:"btn sm",onclick:()=>goTab("cocreports")},"Open CoC assessment \u2192")));
-    const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Student","Proposal title","Principal","Panel","My role","Time"].map(h=>el("th",{},h)))));
-    const tb=el("tbody",{});
-    asMember.forEach(g=>{
+    host.append(el("div",{class:"row ui",style:"justify-content:space-between;margin:0 0 10px;font-size:13px"},
+      el("span",{class:"muted"},total+" of "+PANEL_CAP+" usual maximum"+(held.length?" \u00B7 "+held.length+" panel"+(held.length===1?"":"s")+" not released yet":"")),
+      total>PANEL_CAP?el("span",{class:"pill missed"},"Above the usual limit"):""));
+    /* The next presentation from today on, across every released panel. */
+    const keyOf=(g,id)=>{ if(!isScheduled(g,id)) return "~"; const sl=slotOfStudent(g,id); return slotDate(g,sl)+" "+sl.start; };
+    let next=null;
+    rel.forEach(g=>groupStudents(g).forEach(id=>{ const k=keyOf(g,id); if(k!=="~"&&k.slice(0,10)>=today&&(!next||k<next.k)) next={k,gid:g.id,id}; }));
+    const firstKey=g=>groupStudents(g).map(id=>keyOf(g,id)).sort()[0]||"~";
+    rel.slice().sort((a,b)=>firstKey(a)<firstKey(b)?-1:firstKey(a)>firstKey(b)?1:0).forEach(g=>{
+      const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
+      const chair=isChair(g,me);
+      const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
+      const ids=groupStudents(g).slice().sort((a,b)=>keyOf(g,a)<keyOf(g,b)?-1:1);
+      const pd=panelReportDue(g,semA), ds=dueState(pd.date);
+      const card=el("div",{class:"cx-pcard"});
+      card.append(el("div",{class:"cx-phead"},
+        el("div",{},el("div",{class:"pn"},g.label||"Panel"),
+          el("div",{class:"ps ui"},[sess?prettyDate(sess.date)+", "+prettyTime(sess.start)+"\u2013"+prettyTime(sess.end):"Session not set yet",
+            ids.length+" candidate"+(ids.length===1?"":"s")].join(" \u00B7 "))),
+        el("div",{class:"pr"},el("span",{class:"pill "+(chair?"blue":"none")},chair?"You chair this panel":"You are a panel member"),
+          pd.date?el("span",{class:"pill "+ds.cls,title:pd.auto?"Worked out automatically: "+dueRuleText(semA)+(pd.multi?" (latest presentation day)":""):"Set by the MRes office for this panel"},
+            "Report due "+prettyDate(pd.date)+(ds.txt?" \u00B7 "+ds.txt:"")):"")));
+      card.append(el("div",{class:"cx-pmeta ui"},el("span",{class:"lb"},"Panel"),
+        ...groupMembers(g).map(m=>{ const mine_=m.kind==="internal"&&m.uid===S.uid;
+          return el("span",{class:"cx-mate"+(mine_?" me":"")},el("i",{},initialsOf(m.name||"?")),
+            (m.name||"")+(isChair(g,m)?" \u00B7 Chair":"")+(mine_?" (you)":"")); }),
+        el("span",{style:"flex:1"}),
+        docsLinkOf(g)?joinLink(docsLinkOf(g),DOCS_OPEN):el("span",{class:"pill none",style:"font-size:11.5px"},"Folder not shared yet")));
+      ids.forEach((id,i)=>{
+        const s=students.find(x=>x.id===id); if(!s) return;
+        const slot=slotOfStudent(g,id), sched=isScheduled(g,id), day=sched?slotDate(g,slot):"";
+        const isNext=!!next&&next.gid===g.id&&next.id===id, past=sched&&day<today;
+        const jl=slotLink(g,slot);
+        const sDue=studentReportDue(g,id,semA), sds=sDue?dueState(sDue):null;
+        card.append(el("div",{class:"cx-arow"+(isNext?" next":"")+(past?" past":"")},
+          el("div",{class:"cx-when ui"},sched
+            ?[el("div",{class:"d"},prettyDate(day)),el("div",{class:"h"},prettyTime(slot.start)+"\u2013"+prettyTime(slot.end)),
+              partsLine(g,slot)?el("div",{class:"p"},partsLine(g,slot)):""]
+            :el("span",{class:"pill pending"},"Not scheduled")),
+          el("div",{class:"cx-who"},
+            el("div",{class:"n"},el("span",{class:"cx-num"},String(i+1)),s.name,el("small",{},s.sid||"no ID")),
+            el("div",{class:"ti"},titleCell(s,"ui")),
+            el("div",{class:"sv ui"},"Principal supervisor: "+(s.principalName||"\u2014")+(s.coName?" \u00B7 Co-supervisor: "+s.coName:""))),
+          el("div",{class:"cx-aside ui"},
+            isNext?el("span",{class:"cx-start"},"Next up"):"",
+            jl&&!past?joinLink(jl,"Join"):"",
+            sDue?el("span",{class:"pill "+sds.cls,style:"font-size:11px"},"Report due "+prettyDate(sDue)+(sds.txt?" \u00B7 "+sds.txt:"")):"")));
+      });
+      host.append(card);
+    });
+    /* Until the coordinator releases a panel, who an assessor has been
+       given is not theirs to know \u2014 not the names, not the times, not
+       the number, and not the panel's NAME either: the name is the
+       chair's, and knowing who chairs says who else is likely on it. So it
+       is shown under a neutral alias, with only whether they chair it and
+       the booked day, because that is what the availability question
+       hangs on. */
+    held.forEach(g=>{
       const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
       const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId);
-      /* Until the coordinator releases the panel, who an assessor has been
-         given is not theirs to know \u2014 not the names, not the times, not
-         the number, and not the panel's NAME either: the name is the
-         chair's, and knowing who chairs says who else is likely on it.
-         So it is referred to by a neutral alias until release. They
-         are told the panel exists and whether they chair it, because that
-         is what the availability question hangs on. */
-      if(!isAssessorReleased(g)){
-        tb.append(el("tr",{},
-          el("td",{colspan:"3"},el("span",{class:"pill pending"},"Not released yet"),
-            el("span",{class:"muted ui",style:"font-size:13px;margin-left:8px"},
-              "The coordinator is still seating this panel. Which panel this is, who you are assessing and when all appear here once it is released.")),
-          el("td",{class:"muted"},panelAlias(g)),
-          el("td",{},isChair(g,me)?el("span",{class:"pill blue"},"Chair"):el("span",{class:"pill none"},"Member")),
-          el("td",{},sess?el("span",{class:"muted ui",style:"font-size:13px"},"Booked "+prettyDate(sess.date))
-                        :el("span",{class:"pill pending"},"Not scheduled"))));
-        return;
-      }
-      groupStudents(g).forEach(id=>{
-        const s=students.find(x=>x.id===id); if(!s) return;
-        const slot=slotOfStudent(g,id);
-        // An assessor reads this row to prepare, so the title matters as much
-        // as the time, and the link saves them hunting for the invitation.
-        const timeCell=el("td",{},isScheduled(g,id)
-          ?el("strong",{},prettyDate(slotDate(g,slot))+", "+prettyTime(slot.start)+"–"+prettyTime(slot.end))
-          :el("span",{class:"pill pending"},"Not scheduled"));
-        if(isScheduled(g,id)&&partsLine(g,slot)) timeCell.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(g,slot)));
-        const jl=slotLink(g,slot);
-        if(jl) timeCell.append(el("div",{style:"margin-top:4px"},joinLink(jl,"Join")));
-        const sDue=studentReportDue(g,id,activeSemester());
-        if(sDue){ const ds=dueState(sDue);
-          timeCell.append(el("div",{style:"margin-top:4px"},el("span",{class:"pill "+ds.cls,style:"font-size:11px"},
-            "Report due "+prettyDate(sDue)+(ds.txt?" · "+ds.txt:"")))); }
-        tb.append(el("tr",{},
-          el("td",{},el("strong",{},s.name),
-            el("div",{class:"muted ui",style:"font-size:12.5px"},s.sid||"no ID")),
-          el("td",{},titleCell(s,"ui")),
-          el("td",{class:"muted"},s.principalName||"\u2014"),
-          el("td",{class:"muted"},g.label||"Panel"),
-          el("td",{},isChair(g,me)?el("span",{class:"pill blue"},"Chair"):el("span",{class:"pill none"},"Member")),
-          timeCell));
-      });
+      host.append(el("div",{class:"cx-pcard",style:"opacity:.92"},el("div",{class:"cx-phead",style:"border-bottom:none"},
+        el("div",{},el("div",{class:"pn"},panelAlias(g)),
+          el("div",{class:"ps ui"},"The coordinator is still seating this panel. Which panel it is, who you are assessing and when all appear here once it is released.")),
+        el("div",{class:"pr"},el("span",{class:"pill pending"},"Not released yet"),
+          el("span",{class:"pill "+(isChair(g,me)?"blue":"none")},isChair(g,me)?"Chair":"Member"),
+          sess?el("span",{class:"pill none"},"Booked "+prettyDate(sess.date)):el("span",{class:"pill pending"},"Not scheduled")))));
     });
-    t.append(tb); c.append(t);
-    if(total>PANEL_CAP) c.append(el("div",{class:"locknote",style:"margin:0;border-radius:0"},
+    if(total>PANEL_CAP) host.append(el("div",{class:"locknote",style:"margin:0 0 14px"},
       "That's above the usual limit of "+PANEL_CAP+" \u2014 let the coordinator know if it's too much."));
-    host.append(c);
+    if(rel.some(g=>docsLinkOf(g)||panelReportDue(g,semA).date)){
+      const ro=researchOfficeEmail(semA);
+      host.append(el("p",{class:"muted ui",style:"margin:0 0 14px;font-size:12.5px"},
+        "The "+DOCS_FOLDER+" holds "+DOCS_CONTENTS+" \u2014 read them before the presentations. The Panel Chair reviews everyone's entries, approves and signs the report in the hub, "+
+        "and sends it to the Research Office"+(ro?" ("+ro+")":"")+
+        (reportDueDays(semA)?" within "+dueRuleText(semA)+" \u2014 each candidate's own deadline is shown beside them, so please submit well before it":"")+". "+
+        "If the folder asks for permission, tell the MRes office which address you use for OneDrive / Google Drive."));
+    }
   }
 
   draw();
@@ -9014,6 +9148,47 @@ function syncNav(){
 }
 function goTab(id){ S.tab=id; drawMain(); try{ window.scrollTo({top:0}); }catch(e){} }
 
+/* ---- CoC panel sub-menu (staff) ----
+   The items mirror the sections on the CoC panel screen, in the same
+   order. viewPanels() repaints them with live counts once it has loaded;
+   until then a sensible default list is shown. */
+const COC_SUB_DEFAULT=()=>S.role==="panellist"
+  ?[{key:"assessing",label:"Students I assess"},{key:"avail",label:"My availability"}]
+  :[{key:"assessing",label:"Students I assess"},{key:"mystudents",label:"My students' CoC"},{key:"nominate",label:"My suggestions"}];
+const cocSubIsOpen=()=>S.cocSubOpen!==undefined?S.cocSubOpen:true;
+function paintCocSubnav(items){
+  if(items) S.cocSubItems=items;
+  const box=S.cocSubNav; if(!box||!box.isConnected&&!S.cocSubParent) return;
+  const list=S.cocSubItems||COC_SUB_DEFAULT();
+  const open=cocSubIsOpen();
+  box.style.display=open?"":"none";
+  S.cocSubParent?.classList.toggle("subopen",open);
+  box.replaceChildren(...list.map(it=>{
+    const on=S.tab==="panels"&&S.panelSecOn===it.key;
+    const b=el("button",{type:"button",class:"sub"+(on?" on":"")+(it.attn?" attn":""),"data-sec":it.key,
+      title:it.title||it.label,onclick:()=>goPanelSec(it.key)},
+      el("span",{class:"dot"}),el("span",{class:"navlabel"},it.label),
+      it.badge!=null&&it.badge!==""?el("span",{class:"sbadge"+(it.attn?" attn":"")},String(it.badge)):"");
+    return b;
+  }));
+}
+/* Open a section of the CoC panel screen and bring it into view. */
+function goPanelSec(key){
+  S.panelSec=key;
+  document.body.classList.remove("nav-open");
+  if(S.tab!=="panels"){ goTab("panels"); return; }
+  panelSecReveal();
+}
+function panelSecReveal(){
+  const key=S.panelSec; if(!key) return;
+  const d=document.querySelector('details.cfold[data-fold^="'+key+'"]');
+  if(!d){ return; }
+  S.panelSec=null;
+  if(!d.open){ d.open=true; d.dispatchEvent(new Event("toggle")); }
+  S.panelSecOn=key; paintCocSubnav();
+  setTimeout(()=>{ d.scrollIntoView({behavior:"smooth",block:"start"}); d.classList.remove("cx-flash"); void d.offsetWidth; d.classList.add("cx-flash"); },40);
+}
+
 function renderApp(){
   document.body.innerHTML="";
   document.body.classList.remove("nav-open");
@@ -9051,6 +9226,21 @@ function renderApp(){
         navIcon(ic),el("span",{class:"navlabel"},label));
       if(id==="notes"){ b.append(el("span",{class:"nbadge",style:"display:none"},"0")); S.notesTabBtn=b; }
       tabs.append(b);
+      /* Staff: the CoC panel screen's sections as a sub-menu, so a
+         supervisor or panel member can go straight to the students they
+         assess, their own students, or their suggestions. */
+      if(id==="panels"&&S.role!=="admin"){
+        const caret=el("span",{class:"navcaret",role:"button",tabindex:"0","aria-label":"Show or hide the CoC panel sections",
+          title:"Show / hide sections"},"\u203A");
+        const tog=e=>{ e.stopPropagation(); e.preventDefault(); S.cocSubOpen=!cocSubIsOpen(); paintCocSubnav(); };
+        caret.addEventListener("click",tog);
+        caret.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" ") tog(e); });
+        b.append(caret);
+        S.cocSubNav=el("div",{class:"navsub",role:"group","aria-label":"CoC panel sections"});
+        S.cocSubParent=b;
+        tabs.append(S.cocSubNav);
+        paintCocSubnav();
+      }
     });
   });
 
@@ -9150,6 +9340,8 @@ function semesterPicker(onChange){
 
 async function drawMain(){
   syncNav();
+  if(S.tab!=="panels") S.panelSecOn=null;
+  if(S.cocSubNav) paintCocSubnav();
   const host=$("#view"); if(!host) return;
   /* Each draw gets its own fresh pane. Screens load their data before
      drawing, so clicking a second tab while the first is still loading
