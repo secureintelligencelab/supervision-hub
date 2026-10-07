@@ -2114,6 +2114,146 @@ function inflight(key,fn){
   return p;
 }
 
+/* ============================================================
+   STAFF NAMES FOLLOW THE STAFF RECORD
+   ------------------------------------------------------------
+   A panel seat, a nomination, a student's supervisor fields and a
+   consultation each keep a COPY of the staff member's name, taken when
+   they were seated or allocated. Renaming someone under Staff used to
+   change the Staff record only, so every panel card, running order,
+   email, timetable and PIN page went on showing the old name — and a
+   panel named after its chair ("Dr Jones Panel") kept the old name too.
+
+   Two parts, so the name is right everywhere and stays right:
+     1. On READ, every panel / nomination / student / consultation row
+        has its copies replaced with the current name from the Staff
+        record (by uid — external assessors have none and are left
+        alone). The screen is right at once, including for names that
+        were changed before this fix.
+     2. On WRITE, saving a new name under Staff writes it into every
+        stored copy and refreshes the PIN pages, which are snapshots.
+        If the office's screens come across a copy that is still out of
+        date, it is quietly corrected in the database as well, so the
+        student portal and the PIN pages — which cannot look up the
+        Staff list — catch up without anyone having to do anything.
+   A panel name the office TYPED is never touched; only one that was
+   following its chair's name moves with the new name.
+   ============================================================ */
+const NAME_COPY_COLLS=new Set(["panelGroups","panels","panelPool","students","consultations"]);
+const liveStaffName=uid=>uid?String(staffById(uid)?.name||"").trim():"";
+/* The fields of one row whose name copies are out of date, as a patch
+   ({} keys only for what changed), or null if it is already current.
+   `nameOf(uid)` gives the current name, or "" when unknown. */
+function nameCopyPatch(coll,row,nameOf){
+  if(!row||!NAME_COPY_COLLS.has(coll)) return null;
+  const patch={};
+  if(coll==="panelGroups"||coll==="panels"||coll==="panelPool"){
+    const ms=Array.isArray(row.members)?row.members:null;
+    if(ms){
+      let changed=false;
+      const next=ms.map(m=>{
+        if(m&&m.kind!=="external"&&m.uid){
+          const n=nameOf(m.uid);
+          if(n&&n!==String(m.name||"").trim()){ changed=true; return {...m,name:n}; }
+        }
+        return m;
+      });
+      if(changed){
+        /* "Dr Jones Panel" follows Dr Jones. Matched against the OLD
+           names, before they are replaced, so a typed name is kept. */
+        if(coll==="panelGroups"){
+          const l=String(row.label||"").trim();
+          const i=l?ms.findIndex(m=>chairPanelName(m)&&chairPanelName(m)===l):-1;
+          if(i>=0&&next[i]!==ms[i]) patch.label=chairPanelName(next[i]);
+        }
+        patch.members=next;
+      }
+    }
+  }
+  const fix=(field,uid)=>{ const n=nameOf(uid); if(n&&n!==String(row[field]||"").trim()) patch[field]=n; };
+  if(coll==="panelPool") fix("supervisorName",row.supervisorUid);
+  if(coll==="students"||coll==="panels") fix("principalName",row.principalUid);
+  if(coll==="consultations") fix("principalName",row.supervisorUid);
+  if(coll==="students"||coll==="consultations") fix("coName",row.coUid);
+  return Object.keys(patch).length?patch:null;
+}
+/* Part 1: applied to every row DB.list / DB.get hands back. */
+function withLiveNames(coll,rows){
+  if(!NAME_COPY_COLLS.has(coll)||!Array.isArray(rows)||!rows.length) return rows;
+  if(!((S.supervisors||[]).length||(S.panellists||[]).length)) return rows;
+  const stale=[];
+  const out=rows.map(r=>{
+    const p=nameCopyPatch(coll,r,liveStaffName);
+    if(!p) return r;
+    stale.push({coll,id:r.id});
+    return {...r,...p};
+  });
+  if(stale.length) queueNameHeal(stale);
+  return out;
+}
+/* Part 2b: an out-of-date copy seen on the office's screens is corrected
+   in the database too. Each document is re-read raw just before writing,
+   so a cached copy can never overwrite a newer change to the panel, and
+   only the name fields are written. */
+const _nameHealQ=new Map(); let _nameHealT=null, _nameHealBusy=false;
+function queueNameHeal(items){
+  if(S.role!=="admin") return;
+  items.forEach(it=>{ if(it.id) _nameHealQ.set(it.coll+"/"+it.id,it); });
+  if(!_nameHealQ.size) return;
+  clearTimeout(_nameHealT);
+  _nameHealT=setTimeout(runNameHeal,1500);
+}
+async function runNameHeal(){
+  if(_nameHealBusy){ _nameHealT=setTimeout(runNameHeal,1500); return; }
+  const items=[..._nameHealQ.values()]; _nameHealQ.clear();
+  if(!items.length||S.role!=="admin") return;
+  _nameHealBusy=true;
+  try{
+    const ops=[];
+    const docs=await Promise.all(items.map(it=>DB.get(it.coll,it.id,{raw:true}).catch(()=>null)));
+    items.forEach((it,i)=>{
+      const p=nameCopyPatch(it.coll,docs[i],liveStaffName);
+      if(p) ops.push({type:"set",coll:it.coll,id:it.id,data:p});
+    });
+    if(ops.length){
+      await DB.batchWrite(ops);
+      /* The PIN pages are snapshots taken with the old name. */
+      await publishSignInKeys({quiet:true,onlyIfInUse:true}).catch(e=>console.warn("PIN refresh after rename",e));
+    }
+  }catch(e){ console.warn("could not update stored staff names",e); }
+  finally{ _nameHealBusy=false; }
+}
+/* Part 2a: after a rename under Staff, write the new name into every
+   stored copy that belongs to this person. Students and consultations are
+   read by uid; panels and nominations are small enough to read whole.
+   Returns how many documents were updated. */
+async function syncStaffNameCopies(uid){
+  if(!uid) return 0;
+  const users=await DB.listUsers();
+  const byId=new Map(users.map(u=>[u.id,u]));
+  const nameOf=x=>x===uid?String(byId.get(x)?.name||"").trim():"";
+  if(!nameOf(uid)) return 0;
+  const safe=(what,p)=>p.catch(e=>{ console.warn("name sync: "+what,e); return []; });
+  const raw={raw:true};
+  const reads=[
+    ["panelGroups",safe("panels",DB.list("panelGroups",{},raw))],
+    ["panels",safe("legacy panels",DB.list("panels",{},raw))],
+    ["panelPool",safe("nominations",DB.list("panelPool",{},raw))],
+    ["students",safe("students",DB.list("students",{principalUid:uid},raw))],
+    ["students",safe("students",DB.list("students",{coUid:uid},raw))],
+    ["consultations",safe("consultations",DB.list("consultations",{supervisorUid:uid},raw))],
+    ["consultations",safe("consultations",DB.list("consultations",{coUid:uid},raw))]];
+  const lists=await Promise.all(reads.map(r=>r[1]));
+  const seen=new Set(), ops=[];
+  reads.forEach(([coll],i)=>lists[i].forEach(r=>{
+    const k=coll+"/"+r.id; if(seen.has(k)) return; seen.add(k);
+    const p=nameCopyPatch(coll,r,nameOf);
+    if(p) ops.push({type:"set",coll,id:r.id,data:p});
+  }));
+  if(ops.length) await DB.batchWrite(ops);
+  return ops.length;
+}
+
 const DB = {
   async getUser(uid){
     if(DEMO){ return mem.users[uid]||null; }
@@ -2232,7 +2372,8 @@ const DB = {
   /* Filters are {field: value} for "==". Two other shapes are understood:
      {field: {$in: [...]}} (Firestore allows up to 30 values) and
      {field: {$contains: value}} for array-contains. */
-  async list(coll, filters={}){
+  async list(coll, filters={}, opts={}){
+    if(!opts.raw) return withLiveNames(coll,await DB.list(coll,filters,{raw:true}));
     const fs=Object.entries(filters||{});
     const isIn=v=>v&&typeof v==="object"&&Array.isArray(v.$in);
     const isHas=v=>v&&typeof v==="object"&&!Array.isArray(v)&&"$contains" in v;
@@ -2294,9 +2435,11 @@ const DB = {
       return all.docs.map(d=>({id:d.id,...d.data()})).filter(o=>normSid(o.sid)===want);
     }catch(err){ console.warn("student ID scan failed",err); return []; }
   },
-  async get(coll,id){
-    if(DEMO){ return mem[coll][id]?{id,...mem[coll][id]}:null; }
-    const s=await getDoc(doc(db,coll,id)); return s.exists()?{id,...s.data()}:null;
+  async get(coll,id,opts={}){
+    let row;
+    if(DEMO){ row=mem[coll]&&mem[coll][id]?{id,...mem[coll][id]}:null; }
+    else{ const s=await getDoc(doc(db,coll,id)); row=s.exists()?{id,...s.data()}:null; }
+    return row&&!opts.raw?withLiveNames(coll,[row])[0]:row;
   },
   async add(coll,data){
     forgetInflight(coll);
@@ -14687,6 +14830,9 @@ async function relinkStaffUid(oldId,newId){
   /* One commit, so the move either lands whole or not at all. */
   try{ await DB.batchWrite(ops); }
   catch(e){ console.warn("relink: writing",e); failed.push("the move itself"); return {moved:0,failed}; }
+  /* The record that survives may carry a different name from the one
+     copied onto the seats; bring the copies in line with it. */
+  try{ await syncStaffNameCopies(newId); }catch(e){ console.warn("relink: names",e); }
   return {moved:ops.length,failed};
 }
 
@@ -14977,11 +15123,26 @@ function staffForm(existing,done){
         else { profile.supRole=null; profile.area=null; }
         await DB.updateUser(existing.id,profile);
         await reloadStaffCaches();
+        /* A new name goes into every panel seat, panel name, nomination,
+           student and consultation that carries a copy of the old one. */
+        const renamed=!!profile.name&&profile.name!==String(existing?.name||"").trim();
+        let synced=0, syncFailed=false;
+        if(renamed){
+          try{ synced=await syncStaffNameCopies(existing.id); }
+          catch(e){ console.warn("name sync",e); syncFailed=true; }
+        }
         /* A PIN typed in here has to be published like one issued from the
            PIN button, or it opens nothing. Same call, so the two routes
-           cannot drift apart. */
-        if(pinVal||existing?.pin) await publishSignInKeys({quiet:true,only:existing.id});
-        toast("Staff updated."); done(); return true;
+           cannot drift apart. A rename changes what OTHER people's PIN
+           pages show as well (their panel's assessors, their chair), so
+           then everyone's is rebuilt. */
+        if(renamed) await publishSignInKeys({quiet:true,onlyIfInUse:true}).catch(e=>console.warn("PIN refresh",e));
+        else if(pinVal||existing?.pin) await publishSignInKeys({quiet:true,only:existing.id});
+        if(syncFailed) toast("Staff updated, but the new name couldn't be copied to their panels and students. It still shows correctly on screen; save again to retry.",true);
+        else toast(renamed&&synced
+          ? "Staff updated \u2014 the new name now shows on "+synced+" panel, student and nomination record"+(synced===1?"":"s")+"."
+          : "Staff updated.");
+        done(); return true;
       }
       if(!email.value.trim()||pass.value.length<6){ toast("Valid email and 6+ char password needed.",true); return false; }
       const profile={email:email.value.trim(),email2:alt,name:name.value.trim(),role:role.value,
