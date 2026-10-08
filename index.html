@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MRes Supervision Hub</title>
+<title>MRes Supervision Hub | CIHE Australia</title>
+<meta name="theme-color" content="#1F1F5C" />
 <!-- Start fetching the Firebase SDK straight away, in parallel with the
      rest of the page, instead of only once the app script has been read. -->
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
@@ -14,8 +15,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <!-- Fonts load without blocking the first paint; the system font stands in
      for the moment it takes (display=swap). -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" /></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet" /></noscript>
 <style>
   /* ============================================================
      DESIGN SYSTEM — "Register"
@@ -1680,10 +1681,503 @@
   }
   @media print{ .ag-acts{display:none} }
 </style>
+<style id="cihe-pro">
+  /* ============================================================
+     CIHE PROFESSIONAL LAYER
+     The hub belongs to CIHE Australia's Master of Research, so its
+     identity comes from CIHE itself rather than a generic app kit:
+
+       CIHE navy   #1F1F5C  the band on the CoC Examination Report form;
+                            the sidebar, sign-in panel and date tiles.
+       CIHE royal  #194698  the crest's blue; every action, link, focus
+                            ring and "you are here" marker.
+
+     Type: Inter for the working interface, as before (tabular figures, so
+     times and marks line up), and Source Serif 4 only for page, dialog and
+     bar titles — the academic register. Codes such as PINs use the
+     system's monospace, so nothing extra is downloaded for them. Colour beyond navy and royal still means status, nothing
+     else. Labels are sentence case; no gradients, glows or gloss.
+
+     This block is last on purpose and only restyles: it changes no
+     behaviour. Remove it and the previous look returns intact.
+     ============================================================ */
+  :root{
+    --ink:#161A33; --ink-soft:#575E74; --muted:#575E74;
+    --paper:#F3F4F7; --paper-2:#FFFFFF; --sunken:#F6F7FA;
+    --line:#E2E5EC; --line-strong:#CCD1DC;
+    --accent:#194698; --accent-deep:#123A80; --accent-tint:#1946980F; --ring:#19469838;
+    --btn-bg:#194698; --btn-bg-hover:#133A82; --btn-fg:#FFFFFF;
+    --navy:#1F1F5C; --navy-2:#272A6E;
+    --amber:#B5741A; --amber-soft:#FCF2DE; --amber-ink:#8A5300;
+    --clay:#C0392B; --clay-soft:#FCEBE8; --clay-ink:#A12F21;
+    --green:#1E8653; --green-soft:#E2F3E9; --green-ink:#156A40;
+    --blue:#1F62C6; --blue-soft:#E6EEFB; --blue-ink:#174FA3;
+    --neutral-soft:#EDEFF4; --neutral-ink:#535A6F;
+    --side-bg:#1F1F5C; --side-bg-2:#1F1F5C; --side-ink:#D6D9EE; --side-soft:#A2A7CE;
+    --side-line:#2F3275; --side-hover:#FFFFFF12; --side-active:#FFFFFF1C;
+    --side-active-ink:#FFFFFF; --side-mark:#8DB2FF;
+    --r:10px; --r-sm:8px; --r-xs:6px;
+    --shadow:0 1px 2px rgba(22,26,51,.05);
+    --shadow-md:0 1px 2px rgba(22,26,51,.05),0 6px 16px -6px rgba(22,26,51,.14);
+    --shadow-lg:0 2px 6px rgba(22,26,51,.08),0 28px 56px -18px rgba(22,26,51,.32);
+    --sans:Inter,"Inter var",-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --serif:"Source Serif 4","Source Serif Pro",Georgia,"Times New Roman",serif;
+    /* Times, week numbers and marks used to be monospaced. Tabular figures
+       in the interface face line them up just as well and read as prose. */
+    --mono:var(--sans);
+    --code:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --side-w:256px;
+    --viz-1:#2563C4; --viz-2:#D9622B; --viz-3:#B6BBC6;
+  }
+  html[data-theme="dark"]{
+    --ink:#E7E9F3; --ink-soft:#A1A7C0; --muted:#A1A7C0;
+    --paper:#0E1025; --paper-2:#161935; --sunken:#12152D;
+    --line:#262A4E; --line-strong:#373C66;
+    --accent:#8DB0F5; --accent-deep:#B5CCF8; --accent-tint:#8DB0F51C; --ring:#8DB0F54D;
+    --btn-bg:#2E62C7; --btn-bg-hover:#3A6FD6; --btn-fg:#FFFFFF;
+    --navy:#14163F; --navy-2:#1C1F52;
+    --amber:#E0A046; --amber-soft:#33260E; --amber-ink:#F4CF8C;
+    --clay:#E5675A; --clay-soft:#3A1A1B; --clay-ink:#F6ABA2;
+    --green:#3DB77A; --green-soft:#0F2E20; --green-ink:#8EDFB4;
+    --blue:#5B95EE; --blue-soft:#172A4D; --blue-ink:#A9C8F7;
+    --neutral-soft:#20243F; --neutral-ink:#A9AFC7;
+    --side-bg:#121436; --side-bg-2:#121436; --side-line:#24275A;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow-md:0 1px 2px rgba(0,0,0,.4),0 8px 20px -8px rgba(0,0,0,.7);
+    --shadow-lg:0 2px 6px rgba(0,0,0,.5),0 28px 60px -20px rgba(0,0,0,.85);
+    --viz-1:#4F8BEA; --viz-2:#E07A47; --viz-3:#4A5272;
+  }
+
+  /* ---------- base ---------- */
+  body{font-family:var(--sans);font-size:15px;line-height:1.5;font-feature-settings:"cv11","ss01";
+    font-variant-numeric:tabular-nums;background:var(--paper);color:var(--ink)}
+  body,input,select,button,textarea{font-family:var(--sans)}
+  h1,h2,h3{letter-spacing:-.005em}
+  code{font-family:var(--code);font-size:13px;border-radius:5px;padding:1px 5px}
+  a{color:var(--accent-deep)}
+  a:hover{color:var(--accent)}
+  ::selection{background:#19469833;color:inherit}
+
+  /* Page titles carry the academic register; nothing else is serif. */
+  .section-title{margin:2px 0 20px}
+  .section-title h2{font-family:var(--serif);font-weight:600;font-size:30px;line-height:1.15;
+    letter-spacing:-.01em;color:var(--ink);font-optical-sizing:auto}
+  .eyebrow{font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;
+    color:var(--ink-soft);margin-bottom:4px}
+
+  /* Every tracked-out capital label becomes a plain sentence-case label. */
+  th,nav.tabs .navgroup,.weeklog .wk .lab,.cday,.dayhead,.wsum dt,.heat .hh,.sp-label,.sp-person .r,
+  .sp-split .h,.sp-pinned .h,.sp-divider,.coc-band .t,.coc-sec h4,.coc-total .l,.coc-outv .h,
+  .cx-total .bandl,.cx-ready .grp,.cx-ghead .gt,.cx-tag,.cx-start,.cx-pmeta .lb,.cx-when .d,
+  .cx-dt .lb,.ag-tag,.stat .l,.sp-stats .l{text-transform:none;letter-spacing:0}
+
+  /* ---------- form controls ---------- */
+  input,select,textarea{font-size:15px;padding:8px 11px;min-height:38px;border:1px solid var(--line-strong);
+    border-radius:var(--r-sm);background:var(--paper-2);color:var(--ink);box-shadow:none}
+  textarea{min-height:72px;line-height:1.5}
+  input[type=checkbox],input[type=radio]{min-height:0;accent-color:var(--accent)}
+  input:hover:not(:disabled),select:hover:not(:disabled),textarea:hover:not([readonly]){border-color:#AEB5C4}
+  html[data-theme="dark"] input:hover:not(:disabled),html[data-theme="dark"] select:hover:not(:disabled),
+  html[data-theme="dark"] textarea:hover:not([readonly]){border-color:#4A5080}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  input:disabled,select:disabled,input[readonly]{background:var(--sunken);color:var(--ink-soft)}
+  select:not([multiple]){padding-right:32px;background-position:right 11px center}
+  label{font-size:13px;font-weight:600;color:var(--ink-soft);margin:0 0 5px}
+
+  /* ---------- buttons ----------
+     Royal blue is the one action colour. Destructive and secondary
+     actions are outlined, so a column of row actions reads as controls,
+     not as a column of coloured slabs louder than the data. */
+  .btn{gap:7px;min-height:36px;padding:7px 14px;border-radius:var(--r-sm);font-weight:600;font-size:14px;
+    letter-spacing:0;background:var(--btn-bg);color:var(--btn-fg);border:1px solid transparent;
+    box-shadow:0 1px 1px rgba(22,26,51,.08);transition:background .12s,border-color .12s,color .12s,box-shadow .12s}
+  .btn:hover{background:var(--btn-bg-hover);box-shadow:0 1px 2px rgba(22,26,51,.12)}
+  .btn:active{transform:none;filter:brightness(.97)}
+  .btn.ghost{background:var(--paper-2);color:var(--ink);border-color:var(--line-strong);box-shadow:0 1px 1px rgba(22,26,51,.04)}
+  .btn.ghost:hover{background:var(--sunken);border-color:#AEB5C4;color:var(--ink)}
+  html[data-theme="dark"] .btn.ghost:hover{border-color:#4A5080}
+  .btn.danger{background:var(--paper-2);color:var(--clay-ink);border-color:var(--line-strong);box-shadow:none}
+  .btn.danger:hover{background:var(--clay-soft);border-color:var(--clay);color:var(--clay-ink)}
+  .btn.blue{background:var(--blue-soft);color:var(--blue-ink);border-color:transparent;box-shadow:none}
+  .btn.blue:hover{background:var(--blue);color:#fff}
+  .btn.amber{background:var(--amber-soft);color:var(--amber-ink);border-color:transparent;box-shadow:none}
+  .btn.amber:hover{background:var(--amber);color:#fff}
+  .btn.green{background:var(--green);color:#fff;border-color:transparent}
+  .btn.green:hover{background:var(--green-ink);color:#fff}
+  .btn.clay{background:var(--clay);color:#fff;border-color:transparent}
+  .btn.clay:hover{background:var(--clay-ink);color:#fff}
+  html[data-theme="dark"] .btn.danger{color:var(--clay-ink)}
+  html[data-theme="dark"] .btn.green:hover,html[data-theme="dark"] .btn.clay:hover{color:#10121f}
+  .modal .btn.danger{background:var(--clay);color:#fff;border-color:transparent}
+  .modal .btn.danger:hover{background:var(--clay-ink);color:#fff}
+  html[data-theme="dark"] .modal .btn.danger:hover{color:#10121f}
+  .btn.sm{min-height:32px;padding:5px 11px;font-size:13.5px;border-radius:var(--r-xs)}
+  .btn.xs{min-height:28px;padding:3px 9px;font-size:13px;border-radius:var(--r-xs);box-shadow:none}
+  .btn:disabled{opacity:.45}
+  .btn .bi,.btn .bi svg{width:15px;height:15px}
+  .iconbtn{width:34px!important;height:34px!important;min-height:34px;border-radius:var(--r-sm)!important}
+  .btn:focus-visible,.seg button:focus-visible,.seg3 button:focus-visible,.subtabs button:focus-visible,
+  .stucard:focus-visible,.wksq:focus-visible,.modal-x:focus-visible,a:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ---------- surfaces ---------- */
+  .card{border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--shadow);background:var(--paper-2)}
+  .card.tone{border-left-width:3px}
+  .card.tone-info{border-left-color:var(--accent)}
+  .card.tone-main{border-left-color:var(--navy)}
+  html[data-theme="dark"] .card.tone-main{border-left-color:var(--accent)}
+  .cardhead{font-size:14px}
+  .cardhead strong{font-weight:600}
+  .muted{font-size:14px}
+  .row{gap:8px}
+
+  /* ---------- tables ---------- */
+  table{font-size:14.5px}
+  th{font-size:12px;font-weight:600;color:var(--ink-soft);background:var(--sunken);
+    border-bottom:1px solid var(--line);padding:9px 12px;white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid var(--line)}
+  thead th:first-child,thead th:last-child{border-radius:0}
+  tr:hover td{background:#19469806}
+  html[data-theme="dark"] tr:hover td{background:#8DB0F50A}
+  td strong{font-weight:600}
+
+  /* ---------- status chips ---------- */
+  .pill{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;letter-spacing:0}
+  .pill.none{background:var(--neutral-soft);color:var(--neutral-ink)}
+  .loadpill{border-radius:999px}
+  .nbadge{background:var(--clay);font-size:11px;min-width:18px;height:18px}
+  nav.tabs button.active .nbadge{background:#fff;color:var(--navy)}
+  .linkpill{background:var(--accent-tint);color:var(--accent-deep);border:1px solid #19469824;font-size:12.5px;padding:3px 10px}
+  .linkpill:hover{background:var(--accent);color:#fff;border-color:transparent}
+  html[data-theme="dark"] .linkpill{border-color:#8DB0F533}
+  .seatchip{border-radius:999px}
+
+  /* ---------- app shell ---------- */
+  aside.side{background:var(--side-bg);border-right:none;padding:16px 12px 12px;gap:4px}
+  .brand{gap:11px;padding:4px 8px 16px;margin-bottom:6px;border-bottom:1px solid var(--side-line)}
+  .brand .mark{width:36px;height:36px;border-radius:8px;flex:0 0 auto;display:block;object-fit:cover;
+    background:none;box-shadow:0 0 0 1px #ffffff26;padding:0}
+  .brand h1{font-size:15.5px;font-weight:600;letter-spacing:0;color:#fff}
+  .brand .sub{font-size:12px;color:var(--side-soft);font-weight:400;margin-top:1px}
+  nav.tabs{gap:1px}
+  nav.tabs .navgroup{font-size:12px;font-weight:500;color:var(--side-soft);padding:16px 12px 6px}
+  nav.tabs button{font-size:14px;font-weight:500;padding:8px 12px;border-radius:7px;gap:11px;color:var(--side-ink)}
+  nav.tabs button .ico,nav.tabs button .ico svg{width:18px;height:18px}
+  nav.tabs button:hover{background:var(--side-hover)}
+  nav.tabs button.active{background:var(--side-active);font-weight:600}
+  nav.tabs button.active::before{left:-12px;top:7px;bottom:7px;width:3px;background:var(--side-mark)}
+  nav.tabs .navsub{border-left-color:#ffffff1f}
+  .side-user{border-top:1px solid var(--side-line);padding:12px 8px 4px;margin-top:10px}
+  .avatar{background:var(--accent);font-weight:600;font-size:13px;width:34px;height:34px}
+  .side-user .avatar{background:#ffffff1f;box-shadow:inset 0 0 0 1px #ffffff26}
+  .side-user .name{font-size:13.5px}
+  .side-user .role{font-size:12px;text-transform:none}
+
+  .topbar{height:56px;padding:0 28px;background:var(--paper-2);backdrop-filter:none;-webkit-backdrop-filter:none;
+    border-bottom:1px solid var(--line)}
+  .topbar .crumb .grp{font-size:13px}
+  .topbar .crumb .pg{font-size:15px;font-weight:600}
+  main{max-width:1280px;padding:28px 32px 72px}
+  @media (max-width:960px){ .topbar{padding:0 12px} main{padding:20px 16px 48px} }
+  /* A screen settles in without travelling. */
+  #view > div{animation:proIn .16s ease-out}
+  @keyframes proIn{from{opacity:0}to{opacity:1}}
+
+  /* ---------- page furniture ---------- */
+  .toolbar{gap:10px 12px;margin-bottom:20px}
+  .toolbar .field{min-width:140px}
+  .toolbar > .btn{min-height:38px}
+  .subtabs{display:flex;background:none;border:none;border-bottom:1px solid var(--line);border-radius:0;
+    padding:0;gap:22px;margin-bottom:20px}
+  .subtabs button{padding:9px 0 11px;border-radius:0;font-size:14px;font-weight:500;color:var(--ink-soft);
+    background:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .subtabs button:hover{color:var(--ink)}
+  .subtabs button.active{background:none;color:var(--ink);font-weight:600;border-bottom-color:var(--accent);box-shadow:none}
+  .seg{border-radius:var(--r-sm);background:var(--sunken);padding:3px}
+  .seg button{border-radius:6px;font-size:13.5px}
+  .seg button.active{box-shadow:0 1px 2px rgba(22,26,51,.1)}
+  .seg3{border-radius:var(--r-sm)}
+
+  .stat{grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:20px}
+  .stat .b{border-radius:var(--r);padding:12px 14px 13px;gap:4px;box-shadow:var(--shadow)}
+  .stat .l{font-size:12.5px;font-weight:500;color:var(--ink-soft)}
+  .stat .n{font-size:28px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+  .stat .b.cx-jump:hover,.stat .b.cx-f:hover{border-color:var(--accent)}
+
+  .csection h3{font-size:16.5px;font-weight:600}
+  .csection .cs-mark{border-radius:8px;width:30px;height:30px;font-size:15px}
+  details.cfold{border-radius:var(--r);box-shadow:var(--shadow)}
+  details.cfold > summary{padding:13px 16px}
+  details.pcard > summary{padding:12px 16px}
+  .pmeta{border-radius:var(--r-sm)}
+  .pactions{background:var(--sunken)}
+  .panelbody label::before{font-family:var(--sans);background:var(--navy)}
+  html[data-theme="dark"] .panelbody label::before{background:var(--accent);color:#10121f}
+
+  .empty{padding:44px 22px}
+  .card.empty{background:var(--paper-2);border:1px dashed var(--line-strong)}
+  .empty .big{opacity:1;margin:0 auto 12px;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+    background:var(--accent-tint);color:var(--accent)}
+  .empty .big svg{width:22px;height:22px}
+
+  /* the loading state, while a screen gathers its records */
+  .loading{display:flex;align-items:center;gap:12px;padding:40px 4px;color:var(--ink-soft);font-size:14px}
+  .spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-strong);border-top-color:var(--accent);
+    animation:spin .8s linear infinite;flex:0 0 auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #boot{background:var(--paper)}
+  #boot .boot-card{display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--ink-soft);font-size:14px}
+  #boot .boot-row{display:flex;align-items:center;gap:10px}
+
+  /* ---------- week ribbon & register ---------- */
+  .wksq{border-radius:7px;font-size:12.5px}
+  .wksq.sel{outline-color:var(--accent)}
+  .weeklog{border-radius:var(--r)}
+  .weeklog .wk .num{font-weight:600}
+  .weeklog .wrow.now .wk{background:var(--navy);border-right-color:var(--navy)}
+  html[data-theme="dark"] .weeklog .wrow.now .wk{background:var(--btn-bg)}
+  .stucard{border-radius:var(--r-sm)}
+  .stucard.active{box-shadow:inset 0 0 0 1px var(--accent)}
+  .ccard{border-radius:var(--r);border-left-color:var(--accent)}
+  .slot{border-radius:var(--r-xs)}
+  .dayhead{font-size:13px;font-weight:600;color:var(--ink)}
+  .daycol .dayhead{border-bottom-color:var(--line)}
+
+  /* ---------- dialogs ----------
+     Header, scrolling body and a fixed action bar, so long forms keep
+     their Save button in reach. */
+  .modal-bg{background:rgba(16,18,40,.48);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+  .modal{display:flex;flex-direction:column;padding:0;border-radius:12px;max-height:min(88vh,920px);overflow:hidden;
+    box-shadow:var(--shadow-lg);border:1px solid var(--line)}
+  .modal-head{display:flex;align-items:flex-start;gap:12px;padding:18px 22px 14px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  .modal-head h3{flex:1;min-width:0;margin:0;font-family:var(--serif);font-weight:600;font-size:21px;line-height:1.25;
+    letter-spacing:-.005em;font-optical-sizing:auto}
+  .modal-x{flex:0 0 auto;width:32px;height:32px;margin:-4px -8px 0 0;border:none;border-radius:7px;background:none;
+    color:var(--ink-soft);display:grid;place-items:center;padding:0;cursor:pointer}
+  .modal-x:hover{background:var(--sunken);color:var(--ink)}
+  .modal-x svg{width:18px;height:18px}
+  .modal-body{flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch;padding:18px 22px 20px;min-height:0}
+  .modal-foot{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 22px;
+    border-top:1px solid var(--line);background:var(--sunken)}
+  @media (max-width:640px){
+    .modal{padding:0;border-radius:12px}
+    .modal-head{padding:16px 16px 12px}
+    .modal-body{padding:14px 16px 16px}
+    .modal-foot{padding:10px 16px}
+  }
+
+  /* ---------- toast ---------- */
+  #toast{background:var(--ink);color:var(--paper-2);border-radius:var(--r-sm);font-size:13.5px;padding:11px 16px 11px 13px;
+    box-shadow:var(--shadow-lg)}
+  #toast.err{background:var(--clay);color:#fff}
+  html[data-theme="dark"] #toast{background:#E7E9F3;color:#161A33;border:none}
+  html[data-theme="dark"] #toast.err{background:var(--clay);color:#10121f}
+
+  /* ---------- sign in ---------- */
+  .auth-wrap{background:var(--paper)}
+  .auth-wrap.auth-split{background:var(--paper)}
+  .auth-aside{background:var(--navy);color:#DDE0F3;padding:44px 56px}
+  .auth-aside::after{content:none}
+  .auth-brand{gap:14px}
+  .auth-brand .mark-lg{width:48px;height:48px;border-radius:10px;padding:0;background:none;display:block;object-fit:cover;
+    box-shadow:0 0 0 1px #ffffff2e}
+  .auth-bname{font-size:16px;font-weight:600}
+  .auth-bsub{font-size:13px;color:#B9BEE0}
+  .auth-copy h2{font-family:var(--serif);font-weight:600;font-size:clamp(30px,3vw,42px);line-height:1.12;
+    letter-spacing:-.01em;max-width:520px;font-optical-sizing:auto}
+  .auth-copy > p{color:#C9CDEA;font-size:15.5px;max-width:480px}
+  .auth-ways{gap:8px;margin-top:32px;max-width:480px}
+  .auth-way{border-radius:var(--r);background:transparent;border:1px solid #ffffff24;padding:13px 15px}
+  .auth-way:hover{background:#ffffff0d;border-color:#ffffff3d}
+  .auth-way.on{background:#ffffff14;border-color:#ffffff59;box-shadow:inset 3px 0 0 #8DB2FF}
+  .aw-ic{background:#ffffff14;border-radius:8px}
+  .auth-way.on .aw-ic{background:#ffffff;color:var(--navy)}
+  .aw-t strong{font-weight:600}
+  .aw-t span{color:#C2C6E6}
+  .auth-foot{color:#A9AED6;font-size:12.5px}
+  .auth-main{background:var(--paper)}
+  .auth-card,.auth-split .auth-card{border-radius:12px;box-shadow:var(--shadow-md);padding:32px;max-width:430px}
+  .auth-title{font-family:var(--serif);font-weight:600;font-size:28px;letter-spacing:-.01em;font-optical-sizing:auto}
+  .auth-card .btn{min-height:40px}
+  .auth-forgot > summary{color:var(--accent-deep)}
+  @media (max-width:1023px){
+    .auth-aside{padding:16px 20px}
+    .auth-brand .mark-lg{width:40px;height:40px}
+  }
+  @media (max-width:640px){ .auth-split .auth-card{padding:22px 18px} .auth-title{font-size:24px} }
+
+  /* ---------- student portal & PIN view ---------- */
+  .sp{background:var(--paper)}
+  .sp-top{background:var(--pbar);color:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom:0;height:60px}
+  .sp-top .mark{width:34px;height:34px;border-radius:8px;padding:0;background:none;display:block;object-fit:cover;
+    box-shadow:0 0 0 1px #FFFFFF2E}
+  .sp-top .ttl{font-weight:600;font-size:14.5px;color:#fff}
+  .sp-top .sub{color:var(--pbar-soft)}
+  .sp-card{border-radius:var(--r);box-shadow:var(--shadow)}
+  .sp-hero{border-top:3px solid var(--navy)}
+  .sp-hero::before{content:none}
+  .sp-hero h1{font-family:var(--serif);font-weight:600;font-size:30px;letter-spacing:-.01em;font-optical-sizing:auto}
+  .sp-head h2{font-size:17px;font-weight:600}
+  .sp-ico{border-radius:9px}
+  .sp-person{border-radius:var(--r-sm)}
+  .sp-person .avatar{background:var(--navy)}
+  .sp-person .avatar.co{background:var(--accent)}
+  html[data-theme="dark"] .sp-person .avatar{background:#2B2F72}
+  .sp-person .r{font-size:12px;font-weight:500}
+  .sp-bar > i{background:var(--accent)}
+  .sp-tabs{border-radius:var(--r);padding:3px}
+  .sp-tabs button{border-radius:7px}
+  .sp-tabs button.on{box-shadow:0 1px 2px rgba(22,26,51,.1)}
+  .sp-label{font-size:13px;font-weight:600;color:var(--ink-soft)}
+  .sp-date{border-radius:9px}
+  .sp-date .m{background:var(--navy);letter-spacing:.06em}
+  html[data-theme="dark"] .sp-date .m{background:#2B2F72}
+  .sp-date .d{font-family:var(--sans);font-weight:600}
+  .sp-row.next .sp-wk{background:var(--navy)}
+  html[data-theme="dark"] .sp-row.next .sp-wk{background:var(--btn-bg)}
+  .sp-msg.me .sp-bub{background:var(--accent)}
+  html[data-theme="dark"] .sp-msg.me .sp-bub{background:var(--btn-bg)}
+  .sp-alert{border-radius:var(--r)}
+  .sp-alert .btn{background:var(--accent);color:#fff}
+  .sp-chip{border-radius:999px}
+  .sp-count{font-weight:600}
+  .sp-time,.sp-wk,.chrs,.slot-time,.att-cell,.wksq,.weeklog .wk .num,.stat .n,.sp-stats .n{font-family:var(--sans)}
+
+  /* ---------- CoC report & diary ---------- */
+  .coc-band{border-radius:var(--r)}
+  .coc-band .t{font-size:12.5px;opacity:.85;font-weight:600}
+  .coc-band .n{font-family:var(--serif);font-weight:600;font-size:21px}
+  html[data-theme="dark"] .coc-band{background:#14163F;border:1px solid var(--line)}
+  .coc-sec h4{font-size:13px;color:var(--ink)}
+  .coc-mk input,.cx-score .ctl input,.cx-total .v,.coc-total .v,.cx-ring > span,.cx-dt .tt,.ag-row .h{font-family:var(--sans)}
+  .cx-ghead .gt{font-size:13px;font-weight:600}
+  .cx-ghead .gt b{font-weight:700}
+  .cx-ghead.as-member .gi{background:var(--navy)}
+  .cx-tag{font-size:11.5px;font-weight:600}
+  .cx-start{font-size:11.5px;font-weight:600}
+  .cx-pmeta .lb{font-size:12px}
+  .cx-when .d{font-size:12.5px}
+  .cx-dt .lb{font-size:12px;font-weight:600}
+  .ag-tag{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px}
+  .ag-tag.req{background:var(--navy)}
+  html[data-theme="dark"] .ag-tag.req{background:var(--btn-bg)}
+  .coc-num,.cx-steps .cur .n{background:var(--navy)}
+  html[data-theme="dark"] .coc-num,html[data-theme="dark"] .cx-steps .cur .n{background:var(--btn-bg)}
+  .coc-help{border-radius:var(--r);background:var(--sunken);border-color:var(--line)}
+  .coc-help .qm{background:var(--accent)}
+  .coc-help .hint{color:var(--accent-deep)}
+  .cx-acta{border-radius:var(--r)}
+  .cx-pcard{border-radius:var(--r)}
+  .coc-bar{border-radius:var(--r)}
+
+  /* ---------- small screens ---------- */
+  @media (max-width:640px){
+    .section-title h2{font-size:25px}
+    .stat{grid-template-columns:1fr 1fr}
+    .stat .n{font-size:23px}
+    .sp-hero h1{font-size:24px}
+    .subtabs{gap:16px;overflow-x:auto;scrollbar-width:none}
+    .subtabs::-webkit-scrollbar{display:none}
+    .subtabs button{white-space:nowrap}
+    input,select,textarea{font-size:16px}
+  }
+  @media print{
+    .modal-bg,.modal-x{display:none!important}
+    .sp-hero{border-top:none}
+  }
+  /* ---------- fixes found in review ---------- */
+  /* the sidebar's sign-out sits on navy, not on paper */
+  .side-user .btn.iconbtn{background:transparent;border-color:var(--side-line);color:var(--side-ink);box-shadow:none}
+  .side-user .btn.iconbtn:hover{background:var(--side-hover);border-color:#ffffff40;color:#fff}
+  /* tighter cells so short names don't wrap; long titles under a name
+     stop claiming the whole row */
+  th{padding:9px 10px} td{padding:10px 10px}
+  td:first-child > div.muted{max-width:360px}
+  @media (min-width:641px){ td:first-child > strong{white-space:nowrap} }
+  /* sticky section menus sit just under the 56px top bar */
+  .cx-secnav{top:56px}
+  /* phone: each stacked row leads with its first cell as a heading */
+  @media screen and (max-width:640px){
+    table.resp td:first-child{display:block;text-align:left;padding:0 0 6px;font-size:15.5px}
+    table.resp td:first-child::before{display:none}
+    table.resp td:first-child > div.muted{max-width:none;font-size:13px;font-weight:400;margin-top:2px}
+  }
+
+  /* ---- The standard header bar -------------------------------------------
+     Every card with a title bar gets the same one: CIHE navy with white
+     type, as on the CoC report. That covers the office's cards, the staff
+     CoC pages and the panel cards, and the student portal and PIN view carry
+     the same navy along their top. A card's state (done, needs action) shows
+     on its coloured left edge and in its tags, not in the bar. */
+  :root{--pbar:#1F1F5C;--pbar-hover:#26276C;--pbar-soft:#C3C7E6;--pbar-chip:#FFFFFF14;--pbar-line:#FFFFFF2E}
+  html[data-theme="dark"]{--pbar:#1F2358;--pbar-hover:#262B68;--pbar-soft:#B3B8DE}
+  .cardhead,.card > .cardhead,
+  html[data-theme] .card:not(.tone) > .cardhead,
+  .cx-pcard > .cx-phead{background:var(--pbar)!important;color:#fff;border-bottom-color:transparent!important}
+  .cardhead strong,.cardhead b,.cx-phead .pn{color:#fff}
+  .cardhead strong.ui,.cx-phead .pn{font-family:var(--serif);font-weight:600;font-size:17px;line-height:1.3;
+    letter-spacing:0;font-optical-sizing:auto}
+  .cardhead .muted,.cardhead .soft,.cx-phead .ps,.cx-phead .muted{color:var(--pbar-soft)!important}
+  .cardhead a:not(.btn),.cx-phead a:not(.btn){color:#BCD1FF}
+  /* text the hub colours inline for a light background */
+  :is(.cardhead,.cx-phead) [style*="color:var(--ink-soft)"],
+  :is(.cardhead,.cx-phead) [style*="color:var(--muted"]{color:var(--pbar-soft)!important}
+  :is(.cardhead,.cx-phead) [style*="color:var(--ink)"]{color:#fff!important}
+  /* controls on navy */
+  :is(.cardhead,.cx-phead,.sp-top) .btn{background:#fff;color:#1F1F5C;border-color:#fff;box-shadow:none}
+  :is(.cardhead,.cx-phead,.sp-top) .btn:hover{background:#E8EAF6;border-color:#E8EAF6;color:#1F1F5C}
+  :is(.cardhead,.cx-phead,.sp-top) .btn.ghost{background:transparent;color:#fff;border-color:#FFFFFF59}
+  :is(.cardhead,.cx-phead,.sp-top) .btn.ghost:hover{background:#FFFFFF1A;border-color:#FFFFFF8C;color:#fff}
+  :is(.cardhead,.cx-phead,.sp-top) .btn.danger{background:transparent;color:#FFB4A8;border-color:#FFB4A866}
+  :is(.cardhead,.cx-phead,.sp-top) .btn:focus-visible{outline:2px solid #8DB2FF;outline-offset:2px}
+  /* tags keep their meaning, as light text on the navy */
+  :is(.cardhead,.cx-phead) .pill{background:var(--pbar-chip);border:1px solid var(--pbar-line);color:#DDE0F3}
+  .cardhead .pill.approved,.cardhead .pill.held,.cx-phead .pill.approved,.cx-phead .pill.held{background:#3DB77A2E;border-color:#3DB77A55;color:#9BE8BF}
+  :is(.cardhead,.cx-phead) .pill.pending{background:#E0A0462E;border-color:#E0A04661;color:#FFD48A}
+  :is(.cardhead,.cx-phead) .pill.blue{background:#8DB0F52B;border-color:#8DB0F55C;color:#BCD1FF}
+  :is(.cardhead,.cx-phead) .pill.missed{background:#E5675233;border-color:#E5675266;color:#FFB4A8}
+
+  /* The panel cards: the name, the times the panel sits and its state. */
+  details.pcard.card > summary.cardhead{padding:13px 18px;gap:12px 20px}
+  details.pcard.card > summary.cardhead:hover{filter:none;background:var(--pbar-hover)!important}
+  details.pcard.card > summary.cardhead:focus-visible{outline:2px solid #8DB2FF;outline-offset:-3px}
+  details.pcard > summary .chev{color:var(--pbar-soft)}
+  details.pcard > summary > .psum-main{flex:1 1 220px}
+  /* Times line up down the page: the name takes a set column, the times
+     follow it, and the state tags sit at the right. */
+  @media (min-width:900px){
+    details.pcard.card > summary.cardhead{justify-content:flex-start}
+    details.pcard > summary > .psum-main{flex:0 0 clamp(230px,26%,330px)}
+    details.pcard > summary > .row{margin-left:auto;justify-content:flex-end}
+  }
+  details.pcard .psum-nm{color:#fff;font-family:var(--serif);font-size:18.5px;font-weight:600;line-height:1.25;
+    font-optical-sizing:auto}
+  details.pcard .psum-sub{color:var(--pbar-soft);font-size:13px;margin-top:3px}
+  .psum-when{display:flex;flex-direction:column;gap:4px;flex:none;padding:7px 13px;border-radius:8px;
+    background:var(--pbar-chip);border:1px solid var(--pbar-line)}
+  .psum-sit{display:flex;align-items:center;gap:8px;white-space:nowrap;line-height:1.3}
+  .psum-ico{display:inline-flex;color:var(--pbar-soft);flex:none}
+  .psum-ico svg{width:15px;height:15px}
+  .psum-d{color:var(--pbar-soft);font-size:13px}
+  .psum-t{color:#fff;font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
+  .psum-when.none .psum-t{color:var(--pbar-soft);font-weight:500;font-size:13.5px}
+  .psum-more{color:var(--pbar-soft);font-size:12.5px;padding-left:23px}
+  @media (max-width:640px){
+    details.pcard.card > summary.cardhead{padding:12px 14px}
+    .psum-when{flex:1 1 100%;order:2}
+    details.pcard > summary > .row{order:3}
+  }
+  @media print{
+    .cardhead,.cx-phead,.card > .cardhead{background:#fff!important;border-bottom:1px solid #999!important}
+    :is(.cardhead,.cx-phead) *,.cardhead,.cx-phead{color:#000!important}
+    :is(.cardhead,.cx-phead) .pill,.psum-when{background:#fff!important;border-color:#999!important}
+  }
+
+</style>
 </head>
 <body>
   <!-- Shown the moment the page arrives, while the app below is read. -->
-  <div class="auth-wrap" id="boot"><div class="muted ui">Loading…</div></div>
+  <div class="auth-wrap" id="boot"><div class="boot-card ui"><div class="boot-row"><span class="spin"></span>Loading the hub…</div></div></div>
   <script>
     /* If the app never starts (the Firebase CDN blocked by a network
        filter, say) the page used to sit on "Loading…" forever. After a
@@ -2587,13 +3081,17 @@ const BTN_ICONS={
   arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
   lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-  cap:'<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>'
+  cap:'<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  back:'<path d="M19 12H5M11 18l-6-6 6-6"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
 };
 const GLYPH_ICON={"\u2709":"mail","\uD83D\uDCE7":"mail","\u2913":"download","\u2B73":"download",
   "\u21E9":"download","\u2399":"print","\u2380":"print","\uD83D\uDDA8":"print","\u23F1":"clock","\u23F2":"clock",
   "\u29C9":"copy","\u21BB":"refresh","\u21BA":"refresh","\u26BF":"key","\u270E":"edit","\u270F":"edit",
   "\u2691":"flag","\u21EA":"upload","\u26A0":"alert","\u2713":"check","\u2714":"check","+":"plus","\uFF0B":"plus",
-  "\uD83D\uDCAC":"message"};
+  "\uD83D\uDCAC":"message","\u2190":"back","\u21A9":"undo"};
 function btnIcon(name){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(BTN_ICONS[name]||"")+'</svg>';
 }
@@ -2608,6 +3106,11 @@ function glyphize(n){
 }
 /* For the few buttons whose label is rewritten after a save. */
 function setBtnLabel(b,text){ b.textContent=text; glyphize(b); }
+/* The CIHE crest, wherever the hub shows its own mark. COC_LOGO_SRC is
+   declared further down this module; this only runs once it exists. */
+function brandMark(cls){
+  return el("img",{class:cls,src:COC_LOGO_SRC,alt:"CIHE",width:"40",height:"40",decoding:"async"});
+}
 
 const el = (tag,props={},...kids)=>{
   const n=document.createElement(tag);
@@ -3147,7 +3650,7 @@ function cardShell(title,right,tone){
   const c=el("div",{class:"card"+(tone?" tone tone-"+tone:""),
     style:"padding:0;overflow:hidden;margin-bottom:14px"});
   c.append(el("div",{class:"cardhead",
-    style:"padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"+(tone?"":";background:#0000000a")},
+    style:"padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"},
     el("strong",{class:"ui"},title), right||el("span",{})));
   return c;
 }
@@ -5049,13 +5552,30 @@ async function viewPanelAdmin(v){
     const openDefault=groups.length<=2;
     if(S.panelOpen[g.id]!==undefined?S.panelOpen[g.id]:openDefault) c.setAttribute("open","open");
     c.addEventListener("toggle",()=>{ S.panelOpen[g.id]=c.open; });
+    /* When the panel sits, on the bar itself, so it can be read with the
+       card shut: the booked session (deliberation included) and any student
+       timed outside it. These are the same sittings the assessors' diary,
+       PIN page and calendar file show, so the times always agree. */
+    const sits=panelSittings(g,students);
+    const barTime=t=>{ const m=minsOf(t), h=Math.floor(m/60), mm=m%60;
+      return (h%12===0?12:h%12)+(mm?":"+pad2(mm):"")+" "+(h<12?"AM":"PM"); };
+    const SHOW_SITS=3;
+    const sitRow=(d,t)=>el("div",{class:"psum-sit"},
+      el("span",{class:"psum-ico",html:btnIcon("clock")}),
+      d?el("span",{class:"psum-d"},d):"",
+      el("span",{class:"psum-t"},t));
+    const when=el("div",{class:"psum-when"+(sits.length?"":" none")},
+      ...(sits.length
+        ? sits.slice(0,SHOW_SITS).map(s=>sitRow(prettyDate(s.date),barTime(s.start)+" \u2013 "+barTime(s.end)))
+            .concat(sits.length>SHOW_SITS?[el("div",{class:"psum-more"},"+"+(sits.length-SHOW_SITS)+" more")]:[])
+        : [sitRow("","Time not set yet")]));
     c.append(el("summary",{class:"cardhead"},
       el("div",{class:"psum-main"},
         el("span",{class:"chev"},"\u203A"),
         el("div",{class:"psum-tw"},
           el("div",{class:"psum-nm"},g.label||"Panel"),
-          el("div",{class:"psum-sub"},
-            [chairM?"Chair: "+chairM.name:"no chair yet",whenTxt].join("  \u00B7  ")))),
+          el("div",{class:"psum-sub"},chairM?"Chair: "+chairM.name:"No chair yet"))),
+      when,
       right));
     // .panelbody drives the CSS step counter on the labels below
     const body=el("div",{class:"panelbody",style:"padding:14px 16px"});
@@ -9078,14 +9598,14 @@ function renderLogin(opts){
   const waysList=el("div",{class:"auth-ways"});
   const aside=el("section",{class:"auth-aside ui"},
     el("div",{class:"auth-brand"},
-      el("div",{class:"mark-lg"},"SH"),
+      brandMark("mark-lg"),
       el("div",{},el("div",{class:"auth-bname"},"MRes Supervision Hub"),
-        el("div",{class:"auth-bsub"},"Research supervision coordination"))),
+        el("div",{class:"auth-bsub"},"Master of Research, CIHE Australia"))),
     el("div",{class:"auth-copy"},
       el("h2",{},"Every student, supervisor and panel in one register."),
       el("p",{},"Allocation, weekly consultations, attendance, messages and Confirmation of Candidature — from the first week of semester to the last panel."),
       waysList),
-    el("div",{class:"auth-foot"},"Choose how you'd like to get in"));
+    el("div",{class:"auth-foot"},"CRICOS Provider No. 03744B"));
   function drawWays(){
     waysList.replaceChildren(...WAYS.map(([id,title,ic,sub])=>{
       const b=el("button",{type:"button",class:"auth-way"+(mode===id?" on":""),onclick:()=>{mode=id;draw();}},
@@ -9101,7 +9621,6 @@ function renderLogin(opts){
     card.append(
       el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"},
         el("div",{},
-          el("div",{class:"eyebrow"},"Welcome"),
           el("h1",{class:"auth-title"},mode==="student"?"Open your portal":mode==="pin"?"View your timetable":"Sign in to the hub")),
         themeButton()),
       el("p",{class:"muted",style:"margin:6px 0 0"},way[3])
@@ -9226,7 +9745,7 @@ function authMsg(e){
   if(c.includes("too-many")) return "Too many attempts. Try again shortly.";
   return e?.message||"Sign-in failed.";
 }
-function toastNode(){ return el("div",{id:"toast"}); }
+function toastNode(){ return el("div",{id:"toast",role:"status","aria-live":"polite"}); }
 
 async function doLogin(email,password){
   if(DEMO){
@@ -9554,10 +10073,10 @@ function renderApp(){
   signOutBtn.append(navIcon("logout"));
   const side=el("aside",{class:"side ui"},
     el("div",{class:"brand"},
-      el("div",{class:"mark ui"},"SH"),
+      brandMark("mark"),
       el("div",{style:"min-width:0"},
         el("h1",{},"MRes Supervision Hub"),
-        el("div",{class:"sub"},"Research supervision coordination"))),
+        el("div",{class:"sub"},"CIHE Australia"))),
     tabs,
     el("div",{class:"side-user"},
       el("div",{class:"avatar"},initialsOf(S.userName||S.user?.email)),
@@ -9655,7 +10174,7 @@ async function drawMain(){
      of each other. A screen that finishes after the user has moved on now
      draws into a pane that is no longer on the page, and nobody sees it. */
   const v=el("div",{});
-  v.innerHTML="<div class='muted ui' style='padding:30px'>Loading…</div>";
+  v.innerHTML="<div class='loading ui' role='status'><span class='spin'></span>Loading…</div>";
   host.replaceChildren(v);
   const views={students:viewStudents, schedule:viewSchedule, timetables:viewTimetables,
     consultations:viewConsultations, meetinglog:viewMeetingLog, notes:viewNotes,
@@ -10534,7 +11053,7 @@ async function viewStudents(v){
       } else {
         hdrLeft.append(el("strong",{class:"ui"},gkey+" campus"));
       }
-      card.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"},
+      card.append(el("div",{class:"cardhead",style:"padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"},
         hdrLeft,
         el("span",{class:"muted ui"},list.length+" student"+(list.length>1?"s":""))));
 
@@ -10592,7 +11111,7 @@ async function viewStudents(v){
 }
 
 function emptyState(title,sub){
-  return el("div",{class:"empty card ui"},el("div",{class:"big"},"◷"),el("div",{style:"font-weight:600;color:var(--ink)"},title),el("div",{class:"muted"},sub));
+  return el("div",{class:"empty card ui"},el("div",{class:"big",html:btnIcon("inbox")}),el("div",{style:"font-weight:600;color:var(--ink)"},title),el("div",{class:"muted"},sub));
 }
 
 function studentForm(existing,done){
@@ -10977,7 +11496,7 @@ function importPanels(done){
     plan=buildPlan(students,groups);
 
     const box=el("div",{class:"card",style:"padding:0;overflow:hidden"});
-    box.append(el("div",{style:"padding:10px 14px;background:#0000000a;border-bottom:1px solid var(--line)"},
+    box.append(el("div",{class:"cardhead",style:"padding:10px 14px;border-bottom:1px solid var(--line)"},
       el("strong",{class:"ui"},plan.panels.length+" panel"+(plan.panels.length===1?"":"s")+
         " · "+plan.panels.reduce((n,P)=>n+P.students.length,0)+" students matched")));
     const t=el("table",{});
@@ -11314,7 +11833,7 @@ async function viewSchedule(v){
   }
   wkSel.onchange=()=>goWeek(parseInt(wkSel.value)||null);
   const weekBar=el("div",{class:"row",style:"margin:2px 0 12px;gap:8px;align-items:center;flex-wrap:wrap"},
-    el("span",{class:"muted ui",style:"font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:600"},"Showing"),
+    el("span",{class:"muted ui",style:"font-size:13px;font-weight:600"},"Showing"),
     el("button",{class:"btn ghost sm",title:"Previous week",
       ...((selWeek&&selWeek>1)?{}:{disabled:"disabled"}),onclick:()=>goWeek((selWeek||1)-1)},"\u25C0"),
     wkSel,
@@ -12410,7 +12929,7 @@ function toggleGroup(label,current,options,enabled,onPick){
     if(enabled) b.onclick=()=>onPick(val); else b.disabled=true;
     seg.append(b);
   });
-  return el("div",{},el("div",{class:"muted ui",style:"font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:600"},label),seg);
+  return el("div",{},el("div",{class:"muted ui",style:"font-size:12.5px;margin-bottom:5px;font-weight:600"},label),seg);
 }
 
 // Override a single week's time / link
@@ -13481,7 +14000,7 @@ async function viewReport(v){
       const grp=byPrin[prin];
       const prinUid=grp[0]?.s.principalUid;
       const card=el("div",{class:"card",style:"margin-bottom:14px;padding:0;overflow:hidden"});
-      const headRow=el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px"},
+      const headRow=el("div",{class:"cardhead",style:"padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px"},
         el("strong",{class:"ui"},"Principal: "+prin),
         el("div",{class:"row"},
           el("span",{class:"muted ui"},grp.length+" student"+(grp.length>1?"s":"")),
@@ -13493,7 +14012,7 @@ async function viewReport(v){
     });
   } else {
     const card=el("div",{class:"card",style:"margin-bottom:14px;padding:0;overflow:hidden"});
-    card.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"},
+    card.append(el("div",{class:"cardhead",style:"padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"},
       el("strong",{class:"ui"},focusName||"Supervisor"),
       el("span",{class:"muted ui"},rows.length+" student"+(rows.length===1?"":"s"))));
     if(!rows.length){
@@ -13560,7 +14079,7 @@ function showSupervisorDetail(supUid,supName,lens,rows,sem,weeks){
   }
   rows.forEach(({s,c,focusRole})=>{
     const block=el("div",{style:"border:1px solid var(--line);border-radius:8px;overflow:hidden"});
-    block.append(el("div",{style:"padding:9px 13px;background:#0000000a;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px"},
+    block.append(el("div",{class:"cardhead",style:"padding:9px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px"},
       el("strong",{class:"ui"},s.name+(focusRole?" · "+focusRole:"")),
       el("span",{class:"muted ui",style:"font-size:12.5px"},s.campus+((c&&c.day)?` · ${c.day} ${c.start}–${c.end}`:c?" · default slot (no fixed time)":" · no time set"))));
     if(!c){
@@ -13822,7 +14341,7 @@ async function viewContacts(v){
 
     // ---- Staff ----
     const sCard=el("div",{class:"card",style:"padding:0;overflow:hidden;margin-bottom:16px"});
-    sCard.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line)"},
+    sCard.append(el("div",{class:"cardhead",style:"padding:11px 16px;border-bottom:1px solid var(--line)"},
       el("strong",{class:"ui"},"Staff")));
     const st=el("table",{});
     st.append(el("thead",{},el("tr",{},...["Name","Role","Employment","Area","Email","Mobile","Contact"].map(h=>el("th",{},h)))));
@@ -13848,7 +14367,7 @@ async function viewContacts(v){
 
     // ---- Students ----
     const cCard=el("div",{class:"card",style:"padding:0;overflow:hidden"});
-    cCard.append(el("div",{style:"padding:11px 16px;background:#0000000a;border-bottom:1px solid var(--line)"},
+    cCard.append(el("div",{class:"cardhead",style:"padding:11px 16px;border-bottom:1px solid var(--line)"},
       el("strong",{class:"ui"},"Students"+(activeSemester()?" · "+activeSemester().label:""))));
     if(!students.length){
       cCard.append(el("p",{class:"muted",style:"padding:18px;margin:0"},"No students in this semester."));
@@ -15742,7 +16261,7 @@ async function renderStudentView(sid,enrolments,sems){
 
   const who=enrolments[0]||{};
   const top=el("header",{class:"sp-top"},
-    el("div",{class:"mark"},"SH"),
+    brandMark("mark"),
     el("div",{style:"min-width:0"},
       el("div",{class:"ttl"},"Student portal"),
       el("div",{class:"sub"},"MRes Supervision Hub")),
@@ -16572,7 +17091,7 @@ function renderStaffPinView(who,blocks,opts={}){
   const agenda=cocAgendaItems(blocks);
   const calName=cocCalFile(who.name,"");
   const top=el("header",{class:"sp-top"},
-    el("div",{class:"mark"},"SH"),
+    brandMark("mark"),
     el("div",{style:"min-width:0"},
       el("div",{class:"ttl"},"My CoC timetable"),
       el("div",{class:"sub"},"Read-only PIN view")),
@@ -19789,7 +20308,12 @@ function cocOutcomesView(v,ctx,redraw){
 function modal(title,bodyNode,onSave,saveLabel="Save"){
   const bg=el("div",{class:"modal-bg",onclick:e=>{if(e.target===bg)close();}});
   const saveBtn=el("button",{class:"btn"},saveLabel);
-  function close(){ bg.remove(); }
+  /* Where focus was before the dialog opened, so closing hands it back. */
+  const back=document.activeElement;
+  function close(){
+    bg.remove();
+    try{ if(back&&back.isConnected&&!document.querySelector(".modal-bg")) back.focus({preventScroll:true}); }catch(e){}
+  }
   saveBtn.onclick=async()=>{
     saveBtn.disabled=true;
     try{
@@ -19804,12 +20328,37 @@ function modal(title,bodyNode,onSave,saveLabel="Save"){
       toast((err&&err.message)||"Could not save — check your connection or permissions.",true);
     }
   };
-  const m=el("div",{class:"modal ui"},
-    el("h3",{},title), bodyNode,
-    el("div",{class:"row",style:"justify-content:flex-end;margin-top:18px"},
+  /* Header, scrolling body, then the actions in a bar that stays put, so
+     a long form never pushes Save out of reach. The footer stays the last
+     thing in the dialog: callers find "the last .btn" to tint it red, and
+     "the first .btn.ghost" to drop Cancel, and both still land right. */
+  const tid="mt"+Math.random().toString(36).slice(2,8);
+  const xBtn=el("button",{class:"modal-x",type:"button","aria-label":"Close",title:"Close (Esc)",
+    html:btnIcon("x"),onclick:close});
+  const m=el("div",{class:"modal ui",role:"dialog","aria-modal":"true","aria-labelledby":tid,tabindex:"-1"},
+    el("div",{class:"modal-head"},el("h3",{id:tid},title),xBtn),
+    el("div",{class:"modal-body"},bodyNode),
+    el("div",{class:"modal-foot"},
       el("button",{class:"btn ghost",onclick:close},"Cancel"), saveBtn));
   bg.append(m); document.body.append(bg);
+  bg._close=close;
+  /* Focus the first field on a keyboard-and-mouse device (on a phone it
+     would throw up the keyboard over the form). Deferred a frame, because
+     many callers fill the dialog straight after opening it. */
+  requestAnimationFrame(()=>{
+    if(!bg.isConnected) return;
+    let fine=false; try{ fine=window.matchMedia("(pointer:fine)").matches; }catch(e){}
+    const f=fine&&m.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([disabled]):not([readonly]),.modal-body textarea:not([readonly]),.modal-body select:not([disabled])");
+    try{ (f||m).focus({preventScroll:true}); }catch(e){}
+  });
 }
+/* Esc closes the dialog on top, the same as Cancel. */
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape"||e.defaultPrevented) return;
+  const top=[...document.querySelectorAll(".modal-bg")].pop();
+  if(!top||typeof top._close!=="function") return;
+  e.preventDefault(); top._close();
+});
 // confirmDelete: deletes a record. If cascade=true and it's a student/consultation,
 // related records are tidied up so no orphan logs remain.
 function confirmDelete(coll,id,name,done,custom){
@@ -19885,6 +20434,7 @@ if(DEMO){
     }
   });
 }
+(()=>{ try{ const l=document.createElement("link"); l.rel="icon"; l.type="image/png"; l.href=COC_LOGO_SRC; document.head.append(l); }catch(e){} })();
 window.addEventListener("error",e=>console.error(e));
 </script>
 </body>
