@@ -2264,6 +2264,15 @@
     table.cps-t tr.next td{background:#FFF3D6!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
+<style id="coc-why">
+  /* The Chair's reason for an outcome the members didn't agree on. */
+  .cx-why{margin-top:12px;padding:10px 12px 12px;border:1px solid color-mix(in srgb,var(--amber) 35%,var(--line));
+    border-left:3px solid var(--amber);border-radius:var(--r-sm,8px);background:color-mix(in srgb,var(--amber) 7%,var(--paper-2))}
+  .cx-why-h{font-size:13px;font-weight:600;color:var(--amber-ink);margin-bottom:8px;line-height:1.45}
+  .cx-why label{display:block;margin:0 0 4px}
+  .cx-why .req{color:var(--clay)}
+  .cx-why textarea{width:100%}
+</style>
 <style id="cihe-modern">
   /* ============================================================
      CIHE MODERN LAYER — October 2026
@@ -18034,7 +18043,7 @@ function renderStaffPinView(who,blocks,opts={}){
                 coiManaged, fb:{strengths,concerns,improvements,dissent},
                 notes:{ethics,permits,rcr,support:'Y'|'N'},
                 det:{finalMark, outcome, conditions, dueBy, represent:'Y'|'N',
-                     reason, resub:bool}}},
+                     reason, outcomeReason, resub:bool}}},
          status:''|'approved'|'received',
          chairSign:{name,img,at,by}, approvedAt,
          office:{receivedDate, receivedBy, chk:{...}, advisedDate,
@@ -18226,6 +18235,15 @@ function cocCand(rep,g,st,marks,sem){
   const lockedRep=!!rep&&(rep.status==="approved"||rep.status==="received");
   const detOutcome=c.det.outcomeAuto&&!lockedRep?"":c.det.outcome;
   c._outcome=detOutcome||(rs&&rs.mode==="chair"?(rs.marks?.rec||""):ag.majority)||"";
+  /* When the members don't agree on an outcome — no majority among their
+     recommendations, or the Chair chooses something other than the
+     majority — the Chair records why (det.outcomeReason). Not asked for a
+     candidate who didn't present, or a resubmission the Chair re-marked
+     alone on the panel's behalf. */
+  const recs=ag.counted.map(r=>r.rec).filter(Boolean);
+  const split=recs.length>=2&&!ag.majority&&new Set(recs).size>1;
+  const against=!!ag.majority&&!!c._outcome&&c._outcome!==ag.majority;
+  c._outcomeWhy=c._absent||(rs&&rs.mode==="chair")?"":split?"split":against?"against":"";
   const capOn=!!c.det.resub||(!!rs&&(c._outcome==="C"||c._outcome==="CMR"));
   c._capOn=capOn;
   const capped=v=>v==null?null:(capOn?Math.min(v,10):v);
@@ -18236,6 +18254,17 @@ function cocCand(rep,g,st,marks,sem){
   c._dueBy=c.det.dueBy||(o&&o.weeks?cocAddDays(ymdOf(new Date()),o.weeks*7):"");
   c._differs=base!=null&&c._final!=null&&Math.abs(c._final-base)>0.05&&!(capOn&&c._final===capped(base));
   return c;
+}
+/* "P1 recommends C, P2 CMR, P3 MRR" — the split, in words. */
+function cocOutcomeWhyText(c){
+  const ag=c._agg, by=ag.counted.filter(r=>r.rec).map((r,i)=>r.code+(i?" ":" recommends ")+r.rec).join(", ");
+  if(c._outcomeWhy==="split") return "The members recommended different outcomes ("+by+") and there is no majority.";
+  if(c._outcomeWhy==="against"){
+    const recd=ag.counted.filter(r=>r.rec);
+    return (recd.length===1?recd[0].code+" recommended "+ag.majority:"The majority recommended "+ag.majority+" ("+by+")")+
+      ", but the outcome chosen is "+c._outcome+".";
+  }
+  return "";
 }
 function cocChairMissing(c){
   const out=[];
@@ -18257,6 +18286,8 @@ function cocChairMissing(c){
   if((c._outcome==="CMR"||c._outcome==="MRR")&&!c._dueBy) out.push("revisions due date");
   if(!c.det.represent) out.push("re-presentation");
   if(c._differs&&!cocT(c.det.reason)) out.push("reason the final mark differs from the average");
+  if(c._outcomeWhy&&c._outcome&&!cocT(c.det.outcomeReason))
+    out.push(c._outcomeWhy==="split"?"reason for the outcome (the members recommended different outcomes)":"reason the outcome differs from the members\u2019 majority");
   if(!cocT(c.fb.strengths)||!cocT(c.fb.concerns)) out.push("panel feedback");
   return [...new Set(out)];
 }
@@ -18697,7 +18728,7 @@ function cocDocxBuild(ctx){
           :[V(cocFmt(rw.rq)),V(cocFmt(rw.fe)),V(cocFmt(rw.pr)),V(cocFmt(rw.total),{run:{b:true}})]),
         V(rw.rec?(cocOutcome(rw.rec)?.c||rw.rec):"")].map(cl=>({...cl,fill:i%2?COC_ALT:undefined}))})),
       {cells:[L("Panel average (total ÷ "+(ag.n||3)+")",{span:2}),V(cocFmt(ag.avg.rq)),V(cocFmt(ag.avg.fe)),V(cocFmt(ag.avg.pr)),V(cocFmt(ag.avg.total),{run:{b:true}}),
-        V(ag.majority?"Majority: "+ag.majority:"")]}]);
+        V(ag.majority?"Majority: "+ag.majority:c._outcomeWhy==="split"?"No majority \u2014 see C1.6":"")]}]);
     body+=note("Round the panel average to one decimal place. The Chair determines the final mark in C1.6 and must record a reason where it differs from this average.");
     if(c._resub){
       /* Re-assessment of a revised proposal after Major Revisions. */
@@ -18730,6 +18761,8 @@ function cocDocxBuild(ctx){
       {cells:[titleCell("C1.6 Panel Chair’s determination","The Chair decides the outcome having considered the marks and comments of all panel members.",{span:2})]},
       {cells:[L("Final mark determined / 20"),V((c._final==null?"":cocFmt(c._final))+(c._capOn?"  (re-submission after MRR — capped at 10/20)":"")+reasonTxt)]},
       {cells:[L("Candidature Outcome"),{c:COC_OUTCOMES.map(o=>p(box(c._outcome===o.c,o.long,{sz:17}))).join("")}]},
+      ...(c._outcomeWhy?[{cells:[L("Reason for the outcome",{sub:c._outcomeWhy==="split"?"The panel members recommended different outcomes":"The outcome differs from the panel members\u2019 majority"}),
+        {c:p(r(cocOutcomeWhyText(c),{i:true,sz:16,color:"595959"}))+p(r(cocT(det.outcomeReason),{sz:18}),{before:60}),padV:90}]}]:[]),
       {cells:[L("Conditions, Revisions or actions required by Candidate",{sub:"Attach additional documents if required"}),V(cocT(det.conditions),{padV:90})]},
       {cells:[L("Revisions due by (refer to B3)"),V((c._outcome==="CMR"||c._outcome==="MRR")&&c._dueBy?longDate(c._dueBy):"")]},
       {cells:[L("Re-Presentation required?"),{c:p(box(det.represent==="Y","Yes",{sz:17})+r("       ",{sz:17})+box(det.represent==="N","No",{sz:17}))}]},
@@ -19705,7 +19738,7 @@ function cocReportEditor(host,o){
       el("td",{},rw.rec?el("span",{class:"pill oc-"+rw.rec},rw.rec):""))));
     mb.append(el("tr",{class:"avg"},el("td",{colspan:"2"},el("strong",{},"Panel average (total ÷ "+(ag.n||"–")+")")),
       el("td",{},cocFmt(ag.avg.rq)),el("td",{},cocFmt(ag.avg.fe)),el("td",{},cocFmt(ag.avg.pr)),
-      el("td",{},el("strong",{},cocFmt(ag.avg.total))),el("td",{},ag.majority?"Majority "+ag.majority:"")));
+      el("td",{},el("strong",{},cocFmt(ag.avg.total))),el("td",{},ag.majority?"Majority "+ag.majority:c._outcomeWhy==="split"?"No majority":"")));
     mt.append(mb);
     /* A wide spread between members is worth a conversation before the
        Chair settles the final mark. Screen-only. */
@@ -19785,14 +19818,20 @@ function cocReportEditor(host,o){
         save(); redraw(); },{ro:R,votes:ag.tally,of:ag.n});
     const needsRev=c._outcome==="CMR"||c._outcome==="MRR";
     body.append(tag("C1.6",cocSec("C1.6 Panel Chair’s determination",null,
-      cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. For CMR, list the minor revisions (due within 2 weeks); for MRR, the major revisions (resubmission within 4 weeks) \u2014 the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. If the candidate is confirmed after an MRR resubmission, tick the cap box: the mark is capped at 10/20."),
+      cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. If the members recommend different outcomes with no majority, or you choose a different outcome from the majority, say why under the outcome \u2014 it is printed on the report. For CMR, list the minor revisions (due within 2 weeks); for MRR, the major revisions (resubmission within 4 weeks) \u2014 the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. If the candidate is confirmed after an MRR resubmission, tick the cap box: the mark is capped at 10/20."),
       cocKV(["Final mark / 20",el("div",{},el("div",{class:"row"},fin,
           c._final!=null?el("span",{class:"pill "+(c._final>=17?"approved":c._final>=13?"blue":c._final>=10?"pending":"missed")},cocBand(c._final)):"",
           el("span",{class:"muted ui"},c._finalDefault!=null?(!finManual?"Using the ":"The ")+(c._resub?.mode==="chair"?"Chair's resubmission total ":"panel average ")+cocFmt(c._base)+(c._capOn?" (capped at 10)":""):"Waiting for the members' marks")),
           c._resub?cocTip(c._capOn?"Confirmed after an MRR resubmission \u2014 the mark is capped at 10/20 automatically.":"If this resubmission is confirmed (C or CMR), the mark is capped at 10/20 automatically."):el("div",{style:"margin-top:6px"},cocCheck(!!det.resub,"Confirmed after a Major Revision re-submission — mark capped at 10/20",v=>{ det.resub=v; save(); redraw(); },{ro:R})),
           c._differs?el("div",{style:"margin-top:8px"},el("label",{},"Reason the final mark differs from the panel average"),
             cocArea(det.reason,v=>{ det.reason=v; save(); },{ro:R,rows:2})):"")],
-        ["Candidature outcome",el("div",{},outs,!det.outcome&&ag.majority?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"Pre-selected from the panel's majority recommendation."):"")],
+        ["Candidature outcome",el("div",{},outs,!det.outcome&&ag.majority?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"Pre-selected from the panel's majority recommendation."):"",
+          c._outcomeWhy?el("div",{class:"cx-why"},
+            el("div",{class:"cx-why-h ui"},"\u26A0 "+(c._outcomeWhy==="split"&&!c._outcome?cocOutcomeWhyText(c)+" Choose the outcome above, then say why."
+              :cocOutcomeWhyText(c)+" Say why you chose "+c._outcome+" \u2014 this is printed on the report under C1.6.")),
+            el("label",{for:"why-"+st.id},"Reason for the outcome",el("span",{class:"req",title:"Required"}," *")),
+            (()=>{ const ta=cocArea(det.outcomeReason,v=>{ det.outcomeReason=v; save(); },{ro:R,rows:3,
+              ph:"e.g. After discussing the presentation, the panel agreed the revisions needed are minor, so CMR rather than MRR."}); ta.id="why-"+st.id; return ta; })()):"")],
         ["Conditions, revisions or actions",cocArea(det.conditions,v=>{ det.conditions=v; save(); },{ro:R,rows:3,ph:needsRev?"Required for "+c._outcome:"If any"})],
         ...(needsRev?[["Revisions due by",cocInput(c._dueBy,v=>{ det.dueBy=v; save(); },{type:"date",ro:R,attrs:{style:"max-width:200px"}})]]:[]),
         ["Re-presentation required?",cocYN(det.represent||"",v=>{ det.represent=v; save(); redraw(); },{ro:R})]))));
@@ -20392,7 +20431,8 @@ async function cocFillTest(g,students,marks){
     rc[st.id]={mode:"Online (Teams)",priAtt:"Y",coAtt:(st.coName||st.coUid)?"Y":"",pre:{"1":true,"2":true,"5":true},preNA:{},
       notes:{ethics:"N",permits:"N",rcr:"Y",support:"N"},
       det:{outcome:recOf((tot[st.id]||0)/Math.max(1,coded.length)),
-        conditions:"[TEST] Address the panel's comments and resubmit the revised proposal to the Chair.",represent:"N"}};
+        conditions:"[TEST] Address the panel's comments and resubmit the revised proposal to the Chair.",represent:"N",
+        outcomeReason:"[TEST] The panel discussed the differing recommendations and agreed on this outcome."}};
   });
   ops.push({type:"set",coll:"cocReports",id:g.id,data:{cand:rc,testData:true,updatedAt:now,
     history:[{at:now,by:S.userName||"",what:"TEST marks filled in by the office"}]}});
@@ -20567,7 +20607,7 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
           approvedAt:rep.approvedAt||0,conditions:cocT(c0.det.conditions),dueBy:c0.det.dueBy||""},
         marks:{}};
       /* the Chair decides afresh: outcome and mark are cleared, conditions kept for reference */
-      c0.det.outcome=""; c0.det.finalMark=""; c0.det.reason=""; c0.det.resub=false; c0.det.dueBy="";
+      c0.det.outcome=""; c0.det.finalMark=""; c0.det.reason=""; c0.det.outcomeReason=""; c0.det.resub=false; c0.det.dueBy="";
       const ops=[{type:"set",coll:"cocReports",id:g0.id,data:{cand,status:"",chairSign:null,approvedAt:0,snap:null,
         window:{opensAt:now,closesAt:cl},updatedAt:now,
         history:cocHist(rep,"reopened to re-assess "+(st.name||"")+"'s revised proposal (round "+(prevRound+1)+", "+(mode==="chair"?"Chair on behalf of the panel":"all members")+")")}}];
@@ -20781,6 +20821,7 @@ function cocMarksExport(rows,sem,opts){
       fin,fin===""?"":Math.round(fin/COC_TOTAL*1000)/10,
       c._differs?cocT(c.det?.reason):"",
       c._absent?"DEF":(o?.c||""),c._absent?"Deferred — did not present":(o?.label||""),
+      c._outcomeWhy?cocT(c.det?.outcomeReason):"",
       c._absent?cocT(c.absentNote):cocT(c.det?.conditions),
       !c._absent&&(c._outcome==="CMR"||c._outcome==="MRR")&&c._dueBy?longDate(c._dueBy):"",
       c._absent?"":(c.det?.represent==="Y"?"Yes":c.det?.represent==="N"?"No":""),
@@ -20798,7 +20839,7 @@ function cocMarksExport(rows,sem,opts){
 }
 const COC_MAIN_HEAD=["Student ID","Student","Email","Principal supervisor","Panel","Chair","Seminar date",
   "Research quality (avg /10)","Feasibility (avg /5)","Presentation (avg /5)","Panel average /20","Final mark /20","Final mark %",
-  "Reason final mark differs","Outcome code","Outcome","Conditions / revisions","Revisions due","Re-presentation",
+  "Reason final mark differs","Outcome code","Outcome","Reason for outcome (members split or majority overridden)","Conditions / revisions","Revisions due","Re-presentation",
   "Strengths","Concerns / gaps","Improvements required","Minority / dissenting view","Report status","Released to student"];
 const COC_MOODLE_HEAD=["ID number","Email address","Full name","CoC mark (/20)","CoC mark (%)","Outcome","Feedback comments"];
 const COC_ASSESS_HEAD=["Student ID","Student","Panel","Code","Assessor","Role","Research /10","Feasibility /5","Presentation /5","Total /20",
@@ -20811,7 +20852,7 @@ function cocDownloadMarksXlsx(rows,sem,opts){
     rows:[title(cap,head.length),{cells:[(sem?.label||"")+(opts.scope?"  ·  "+opts.scope:"")+"  ·  exported "+todayLabel()+(opts.provisional?"  ·  includes PROVISIONAL marks from reports not yet approved":"")]},
       {cells:head,s:1,h:32},...data.map(r=>({cells:r,s:2}))]});
   const sheets=[
-    sheet("CoC outcomes & marks",COC_MAIN_HEAD,x.main,[12,22,26,20,22,18,14,11,11,11,11,11,10,28,9,26,40,14,11,40,40,40,30,20,16],"CoC outcomes and marks"),
+    sheet("CoC outcomes & marks",COC_MAIN_HEAD,x.main,[12,22,26,20,22,18,14,11,11,11,11,11,10,28,9,26,34,40,14,11,40,40,40,30,20,16],"CoC outcomes and marks"),
     sheet("Moodle upload",COC_MOODLE_HEAD,x.moodle,[14,28,24,12,12,10,90],"Moodle upload — map “ID number” (or “Email address”) to the student, and the mark and feedback columns to the CoC grade item"),
     sheet("Assessor marks & comments",COC_ASSESS_HEAD,x.assess,[12,22,20,6,20,8,10,10,10,9,10,24,40,40,40,30,18],"Every assessor's marks and comments (office use only)")];
   saveBlob(xlsxBlob(sheets),("CoC_marks_"+(sem?.label||"")+(opts.scope?"_"+opts.scope:"")).replace(/[^\w\-]+/g,"_")+".xlsx");
