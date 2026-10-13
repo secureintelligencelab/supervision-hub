@@ -4257,6 +4257,9 @@ function exportRows(students,groups,cons){
       title:titleOf(s),
       meetingLink:slotLink(g,linkSlot||slot),
       ownLink:!!String((linkSlot||slot)?.link||"").trim(),
+      /* The panel's shared CoC Panel Documents folder (proposals, slides,
+         the report form). One per panel, so every student on it shares it. */
+      docsLink:g?docsLinkOf(g):"",
       status:!g?"":releaseState(g),
       consult:(c&&c.day)?(c.day+" "+c.start+"–"+c.end):""
     };
@@ -4271,7 +4274,7 @@ function exportRows(students,groups,cons){
    The weekly consultation time is deliberately NOT here — it is a
    supervision arrangement, not part of the confirmation record. */
 function downloadPanelCSV(rows,sem,scope){
-  const head=["student","student_email","student_id","proposal_title","meeting_link",
+  const head=["student","student_email","student_id","proposal_title","meeting_link","documents_folder",
     "principal_supervisor","co_supervisor","campus","area",
     "panel","panel_chair",
     "member_1","member_1_email","member_1_mobile","member_1_type",
@@ -4281,7 +4284,7 @@ function downloadPanelCSV(rows,sem,scope){
   const lines=[head.join(",")];
   rows.forEach(r=>{
     const m=[0,1,2].map(i=>r.members[i]||{});
-    const cell=[r.s.name,r.s.email||"",r.s.sid||"",r.title,r.meetingLink,
+    const cell=[r.s.name,r.s.email||"",r.s.sid||"",r.title,r.meetingLink,r.docsLink,
       r.principal,r.s.coName||"",r.s.campus||"",r.s.area||"",
       r.g?.label||"", r.chair?.name||"",
       ...m.flatMap(x=>[x.name||"",x.email||"",x.mobile||"",
@@ -4390,15 +4393,15 @@ function downloadPanelXLSX(rows,groups,students,timetables,sem,scope){
      "Panel","Panel status","Chair",
      "Assessor 1","Assessor 1 email","Assessor 1 type","Assessor 2","Assessor 2 email","Assessor 2 type",
      "Assessor 3","Assessor 3 email","Assessor 3 type",
-     "CoC date","Start","End","Presentation","Q&A","Meeting link","Independence"],
-    [22,22,12,26,44,18,10,10,10,12,18,20,26,10,20,26,10,20,26,10,12,8,8,20,20,40,30],
+     "CoC date","Start","End","Presentation","Q&A","Meeting link","CoC Panel Documents folder","Independence"],
+    [22,22,12,26,44,18,10,10,10,12,18,20,26,10,20,26,10,20,26,10,12,8,8,20,20,40,40,30],
     rows.map(r=>{
       const m=[0,1,2].map(i=>r.members[i]||{});
       return [r.principal,r.s.name,r.s.sid||"",r.s.email||"",r.title,r.s.coName||"",r.s.campus||"",r.s.area||"",
         r.g?.label||"",statusOf(r.g),r.chair?.name||"",
         ...m.flatMap(x=>[x.name||"",x.email||"",typeOf(x)]),
         (r.slot?.date||r.sess?.date||""),r.slot?r.slot.start:"",r.slot?r.slot.end:"",
-        r.parts?clockRange(r.parts.start,r.parts.qaStart):"",r.parts&&r.parts.qaMins?clockRange(r.parts.qaStart,r.parts.end):"",r.meetingLink,
+        r.parts?clockRange(r.parts.start,r.parts.qaStart):"",r.parts&&r.parts.qaMins?clockRange(r.parts.qaStart,r.parts.end):"",r.meetingLink,r.docsLink,
         r.notIndependent.length?"Override: supervised by "+r.notIndependent.join(", "):"OK"];
     }));
 
@@ -4406,45 +4409,340 @@ function downloadPanelXLSX(rows,groups,students,timetables,sem,scope){
   const sorted=groups.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label)));
   sheet("Panels",
     ["Panel","Status","Chair","Assessor 1","Email","Mobile","Type","Assessor 2","Email","Mobile","Type",
-     "Assessor 3","Email","Mobile","Type","Students","Date","Start","End","Meeting link","Time clashes"],
-    [12,11,18,20,26,16,9,20,26,16,9,20,26,16,9,9,12,8,8,40,44],
+     "Assessor 3","Email","Mobile","Type","Students","Date","Start","End","Meeting link",
+     "CoC Panel Documents folder","Report due","Time clashes"],
+    [12,11,18,20,26,16,9,20,26,16,9,20,26,16,9,9,12,8,8,40,40,18,44],
     sorted.map(g=>{
-      const ms=groupMembers(g), m=[0,1,2].map(i=>ms[i]||{}), se=sessOf(g);
+      const ms=groupMembers(g), m=[0,1,2].map(i=>ms[i]||{}), se=sessOf(g), pd=panelReportDue(g,sem);
       return [g.label||"",statusOf(g),ms.find(x=>isChair(g,x))?.name||"",
         ...m.flatMap(x=>[x.name||"",x.email||"",x.mobile||"",typeOf(x)]),
         String(groupStudents(g).length),se?.date||"",se?.start||"",se?.end||"",
-        String(g.meetingLink||"").trim(),clashText(g)];
+        String(g.meetingLink||"").trim(),docsLinkOf(g),pd.date?dueLong(pd.date):"",clashText(g)];
     }));
 
   // 3. the running order, one row per slot, in the office's timetable
   // layout: panel, date, day, session, slot, presentation, Q&A, student,
   // ID \u2014 then the panel's own deliberation hour as the last row.
   const tt=timetableRows(sorted,students);
-  sheet("Timetable",TIMETABLE_HEAD.concat(TIMETABLE_EXTRA_HEAD),
-    [18,13,11,20,20,20,20,24,13,44,22,18,18,40,12],
-    tt.map(r=>r.cells.concat(r.extra.concat([statusOf(r.g)]))));
+  sheet("Timetable",TIMETABLE_HEAD.concat(TIMETABLE_EXTRA_HEAD,["CoC Panel Documents folder"]),
+    [18,13,11,20,20,20,20,24,13,44,22,18,18,40,12,40],
+    tt.map(r=>r.cells.concat(r.extra.concat([statusOf(r.g),docsLinkOf(r.g)]))));
 
   // 4. one row per assessor, load counted across every panel they sit on
   const byKey=new Map();
   groups.forEach(g=>groupMembers(g).forEach(m=>{
     const k=memberKey(m);
-    if(!byKey.has(k)) byKey.set(k,{m,panels:[],chairs:0,students:0,clash:new Set()});
+    if(!byKey.has(k)) byKey.set(k,{m,panels:[],folders:[],chairs:0,students:0,clash:new Set()});
     const r=byKey.get(k);
     r.panels.push(g.label||"Panel"); r.students+=groupStudents(g).length;
+    if(docsLinkOf(g)) r.folders.push((g.label||"Panel")+": "+docsLinkOf(g));
     if(isChair(g,m)) r.chairs++;
     const ct=clashText(g,m); if(ct) r.clash.add((g.label||"Panel")+": "+ct);
   }));
   sheet("Assessors",
-    ["Assessor","Type","Employment","Email","Mobile","Organisation","Panels","Chairs","Students assessed","Over the usual "+PANEL_CAP+"?","Time clashes"],
-    [22,9,18,28,16,26,24,8,10,12,60],
+    ["Assessor","Type","Employment","Email","Mobile","Organisation","Panels","CoC Panel Documents folders","Chairs","Students assessed","Over the usual "+PANEL_CAP+"?","Time clashes"],
+    [22,9,18,28,16,26,24,48,8,10,12,60],
     [...byKey.values()].sort((a,b)=>String(a.m.name).localeCompare(String(b.m.name))).map(r=>[
       r.m.name||"",typeOf(r.m),memberEmployment(r.m),r.m.email||"",r.m.mobile||"",r.m.org||"",r.panels.join(", "),
-      String(r.chairs),String(r.students),r.students>PANEL_CAP?"Yes":"",[...r.clash].join("; ")]));
+      r.folders.join("\n"),String(r.chairs),String(r.students),r.students>PANEL_CAP?"Yes":"",[...r.clash].join("; ")]));
 
   const fname=("coc_panels_"+[scope?.slug,(sem?.label||"export")].filter(Boolean).join("_"))
     .replace(/\s+/g,"_")+".xlsx";
   saveBlob(xlsxBlob(sheets),fname);
   toast("Excel workbook downloaded.");
+}
+
+/* ============================================================
+   INFORMATION SHEETS TO SEND OUT BY EMAIL
+   Two Excel files the office uses to brief people panel by panel. Each
+   is built to work both as something to read and as the recipient list
+   for a mail merge (Word, Outlook or a Gmail add-on): the merge sheet
+   has its headings in row 1 and nothing above them.
+
+   For the PANEL MEMBERS: when each panel sits, its chair and members,
+   the meeting link, the CoC Panel Documents folder and the report
+   deadline. One row per panel, then one row per PERSON — however many
+   panels they sit on, each person appears once with everything that
+   concerns them, so a mail merge sends one email each.
+
+   For the STUDENTS: the presentation timetable panel by panel. One row
+   per student for the merge (their own slot, link, chair and assessors,
+   with their supervisors' addresses for Cc), one row per panel with all
+   its students' addresses ready for Bcc, then a tab per panel with its
+   running order to paste into or attach to the email. Deliberately left
+   out of the student file: proposal titles (staff-facing everywhere else
+   in the hub) and the documents folder (assessors only).
+   ============================================================ */
+
+/* Everything one panel's information sheet needs, worked out once. */
+function panelBrief(g,students,sem){
+  const sess=groupSessions(g).find(x=>x.id===g.chosenSessionId)||null;
+  const sits=panelSittings(g,students);
+  const dl=deliberationOf(g,sess);
+  const ms=groupMembers(g);
+  const chair=ms.find(m=>isChair(g,m))||null;
+  const others=ms.filter(m=>m!==chair);
+  const first=sess&&sess.date?sess:(sits[0]||null);
+  const order=(g.slots||[]).filter(sl=>sl.start&&sl.end&&slotDate(g,sl)).map(sl=>{
+    const st=students.find(x=>x.id===sl.studentDocId)||null;
+    return {sl,st,d:slotDate(g,sl),parts:slotParts(g,sl),link:slotLink(g,sl)};
+  });
+  const untimed=groupStudents(g).filter(id=>!isScheduled(g,id))
+    .map(id=>students.find(x=>x.id===id)).filter(Boolean);
+  const pd=panelReportDue(g,sem);
+  return {g,sess,sits,dl,ms,chair,others,first,order,untimed,
+    date:first?.date||"",
+    session:first?clockRange(first.start,first.end):"",
+    when:sits.length?sits.map(s=>weekdayOf(s.date)+" "+longDate(s.date)+", "+clockRange(s.start,s.end)).join("\n"):"To be confirmed",
+    deliberation:dl&&sess?.date?clockRange(dl.start,dl.end):"",
+    link:String(g.meetingLink||"").trim(),
+    folder:docsLinkOf(g),
+    due:pd.date?dueLong(pd.date):"",
+    dueRule:pd.date&&pd.auto?dueRuleText(sem):""};
+}
+/* The running order as items in time order: each student's slot, the
+   deliberation in its place on the session day, and anyone still without
+   a time at the end. */
+function panelOrderItems(b){
+  const items=b.order.map(o=>({kind:o.st?"student":"other",d:o.d,start:o.sl.start,end:o.sl.end,
+    st:o.st,parts:o.parts,link:o.link,k:o.d+" "+o.sl.start}));
+  if(b.sess?.date&&b.deliberation) items.push({kind:"deliberation",d:b.sess.date,start:b.dl.start,end:b.dl.end,
+    link:b.link,k:b.sess.date+" "+b.dl.start});
+  items.sort((x,y)=>x.k<y.k?-1:x.k>y.k?1:(x.kind==="deliberation")-(y.kind==="deliberation"));
+  b.untimed.forEach(st=>{
+    const ls=(b.g.slots||[]).find(x=>x.studentDocId===st.id&&String(x.link||"").trim());
+    items.push({kind:"untimed",st,link:slotLink(b.g,ls)});
+  });
+  return items;
+}
+/* The same running order as text, one line per slot. `titles` adds each
+   proposal title (staff only); `students` marks the deliberation as the
+   assessors' closed session. */
+function panelOrderText(b,opts={}){
+  const items=panelOrderItems(b);
+  const showDate=new Set(items.filter(it=>it.d).map(it=>it.d)).size>1;
+  const who=st=>st.name+(st.sid?" ("+st.sid+")":"")+(opts.titles&&titleOf(st)?" — “"+titleOf(st)+"”":"");
+  return items.map(it=>{
+    if(it.kind==="untimed") return "Time to be confirmed  "+who(it.st);
+    const when=(showDate?weekdayOf(it.d).slice(0,3)+" "+longDate(it.d)+"  ":"")+clockRange(it.start,it.end);
+    if(it.kind==="deliberation") return when+"  Panel deliberation"+(opts.students?" (assessors only — students do not attend)":"");
+    if(it.kind==="other") return when+"  Panel discussion";
+    return when+"  "+who(it.st);
+  }).join("\n");
+}
+const xlsxFileName=(base,scope,sem)=>(base+"_"+[scope?.slug,(sem?.label||"export")].filter(Boolean).join("_"))
+  .replace(/[^\w\-]+/g,"_").replace(/_+/g,"_")+".xlsx";
+/* Sheet builders shared by the two information files. */
+function infoSheets(caption){
+  const used=new Set(), sheets=[];
+  return {sheets,used,
+    /* a readable tab: title, caption, a blank row, then the headings */
+    titled(name,title,header,widths,body){
+      const rs=[{cells:[title],s:4,h:20},{cells:[caption]},{cells:[]},{cells:header,s:1,h:30}];
+      body.forEach(r=>rs.push({cells:r,s:2}));
+      sheets.push({name:safeSheetName(name,used),widths,rows:rs,freezeAt:4,
+        filter:body.length?"A4:"+colLetter(header.length-1)+rs.length:""});
+    },
+    /* a mail-merge tab: headings in row 1, one recipient per row */
+    merge(name,header,widths,body){
+      const rs=[{cells:header,s:1,h:30},...body.map(r=>({cells:r,s:2}))];
+      sheets.push({name:safeSheetName(name,used),widths,rows:rs,freezeAt:1,
+        filter:body.length?"A1:"+colLetter(header.length-1)+rs.length:""});
+    }};
+}
+
+/* ---- for the panel members ---- */
+function downloadPanelMembersXLSX(gs,students,sem,scope){
+  const caption=[scope?.label,sem?.label,"exported "+todayLabel()].filter(Boolean).join("  ·  ");
+  const X=infoSheets(caption);
+  const briefs=gs.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label))).map(g=>panelBrief(g,students,sem));
+  const status=g=>isAssessorReleased(g)?"Released":"Not released yet";
+  const em=m=>memberEmails(m).join(", ");
+  const panelOf=b=>b.g.label||"Panel";
+  const memberList=b=>b.ms.map(m=>(m.name||"?")+(isChair(b.g,m)?" (chair)":"")).join(", ");
+
+  // 1. Panels — one row per panel
+  const maxOthers=Math.max(2,...briefs.map(b=>b.others.length));
+  const memHead=[], memW=[];
+  for(let i=0;i<maxOthers;i++){ memHead.push("Member "+(i+2),"Member "+(i+2)+" email"); memW.push(20,28); }
+  X.titled("Panels","CoC panels — information for the panel members",
+    ["Panel","Released to assessors","Date","Day","Session","Deliberation","All sittings",
+     "Chair","Chair email",...memHead,"All members' emails (To)","Students","Running order",
+     "Meeting link","CoC Panel Documents folder","Report due"],
+    [22,14,14,11,20,20,34,20,28,...memW,44,9,54,40,40,24],
+    briefs.map(b=>{
+      const mem=[]; for(let i=0;i<maxOthers;i++){ const m=b.others[i]; mem.push(m?.name||"",m?em(m):""); }
+      return [panelOf(b),status(b.g),b.date?longDate(b.date):"To be confirmed",b.date?weekdayOf(b.date):"",
+        b.session||"To be confirmed",b.deliberation,b.when,
+        b.chair?.name||"Not set",b.chair?em(b.chair):"",...mem,
+        [...new Set(b.ms.flatMap(memberEmails))].join("; "),
+        String(groupStudents(b.g).length),panelOrderText(b,{titles:true}),
+        b.link||"To follow",b.folder||"Not shared yet",b.due];
+    }));
+
+  // 2. Panel members (mail merge) — one row per PERSON, however many panels
+  const people=new Map();
+  briefs.forEach(b=>b.ms.forEach(m=>{
+    const k=memberKey(m);
+    if(!people.has(k)) people.set(k,{m,emails:memberEmails(m),items:[]});
+    const p=people.get(k);
+    if(!p.emails.length) p.emails=memberEmails(m);
+    p.items.push({b,chair:isChair(b.g,m)});
+  }));
+  /* One panel: the value itself. Several: one line per panel, named —
+     or nothing at all when the value is blank on every one of them. */
+  const one=(items,f)=>{
+    const vals=items.map(f);
+    if(items.length===1) return vals[0];
+    if(vals.every(v=>!v)) return "";
+    return items.map((it,i)=>panelOf(it.b)+": "+(vals[i]||"—")).join("\n");
+  };
+  const schedule=p=>p.items.map(x=>{
+    const b=x.b, L=[];
+    L.push("── "+panelOf(b)+(x.chair?" — you are the chair":"")+
+      (isAssessorReleased(b.g)?"":"  (draft — may still change)")+" ──");
+    L.push("When: "+b.when.replace(/\n/g,"; "));
+    if(b.deliberation) L.push("Panel deliberation: "+b.deliberation);
+    L.push("Chair: "+(b.chair?.name||"not yet set"));
+    L.push("Panel members: "+(memberList(b)||"to be confirmed"));
+    L.push("Meeting link: "+(b.link||"to follow"));
+    L.push("CoC Panel Documents folder: "+(b.folder||"to follow"));
+    if(b.due) L.push("CoC Examination Report due: "+b.due+(b.dueRule?" ("+b.dueRule+")":""));
+    const ord=panelOrderText(b,{titles:true});
+    if(ord) L.push("Running order:\n"+ord.split("\n").map(l=>"  "+l).join("\n"));
+    return L.join("\n");
+  }).join("\n\n");
+  X.merge("Panel members (mail merge)",
+    ["Name","Email","Other email","Type","Organisation","Role","Panels","Number of panels",
+     "Date","Day","Session","All sittings","Chair","Panel members","Students",
+     "Meeting link","CoC Panel Documents folder","Report due","Released to assessors",
+     "Running order","Full schedule (paste into the email)"],
+    [22,28,24,9,22,16,22,9,16,11,20,34,20,40,9,40,40,24,14,54,70],
+    [...people.values()].sort((a,b)=>String(a.m.name).localeCompare(String(b.m.name))).map(p=>{
+      const it=p.items;
+      return [p.m.name||"",p.emails[0]||"",p.emails.slice(1).join(", "),
+        p.m.kind==="internal"?"Staff":"External",p.m.org||"",
+        one(it,x=>x.chair?"Chair":"Member"),
+        it.map(x=>panelOf(x.b)).join("; "),String(it.length),
+        one(it,x=>x.b.date?longDate(x.b.date):"To be confirmed"),
+        one(it,x=>x.b.date?weekdayOf(x.b.date):""),
+        one(it,x=>x.b.session||"To be confirmed"),
+        one(it,x=>x.b.when.replace(/\n/g,"; ")),
+        one(it,x=>x.b.chair?.name||"Not set"),
+        one(it,x=>memberList(x.b)),
+        one(it,x=>String(groupStudents(x.b.g).length)),
+        one(it,x=>x.b.link||"To follow"),
+        one(it,x=>x.b.folder||"Not shared yet"),
+        one(it,x=>x.b.due||""),
+        one(it,x=>status(x.b.g)),
+        it.map(x=>(it.length>1?"── "+panelOf(x.b)+" ──\n":"")+panelOrderText(x.b,{titles:true})).join("\n\n"),
+        schedule(p)];
+    }));
+
+  // 3. Running order — every slot, in the office's timetable layout
+  const tt=timetableRows(briefs.map(b=>b.g),students);
+  X.titled("Running order","Running order — Confirmation of Candidature",
+    TIMETABLE_HEAD.concat(["Proposal title","Principal supervisor","Co-supervisor","Chair","Meeting link",
+      "Released to assessors","CoC Panel Documents folder"]),
+    [20,13,11,20,20,20,20,24,13,44,22,18,18,40,14,40],
+    tt.map(r=>r.cells.concat(r.extra,[status(r.g),docsLinkOf(r.g)])));
+
+  saveBlob(xlsxBlob(X.sheets),xlsxFileName("coc_panel_members_info",scope,sem));
+  toast("Panel members' information downloaded — "+briefs.length+" panel"+(briefs.length===1?"":"s")+
+    ", "+people.size+" "+(people.size===1?"person":"people")+".");
+}
+
+/* ---- for the students, panel by panel ---- */
+function downloadStudentTimetableXLSX(gs,students,sem,scope,onlyIds){
+  const caption=[scope?.label,sem?.label,"exported "+todayLabel()].filter(Boolean).join("  ·  ");
+  const X=infoSheets(caption);
+  const briefs=gs.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label))).map(g=>panelBrief(g,students,sem));
+  const rel=g=>isStudentReleased(g)?"Yes":"Not yet";
+  const supMails=uid=>uid?emailsOf(staffById(uid)).join(", "):"";
+  const assessors=b=>b.ms.map(m=>m.name||"?").join(", ");
+  const panelOf=b=>b.g.label||"Panel";
+  /* The scoped students on one panel, in presentation order. */
+  const studentsOf=b=>groupStudents(b.g).filter(id=>!onlyIds||onlyIds.has(id)).map(id=>{
+    const st=students.find(x=>x.id===id); if(!st) return null;
+    const sl=slotOfStudent(b.g,id), d=sl?slotDate(b.g,sl):"";
+    const timed=sl&&d?sl:null;
+    const ls=(b.g.slots||[]).find(x=>x.studentDocId===id&&String(x.link||"").trim());
+    return {st,sl:timed,d:timed?d:"",pp:timed?slotParts(b.g,timed):null,link:slotLink(b.g,ls||timed)};
+  }).filter(Boolean).sort((a,c)=>{
+    const ka=a.sl?a.d+" "+a.sl.start:"~", kc=c.sl?c.d+" "+c.sl.start:"~";
+    return ka<kc?-1:ka>kc?1:String(a.st.name).localeCompare(String(c.st.name));
+  });
+
+  // 1. Students (mail merge) — one row per student
+  const body=[];
+  briefs.forEach(b=>{
+    const t=timingOf(b.g);
+    studentsOf(b).forEach(x=>{
+      const st=x.st;
+      body.push([st.name||"",String(st.email||"").trim(),st.sid||"",panelOf(b),
+        x.d?longDate(x.d):"To be confirmed",x.d?weekdayOf(x.d):"",
+        x.sl?clockRange(x.sl.start,x.sl.end):"",
+        x.pp?clockRange(x.pp.start,x.pp.qaStart):"",
+        x.pp&&x.pp.qaMins?clockRange(x.pp.qaStart,x.pp.end):"",
+        String(x.pp?x.pp.presMins:t.presMins),String(x.pp?x.pp.qaMins:t.qaMins),
+        b.chair?.name||"To be confirmed",assessors(b)||"To be confirmed",x.link||"To follow",
+        st.principalName||supName(st.principalUid)||"",supMails(st.principalUid),
+        st.coName||(st.coUid?supName(st.coUid):""),supMails(st.coUid),rel(b.g)]);
+    });
+  });
+  X.merge("Students (mail merge)",
+    ["Student","Email","Student ID","Panel","Date","Day","Time","Presentation","Q&A",
+     "Presentation (min)","Q&A (min)","Chair","Assessors","Meeting link",
+     "Principal supervisor","Principal supervisor email","Co-supervisor","Co-supervisor email","Released to students"],
+    [24,30,13,22,15,11,20,20,20,11,9,20,40,40,22,28,22,28,12],body);
+
+  // 2. Panels — one row per panel, ready for a panel-wise email
+  X.titled("Panels","CoC presentation timetable — panel by panel, for the students",
+    ["Panel","Released to students","Date","Day","Session","All sittings","Chair","Assessors","Meeting link",
+     "Students","Students' emails (Bcc)","Supervisors' emails (Cc)","Running order"],
+    [22,12,14,11,20,34,20,40,40,9,50,50,60],
+    briefs.map(b=>{
+      const list=studentsOf(b);
+      const sup=[...new Set(list.flatMap(x=>[supMails(x.st.principalUid),supMails(x.st.coUid)])
+        .flatMap(s=>s.split(", ")).filter(Boolean))];
+      return [panelOf(b),rel(b.g),b.date?longDate(b.date):"To be confirmed",b.date?weekdayOf(b.date):"",
+        b.session||"To be confirmed",b.when,b.chair?.name||"To be confirmed",assessors(b)||"To be confirmed",
+        b.link||"To follow",String(list.length),
+        list.map(x=>String(x.st.email||"").trim()).filter(Boolean).join("; "),sup.join("; "),
+        panelOrderText(b,{students:true})];
+    }));
+
+  // 3. One tab per panel: its running order, to paste or attach
+  briefs.forEach(b=>{
+    const t=timingOf(b.g);
+    const head=["Time","Presentation","Q&A","Student","Student ID","Date","Day","Meeting link"];
+    const rs=[{cells:[panelOf(b)+" — CoC presentation timetable"],s:4,h:20},{cells:[caption]},{cells:[]},
+      {cells:["When",b.when.replace(/\n/g,"; ")]},
+      {cells:["Chair",b.chair?.name||"To be confirmed"]},
+      {cells:["Assessors",assessors(b)||"To be confirmed"]},
+      {cells:["Meeting link",b.link||"To follow"]},
+      {cells:["Format","Each student presents for "+t.presMins+" minutes"+(t.qaMins?", then takes "+t.qaMins+" minutes of questions":"")+
+        ". Join five minutes before your slot with your slides ready to share."]},
+      {cells:["Status",isStudentReleased(b.g)?"Released to students":"Not yet released to students — times may still change"]},
+      {cells:[]},{cells:head,s:1,h:26}];
+    const headRow=rs.length;
+    panelOrderItems(b).forEach(it=>{
+      if(it.kind==="untimed"){ rs.push({cells:["To be confirmed","","",it.st.name||"",it.st.sid||"","","",it.link||"To follow"],s:2}); return; }
+      const p=it.parts;
+      rs.push({cells:[clockRange(it.start,it.end),
+        p?clockRange(p.start,p.qaStart):"",p&&p.qaMins?clockRange(p.qaStart,p.end):"",
+        it.kind==="deliberation"?"Panel deliberation (assessors only — students do not attend)"
+          :it.kind==="other"?"Panel discussion":(it.st.name||""),
+        it.kind==="student"?(it.st.sid||""):"",longDate(it.d),weekdayOf(it.d),
+        it.kind==="deliberation"?"":(it.link||"To follow")],s:2});
+    });
+    X.sheets.push({name:safeSheetName(panelOf(b),X.used),widths:[20,20,20,34,14,14,11,44],
+      rows:rs,freezeAt:headRow,filter:""});
+  });
+
+  saveBlob(xlsxBlob(X.sheets),xlsxFileName("coc_student_timetable",scope,sem));
+  toast("Students' timetable downloaded — "+body.length+" student"+(body.length===1?"":"s")+
+    " on "+briefs.length+" panel"+(briefs.length===1?"":"s")+".");
 }
 
 /* Same failure mode as the Messages tab: the CoC screens live in collections
@@ -9195,30 +9493,80 @@ async function viewPanelAdmin(v){
     const onlyMine=el("input",{type:"checkbox",checked:"checked",style:"width:auto;margin:0"});
     const onlyBox=el("div",{style:"display:none"},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
       onlyMine,el("span",{},"Only these students' rows \u2014 leave out other students on the same panels, and the deliberation")));
+    /* The two information files go to people outside the office, so they
+       can be limited to the panels already released to that audience. */
+    const brief=kind==="members"||kind==="students";
+    const relOf=g=>kind==="students"?isStudentReleased(g):isAssessorReleased(g);
+    const relOnly=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+    const relBox=el("div",{style:brief?"":"display:none"},el("label",{class:"row",style:"gap:8px;align-items:center;cursor:pointer;flex-wrap:nowrap"},
+      relOnly,el("span",{},kind==="students"?"Only panels already released to their students":"Only panels already released to their assessors")));
+    const panelsFor=sc=>sc.gs.filter(g=>!relOnly.checked||relOf(g));
+    const plural=(n,w,ws)=>n+" "+(n===1?w:(ws||w+"s"));
     function sync(){
       const sc=scoped();
-      info.textContent=sc.list.length+" student"+(sc.list.length===1?"":"s")+
-        ", "+sc.gs.length+" panel"+(sc.gs.length===1?"":"s")+" \u2014 "+(sc.label||"the whole semester")+".";
+      if(kind==="members"){
+        const gs=panelsFor(sc);
+        const ppl=new Set(gs.flatMap(g=>groupMembers(g).map(memberKey)));
+        const held=gs.filter(g=>!relOf(g)).length;
+        const untimed=gs.filter(g=>!panelSittings(g,students).length).length;
+        const nolink=gs.filter(g=>!String(g.meetingLink||"").trim()).length;
+        const nofolder=gs.filter(g=>!docsLinkOf(g)).length;
+        const noMail=[...new Map(gs.flatMap(g=>groupMembers(g)).map(m=>[memberKey(m),m])).values()]
+          .filter(m=>!memberEmails(m).length).length;
+        info.textContent=plural(gs.length,"panel")+", "+plural(ppl.size,"panel member")+
+          " \u2014 "+(sc.label||"the whole semester")+"."+
+          (held?" "+plural(held,"panel")+" not yet released to "+(held===1?"its":"their")+" assessors (marked in the file).":"")+
+          (untimed?" "+plural(untimed,"panel")+" with no session time yet.":"")+
+          (nolink?" "+plural(nolink,"panel")+" with no meeting link.":"")+
+          (nofolder?" "+plural(nofolder,"panel")+" with no CoC Panel Documents folder.":"")+
+          (noMail?" "+plural(noMail,"member")+" with no email on file.":"");
+      }else if(kind==="students"){
+        const gs=panelsFor(sc);
+        const ids=new Set(sc.list.map(x=>x.id));
+        const onP=gs.flatMap(g=>groupStudents(g).filter(id=>ids.has(id)).map(id=>({g,id})));
+        const timed=onP.filter(x=>isScheduled(x.g,x.id)).length;
+        const noMail=onP.filter(x=>!String(students.find(s=>s.id===x.id)?.email||"").trim()).length;
+        const held=gs.filter(g=>!relOf(g)).length;
+        info.textContent=plural(onP.length,"student")+" on "+plural(gs.length,"panel")+", "+timed+" with a time"+
+          " \u2014 "+(sc.label||"the whole semester")+"."+
+          (held?" "+plural(held,"panel")+" not yet released to "+(held===1?"its":"their")+" students (marked in the file).":"")+
+          (noMail?" "+plural(noMail,"student")+" with no email on file.":"");
+      }else{
+        info.textContent=sc.list.length+" student"+(sc.list.length===1?"":"s")+
+          ", "+sc.gs.length+" panel"+(sc.gs.length===1?"":"s")+" \u2014 "+(sc.label||"the whole semester")+".";
+      }
       onlyBox.style.display=kind==="timetable"&&which.value!=="all"?"":"none";
     }
-    which.onchange=sync; sync();
+    which.onchange=sync; relOnly.onchange=sync; sync();
 
-    modal("Download "+(kind==="xlsx"?"Excel workbook":kind==="timetable"?"presentation timetable":"CSV"),
+    const TITLE={xlsx:"Excel workbook",csv:"CSV",timetable:"presentation timetable",
+      members:"panel members' information",students:"students' timetable by panel"};
+    const HELP={
+      xlsx:"A panel that includes any of these students is exported whole, so its running order stays complete even when it mixes areas or supervisors. The workbook's caption and filename name the scope.",
+      timetable:"One row per student slot \u2014 panel, date, day, session, slot, presentation, Q&A, student, student ID \u2014 then each panel's deliberation. Choose one supervisor's students to make a file you can send to that supervisor.",
+      csv:"One row per included student. The filename names the scope.",
+      members:"An Excel file for briefing the panel members by email. \u201cPanels\u201d has one row per panel: date, day, session time, deliberation, the chair and each member with their email, the meeting link, the CoC Panel Documents folder, the report deadline and the running order. "+
+        "\u201cPanel members (mail merge)\u201d has one row per person \u2014 however many panels they sit on \u2014 with headings in row 1, so it can be the recipient list for a mail merge in Word, Outlook or Gmail; its last column is their whole schedule, ready to paste. \u201cRunning order\u201d lists every slot.",
+      students:"An Excel file for sending students their times, panel by panel. \u201cStudents (mail merge)\u201d has one row per student \u2014 their own date, time, presentation and Q&A, chair, assessors and meeting link, plus their supervisors' emails for Cc \u2014 with headings in row 1. "+
+        "\u201cPanels\u201d has one row per panel with all its students' emails ready for Bcc. Then each panel has its own tab with the running order, to paste into the email or attach. Proposal titles and the CoC Panel Documents folder are left out \u2014 they are for staff only."};
+    modal("Download "+TITLE[kind],
       el("div",{class:"grid"},
         el("div",{},el("label",{},"Include"),which),
         el("div",{},info),
-        onlyBox,
-        el("div",{},el("p",{class:"muted",style:"margin:0"},
-          kind==="xlsx"
-            ? "A panel that includes any of these students is exported whole, so its running order stays complete even when it mixes areas or supervisors. The workbook's caption and filename name the scope."
-            : kind==="timetable"
-              ? "One row per student slot \u2014 panel, date, day, session, slot, presentation, Q&A, student, student ID \u2014 then each panel's deliberation. Choose one supervisor's students to make a file you can send to that supervisor."
-              : "One row per included student. The filename names the scope."))),
+        onlyBox,relBox,
+        el("div",{},el("p",{class:"muted",style:"margin:0"},HELP[kind]))),
       async()=>{
         const sc=scoped();
         if(!sc.list.length){ toast("Nobody matches that choice.",true); return false; }
-        const rows=exportRows(sc.list,groups,cons);
         const scope=sc.label?{label:sc.label,slug:sc.slug}:null;
+        if(brief){
+          const gs=panelsFor(sc);
+          if(!gs.length){ toast(relOnly.checked?"None of those panels has been released yet.":"None of those students is on a panel yet.",true); return false; }
+          if(kind==="members") downloadPanelMembersXLSX(gs,students,sem,scope);
+          else downloadStudentTimetableXLSX(gs,students,sem,scope,which.value!=="all"?new Set(sc.list.map(x=>x.id)):null);
+          return true;
+        }
+        const rows=exportRows(sc.list,groups,cons);
         if(kind==="xlsx") downloadPanelXLSX(rows,sc.gs,students,timetables,sem,scope);
         else if(kind==="timetable") downloadCocTimetableCSV(sc.gs,students,sem,scope,
           which.value!=="all"&&onlyMine.checked?new Set(sc.list.map(x=>x.id)):null);
@@ -9235,9 +9583,10 @@ async function viewPanelAdmin(v){
 
     const untitled=rows.filter(r=>!r.title).length;
     const nolink=rows.filter(r=>r.g&&!r.meetingLink).length;
+    const nofolder=groups.filter(g=>groupStudents(g).length&&!docsLinkOf(g)).length;
 
     host.append(sectionHead("\u2913","Export",
-      "The CoC document: each student with their email and proposal title, the meeting link, the panel and their contact details, and the presentation timetable \u2014 grouped by principal supervisor. The weekly consultation time is not part of it.","info"));
+      "The CoC document: each student with their email and proposal title, the meeting link and CoC Panel Documents folder, the panel and their contact details, and the presentation timetable \u2014 grouped by principal supervisor. The weekly consultation time is not part of it.","info"));
     if(missing||unscheduled) host.append(noticeBar("amber",
       [missing?missing+" student(s) are not on a panel":"",
        unscheduled?unscheduled+" have a panel but no presentation time yet":""].filter(Boolean).join(" and ")+
@@ -9245,9 +9594,10 @@ async function viewPanelAdmin(v){
     /* Two blanks the coordinator can still fix before sending the document
        out, so they are worth naming separately rather than letting an empty
        column speak for itself. */
-    if(untitled||nolink) host.append(noticeBar("amber",
+    if(untitled||nolink||nofolder) host.append(noticeBar("amber",
       [untitled?untitled+" student(s) have no proposal title \u2014 set it on the Students tab, or ask their principal supervisor to":"",
-       nolink?nolink+" panel student(s) have no meeting link \u2014 set it on the panel card under Panels & scheduling":""]
+       nolink?nolink+" panel student(s) have no meeting link \u2014 set it on the panel card under Panels & scheduling":"",
+       nofolder?nofolder+" panel(s) have no CoC Panel Documents folder \u2014 add it on the panel card under Panels & scheduling":""]
         .filter(Boolean).join(". ")+"."));
 
     const drafts=groups.filter(g=>releaseState(g)!=="both").length;
@@ -9267,7 +9617,17 @@ async function viewPanelAdmin(v){
         :el("span",{}),
       el("button",{class:"btn ghost",onclick:()=>window.print()},"\u2399 Print / save as PDF")));
     host.append(el("p",{class:"muted ui",style:"margin:-6px 0 14px;font-size:12.5px"},
-      "Both downloads ask who to include first \u2014 everyone, one area, or one supervisor's students. The Excel workbook has four tabs: the student document, one row per panel, the running order slot by slot (presentation, Q&A and deliberation), and each assessor's load and any time clashes. The presentation timetable CSV is that running order on its own."));
+      "Every download asks who to include first \u2014 everyone, one area, or one supervisor's students. The Excel workbook has four tabs: the student document, one row per panel, the running order slot by slot (presentation, Q&A and deliberation), and each assessor's load and any time clashes. The workbook and CSV now carry each panel's CoC Panel Documents folder link; that folder is meant for the assessors, so remove the column before forwarding either file to supervisors or students. The presentation timetable CSV is the running order on its own, without the folder."));
+
+    /* The two files for briefing people by email, panel by panel. */
+    host.append(el("div",{class:"ui",style:"font-weight:650;font-size:14.5px;margin:4px 0 8px"},"Information to send out by email"));
+    host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:8px;flex-wrap:wrap"},
+      el("button",{class:"btn",onclick:()=>panelExportDialog("members")},"\u2913 Panel members' information (Excel)"),
+      el("button",{class:"btn",onclick:()=>panelExportDialog("students")},"\u2913 Students' timetable by panel (Excel)")));
+    host.append(el("p",{class:"muted ui",style:"margin:0 0 16px;font-size:12.5px"},
+      "Panel members: each panel's date, session time, chair, members, meeting link, CoC Panel Documents folder and report deadline \u2014 one row per panel, plus one row per person for a mail merge, so someone on two panels gets one email. "+
+      "Students: the presentation timetable panel by panel \u2014 one row per student for a mail merge (with supervisors' emails for Cc), each panel's students' emails ready for Bcc, and a tab per panel with its running order. "+
+      "Both can be limited to panels already released to that audience."));
 
     if(!rows.length){ host.append(emptyState("Nothing to export","Add students to this semester first.")); return; }
 
@@ -9281,7 +9641,7 @@ async function viewPanelAdmin(v){
         done===list.length?"ok":"info");
       const t=el("table",{});
       t.append(el("thead",{},el("tr",{},
-        ...["Student","Proposal title","Panel","Status","Chair","Assessors","CoC time","Meeting link","Independence"].map(h=>el("th",{},h)))));
+        ...["Student","Proposal title","Panel","Status","Chair","Assessors","CoC time","Meeting link · documents folder","Independence"].map(h=>el("th",{},h)))));
       const tb=el("tbody",{});
       list.forEach(r=>{
         // Assessor name AND email — the document is used to contact them.
@@ -9307,12 +9667,16 @@ async function viewPanelAdmin(v){
           el("td",{},r.cocTime?el("div",{},el("strong",{},r.cocDate+", "+r.cocTime),
               r.parts?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:2px"},partsLine(r.g,r.slot)):el("span",{}))
             :el("span",{class:"pill pending"},"Not set")),
-          // the URL in full, so it survives being printed to PDF
+          // the URLs in full, so they survive being printed to PDF
           el("td",{},r.meetingLink
             ? el("div",{},joinLink(r.meetingLink,"Join"),
                 r.ownLink?el("div",{},el("span",{class:"pill blue",title:"This student has their own link, not the panel's"},"Own link")):el("span",{}),
                 el("div",{class:"muted ui",style:"font-size:12px;word-break:break-all"},r.meetingLink))
-            : el("span",{class:"pill pending"},"Not set")),
+            : el("span",{class:"pill pending"},"Not set"),
+            r.docsLink
+              ? el("div",{style:"margin-top:8px"},joinLink(r.docsLink,"Documents folder"),
+                  el("div",{class:"muted ui",style:"font-size:12px;word-break:break-all"},r.docsLink))
+              : r.g?el("div",{style:"margin-top:6px"},el("span",{class:"pill none",style:"font-size:11px"},"No documents folder")):el("span",{})),
           el("td",{},r.notIndependent.length
             ? el("span",{class:"pill missed",title:"Supervised by "+r.notIndependent.join(", ")},"Override")
             : el("span",{class:"muted"},"\u2014"))));
