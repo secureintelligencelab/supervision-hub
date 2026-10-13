@@ -2174,6 +2174,273 @@
   }
 
 </style>
+<style id="coc-summary">
+  /* ============================================================
+     CoC PANEL SUMMARY (admin) — one page per semester: who to remind,
+     then each discipline's panels as a compact table, the same layout
+     as the Word file. Prefix cps- (cs- is taken by .csection).
+     ============================================================ */
+  .cps-rem{padding:0;overflow:hidden;margin-bottom:18px}
+  .cps-rem-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .cps-rem-h strong{font-size:15px}
+  .cps-rem-sub{font-size:11.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);
+    padding:10px 16px 4px;background:var(--sunken);border-bottom:1px solid var(--line)}
+  .cps-rrow{display:grid;grid-template-columns:minmax(140px,180px) minmax(150px,210px) 1fr auto;gap:10px 14px;align-items:start;
+    padding:12px 16px;border-bottom:1px solid var(--line)}
+  .cps-rrow:last-child{border-bottom:0}
+  .cps-rrow.next{background:var(--amber-soft);box-shadow:inset 4px 0 0 var(--amber)}
+  .cps-rrow .cps-when{font-size:13.5px}
+  .cps-rrow .cps-who{display:flex;flex-wrap:wrap;gap:6px}
+  .cps-rrow .cps-act{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .cps-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);border-radius:999px;
+    padding:3px 4px 3px 10px;font-size:12.5px;background:var(--paper-2);white-space:nowrap}
+  .cps-chip.need{border-color:var(--amber);background:var(--amber-soft);color:var(--amber-ink);font-weight:600}
+  .cps-chip.marks{border-color:var(--clay);background:var(--clay-soft);color:var(--clay-ink);font-weight:600}
+  .cps-chip.done{border-color:transparent;background:var(--green-soft);color:var(--green-ink)}
+  .cps-chip.quiet{color:var(--ink-soft)}
+  .cps-chip .cps-x{font-size:11px;font-weight:500;opacity:.85}
+  .cps-chip button{border:0;background:transparent;color:inherit;cursor:pointer;padding:2px 6px;border-radius:999px;line-height:1;font-size:13px}
+  .cps-chip button:hover{background:#0000000f}
+  .cps-chip:not(:has(button)){padding-right:10px}
+  .cps-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--navy);color:#fff;
+    border-radius:var(--r) var(--r) 0 0;padding:12px 16px;margin-top:22px}
+  .cps-band .cps-no{font-variant-numeric:tabular-nums;font-weight:700;opacity:.75;font-size:15px}
+  .cps-band .cps-nm{font-weight:700;letter-spacing:.07em;font-size:15px}
+  .cps-band .cps-rg{letter-spacing:.07em;font-size:13px;opacity:.85}
+  .cps-band .cps-ct{margin-left:auto;font-size:13px;opacity:.9}
+  .cps-info{font-size:12.5px;color:var(--ink-soft);padding:8px 16px;background:var(--sunken);
+    border:1px solid var(--line);border-top:0}
+  .cps-info a{color:var(--accent)}
+  .cps-sec{border:1px solid var(--line);border-top:0;border-radius:0 0 var(--r) var(--r);background:var(--paper-2);margin-bottom:6px}
+  table.cps-t{font-size:13px;min-width:980px}
+  table.cps-t th{font-size:11px;white-space:nowrap;padding:8px 10px}
+  table.cps-t td{padding:10px 10px;vertical-align:top}
+  table.cps-t tr.next td{background:var(--amber-soft)}
+  table.cps-t tr.next td:first-child{box-shadow:inset 4px 0 0 var(--amber)}
+  .toolbar input.cps-cb{width:auto!important;flex:0 0 auto}
+  .cps-when{white-space:nowrap}
+  .cps-when b{display:block;font-weight:650}
+  .pill.cps-nextpill{background:var(--amber);color:#fff}
+  html[data-theme="dark"] .pill.cps-nextpill{color:#1b1305}
+  .cps-when .cps-tm{display:block;font-variant-numeric:tabular-nums}
+  .cps-when .cps-due{display:block;color:var(--ink-soft);font-size:12px;margin-top:3px}
+  .cps-when .pill{margin-top:5px}
+  .cps-panel .cps-p{font-family:var(--serif);font-size:22px;font-weight:700;line-height:1.1;color:var(--navy)}
+  html[data-theme="dark"] .cps-panel .cps-p{color:var(--ink)}
+  .cps-panel .cps-p.long{font-size:14px;font-family:var(--sans)}
+  .cps-panel .cps-n{display:block;color:var(--ink-soft);font-size:12px;margin-top:2px;white-space:nowrap}
+  .cps-mem{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .cps-mem li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+  .cps-mem li::before{content:"\2022";color:var(--ink-soft)}
+  .cps-mem .pill{font-size:11px;padding:1px 7px}
+  .cps-one{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+  .cps-one .pill{font-size:11px;padding:1px 7px}
+  .cps-one .cps-mail{border:0;background:transparent;color:var(--accent);cursor:pointer;padding:0 2px;font-size:13px}
+  .cps-mem .cps-mail{border:0;background:transparent;color:var(--accent);cursor:pointer;padding:0 2px;font-size:13px}
+  .cps-lnk{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+  .cps-lnk a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+  .cps-lnk a:hover{text-decoration:underline}
+  .cps-lnk .cps-or{color:var(--ink-soft);font-size:12px}
+  .cps-none{color:var(--ink-soft);font-style:italic}
+  @media screen and (max-width:640px){
+    table.cps-t{min-width:0}
+    table.cps-t td{align-items:flex-start}
+    table.cps-t td > *{text-align:right}
+    table.cps-t .cps-mem li,table.cps-t .cps-one{justify-content:flex-end}
+    table.cps-t .cps-mem li::before{display:none}
+    table.cps-t .cps-lnk{align-items:flex-end}
+    table.cps-t tr.next{background:var(--amber-soft);box-shadow:inset 4px 0 0 var(--amber)}
+    table.cps-t tr.next td:first-child{box-shadow:none}
+    .cps-band .cps-ct{margin-left:0}
+  }
+  @media (max-width:760px){
+    .cps-rrow{grid-template-columns:1fr}
+    .cps-rrow .cps-act{align-items:flex-start;flex-direction:row;flex-wrap:wrap}
+  }
+  @media print{
+    .cps-rem,.cps-noprint{display:none!important}
+    .cps-band{background:#1F1F5C!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    table.cps-t{min-width:0}
+    table.cps-t tr.next td{background:#FFF3D6!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+<style id="cihe-modern">
+  /* ============================================================
+     CIHE MODERN LAYER — October 2026
+     Restyles only, and last on purpose: delete this block and the
+     previous look returns exactly. The CIHE identity stays — navy for
+     identity and grouping, royal blue as the one action colour, Source
+     Serif 4 for page and dialog titles only. What changes is density
+     and hierarchy:
+       - the first screen shows the work rather than the furniture: a
+         tighter page head, the statistics as one strip, slim callouts;
+       - one loud control per area (the filled royal button). Secondary
+         buttons are quieter, and the buttons on each table row stay in
+         the background until that row is pointed at;
+       - figures line up only where they are figures. Prose uses
+         proportional figures, so a hyphen no longer sits in a box as
+         wide as a digit ("privacy - preserving");
+       - card bars are slimmer and set in the interface face, leaving
+         the serif to page titles.
+     ============================================================ */
+  :root{
+    --paper:#F3F4F8; --line:#E3E6EE; --line-strong:#CBD0DC;
+    --r:12px; --r-sm:8px; --r-xs:6px;
+    --shadow:0 1px 1px rgba(22,26,51,.04);
+    --ease:cubic-bezier(.2,.75,.25,1);
+  }
+
+  /* ---------- type ---------- */
+  body{font-size:14.5px;font-variant-numeric:normal;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  table{font-variant-numeric:normal;font-size:14px}
+  .stat .n,.sp-stats .n,.psum-t,.cps-tm,.wksq,.weeklog .wk .num,.slot-time,.sp-time,.chrs,.att-cell,.nbadge,
+  .loadpill,.cx-total .v,.coc-total .v,.cx-ring > span,.coc-mk input,.cx-score .ctl input,
+  input[type=number],input[type=time],input[type=date],input[type=datetime-local]{font-variant-numeric:tabular-nums}
+  h1,h2,h3,h4{text-wrap:balance}
+  p{text-wrap:pretty}
+
+  /* ---------- page head ---------- */
+  main{padding-top:24px}
+  .section-title{margin:0 0 16px}
+  .section-title h2{font-size:28px;line-height:1.12;letter-spacing:-.015em}
+  .eyebrow{font-size:12.5px;margin-bottom:3px}
+  .toolbar{margin-bottom:16px;gap:10px 12px}
+  .toolbar .field label,.field > label{font-size:12.5px;margin-bottom:4px}
+  .csection{margin:26px 0 10px}
+  .csection h3{font-size:16px;letter-spacing:-.01em}
+  .csection .cs-mark{width:28px;height:28px;font-size:14px;border-radius:7px}
+  .subtabs{margin-bottom:16px}
+
+  /* The bar at the top: translucent, so the page shows it's scrolling
+     beneath. */
+  .topbar{background:color-mix(in srgb,var(--paper-2) 84%,transparent);
+    backdrop-filter:blur(12px) saturate(1.4);-webkit-backdrop-filter:blur(12px) saturate(1.4)}
+
+  /* ---------- statistics: one strip, not a row of tiles ---------- */
+  .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(124px,1fr));gap:0;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+    box-shadow:var(--shadow);margin-bottom:18px}
+  .stat .b{border:0!important;border-radius:0!important;background:transparent;min-width:0;
+    box-shadow:-1px 0 0 var(--line),0 -1px 0 var(--line)!important;padding:11px 16px 12px;gap:3px}
+  .stat .n{font-size:23px;font-weight:650;line-height:1.1;letter-spacing:-.02em}
+  .stat .l{font-size:12.5px;line-height:1.3}
+  .stat .b.cx-f,.stat .b.cx-jump{transition:background .12s}
+  .stat .b.cx-f:hover,.stat .b.cx-jump:hover{background:var(--sunken)}
+  .stat .b.cx-f.on{background:var(--accent-tint);
+    box-shadow:inset 0 -2px 0 var(--accent),-1px 0 0 var(--line),0 -1px 0 var(--line)!important}
+
+  /* Intro text under a page title stays a readable measure. */
+  #view > div > p,.csection p{max-width:96ch}
+
+  /* Consultation rows share one set of columns, so times, attendance
+     and actions line up from one student to the next. */
+  @media (min-width:821px){
+    .consult-list{grid-template-columns:minmax(220px,1.3fr) 148px minmax(190px,1fr) auto;column-gap:18px}
+    .ccard{grid-column:1/-1;grid-template-columns:subgrid;padding:14px 16px}
+    .ccard .cact{max-width:420px}
+  }
+  .attmini{white-space:nowrap}
+
+  /* ---------- callouts ----------
+     noticeBar and the new-messages banner: a tinted strip with the
+     tone on its left edge, instead of a white card. */
+  .notice{--nt:var(--blue);display:block;border:1px solid color-mix(in srgb,var(--nt) 22%,var(--line));
+    border-left:3px solid var(--nt);border-radius:var(--r-sm);box-shadow:none;
+    background:color-mix(in srgb,var(--nt) 6%,var(--paper-2));padding:9px 12px 9px 14px;margin:0 0 12px}
+  .notice.amber{--nt:var(--amber)} .notice.green{--nt:var(--green)} .notice.clay{--nt:var(--clay)}
+  .notice > .row{align-items:center;gap:8px 12px}
+  .notice .notice-t{flex:1;min-width:190px;font-size:13.5px;line-height:1.45;color:var(--ink)}
+  .notice .btn{min-height:30px;padding:4px 11px;font-size:13px}
+  .inbox-banner.notice{border-radius:var(--r-sm)!important;margin:0 0 16px}
+  .inbox-banner .pill{background:var(--paper-2);border:1px solid color-mix(in srgb,var(--blue) 25%,var(--line))}
+
+  /* ---------- buttons ---------- */
+  .btn{min-height:34px;padding:6px 13px;font-size:13.5px;gap:6px}
+  .toolbar > .btn{min-height:36px}
+  .btn.ghost{box-shadow:none}
+  .btn.sm{min-height:30px;padding:4px 10px;font-size:13px}
+  .btn.xs{min-height:26px;padding:2px 8px;font-size:12.5px}
+  .btn .bi,.btn .bi svg{width:15px;height:15px}
+  .btn.xs .bi,.btn.xs .bi svg,.btn.sm .bi,.btn.sm .bi svg{width:14px;height:14px}
+  /* A wall of secondary actions reads as a set: closer together. */
+  .row:has(> .btn.ghost + .btn.ghost){gap:6px}
+
+  /* Buttons on a table row: present, but quieter than the data, until
+     the row is pointed at. Touch screens keep the outline. */
+  @media (hover:hover){
+    td .btn.ghost{background:transparent;border-color:var(--line);color:var(--ink-soft)}
+    td .btn.danger{background:transparent;border-color:transparent}
+    tr:hover td .btn.ghost,td .btn.ghost:focus-visible{background:var(--paper-2);border-color:var(--line-strong);color:var(--ink)}
+    tr:hover td .btn.danger{border-color:color-mix(in srgb,var(--clay) 35%,transparent)}
+    td .btn.ghost:hover{background:var(--sunken)!important}
+    td .btn.danger:hover{background:var(--clay-soft)!important;border-color:var(--clay)!important}
+  }
+
+  /* ---------- form controls ---------- */
+  input,select,textarea{min-height:36px;font-size:14px;padding:7px 11px}
+  input[type=checkbox],input[type=radio]{min-height:0;width:16px;height:16px}
+  textarea{min-height:72px}
+  select:not([multiple]){padding-right:32px}
+
+  /* ---------- surfaces ---------- */
+  .card{box-shadow:var(--shadow)}
+  details.cfold{box-shadow:var(--shadow)}
+  details.cfold > summary{padding:12px 16px}
+
+  /* ---------- tables ---------- */
+  th{font-size:12px;padding:8px 12px;letter-spacing:.005em}
+  td{padding:10px 12px}
+  tr:hover td{background:color-mix(in srgb,var(--accent) 3%,transparent)}
+
+  /* ---------- card bars ----------
+     Navy stays — it groups — but slimmer, and in the interface face. */
+  .cardhead,.card > .cardhead{padding:10px 16px!important}
+  .cardhead strong.ui,.cx-phead .pn{font-family:var(--sans);font-size:15px;font-weight:650;letter-spacing:-.005em}
+  details.pcard.card > summary.cardhead{padding:12px 18px!important}
+  details.pcard .psum-nm{font-family:var(--sans);font-size:16.5px;font-weight:650;letter-spacing:-.01em}
+
+  /* ---------- sidebar ---------- */
+  nav.tabs .navgroup{font-size:11.5px;letter-spacing:.01em;padding:14px 12px 5px}
+  nav.tabs button{padding:7px 12px;border-radius:8px;font-size:13.5px}
+  nav.tabs button.active{background:#FFFFFF1F}
+  .brand h1{font-size:15px}
+
+  /* ---------- dialogs ---------- */
+  .modal{border-radius:14px}
+  .modal-bg{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  .modal-head{padding:16px 20px 12px}
+  .modal-head h3{font-size:20px}
+  .modal-body{padding:16px 20px 18px}
+  .modal-foot{padding:11px 20px}
+
+  /* ---------- focus & motion ---------- */
+  :where(button,a,summary,select,input,textarea,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  input:not([type=checkbox]):not([type=radio]):focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+      transition-duration:.01ms!important;scroll-behavior:auto!important}
+  }
+
+  /* ---------- phones ---------- */
+  @media (max-width:640px){
+    main{padding-top:16px}
+    .section-title{margin-bottom:12px}
+    .section-title h2{font-size:24px}
+    .stat{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .stat .b{padding:9px 10px 10px;gap:2px}
+    .stat .n{font-size:19px}
+    .stat .l{font-size:11.5px}
+    .notice{padding:9px 11px}
+    .notice .notice-t{min-width:0;flex-basis:100%}
+    input,select,textarea{font-size:16px}
+  }
+  @media print{
+    body,main,.content,.shell{background:#fff!important}
+    .inbox-banner{display:none!important}
+    .notice{background:#fff!important;border-color:#999!important}
+    .stat{box-shadow:none}
+  }
+</style>
 </head>
 <body>
   <!-- Shown the moment the page arrives, while the app below is read. -->
@@ -3641,10 +3908,9 @@ function loadPill(n){
   return el("span",{class:cls,title:"Already assessing "+n+" of the usual maximum "+PANEL_CAP+" CoCs"},n+"/"+PANEL_CAP);
 }
 function noticeBar(tone,text,...extra){
-  const c={amber:"var(--amber)",blue:"var(--blue)",green:"var(--green)",clay:"var(--clay)"}[tone]||"var(--blue)";
-  return el("div",{class:"card ui",style:"border-left:4px solid "+c+";padding:12px 14px;margin-bottom:14px"},
-    el("div",{class:"row",style:"align-items:center;gap:10px"},
-      el("span",{style:"flex:1;min-width:190px;font-size:14px"},text),...extra));
+  const t=["amber","blue","green","clay"].includes(tone)?tone:"blue";
+  return el("div",{class:"notice ui "+t,role:t==="clay"||t==="amber"?"status":null},
+    el("div",{class:"row"},el("span",{class:"notice-t"},text),...extra));
 }
 function cardShell(title,right,tone){
   const c=el("div",{class:"card"+(tone?" tone tone-"+tone:""),
@@ -9623,7 +9889,8 @@ async function viewPanelAdmin(v){
     host.append(el("div",{class:"ui",style:"font-weight:650;font-size:14.5px;margin:4px 0 8px"},"Information to send out by email"));
     host.append(el("div",{class:"row",style:"gap:8px;margin-bottom:8px;flex-wrap:wrap"},
       el("button",{class:"btn",onclick:()=>panelExportDialog("members")},"\u2913 Panel members' information (Excel)"),
-      el("button",{class:"btn",onclick:()=>panelExportDialog("students")},"\u2913 Students' timetable by panel (Excel)")));
+      el("button",{class:"btn",onclick:()=>panelExportDialog("students")},"\u2913 Students' timetable by panel (Excel)"),
+      el("button",{class:"btn ghost",onclick:()=>goTab("cocsummary")},"Panel summary (Word) \u2192")));
     host.append(el("p",{class:"muted ui",style:"margin:0 0 16px;font-size:12.5px"},
       "Panel members: each panel's date, session time, chair, members, meeting link, CoC Panel Documents folder and report deadline \u2014 one row per panel, plus one row per person for a mail merge, so someone on two panels gets one email. "+
       "Students: the presentation timetable panel by panel \u2014 one row per student for a mail merge (with supervisors' emails for Cc), each panel's students' emails ready for Bcc, and a tab per panel with its running order. "+
@@ -10314,6 +10581,7 @@ const NAV_ICONS={
   layers:'<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   clipboard:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/>',
   menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>'
 };
@@ -10391,7 +10659,7 @@ function renderApp(){
     ? [["Supervision",[["students","Students","users"],["schedule","Week planner","calendar"],
           ["timetables","Class timetables","clock"],["consultations","Consultation times","chat"],
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
-       ["Confirmation of Candidature",[["panels","CoC panels","award"],["cocreports","CoC reports","clipboard"]]],
+       ["Confirmation of Candidature",[["panels","CoC panels","award"],["cocsummary","Panel summary","table"],["cocreports","CoC reports","clipboard"]]],
        ["Reports & records",[["report","Summary report","chart"],["export","Moodle export","download"],["contacts","Contacts","book"]]],
        ["Administration",[["people","Semesters & staff","layers"],["settings","Settings","gear"]]]]
     : S.role==="panellist"
@@ -10501,12 +10769,11 @@ async function showInboxBanner(){
     const byStudent=new Map();
     unread.forEach(n=>byStudent.set(n.studentDocId,(byStudent.get(n.studentDocId)||0)+1));
     const names=[...byStudent.keys()].map(id=>students.find(s=>s.id===id)?.name).filter(Boolean);
-    const bar=el("div",{class:"card ui inbox-banner",style:"border-left:4px solid var(--blue);margin:0 0 14px;padding:12px 14px"},
-      el("div",{class:"row",style:"align-items:center;gap:10px;flex-wrap:wrap"},
+    const bar=el("div",{class:"notice ui blue inbox-banner"},
+      el("div",{class:"row",style:"flex-wrap:wrap"},
         el("span",{class:"pill blue"},"\u2709 "+unread.length+" new message"+(unread.length===1?"":"s")),
-        el("span",{class:"ui",style:"font-size:13.5px"},
+        el("span",{class:"ui",style:"font-size:13.5px;flex:1;min-width:180px"},
           "from your supervision threads"+(names.length?" \u00B7 "+names.slice(0,3).join(", ")+(names.length>3?" +"+(names.length-3)+" more":""):"")),
-        el("span",{style:"flex:1;min-width:10px"}),
         el("button",{class:"btn sm",onclick:()=>{
           goTab("notes");
           bar.remove();
@@ -10544,7 +10811,8 @@ async function drawMain(){
     consultations:viewConsultations, meetinglog:viewMeetingLog, notes:viewNotes,
     panels:S.role==="admin"?viewPanelAdmin:viewPanels, report:viewReport, export:viewExport,
     contacts:viewContacts, people:viewPeople, settings:viewSettings,
-    cocreports:S.role==="admin"?viewCocAdmin:viewCocAssess};
+    cocreports:S.role==="admin"?viewCocAdmin:viewCocAssess,
+    cocsummary:S.role==="admin"?viewCocSummary:null};
   const fn=views[S.tab]; if(!fn) return;
   try{ return await fn(v); }
   catch(err){
@@ -20664,6 +20932,700 @@ function cocOutcomesView(v,ctx,redraw){
   c.append(el("p",{class:"muted ui",style:"margin:0;padding:10px 16px;font-size:12px;border-top:1px solid var(--line)"},
     "* Provisional: the report isn't approved yet. Final marks are shown here for the office only — students never see marks."));
   v.append(c);
+}
+
+/* ============================================================
+   13b. CoC PANEL SUMMARY (admin)
+   One page per semester for the office: each discipline's panels as a
+   compact table (when, panel, chair, members, Teams meeting, CoC
+   documents folder, assessment forms), downloadable as a landscape Word
+   file or copied as a table to paste into an email.
+
+   Above the tables, who needs a reminder: the members of the next CoC
+   (every panel sitting on the earliest date still to come) and of any
+   panel in the coming week, then members whose marks are still
+   outstanding after their CoC, most recent first. A reminder opened from
+   here is noted on the panel as `cocReminders[memberKey] = {upcoming,
+   marks}` (times in ms), so the list shows who has been reminded and
+   when. Nothing else on the panel is touched, and updatedAt is left
+   alone so the panel doesn't read as changed since it was released.
+   ============================================================ */
+const CPS_DAY=86400000;
+const CPS_AREA_NAME={IT:"Information Technology",Business:"Business",Mixed:"Mixed disciplines","":"Other panels"};
+const cpsAreaName=a=>CPS_AREA_NAME[a]??a;
+/* The online assessment form: the Supervision Hub, where members open
+   the "CoC assessment" tab. */
+const CPS_HUB_URL="https://secureintelligencelab.github.io/supervision-hub/";
+const cpsHub=()=>CPS_HUB_URL;
+const cpsHttp=u=>{ const t=String(u||"").trim(); return /^https?:\/\//i.test(t)?t:""; };
+const cpsNat=(a,b)=>String(a||"").localeCompare(String(b||""),undefined,{numeric:true,sensitivity:"base"});
+const cpsPl=(n,w)=>n+" "+w+(n===1?"":"s");
+/* "Panel A" → "A". Anything else stays as it is. */
+const cocShortLabel=g=>String(g?.label||"Panel").trim().replace(/^panel\s+/i,"")||String(g?.label||"Panel");
+const cocPanelName=r=>r.short.length<=4?"Panel "+r.short:(r.g.label||"Panel");
+/* "Wed, 21 Oct 2026", "27 Oct", "9:00 AM – 12:00 PM" */
+const cpsDay=ymd=>{ const dt=new Date(String(ymd||"")+"T00:00:00"); return isNaN(dt)?String(ymd||""):WEEKDAY_SHORT[dt.getDay()]+", "+longDate(ymd); };
+const cpsShort=ymd=>{ const dt=new Date(String(ymd||"")+"T00:00:00"); return isNaN(dt)?String(ymd||""):dt.getDate()+" "+COC_MON[dt.getMonth()]; };
+const cpsTime=(a,b)=>a&&b?clockTime(a)+" – "+clockTime(b):"";
+/* Word Form Link: where panel members can open the Word version of the
+   assessment form — a Google Drive, OneDrive or SharePoint share link, or
+   any web address. One link for the whole semester, and a panel can have
+   its own instead. Without either, the form is in the panel's CoC
+   documents folder. Typed links without "https://" are accepted. */
+const cpsLinkOk=u=>/^https?:\/\/[^\s\/]+\.[^\s]+$/i.test(linkHref(u));
+const cpsWordLink=sem=>{ const t=String(sem?.cocWordFormLink||"").trim(); return t&&cpsLinkOk(t)?linkHref(t):""; };
+const cpsPanelWordLink=g=>{ const t=String(g?.wordFormLink||"").trim(); return t&&cpsLinkOk(t)?linkHref(t):""; };
+function cpsProvider(u){
+  const h=String(u||"").toLowerCase();
+  return /drive\.google\.|docs\.google\./.test(h)?"Google Drive"
+    :/1drv\.ms|onedrive\.live\.|-my\.sharepoint\./.test(h)?"OneDrive"
+    :/sharepoint\./.test(h)?"SharePoint":/dropbox\./.test(h)?"Dropbox":"";
+}
+
+/* A panel's discipline: most of its students'. An even split between
+   students goes to the staff assessors' discipline if that settles it,
+   otherwise "Mixed"; a panel with no student areas takes its assessors'. */
+function cocPanelArea(g,students){
+  const top=list=>{
+    const t={}; list.forEach(a=>{ a=String(a||"").trim(); if(a) t[a]=(t[a]||0)+1; });
+    const rk=Object.entries(t).sort((x,y)=>y[1]-x[1]);
+    return rk.length?rk.filter(x=>x[1]===rk[0][1]).map(x=>x[0]):[];
+  };
+  const st=top(groupStudents(g).map(id=>students.find(s=>s.id===id)?.area));
+  const ms=top(groupMembers(g).map(memberArea));
+  if(st.length===1) return st[0];
+  if(st.length>1){ const hit=ms.filter(a=>st.includes(a)); return hit.length===1?hit[0]:"Mixed"; }
+  return ms.length===1?ms[0]:ms.length?"Mixed":"";
+}
+/* "Panels A–F" when the labels are consecutive letters (or numbers),
+   otherwise the short labels listed; nothing when the labels are names. */
+function cpsRange(rs){
+  const s=rs.map(r=>r.short).filter(x=>x.length<=4).sort(cpsNat);
+  if(!s.length||s.length!==rs.length) return "";
+  if(s.length===1) return "Panel "+s[0];
+  const letters=s.every(x=>/^[A-Za-z]$/.test(x)), nums=s.every(x=>/^\d+$/.test(x));
+  if(letters||nums){
+    const cs=s.map(x=>nums?+x:x.toUpperCase().charCodeAt(0));
+    if(cs.every((c,i)=>!i||c===cs[i-1]+1)) return "Panels "+s[0]+"–"+s[s.length-1];
+  }
+  return "Panels "+s.join(", ");
+}
+
+/* Everything the screen, the Word file and the email table show.
+   `area` null = every discipline. */
+function cocSummaryModel({groups,students,reps,allMarks,sem,area=null,relOnly=false,sort="date"}){
+  const now=Date.now(), today=ymdOf(new Date());
+  const repOf=gid=>(reps||[]).find(x=>x.id===gid)||null;
+  const marksOf=g=>{ const o={}; cocCoded(g).forEach(cd=>{ const d=(allMarks||[]).find(m=>m.id===cocMarkId(g.id,cd.key)); if(d) o[cd.key]=d; }); return o; };
+  let rows=groups.map(g=>{
+    const b=panelBrief(g,students,sem), sits=b.sits;
+    const nextDate=(sits.find(s=>s.date>=today)||{}).date||"";
+    const lastDate=sits.length?sits[sits.length-1].date:"";
+    const rep=repOf(g.id);
+    return {g,b,sits,rep,marks:marksOf(g),
+      locked:!!rep&&(rep.status==="approved"||rep.status==="received"),
+      phase:!sits.length?"unscheduled":nextDate===today?"today":nextDate?"upcoming":"past",
+      nextDate,lastDate,short:cocShortLabel(g),area:cocPanelArea(g,students),
+      nStu:groupStudents(g).length,released:isAssessorReleased(g),
+      due:panelReportDue(g,sem).date||"",
+      wordOwn:cpsPanelWordLink(g),word:cpsPanelWordLink(g)||cpsWordLink(sem),
+      daysUntil:nextDate?Math.round((new Date(nextDate+"T00:00:00")-new Date(today+"T00:00:00"))/CPS_DAY):null};
+  });
+  if(relOnly) rows=rows.filter(r=>r.released);
+  if(area!=null) rows=rows.filter(r=>r.area===area);
+  const firstStart=r=>r.sits.length?r.sits[0].date+" "+r.sits[0].start:"9999";
+  rows.sort(sort==="panel"
+    ?(a,b)=>cpsNat(a.short,b.short)
+    :(a,b)=>cpsNat(firstStart(a),firstStart(b))||cpsNat(a.short,b.short));
+  /* The next CoC: every panel sitting on the earliest date still to come. */
+  const nextDay=rows.map(r=>r.nextDate).filter(Boolean).sort()[0]||"";
+  rows.forEach(r=>{
+    r.isNext=!!nextDay&&r.nextDate===nextDay;
+    r.soon=(r.phase==="upcoming"||r.phase==="today")&&(r.isNext||r.daysUntil<=7);
+    r.marking=r.phase==="past"&&!!r.rep&&!r.locked&&cocWin(r.rep).state==="open";
+    const rem=r.g.cocReminders||{};
+    r.people=cocCoded(r.g).map(cd=>{
+      const emails=memberEmails(cd.m), sub=!!r.marks[cd.key]?.submitted;
+      const out=r.marking&&!sub;
+      const kind=r.soon?"upcoming":out?"marks":"";
+      const remAt=kind?(Number(rem[cd.key]?.[kind])||0):0;
+      const recent=!!remAt&&now-remAt<(kind==="upcoming"?7:3)*CPS_DAY;
+      return {cd,m:cd.m,key:cd.key,name:cd.m.name||emails[0]||"Member",isChair:cd.isChair,
+        emails,sub,out,kind,remAt,recent,need:kind&&!recent&&emails.length?kind:""};
+    });
+  });
+  const order=a=>{ const i=AREAS.indexOf(a); return i>=0?i:a==="Mixed"?90:a===""?99:50; };
+  const areas=[...new Set(rows.map(r=>r.area))].sort((x,y)=>order(x)-order(y)||cpsNat(x,y));
+  const sections=areas.map((a,i)=>{ const rs=rows.filter(r=>r.area===a);
+    return {area:a,no:pad2(i+1),name:cpsAreaName(a),rows:rs,range:cpsRange(rs),students:rs.reduce((n,r)=>n+r.nStu,0)}; });
+  const startOn=(r,d)=>(r.sits.find(s=>s.date===d)||{}).start||"";
+  return {sem,rows,sections,nextDay,
+    soonRows:rows.filter(r=>r.soon&&r.people.length).sort((a,b)=>cpsNat(a.nextDate+" "+startOn(a,a.nextDate),b.nextDate+" "+startOn(b,b.nextDate))),
+    marksRows:rows.filter(r=>r.people.some(p=>p.out)).sort((a,b)=>cpsNat(b.lastDate,a.lastDate)||cpsNat(a.short,b.short)),
+    hub:cpsHub(),hubHttp:cpsHttp(cpsHub()),word:cpsWordLink(sem),
+    students:rows.reduce((n,r)=>n+r.nStu,0)};
+}
+/* One row's cells, worked out once for the screen, Word and email. */
+function cpsCells(r,M){
+  const byDay=[];
+  r.sits.forEach(s=>{ let d=byDay.find(x=>x.date===s.date);
+    if(!d) byDay.push(d={date:s.date,day:cpsDay(s.date),times:[]});
+    d.times.push(cpsTime(s.start,s.end)); });
+  const ls=[...new Set(r.sits.map(s=>String(s.link||"").trim()).filter(Boolean))];
+  if(!ls.length&&r.b.link) ls.push(r.b.link);
+  const meet=ls.map(u=>{
+    const days=[...new Set(r.sits.filter(s=>String(s.link||"").trim()===u).map(s=>s.date))];
+    const dated=(ls.length>1||r.sits.some(s=>!String(s.link||"").trim()))&&days.length;
+    return {url:linkHref(u),label:(/teams\./i.test(u)?"Join Teams meeting":"Join meeting")+(dated?" ("+days.map(cpsShort).join(", ")+")":"")};
+  });
+  const folder=r.b.folder?linkHref(r.b.folder):"";
+  const forms=[{label:"Online assessment",url:M.hubHttp}];
+  if(r.word) forms.push({label:"Word Form Link",url:r.word,own:!!r.wordOwn});
+  else if(folder) forms.push({label:"Word form (in CoC folder)",url:folder});
+  const pOf=m=>r.people.find(p=>p.key===availKey(m))||null;
+  return {byDay,meet,folder,forms,
+    big:r.short.length<=4?r.short:(r.g.label||"Panel"),long:r.short.length>4,
+    assigned:r.nStu+" assigned",
+    chair:r.b.chair?{name:r.b.chair.name||memberEmails(r.b.chair)[0]||"",p:pOf(r.b.chair)}:null,
+    members:r.b.others.map(m=>({name:m.name||memberEmails(m)[0]||"",p:pOf(m)}))};
+}
+/* The "Word Form Link:" part of a section's info line: the link itself
+   when every panel in the section shares one, otherwise a pointer. */
+function cpsWordInfo(rows){
+  const urls=[...new Set(rows.map(r=>r.word).filter(Boolean))];
+  if(urls.length===1&&rows.every(r=>r.word===urls[0])){ const pv=cpsProvider(urls[0]);
+    return {url:urls[0],text:"Open the Word form"+(pv?" ("+pv+")":"")}; }
+  if(urls.length) return {url:"",text:"shown for each panel below"};
+  return {url:"",text:"not added yet \u2014 the form is in each panel\u2019s CoC documents folder"};
+}
+const CPS_HEAD=["Date & time","Panel","Panel chair","Panel members","Teams meeting","CoC documents","Assessment forms"];
+const cpsNextLine=M=>{
+  const nx=M.rows.filter(r=>r.isNext);
+  return nx.length?cpsDay(M.nextDay)+" — "+nx.map(r=>{ const s=r.sits.filter(x=>x.date===M.nextDay);
+    return cocPanelName(r)+(s.length?" ("+s.map(x=>cpsTime(x.start,x.end)).join(", ")+")":""); }).join("; "):"";
+};
+const cpsFileName=(M,sem,area,ext)=>("CoC_Panel_Summary_"+[area!=null?(area?cpsAreaName(area):"Other"):"",sem?.label||""].filter(Boolean).join("_"))
+  .replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").replace(/_$/,"")+"."+ext;
+
+/* ---- the reminder emails ---- */
+function cocReminderText(r,ppl,kind,sem){
+  const b=r.b, nm=cocPanelName(r), hub=cpsHub();
+  const onPanel=/^panel\b/i.test(nm)?nm:"panel "+nm;  // "Panel B", not "panel Panel B"
+  const names=ppl.map(p=>p.name);
+  const greet=names.length?"Dear "+(names.length===1?names[0]:names.slice(0,-1).join(", ")+" and "+names[names.length-1])+",":"Dear colleagues,";
+  const folder=b.folder?linkHref(b.folder):"", word=r.word||"";
+  const L=[];
+  if(kind==="upcoming"){
+    const members=b.ms.map(m=>(m.name||memberEmails(m)[0]||"")+(isChair(r.g,m)?" (Chair)":"")).filter(Boolean).join(", ");
+    L.push(greet,"","A reminder that you are on the Confirmation of Candidature "+onPanel+(sem?.label?" for "+sem.label:"")+(r.phase==="today"?", which sits today.":"."),"");
+    L.push("When:",r.sits.length?r.sits.map(s=>cpsDay(s.date)+", "+cpsTime(s.start,s.end)).join("\n"):"To be confirmed","");
+    L.push("Panel members: "+members,"");
+    const ord=panelOrderText(b,{titles:true});
+    if(ord) L.push("Running order ("+cpsPl(r.nStu,"candidate")+"):",ord,"");
+    const meet=cpsCells(r,{hubHttp:"",word:""}).meet;
+    L.push("Teams meeting: "+(meet.length?meet.map(x=>{ const d=x.label.match(/\(([^)]+)\)$/); return x.url+(d?" ("+d[1]+")":""); }).join("\n"):"link to follow"));
+    L.push("CoC documents (proposals and slides): "+(folder||"folder link to follow"));
+    L.push("Online assessment form: the MRes Supervision Hub, “CoC assessment” tab — "+hub);
+    if(word) L.push("Word Form Link: "+word); else if(folder) L.push("Word form: in the CoC documents folder");
+    if(r.due) L.push("","Report due: "+dueLong(r.due)+" (the Chair returns the signed report to the Research Office).");
+    L.push("","Thank you,","MRes Coordination","");
+    return {subject:"Reminder: CoC "+nm+(r.nextDate?" — "+cpsDay(r.nextDate):""),body:L.join("\n")};
+  }
+  const closes=r.rep?.window?.closesAt;
+  L.push(greet,"","Thank you for assessing on the Confirmation of Candidature "+onPanel+(r.lastDate?" on "+cpsDay(r.lastDate):"")+
+    ". Our records show your marks and comments haven't been submitted yet.","",
+    "Please sign in to the MRes Supervision Hub ("+hub+"), open “CoC assessment”, complete each candidate, then sign and submit to the Chair."+
+    (closes?" Marking closes "+cocDT(closes)+".":""));
+  if(r.due) L.push("","The panel's report is due "+dueLong(r.due)+".");
+  if(word) L.push("","If you are using the Word form instead \u2014 Word Form Link: "+word);
+  if(folder) L.push("","CoC documents: "+folder);
+  L.push("","Thank you,","MRes Coordination","");
+  return {subject:"CoC "+nm+" — your assessment is still to be submitted",body:L.join("\n")};
+}
+async function cocRecordReminder(g,keys,kind){
+  const cur=JSON.parse(JSON.stringify(g.cocReminders||{})), at=Date.now();
+  keys.forEach(k=>{ cur[k]={...(cur[k]||{}),[kind]:at}; });
+  await DB.update("panelGroups",g.id,{cocReminders:cur});
+  g.cocReminders=cur;
+}
+async function cpsSendReminder(r,ppl,kind,sem,redraw,noMail){
+  const ok=ppl.filter(p=>p.emails.length);
+  if(!noMail){
+    if(!ok.length){ toast("No email on file for "+(ppl.length===1?ppl[0].name:"these members")+".",true); return; }
+    const {subject,body}=cocReminderText(r,ok,kind,sem);
+    openEmail([...new Set(ok.flatMap(p=>p.emails))].join(","),subject,body);
+  }
+  const who=noMail?ppl:ok;
+  try{ await cocRecordReminder(r.g,who.map(p=>p.key),kind);
+    toast((noMail?"Noted as reminded: ":"Reminder noted for ")+cpsPl(who.length,"member")+"."); }
+  catch(e){ toast((noMail?"Couldn't note the reminder: ":"The email opened, but the reminder couldn't be noted: ")+(e?.message||e),true); }
+  redraw&&redraw();
+}
+
+/* ---- the Word file: landscape A4, the CIHE navy bands ---- */
+function cocSummaryDocx(M,opts={}){
+  const X=xmlEsc, W=15398; // A4 landscape less 0.5" margins, in twips
+  const media=[], links=[];
+  let picId=10;
+  const img=(bytes,wIn,hIn)=>{
+    const rid="rIdImg"+(media.length+1); media.push({name:"image"+(media.length+1)+".png",bytes,rid});
+    const cx=Math.round(wIn*914400), cy=Math.round(hIn*914400), id=picId++;
+    return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/>'+
+      '<wp:docPr id="'+id+'" name="Picture '+id+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'+
+      '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'+
+      '<pic:nvPicPr><pic:cNvPr id="'+id+'" name="img'+id+'.png"/><pic:cNvPicPr/></pic:nvPicPr>'+
+      '<pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
+      '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'+
+      '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+  };
+  const r=(t,o={})=>{
+    const rp='<w:rPr>'+(o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+(o.color?'<w:color w:val="'+o.color+'"/>':'')+
+      (o.sp?'<w:spacing w:val="'+o.sp+'"/>':'')+'<w:sz w:val="'+(o.sz||17)+'"/><w:szCs w:val="'+(o.sz||17)+'"/>'+(o.u?'<w:u w:val="single"/>':'')+'</w:rPr>';
+    return String(t==null?"":t).split("\n").map((ln,i)=>(i?'<w:r>'+rp+'<w:br/></w:r>':'')+'<w:r>'+rp+'<w:t xml:space="preserve">'+X(ln)+'</w:t></w:r>').join("");
+  };
+  const a=(t,url,o={})=>{
+    if(!url) return r(t,o);
+    const id="rIdH"+(links.length+1); links.push({id,url});
+    return '<w:hyperlink r:id="'+id+'" w:history="1">'+r(t,{color:"194698",u:true,b:true,...o})+'</w:hyperlink>';
+  };
+  const p=(runs,o={})=>'<w:p><w:pPr>'+(o.keep?'<w:keepNext/>':'')+'<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after??0)+'" w:line="'+(o.line||252)+'" w:lineRule="auto"/>'+
+    (o.align?'<w:jc w:val="'+o.align+'"/>':'')+'</w:pPr>'+(runs||"")+'</w:p>';
+  const tc=(c,o)=>'<w:tc><w:tcPr><w:tcW w:w="'+o.w+'" w:type="dxa"/>'+(o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+
+    '<w:tcMar><w:top w:w="'+(o.padV??70)+'" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:bottom w:w="'+(o.padV??70)+'" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tcMar>'+
+    '<w:vAlign w:val="'+(o.v||"top")+'"/></w:tcPr>'+(c||p(""))+'</w:tc>';
+  const tbl=(widths,rows,o={})=>'<w:tbl><w:tblPr><w:tblW w:w="'+widths.reduce((s,x)=>s+x,0)+'" w:type="dxa"/><w:tblBorders>'+
+    ['top','left','bottom','right','insideH','insideV'].map(s=>o.noBorder?'<w:'+s+' w:val="nil"/>':'<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="'+COC_BORDER+'"/>').join("")+
+    '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join("")+'</w:tblGrid>'+
+    rows.map(row=>'<w:tr><w:trPr><w:cantSplit/>'+(row.header?'<w:tblHeader/>':'')+'</w:trPr>'+row.cells.map((c,i)=>tc(c.c,{...c,w:widths[i]})).join("")+'</w:tr>').join("")+'</w:tbl>';
+  const grey={i:true,sz:16,color:"808080"};
+  let body="";
+  /* title band with the crest */
+  body+=tbl([1100,W-1100],[{cells:[
+    {c:p(img(cocB64Bytes(COC_LOGO_B64),0.55,0.55)),fill:COC_NAVY,v:"center",padV:110},
+    {c:p(r("Confirmation of Candidature (CoC) — Panel summary",{b:true,color:"FFFFFF",sz:28}))+
+      p(r("Master of Research  |  "+[M.sem?.label,cpsPl(M.rows.length,"panel")+" · "+cpsPl(M.students,"student"),"CIHE Australia"].filter(Boolean).join("  |  "),{color:"FFFFFF",sz:17})),
+      fill:COC_NAVY,v:"center",padV:110}]}],{noBorder:true});
+  if(opts.next&&M.nextDay)
+    body+=tbl([W],[{cells:[{c:p(r("Next CoC:  ",{b:true,sz:18,color:"8A5300"})+r(cpsNextLine(M),{b:true,sz:18})+r("   — highlighted below",{i:true,sz:16,color:"595959"})),fill:"FFF3D6",padV:80}]}],{noBorder:true});
+  body+=p(r("Generated from the MRes Supervision Hub on "+cocDT(Date.now())+".",{i:true,sz:15,color:"595959"}),{before:80});
+  const CW=[2350,1250,2150,3050,1950,1950,W-12700];
+  M.sections.forEach(sec=>{
+    body+=p("",{after:140,keep:true});
+    body+=tbl([W-3600,3600],[{cells:[
+      {c:p(r(sec.no+"    ",{b:true,color:"B9BCE0",sz:22})+r(sec.name.toUpperCase(),{b:true,color:"FFFFFF",sz:22,sp:12})+
+        (sec.range?r("    /    "+sec.range.toUpperCase(),{color:"FFFFFF",sz:18,sp:12}):""),{keep:true}),fill:COC_NAVY,v:"center",padV:100},
+      {c:p(r(cpsPl(sec.rows.length,"panel")+"  ·  "+cpsPl(sec.students,"student"),{color:"FFFFFF",sz:18}),{align:"right",keep:true}),fill:COC_NAVY,v:"center",padV:100}]}],{noBorder:true});
+    const wi=cpsWordInfo(sec.rows);
+    body+=p(r("Online form: ",{b:true,sz:16,color:"575E74"})+a("Supervision Hub (CoC assessment tab)",M.hubHttp,{sz:16})+
+      r("     •     ",{sz:16,color:"575E74"})+r("Word Form Link: ",{b:true,sz:16,color:"575E74"})+
+      (wi.url?a(wi.text,wi.url,{sz:16}):r(wi.text,{sz:16,color:"575E74"})),{before:60,after:80,keep:true});
+    const hd=t=>({c:p(r(t,{b:true,sz:15,color:"FFFFFF",sp:6}),{keep:true}),fill:COC_NAVY,padV:60});
+    const rows=[{header:true,cells:CPS_HEAD.map(h=>hd(h.toUpperCase().replace("COC ","CoC ")))}];
+    sec.rows.forEach((x,i)=>{
+      const C=cpsCells(x,M), nxt=!!opts.next&&x.isNext;
+      const fill=nxt?"FFF3D6":(i%2?COC_ALT:undefined);
+      const flag=pp=>opts.marks&&pp?.out?r("  (marks outstanding)",{i:true,sz:15,color:"A12F21"}):"";
+      const when=(C.byDay.length?C.byDay.map((d,j)=>p(r(d.day,{b:true,sz:17}),{before:j?60:0})+p(r(d.times.join("\n"),{sz:17}))).join("")
+          :p(r("Date to be confirmed",grey)))+
+        (x.due?p(r("Report due  "+cpsShort(x.due),{sz:15,color:"595959"}),{before:50}):"")+
+        (nxt?p(r("► NEXT CoC",{b:true,sz:15,color:"8A5300"}),{before:50}):"");
+      rows.push({cells:[
+        {c:when,fill},
+        {c:p(r(C.big,{b:true,sz:C.long?18:34,color:COC_NAVY}))+p(r(C.assigned,{sz:15,color:"595959"})),fill},
+        {c:C.chair?p(r(C.chair.name,{sz:17})+flag(C.chair.p)):p(r("To be confirmed",grey)),fill},
+        {c:C.members.length?C.members.map(m=>p(r("•  "+m.name,{sz:17})+flag(m.p))).join(""):p(r("To be confirmed",grey)),fill},
+        {c:C.meet.length?C.meet.map(m=>p(a(m.label,m.url))).join(""):p(r("Link to follow",grey)),fill},
+        {c:C.folder?p(a("Open CoC folder",C.folder)):p(r("Folder to follow",grey)),fill},
+        {c:C.forms.map((f,j)=>p(a(f.label,f.url)+(j<C.forms.length-1?r("  or",{sz:16,color:"595959"}):""))).join(""),fill}]});
+    });
+    body+=tbl(CW,rows);
+  });
+  if(!M.sections.length) body+=p(r("No panels to show.",grey),{before:200});
+
+  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '+
+    'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '+
+    'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const P='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const doc=P+'<w:document '+NS+'><w:body>'+body+p("")+
+    '<w:sectPr><w:footerReference w:type="default" r:id="rIdFooter"/><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>'+
+    '<w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="500" w:footer="400" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  const fs='<w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr>';
+  const fld=code=>'<w:r>'+fs+'<w:fldChar w:fldCharType="begin"/></w:r><w:r>'+fs+'<w:instrText xml:space="preserve"> '+code+' </w:instrText></w:r>'+
+    '<w:r>'+fs+'<w:fldChar w:fldCharType="separate"/></w:r><w:r>'+fs+'<w:t>1</w:t></w:r><w:r>'+fs+'<w:fldChar w:fldCharType="end"/></w:r>';
+  const fr=t=>'<w:r>'+fs+'<w:t xml:space="preserve">'+X(t)+'</w:t></w:r>';
+  const footer=P+'<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/></w:pPr>'+
+    fr("CRICOS Provider No. 03744B   |   CoC panel summary"+(M.sem?.label?" — "+M.sem.label:"")+"   |   Page ")+fld("PAGE")+fr(" of ")+fld("NUMPAGES")+'</w:p></w:ftr>';
+  const styles=P+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault>'+
+    '<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+    '<w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="194698"/><w:u w:val="single"/></w:rPr></w:style>'+
+    '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'+
+    '</w:styles>';
+  const settings=P+'<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>';
+  const RELNS="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const docRels=P+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rIdStyles" Type="'+RELNS+'/styles" Target="styles.xml"/>'+
+    '<Relationship Id="rIdSettings" Type="'+RELNS+'/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rIdFooter" Type="'+RELNS+'/footer" Target="footer1.xml"/>'+
+    media.map(m=>'<Relationship Id="'+m.rid+'" Type="'+RELNS+'/image" Target="media/'+m.name+'"/>').join("")+
+    links.map(l=>'<Relationship Id="'+l.id+'" Type="'+RELNS+'/hyperlink" Target="'+X(l.url)+'" TargetMode="External"/>').join("")+'</Relationships>';
+  const ct=P+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>';
+  const rootRels=P+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="'+RELNS+'/officeDocument" Target="word/document.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>';
+  const iso=new Date().toISOString().replace(/\.\d+Z$/,"Z");
+  const core=P+'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'+
+    '<dc:title>'+X("CoC panel summary"+(M.sem?.label?" — "+M.sem.label:""))+'</dc:title><dc:creator>MRes Supervision Hub</dc:creator>'+
+    '<dcterms:created xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:modified></cp:coreProperties>';
+  const enc=new TextEncoder(), U=s=>enc.encode(s);
+  return zipStore([
+    {name:"[Content_Types].xml",data:U(ct)},{name:"_rels/.rels",data:U(rootRels)},
+    {name:"docProps/core.xml",data:U(core)},
+    {name:"word/document.xml",data:U(doc)},{name:"word/_rels/document.xml.rels",data:U(docRels)},
+    {name:"word/styles.xml",data:U(styles)},{name:"word/settings.xml",data:U(settings)},
+    {name:"word/footer1.xml",data:U(footer)},
+    ...media.map(m=>({name:"word/media/"+m.name,data:m.bytes}))],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+
+/* ---- the same tables as email-ready HTML (inline styles only, so they
+   survive Outlook and Gmail) and as plain text ---- */
+function cocSummaryHtml(M,opts={}){
+  const E=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const FF="font-family:Calibri,Arial,Helvetica,sans-serif;";
+  const A=(t,u)=>u?'<a href="'+E(u)+'" style="color:#194698;font-weight:bold">'+E(t)+'</a>':E(t);
+  const grey=t=>'<span style="color:#808080;font-style:italic">'+E(t)+'</span>';
+  const flag=pp=>opts.marks&&pp?.out?' <span style="color:#A12F21;font-style:italic;font-size:11px">(marks outstanding)</span>':"";
+  const td=(c,fill)=>'<td valign="top" style="'+FF+'padding:7px 9px;border:1px solid #BFC3D1;vertical-align:top;font-size:13px'+(fill?';background:'+fill:'')+'">'+c+'</td>';
+  let h='<div style="'+FF+'font-size:13px;color:#161A33">';
+  h+='<p style="margin:0 0 8px;font-size:16px"><b>Confirmation of Candidature — panel summary</b>'+(M.sem?.label?' · '+E(M.sem.label):'')+'</p>';
+  if(opts.next&&M.nextDay) h+='<p style="margin:0 0 10px"><span style="background:#FFF3D6;padding:3px 8px"><b style="color:#8A5300">Next CoC:</b> <b>'+E(cpsNextLine(M))+'</b> — highlighted below</span></p>';
+  M.sections.forEach(sec=>{
+    h+='<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px"><tr>'+
+      '<td style="'+FF+'background:#1F1F5C;color:#ffffff;padding:9px 12px;font-size:14px;letter-spacing:1px"><b>'+E(sec.no)+'&nbsp;&nbsp;&nbsp;'+E(sec.name.toUpperCase())+'</b>'+
+      (sec.range?'&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;'+E(sec.range.toUpperCase()):'')+'</td>'+
+      '<td style="'+FF+'background:#1F1F5C;color:#ffffff;padding:9px 12px;text-align:right;font-size:13px;white-space:nowrap">'+E(cpsPl(sec.rows.length,"panel")+" · "+cpsPl(sec.students,"student"))+'</td></tr></table>';
+    h+='<p style="'+FF+'margin:5px 0 7px;font-size:12px;color:#575E74"><b>Online form:</b> '+A("Supervision Hub (CoC assessment tab)",M.hubHttp)+
+      '&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;<b>Word Form Link:</b> '+(()=>{ const wi=cpsWordInfo(sec.rows); return wi.url?A(wi.text,wi.url):E(wi.text); })()+'</p>';
+    h+='<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%"><tr>'+
+      CPS_HEAD.map(x=>'<th align="left" style="'+FF+'background:#1F1F5C;color:#ffffff;padding:6px 9px;font-size:11px;text-align:left;border:1px solid #1F1F5C;white-space:nowrap">'+E(x.toUpperCase().replace("COC ","CoC "))+'</th>').join("")+'</tr>';
+    sec.rows.forEach((x,i)=>{
+      const C=cpsCells(x,M), nxt=!!opts.next&&x.isNext, fill=nxt?"#FFF3D6":(i%2?"#F7F7FA":"");
+      h+='<tr>'+
+        td((C.byDay.length?C.byDay.map(d=>'<b>'+E(d.day)+'</b><br>'+d.times.map(E).join("<br>")).join("<br>"):grey("Date to be confirmed"))+
+          (x.due?'<br><span style="color:#595959;font-size:11.5px">Report due&nbsp; '+E(cpsShort(x.due))+'</span>':'')+
+          (nxt?'<br><b style="color:#8A5300;font-size:11.5px">► NEXT CoC</b>':''),fill)+
+        td('<b style="color:#1F1F5C;font-size:'+(C.long?'13':'20')+'px">'+E(C.big)+'</b><br><span style="color:#595959;font-size:11.5px">'+E(C.assigned)+'</span>',fill)+
+        td(C.chair?E(C.chair.name)+flag(C.chair.p):grey("To be confirmed"),fill)+
+        td(C.members.length?C.members.map(m=>'•&nbsp; '+E(m.name)+flag(m.p)).join("<br>"):grey("To be confirmed"),fill)+
+        td(C.meet.length?C.meet.map(m=>A(m.label,m.url)).join("<br>"):grey("Link to follow"),fill)+
+        td(C.folder?A("Open CoC folder",C.folder):grey("Folder to follow"),fill)+
+        td(C.forms.map(f=>A(f.label,f.url)).join(' <span style="color:#595959">or</span><br>'),fill)+'</tr>';
+    });
+    h+='</table>';
+  });
+  return h+'</div>';
+}
+function cocSummaryText(M){
+  const L=["Confirmation of Candidature — panel summary"+(M.sem?.label?" · "+M.sem.label:""),""];
+  M.sections.forEach(sec=>{
+    L.push(sec.no+"  "+sec.name.toUpperCase()+(sec.range?"  /  "+sec.range.toUpperCase():"")+"   "+cpsPl(sec.rows.length,"panel")+" · "+cpsPl(sec.students,"student"));
+    sec.rows.forEach(x=>{
+      const C=cpsCells(x,M);
+      L.push("",cocPanelName(x)+" ("+C.assigned+")"+(x.isNext?"  — NEXT CoC":""),
+        "  When: "+(C.byDay.length?C.byDay.map(d=>d.day+", "+d.times.join(", ")).join("; "):"to be confirmed")+(x.due?"  (report due "+cpsShort(x.due)+")":""),
+        "  Chair: "+(C.chair?.name||"to be confirmed"),
+        "  Members: "+(C.members.map(m=>m.name).join("; ")||"to be confirmed"),
+        "  Teams meeting: "+(C.meet.map(m=>m.url).join(" ; ")||"link to follow"),
+        "  CoC documents: "+(C.folder||"folder to follow"),
+        ...(x.word&&x.wordOwn?["  Word Form Link: "+x.word]:[]));
+    });
+    L.push("");
+  });
+  const wi=cpsWordInfo(M.rows);
+  L.push("Online form: Supervision Hub (CoC assessment tab) "+M.hub,"Word Form Link: "+(wi.url||wi.text));
+  return L.join("\n");
+}
+/* Copies rich HTML (with plain text alongside), so pasting into Outlook
+   or Gmail gives a real table. Falls back to selecting a hidden copy. */
+async function cpsCopyHtml(html,text){
+  try{
+    if(window.ClipboardItem&&navigator.clipboard?.write){
+      await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const d=el("div",{contenteditable:"true",style:"position:fixed;left:-9999px;top:0;opacity:0",html});
+    document.body.append(d);
+    const rg=document.createRange(); rg.selectNodeContents(d);
+    const s=getSelection(); s.removeAllRanges(); s.addRange(rg);
+    const ok=document.execCommand("copy"); s.removeAllRanges(); d.remove();
+    return ok;
+  }catch(e){ return false; }
+}
+
+/* ---- the screen ---- */
+async function viewCocSummary(v){
+  v.innerHTML="";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),el("h2",{},"Panel summary"))));
+  const redraw=()=>viewCocSummary(v);
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(redraw)); v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
+  const cocP=prefetch(Promise.all([DB.list("cocReports",{semesterId:S.activeSem}),DB.list("cocMarks",{semesterId:S.activeSem})]));
+  let students,groups,reps=[],allMarks=[],cocErr=null;
+  try{ [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]); }
+  catch(err){ v.append(panelRuleHelp(err)); return; }
+  try{ [reps,allMarks]=await cocP; }catch(err){ cocErr=err; }
+  const sem=activeSemester();
+  if(!groups.length){ v.append(emptyState("No CoC panels yet","Set up the panels on the CoC panels screen first.")); return; }
+  const F=S.cocSum=S.cocSum||{sort:"date",area:"",rel:false};
+  const areaArg=F.area===""?null:F.area==="__none"?"":F.area;
+  const ALL=cocSummaryModel({groups,students,reps,allMarks,sem});
+  if(areaArg!=null&&!ALL.sections.some(s=>s.area===areaArg)){ F.area=""; return redraw(); }
+  const M=cocSummaryModel({groups,students,reps,allMarks,sem,area:areaArg,relOnly:F.rel,sort:F.sort});
+
+  /* filters */
+  const opt=(val,label,cur)=>el("option",{value:val,...(cur===val?{selected:"selected"}:{})},label);
+  v.append(el("div",{class:"toolbar cps-noprint",style:"margin-bottom:10px"},
+    el("div",{class:"field"},el("label",{},"Discipline"),el("select",{style:"width:auto;min-width:170px",onchange:e=>{ F.area=e.target.value; redraw(); }},
+      opt("","All disciplines",F.area),...ALL.sections.map(s=>opt(s.area===""?"__none":s.area,s.name,F.area)))),
+    el("div",{class:"field"},el("label",{},"Order"),el("select",{style:"width:auto;min-width:150px",onchange:e=>{ F.sort=e.target.value; redraw(); }},
+      opt("date","By date",F.sort),opt("panel","By panel",F.sort))),
+    el("label",{class:"row ui",style:"gap:6px;align-items:center;flex-wrap:nowrap;align-self:flex-end;font-size:13.5px;font-weight:500;margin:0 0 8px;cursor:pointer"},
+      el("input",{type:"checkbox",class:"cps-cb",style:"width:auto;margin:0",...(F.rel?{checked:"checked"}:{}),onchange:e=>{ F.rel=e.target.checked; redraw(); }}),
+      "Only panels released to their assessors")));
+
+  /* actions */
+  const unrel=M.rows.filter(r=>!r.released).length;
+  v.append(el("div",{class:"row cps-noprint",style:"gap:8px;flex-wrap:wrap;margin-bottom:6px"},
+    el("button",{class:"btn",disabled:M.rows.length?null:"disabled",onclick:()=>cpsDownloadDialog(M,sem,areaArg)},"⤓ Download Word"),
+    el("button",{class:"btn ghost",disabled:M.rows.length?null:"disabled",onclick:async()=>{
+      const ok=await cpsCopyHtml(cocSummaryHtml(M,{next:true}),cocSummaryText(M));
+      toast(ok?"Table copied — paste it into an email.":"Couldn't copy here; download the Word file instead.",!ok); }},"⧉ Copy table for an email"),
+    el("button",{class:"btn ghost",disabled:M.rows.length?null:"disabled",onclick:()=>cpsEmailAll(M,sem)},"✉ Email the summary to these panel members"),
+    el("span",{style:"flex:1"}),
+    el("button",{class:"btn ghost",onclick:()=>window.print()},"⎙ Print")));
+  v.append(el("p",{class:"muted ui cps-noprint",style:"margin:0 0 14px;font-size:12.5px"},
+    "The Word file and the copied table show the panels on this page, grouped by discipline, with the next CoC highlighted. "+
+    "“Email the summary” puts every member of these panels in Bcc and copies the table for you to paste in."));
+  if(cocErr) v.append(noticeBar("amber","Marking progress couldn't be loaded ("+(cocErr?.message||"permission denied")+"), so outstanding marks aren't shown. The panels below are complete."));
+  if(unrel) v.append(noticeBar("amber",cpsPl(unrel,"panel")+" on this page "+(unrel===1?"isn't":"aren't")+" released to "+(unrel===1?"its":"their")+
+    " assessors yet (marked “Not released”). Tick “Only panels released to their assessors” before sharing the summary."));
+
+  /* who to remind */
+  if(M.soonRows.length||M.marksRows.length) v.append(cpsRemindCard(M,sem,redraw));
+  else v.append(noticeBar("green",M.nextDay?"No one needs a reminder right now. The next CoC is "+cpsNextLine(M)+".":"No one needs a reminder right now — no CoC is coming up and no marks are outstanding."));
+
+  /* Assessment form links: the online form is the Supervision Hub; the
+     Word Form Link is kept on the semester, and a panel can have its own. */
+  const wIn=el("input",{type:"text",inputmode:"url",autocomplete:"off",spellcheck:"false",value:String(sem?.cocWordFormLink||""),
+    placeholder:"Paste a Google Drive, OneDrive or SharePoint share link"});
+  const saveSemWord=async t=>{
+    try{ await DB.update("semesters",sem.id,{cocWordFormLink:t});
+      S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
+      toast(t?"Word Form Link saved.":"Word Form Link removed."); redraw(); }
+    catch(e){ toast(e?.message||"Could not save.",true); } };
+  const saveW=el("button",{class:"btn sm",onclick:()=>{
+    const t=wIn.value.trim();
+    if(t&&!cpsLinkOk(t)){ toast("That doesn\u2019t look like a link \u2014 paste the share link from Google Drive or OneDrive.",true); return; }
+    saveSemWord(t?linkHref(t):""); }},"Save");
+  const ownN=M.rows.filter(r=>r.wordOwn).length;
+  const semWord=cpsWordLink(sem), pv=cpsProvider(semWord);
+  v.append(el("details",{class:"cfold cps-noprint",style:"margin:0 0 6px"},el("summary",{},el("div",{class:"csection"},el("div",{class:"cs-mark"},"\u2699"),
+      el("div",{class:"cs-body"},el("h3",{},"Assessment form links"),
+        el("p",{},"Online assessment: Supervision Hub \u00B7 Word Form Link: "+
+          (semWord?"set for "+(sem?.label||"this semester")+(pv?" ("+pv+")":""):"not added yet")+
+          (ownN?" \u00B7 "+cpsPl(ownN,"panel")+" with "+(ownN===1?"its":"their")+" own link":"")))),
+      el("div",{class:"cfold-right"},el("span",{class:"chev"},"\u203A"))),
+    el("div",{class:"cfold-body"},el("div",{class:"card",style:"padding:14px 16px"},
+      el("div",{class:"field",style:"margin-bottom:14px"},el("label",{},"Online assessment form"),
+        el("div",{style:"font-size:14px"},el("a",{href:CPS_HUB_URL,target:"_blank",rel:"noopener"},"Supervision Hub"),
+          el("span",{class:"muted",style:"font-size:13px"}," \u2014 "+CPS_HUB_URL)),
+        el("div",{class:"muted",style:"font-size:12.5px;margin-top:2px"},"Members sign in and open the \u201CCoC assessment\u201D tab. Used for every panel.")),
+      el("div",{class:"row",style:"align-items:flex-end;flex-wrap:wrap"},
+        el("div",{class:"field",style:"flex:1;min-width:260px"},el("label",{},"Word Form Link \u2014 every panel in "+(sem?.label||"this semester")),wIn),
+        saveW,
+        semWord?el("a",{class:"btn sm ghost",href:semWord,target:"_blank",rel:"noopener",style:"text-decoration:none"},"Open link"):"",
+        semWord?el("button",{class:"btn sm ghost",onclick:()=>{ if(window.confirm("Remove the Word Form Link for "+(sem?.label||"this semester")+"? Panels with their own link keep it.")) saveSemWord(""); }},"Remove"):""),
+      el("p",{class:"muted",style:"margin:10px 0 0;font-size:12.5px"},
+        "Share the Word form so panel members can open it: in Google Drive or OneDrive choose \u201CAnyone with the link\u201D (or everyone at CIHE) and copy that link. "+
+        "A panel that needs a different file can have its own link \u2014 use \u201CWord Form Link\u201D on its row below. With no link, the summary points to the panel\u2019s CoC documents folder.")))));
+
+  if(!M.rows.length){ v.append(emptyState("No panels to show","Change the filters above.")); return; }
+  M.sections.forEach(sec=>v.append(cpsSection(sec,M,sem,redraw)));
+}
+
+function cpsInfoLine(M,rows){
+  const lk=(t,u)=>u?el("a",{href:u,target:"_blank",rel:"noopener"},t):el("span",{},t);
+  const wi=cpsWordInfo(rows);
+  return el("div",{class:"cps-info ui"},el("b",{},"Online form: "),lk("Supervision Hub (CoC assessment tab)",M.hubHttp),
+    "\u2003\u2022\u2003",el("b",{},"Word Form Link: "),lk(wi.text,wi.url));
+}
+function cpsMailBtn(r,p,sem,redraw){
+  const kind=p.kind||"upcoming";
+  return el("button",{type:"button",class:"cps-mail",title:p.emails.length?"Email a reminder to "+p.name+" ("+p.emails.join(", ")+")":"No email on file",
+    "aria-label":"Email a reminder to "+p.name,disabled:p.emails.length?null:"disabled",
+    onclick:()=>cpsSendReminder(r,[p],kind,sem,redraw)},"✉");
+}
+/* A member's state as a pill, or nothing. */
+function cpsState(r,p){
+  if(!p) return "";
+  if(p.kind&&!p.emails.length) return el("span",{class:"pill missed"},"No email");
+  if(p.need==="upcoming") return el("span",{class:"pill pending",title:"Not reminded in the last 7 days"},"Remind");
+  if(p.need==="marks") return el("span",{class:"pill missed",title:"Marks not submitted"},"Marks outstanding");
+  if(p.recent) return el("span",{class:"pill none",title:"Reminder opened "+cocDT(p.remAt)},(p.out?"Marks outstanding · ":"")+"reminded "+relTime(p.remAt));
+  if(p.sub&&r.rep&&!r.locked) return el("span",{class:"pill approved"},"✓ Marks in");
+  return "";
+}
+function cpsSection(sec,M,sem,redraw){
+  const wrap=el("div",{});
+  wrap.append(el("div",{class:"cps-band ui"},el("span",{class:"cps-no"},sec.no),el("span",{class:"cps-nm"},sec.name.toUpperCase()),
+    sec.range?el("span",{class:"cps-rg"},"/ "+sec.range.toUpperCase()):"",
+    el("span",{class:"cps-ct"},cpsPl(sec.rows.length,"panel")+" · "+cpsPl(sec.students,"student"))));
+  wrap.append(cpsInfoLine(M,sec.rows));
+  const t=el("table",{class:"cps-t"});
+  t.append(el("thead",{},el("tr",{},...CPS_HEAD.map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  const lk=(t2,u)=>el("a",{href:u,target:"_blank",rel:"noopener"},t2);
+  const none=t2=>el("span",{class:"cps-none"},t2);
+  sec.rows.forEach(r=>{
+    const C=cpsCells(r,M);
+    const who=(nm,p)=>[el("span",{},nm),cpsState(r,p),p&&p.kind?cpsMailBtn(r,p,sem,redraw):""];
+    tb.append(el("tr",{class:r.isNext?"next":""},
+      el("td",{},el("div",{class:"cps-when"},
+        ...(C.byDay.length?C.byDay.flatMap(d=>[el("b",{},d.day),...d.times.map(x=>el("span",{class:"cps-tm"},x))]):[none("Date to be confirmed")]),
+        r.due?el("span",{class:"cps-due"},"Report due "+cpsShort(r.due)):"",
+        r.phase==="today"?el("span",{class:"pill cps-nextpill"},"Today"):r.isNext?el("span",{class:"pill cps-nextpill"},"Next CoC"):"",
+        !r.released?el("span",{class:"pill none",title:"Not released to its assessors yet"},"Not released"):"")),
+      el("td",{},el("div",{class:"cps-panel"},el("div",{class:"cps-p"+(C.long?" long":"")},C.big),el("span",{class:"cps-n"},C.assigned))),
+      el("td",{},C.chair?el("div",{class:"cps-one"},...who(C.chair.name,C.chair.p)):none("Not set")),
+      el("td",{},C.members.length?el("ul",{class:"cps-mem"},...C.members.map(m=>el("li",{},...who(m.name,m.p)))):none("To be confirmed")),
+      el("td",{},el("div",{class:"cps-lnk"},...(C.meet.length?C.meet.map(m=>lk(m.label,m.url)):[none("Link to follow")]))),
+      el("td",{},el("div",{class:"cps-lnk"},C.folder?lk("Open CoC folder",C.folder):none("Folder to follow"))),
+      el("td",{},el("div",{class:"cps-lnk"},...C.forms.flatMap((f,i)=>[f.url?lk(f.label,f.url):el("span",{},f.label),
+          f.own?el("span",{class:"cps-or"},"this panel\u2019s own link"):"",
+          i<C.forms.length-1?el("span",{class:"cps-or"},"or"):""]),
+        el("button",{class:"btn xs ghost cps-noprint",style:"margin-top:4px",title:"Set a Word Form Link for this panel only",
+          onclick:()=>cpsPanelWordDialog(r,sem,redraw)},r.wordOwn?"\u270E Edit panel link":"\u270E Set panel link")))));
+  });
+  t.append(tb);
+  wrap.append(el("div",{class:"cps-sec"},el("div",{class:"tscroll"},t)));
+  return wrap;
+}
+/* A Word Form Link for one panel, used instead of the semester's. */
+function cpsPanelWordDialog(r,sem,redraw){
+  const semWord=cpsWordLink(sem);
+  const inp=el("input",{type:"text",inputmode:"url",autocomplete:"off",spellcheck:"false",value:String(r.g.wordFormLink||""),
+    placeholder:"Paste a Google Drive, OneDrive or SharePoint share link"});
+  const body=el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 12px;font-size:13.5px"},
+      "Used for "+cocPanelName(r)+" only \u2014 in the summary, the Word file, the copied table and its reminder emails. "+
+      (semWord?"Leave it empty to use the link for "+(sem?.label||"the semester")+".":"Leave it empty to point to the panel\u2019s CoC documents folder.")),
+    el("div",{class:"field"},el("label",{},"Word Form Link \u2014 "+cocPanelName(r)),inp),
+    el("p",{class:"muted",style:"margin:8px 0 0;font-size:12.5px"},"Share the file so panel members can open it (\u201CAnyone with the link\u201D, or everyone at CIHE), then paste that link here."));
+  modal("Word Form Link \u2014 "+cocPanelName(r),body,async()=>{
+    const t=inp.value.trim();
+    if(t&&!cpsLinkOk(t)){ toast("That doesn\u2019t look like a link \u2014 paste the share link from Google Drive or OneDrive.",true); return false; }
+    const val=t?linkHref(t):"";
+    await DB.update("panelGroups",r.g.id,{wordFormLink:val});
+    r.g.wordFormLink=val;
+    toast(val?"Word Form Link saved for "+cocPanelName(r)+".":"Word Form Link removed from "+cocPanelName(r)+".");
+    redraw&&redraw();
+    return true;
+  },"Save");
+  setTimeout(()=>{ try{ inp.focus(); }catch(e){} },60);
+}
+function cpsRemindCard(M,sem,redraw){
+  const needN=M.rows.reduce((n,r)=>n+r.people.filter(p=>p.need).length,0);
+  const c=el("div",{class:"card cps-rem"});
+  c.append(el("div",{class:"cps-rem-h"},el("strong",{class:"ui"},"Who to remind"),
+    el("span",{class:"pill "+(needN?"pending":"approved")},needN?needN+" to remind":"Everyone reminded"),
+    el("span",{class:"muted ui",style:"font-size:12.5px;flex:1;min-width:220px"},
+      "The next CoC and any panel in the coming week, then members whose marks are still outstanding after their CoC, most recent first. Opening a reminder from here notes it, so it shows who was reminded and when.")));
+  if(M.soonRows.length){
+    c.append(el("div",{class:"cps-rem-sub ui"},"Before the CoC"));
+    M.soonRows.forEach(r=>c.append(cpsRemRow(r,"upcoming",sem,redraw)));
+  }
+  if(M.marksRows.length){
+    c.append(el("div",{class:"cps-rem-sub ui"},"Marks still to submit — most recent first"));
+    M.marksRows.forEach(r=>c.append(cpsRemRow(r,"marks",sem,redraw)));
+  }
+  return c;
+}
+function cpsRemRow(r,kind,sem,redraw){
+  const ppl=r.people.filter(p=>kind==="upcoming"?p.kind==="upcoming":p.out);
+  const need=ppl.filter(p=>p.need===kind), withMail=ppl.filter(p=>p.emails.length);
+  const day=kind==="upcoming"?r.nextDate:r.lastDate;
+  const sit=r.sits.filter(s=>s.date===day);
+  const tag=kind==="upcoming"
+    ?(r.phase==="today"?el("span",{class:"pill cps-nextpill"},"Today"):r.isNext?el("span",{class:"pill cps-nextpill"},"Next CoC"):el("span",{class:"pill blue"},"In "+cpsPl(r.daysUntil,"day")))
+    :el("span",{class:"pill missed"},r.people.filter(p=>p.sub).length+"/"+r.people.length+" submitted");
+  const chip=p=>{
+    const cls=p.need?(kind==="marks"?"marks":"need"):(!p.emails.length?"marks":"quiet");
+    const note=p.need?(kind==="marks"?"marks outstanding":"to remind"):!p.emails.length?"no email":p.recent?"reminded "+relTime(p.remAt):"";
+    return el("span",{class:"cps-chip "+cls,title:p.emails.join(", ")||"No email on file"},
+      p.name+(p.isChair?" (Chair)":""),note?el("span",{class:"cps-x"},"· "+note):"",
+      p.emails.length?el("button",{type:"button",title:"Email a reminder to "+p.name,"aria-label":"Email a reminder to "+p.name,
+        onclick:()=>cpsSendReminder(r,[p],kind,sem,redraw)},"✉"):"");
+  };
+  return el("div",{class:"cps-rrow ui"+(kind==="upcoming"&&r.isNext?" next":"")},
+    el("div",{class:"cps-when"},el("b",{},cpsDay(day)),...sit.map(s=>el("span",{class:"cps-tm"},cpsTime(s.start,s.end))),
+      kind==="marks"&&r.due?el("span",{class:"cps-due"},"Report due "+cpsShort(r.due)):""),
+    el("div",{},el("div",{style:"font-weight:650"},cocPanelName(r)),
+      el("div",{class:"muted",style:"font-size:12px;margin:2px 0 5px"},cpsAreaName(r.area)+" · "+cpsPl(r.nStu,"student")),
+      el("div",{class:"row",style:"gap:5px;flex-wrap:wrap"},tag,
+        kind==="upcoming"&&!r.released?el("span",{class:"pill missed",title:"Members can't see this panel in the hub until it is released on the CoC panels screen"},"Not released to assessors"):"")),
+    el("div",{class:"cps-who"},...ppl.map(chip)),
+    el("div",{class:"cps-act"},
+      need.length
+        ?el("button",{class:"btn sm",onclick:()=>cpsSendReminder(r,need,kind,sem,redraw)},"✉ Remind "+(need.length===ppl.length&&need.length>1?"all "+need.length:cpsPl(need.length,"member")))
+        :withMail.length?el("button",{class:"btn sm ghost",onclick:()=>cpsSendReminder(r,withMail,kind,sem,redraw)},"✉ Remind again"):"",
+      need.length?el("button",{class:"btn xs ghost",title:"Already reminded another way (Teams chat, phone): note it without opening an email",
+        onclick:()=>cpsSendReminder(r,need,kind,sem,redraw,true)},"✓ Mark as reminded"):""));
+}
+function cpsDownloadDialog(M,sem,area){
+  const cb=on=>el("input",{type:"checkbox",style:"width:auto;margin:0",...(on?{checked:"checked"}:{})});
+  const nextCb=cb(!!M.nextDay), marksCb=cb(false);
+  if(!M.nextDay) nextCb.disabled=true;
+  const lab=(box,t,sub)=>el("label",{class:"row",style:"gap:8px;align-items:flex-start;flex-wrap:nowrap;cursor:pointer;margin:0 0 10px;font-weight:400"},box,
+    el("span",{style:"flex:1;min-width:0"},t,sub?el("span",{class:"muted",style:"display:block;font-size:12.5px"},sub):""));
+  const unrel=M.rows.filter(r=>!r.released).length;
+  const anyOut=M.rows.some(r=>r.people.some(p=>p.out));
+  const body=el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 12px;font-size:13.5px"},"A landscape Word file with the "+cpsPl(M.rows.length,"panel")+" on this page ("+cpsPl(M.students,"student")+"), grouped by discipline: date and time, panel, chair, members, Teams meeting, CoC documents folder and assessment forms."),
+    lab(nextCb,"Highlight the next CoC",M.nextDay?cpsNextLine(M):"No CoC is coming up."),
+    lab(marksCb,"Mark members whose CoC marks are still outstanding",anyOut?"Adds “(marks outstanding)” after their name — best left off if the file goes to the whole panel.":"No marks are outstanding at the moment."),
+    unrel?noticeBar("amber",cpsPl(unrel,"panel")+" here "+(unrel===1?"isn't":"aren't")+" released to "+(unrel===1?"its":"their")+" assessors yet. Tick “Only panels released to their assessors” on the page first if this file is going to panel members."):"");
+  modal("Download the panel summary (Word)",body,()=>{
+    saveBlob(cocSummaryDocx(M,{next:nextCb.checked,marks:marksCb.checked}),cpsFileName(M,sem,area,"docx"));
+    toast("Word file downloaded.");
+    return true;
+  },"⤓ Download");
+}
+async function cpsEmailAll(M,sem){
+  const to=[...new Set(M.rows.flatMap(r=>r.people.flatMap(p=>p.emails)))];
+  if(!to.length){ toast("No panel member emails on file.",true); return; }
+  const unrel=M.rows.filter(r=>!r.released).length;
+  if(unrel&&!window.confirm(cpsPl(unrel,"panel")+" here "+(unrel===1?"isn't":"aren't")+" released to "+(unrel===1?"its":"their")+" assessors yet, and "+(unrel===1?"its":"their")+" members would see "+(unrel===1?"it":"them")+" in this email.\n\nSend anyway?")) return;
+  const ok=await cpsCopyHtml(cocSummaryHtml(M,{next:true}),cocSummaryText(M));
+  openEmail("","CoC panels — "+(sem?.label?sem.label+" ":"")+"summary",
+    "Dear colleagues,\n\nPlease find below the Confirmation of Candidature panel summary"+(sem?.label?" for "+sem.label:"")+
+    ": the date and time of each panel, its chair and members, the Teams meeting, the CoC documents folder and the assessment forms."+
+    (M.nextDay?"\n\nThe next CoC is "+cpsNextLine(M)+".":"")+"\n\n"+
+    (ok?"[Paste the summary table here — it is on your clipboard — or attach the Word file]":"[Attach the Word file downloaded from the hub]")+
+    "\n\nYou can complete your assessment online in the MRes Supervision Hub (“CoC assessment” tab): "+M.hub+
+    (()=>{ const wi=cpsWordInfo(M.rows); return wi.url?"\nWord Form Link: "+wi.url:""; })()+
+    "\n\nThank you,\nMRes Coordination\n","",to.join(","));
+  toast(ok?"Summary table copied — paste it into the email.":"Couldn't copy the table — attach the Word file instead.",!ok);
 }
 
 /* ============================================================
