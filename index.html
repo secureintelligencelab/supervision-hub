@@ -2450,6 +2450,83 @@
     .stat{box-shadow:none}
   }
 </style>
+<style id="coc-chair-jobs">
+  /* ============================================================
+     CoC ASSESSMENT — the Chair's two jobs
+     "My marks" and "Panel marks & report" as two step cards with their
+     state, instead of a small pair of tabs the report could hide behind.
+     The card that needs the Chair now carries an amber ring and dot.
+     Restyles only; delete this block and the cards fall back to plain
+     buttons.
+     ============================================================ */
+  .cx-jobs{margin:0 0 14px;scroll-margin-top:72px}
+  .cx-jobs-h{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:0 0 8px;font-size:13.5px;color:var(--ink-soft)}
+  .cx-jobs-h b{color:var(--ink);font-weight:650}
+  .cx-roles{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:stretch}
+  .cx-role{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;text-align:left;
+    padding:13px 14px;border-radius:var(--r);border:1px solid var(--line-strong);background:var(--paper-2);
+    color:var(--ink);font:inherit;cursor:pointer;box-shadow:var(--shadow);
+    transition:border-color .15s,box-shadow .15s,background .15s}
+  .cx-role:hover{border-color:var(--accent)}
+  .cx-role:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .cx-role .n{width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-weight:700;font-size:14px;background:var(--neutral-soft);color:var(--neutral-ink)}
+  .cx-role .tx{display:grid;gap:2px;min-width:0;flex:1}
+  .cx-role .tx b{font-size:15px;font-weight:650;letter-spacing:-.005em}
+  .cx-role .tx span{font-size:12.5px;color:var(--ink-soft);line-height:1.4}
+  .cx-role > .pill{flex:none}
+  .cx-role.done .n{background:var(--green);color:#fff}
+  .cx-role.on{border-color:var(--accent);background:var(--accent-tint);
+    box-shadow:0 0 0 1px var(--accent),var(--shadow-md);cursor:default}
+  .cx-role.on:not(.done) .n{background:var(--btn-bg);color:#fff}
+  .cx-role.attn:not(.on){border-color:var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 28%,transparent),var(--shadow)}
+  .cx-role.attn:not(.on) .n{background:var(--amber);color:#fff}
+  .cx-role .dot{position:absolute;top:-5px;right:-5px;width:13px;height:13px;border-radius:50%;
+    background:var(--amber);box-shadow:0 0 0 2px var(--paper);animation:cxPing 1.6s ease-out infinite}
+  @keyframes cxPing{0%{box-shadow:0 0 0 2px var(--paper),0 0 0 2px color-mix(in srgb,var(--amber) 60%,transparent)}
+    100%{box-shadow:0 0 0 2px var(--paper),0 0 0 10px transparent}}
+  .cx-role-arr{align-self:center;color:var(--ink-soft);font-size:18px;padding:0 2px}
+  html[data-theme="dark"] .cx-role.attn:not(.on) .n{color:#10121f}
+
+  /* The next step, said once and with a button, between the cards and the work. */
+  .cx-cta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;
+    border-radius:var(--r);background:var(--btn-bg);color:#fff;box-shadow:var(--shadow-md)}
+  .cx-cta .t{flex:1;min-width:220px;font-size:13.5px;line-height:1.45}
+  .cx-cta .t b{display:block;font-size:15px;margin-bottom:1px}
+  .cx-cta .btn{background:#fff;color:#123A80;border-color:#fff;flex:none}
+  .cx-cta .btn:hover{background:#E8EAF6;color:#123A80}
+  .cx-cta.soft{background:var(--accent-tint);color:var(--ink);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);box-shadow:none}
+  .cx-cta.soft .btn,.cx-cta.amber .btn{background:var(--btn-bg);color:#fff;border-color:transparent}
+  .cx-cta.amber{background:var(--amber-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--amber) 45%,transparent);
+    border-left:4px solid var(--amber);box-shadow:none}
+
+  /* Panel marks at a glance (Chair's report) */
+  table.cx-pmx th.c,table.cx-pmx td.c{text-align:center}
+  table.cx-pmx th{white-space:nowrap}
+  table.cx-pmx tbody tr{cursor:pointer}
+  table.cx-pmx tbody tr:hover td,table.cx-pmx tbody tr:focus-visible td{background:var(--accent-tint)}
+  table.cx-pmx tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .cx-pmx .tot{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+  .cx-pmx .pill.rec{margin-left:6px;font-size:11px;padding:1px 7px;vertical-align:1px}
+  .cx-pmx .avg{font-weight:700;font-size:15.5px;font-variant-numeric:tabular-nums}
+  .cx-pmx .avg.warn{color:var(--amber-ink)}
+  .cx-pmx .nil{color:var(--ink-soft);font-size:12.5px;font-style:italic}
+
+  /* A count on the menu that means "this is waiting for you", not "unread". */
+  nav.tabs .nbadge.attn{background:var(--amber);color:#1b1305}
+
+  @media (max-width:760px){
+    .cx-roles{grid-template-columns:minmax(0,1fr)}
+    .cx-role-arr{display:none}
+    .cx-role{flex-wrap:wrap}
+    .cx-role > .pill{margin-left:44px}
+  }
+  @media screen and (max-width:640px){
+    table.cx-pmx.resp td.c{justify-content:space-between}
+  }
+  @media (prefers-reduced-motion:reduce){ .cx-role .dot{animation:none} }
+  @media print{ .cx-jobs,.cx-cta{display:none!important} }
+</style>
 </head>
 <body>
   <!-- Shown the moment the page arrives, while the app below is read. -->
@@ -5565,10 +5642,19 @@ async function viewPanels(v){
       return;
     }
     const semA=activeSemester(), today=ymdOf(new Date());
+    /* A Chair has a second job here, and it was easy to miss: once the
+       members submit, they complete and sign the panel report. */
+    const chairOf=rel.filter(g=>{ const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid); return me&&isChair(g,me); });
+    const openReport=g=>{ S.cocPanel=g.id; S.cocModeBy=S.cocModeBy||{}; S.cocModeBy[g.id]="chair"; goTab("cocreports"); };
     if(rel.length) host.append(el("div",{class:"cx-acta ui"},
       el("div",{class:"t"},el("b",{},"Assess "+total+" candidate"+(total===1?"":"s")+" online"),
-        "After each presentation, enter your marks, conflict of interest declaration and comments in the hub, then sign and submit. There is no Word form to fill in."),
-      el("button",{class:"btn sm",onclick:()=>goTab("cocreports")},"Open CoC assessment \u2192")));
+        "After each presentation, enter your marks, conflict of interest declaration and comments in the hub, then sign and submit. There is no Word form to fill in.",
+        chairOf.length?el("div",{style:"margin-top:6px"},el("strong",{},"You also chair "+chairOf.map(g=>g.label||"a panel").join(" and ")+". "),
+          "Once every member has submitted, review the panel\u2019s marks, complete the report and approve and sign it \u2014 under CoC assessment \u2192 Panel marks & report."):""),
+      el("div",{class:"row",style:"gap:6px"},
+        el("button",{class:"btn sm",onclick:()=>goTab("cocreports")},"Open CoC assessment \u2192"),
+        ...chairOf.map(g=>el("button",{class:"btn sm ghost",onclick:()=>openReport(g)},
+          chairOf.length>1?(g.label||"Panel")+" report \u2192":"Open the panel report \u2192")))));
     host.append(el("div",{class:"row ui",style:"justify-content:space-between;margin:0 0 10px;font-size:13px"},
       el("span",{class:"muted"},total+" of "+PANEL_CAP+" usual maximum"+(held.length?" \u00B7 "+held.length+" panel"+(held.length===1?"":"s")+" not released yet":"")),
       total>PANEL_CAP?el("span",{class:"pill missed"},"Above the usual limit"):""));
@@ -10690,6 +10776,8 @@ function renderApp(){
       const b=el("button",{class:S.tab===id?"active":"","data-tab":id,title:label,onclick:()=>goTab(id)},
         navIcon(ic),el("span",{class:"navlabel"},label));
       if(id==="notes"){ b.append(el("span",{class:"nbadge",style:"display:none"},"0")); S.notesTabBtn=b; }
+      if(id==="cocreports"&&S.role!=="admin"){ b.dataset.label=label;
+        b.append(el("span",{class:"nbadge attn",style:"display:none"},"0")); S.cocTabBtn=b; }
       tabs.append(b);
       /* Staff: the CoC panel screen's sections as a sub-menu, so a
          supervisor or panel member can go straight to the students they
@@ -10744,6 +10832,7 @@ function renderApp(){
   document.body.append(el("div",{class:"shell"},side,el("div",{class:"content"},topbar,main)),scrim,toastNode());
   drawMain();
   refreshUnreadBadge();
+  refreshCocBadge();
   showInboxBanner();
 }
 
@@ -10796,7 +10885,7 @@ async function showInboxBanner(){
 function logout(){ if(DEMO){ S.user=null; renderLogin(); return; } signOut(auth); }
 
 function semesterPicker(onChange){
-  const sel=el("select",{style:"width:auto;min-width:170px",onchange:e=>{S.activeSem=e.target.value;onChange();refreshUnreadBadge();}});
+  const sel=el("select",{style:"width:auto;min-width:170px",onchange:e=>{S.activeSem=e.target.value;onChange();refreshUnreadBadge();refreshCocBadge();}});
   if(!S.semesters.length){ sel.append(el("option",{},"No semesters yet")); sel.disabled=true; }
   S.semesters.forEach(s=>sel.append(el("option",{value:s.id,...(s.id===S.activeSem?{selected:"selected"}:{})},
     s.label+" · "+semUnitCodes(s))));
@@ -19121,7 +19210,7 @@ function cocMemberSheet(host,o){
           :(cd.code+" "+(cd.m.name||"")+"’s sheet · "+done+" of "+cands.length+" candidate"+(cands.length===1?"":"s")+" complete")),
         el("div",{class:"s"},o.mode==="office"?"Amending as the MRes office"+(md.submitted?" — the sheet stays signed and submitted.":"."):
           o.mode==="behalf"?(md.submitted?"Submitted on their behalf.":"Entering their marks on their behalf. Click a name to jump to it."):
-          md.submitted?"Your signed sheet is with the Chair.":
+          md.submitted?(o.selfChair?"Your signed sheet is in the panel report.":"Your signed sheet is with the Chair."):
           (closes&&cocOpen(rep)?"Marking closes "+cocDT(closes)+" · ":"")+"Click a name to jump to it. Everything saves as you type.")),
       !md.submitted&&canEdit()&&done===cands.length&&cands.length&&o.mode!=="office"?el("button",{class:"btn",onclick:submit},o.mode==="behalf"?"✓ Submit on their behalf":"✓ Sign & submit"):""),
       chips);
@@ -19261,8 +19350,10 @@ function cocMemberSheet(host,o){
     if(md.submitted&&o.mode!=="office"){
       host.append(noticeBar("green",
         (o.mode==="behalf"?"Entered on "+(cd.m.name||"the member")+"’s behalf and submitted ":"You submitted your marks and comments ")+cocDT(md.submittedAt)+"."+
-        (approved?" The Chair has approved the report, so it is locked.":" The Chair can now see them."),
+        (approved?" The Chair has approved the report, so it is locked."
+          :o.selfChair?" They now count in the panel report, which you complete as Chair.":" The Chair can now see them."),
         md.sign?el("img",{src:md.sign.img,class:"coc-sig",alt:"Signature"}):"",
+        o.onNext?el("button",{class:"btn sm",onclick:o.onNext.fn},o.onNext.label):"",
         o.mode==="self"&&(o.chairEmails||[]).length&&!approved?emailButton(o.chairEmails,"CoC marks submitted \u2014 "+(g.label||"panel"),
           "Dear "+(o.chairName||"Chair")+",\n\nI have submitted my marks and comments for "+(g.label||"our CoC panel")+" in the MRes Supervision Hub.\n\nKind regards,\n"+(S.userName||""),"\u2709 Let the Chair know","btn sm ghost"):"",
         (!approved&&(o.mode==="behalf"||w.state==="open"))?el("button",{class:"btn sm ghost",onclick:async()=>{
@@ -19290,8 +19381,9 @@ function cocMemberSheet(host,o){
         ["Work through each candidate.","Each candidate has three numbered steps: 1 declare any conflict of interest, 2 enter the three marks (use \u2212 / + or type) and pick your recommended outcome, 3 write your comments for the Chair. Each step turns into a green tick when it is done, and the progress ring at the top fills up."],
         ["A candidate didn't present?","Choose \u201CNo \u2014 absent\u201D at the top of their card \u2014 nothing else is needed for them and you can still submit for everyone else. The Chair records the absence and the MRes office arranges their later presentation."],
         ["Everything saves as you type.","You can stop and come back later on any device \u2014 look for \u201C\u2713 Saved\u201D in the bar at the bottom. \u201CNext to complete\u201D in that bar takes you to whatever is still missing."],
-        ["Sign & submit to the Chair.","When every candidate is complete, press the button in the bottom bar, draw or type your signature and tick the declaration. This replaces the Word form: there is nothing to email."],
-        ["Need to change something?","After submitting, \u201CWithdraw to edit\u201D reopens your sheet while marking is open and the Chair hasn't approved the report. You'll need to sign again."]],
+        [o.selfChair?"Sign & submit your marks.":"Sign & submit to the Chair.","When every candidate is complete, press the button in the bottom bar, draw or type your signature and tick the declaration. This replaces the Word form: there is nothing to email."],
+        ["Need to change something?","After submitting, \u201CWithdraw to edit\u201D reopens your sheet while marking is open and the Chair hasn't approved the report. You'll need to sign again."],
+        ...(o.selfChair?[["Then, as Chair, the panel report.","When you submit, the screen moves on to \u201CPanel marks & report\u201D, where you see every member\u2019s marks side by side, complete each candidate\u2019s determination and approve and sign the report."]]:[])],
         {sub:closes?"\u00B7 marking closes "+cocDT(closes):"",foot:"Your marks are visible only to you, the Panel Chair and the MRes office."}));
     }
     painters.clear(); cardNodes.clear(); bar=null; over=null;
@@ -19312,7 +19404,7 @@ function cocMemberSheet(host,o){
     }else if(canEdit()&&cands.length){
       bar=el("div",{class:"coc-bar ui"},cocProgBar(0,cands.length),
         el("span",{class:"cnt"},""),ss.node,el("span",{style:"flex:1"}),nextBtn(),
-        el("button",{class:"btn go",onclick:submit},o.mode==="behalf"?"✓ Submit on their behalf":"✓ Sign & submit to the Chair"));
+        el("button",{class:"btn go",onclick:submit},o.mode==="behalf"?"✓ Submit on their behalf":o.selfChair?"✓ Sign & submit my marks":"✓ Sign & submit to the Chair"));
       host.append(bar);
     }
     paintBar();
@@ -19333,7 +19425,7 @@ function cocMemberSheet(host,o){
       patch={submitted:true,submittedAt:Date.now(),sign:null,returnNote:null,onBehalf:{by:S.uid||"",byName:S.userName||"",how:cocT(how.value),at:Date.now()}};
     }else{
       const sig=await cocSignDialog({title:"Sign and submit your assessment",name:S.userName||cd.m.name||"",
-        intro:"Your marks, outcome recommendations, conflict of interest declarations and comments for "+cands.length+" candidate"+(cands.length===1?"":"s")+" go to the Panel Chair, who uses them to complete the report.",
+        intro:"Your marks, outcome recommendations, conflict of interest declarations and comments for "+cands.length+" candidate"+(cands.length===1?"":"s")+(o.selfChair?" are added to the panel report, which you then complete as Chair.":" go to the Panel Chair, who uses them to complete the report."),
         declaration:"I confirm these are my own independent marks and comments, and that my conflict of interest declarations for each candidate are accurate and complete.",
         saveLabel:"Sign & submit"});
       if(!sig) return;
@@ -19424,6 +19516,7 @@ function cocReportEditor(host,o){
       el("button",{class:"btn sm",onclick:()=>{ officeEdit=false; amendLogged=false; draw(); }},"\u2713 Finish office edits")));
     if(role==="chair"&&!locked()) host.append(cocGuide("chair","How to complete and approve the panel report",[
       ["Wait for every mark sheet.","The first table shows who has submitted. Use \u201C\u2709 Remind\u201D for anyone outstanding, or \u201C\u21A9 Return to member\u201D to send a signed sheet back with a reason (while marking is open). If an assessor has no hub login (usually an external), press \u201C\u270E Enter for them\u201D, type in the marks and comments they sent you, and record how you confirmed them."],
+      ["Look over the panel marks.","“Panel marks at a glance” puts every member’s total and recommended outcome side by side for each candidate, with the average and ⚠ where members differ widely. Click a candidate to open their full marks."],
       ["Check Part A.","Filled in from the panel record. Add the Course Coordinator if it is blank and any notes about the round (A3)."],
       ["Work through each candidate (click a name to open it).","Most of it is already filled in from the members' sheets. You add: supervisor attendance, seminar mode, the pre-seminar checklist (C1.1); how any declared interest was managed (C1.2); the four \u201CItems to note\u201D (C1.5); and in C1.6 the conditions, revision date and whether the candidate must present again."],
       ["A candidate didn't present?","Set \u201CCandidate presented?\u201D to \u201CDid not present\u201D in C1.1 (it is pre-set if a member recorded them absent) and write what happened and what should happen next. Nothing else is needed for them, and you can approve the report for everyone else. The MRes office then arranges their later presentation \u2014 with this panel or a follow-up panel."],
@@ -19443,6 +19536,7 @@ function cocReportEditor(host,o){
     stepsBox=el("div",{class:"cx-steps ui",role:"navigation","aria-label":"Report progress"});
     { const gd=host.querySelector(":scope > .coc-help"); if(gd) host.insertBefore(stepsBox,gd); else host.append(stepsBox); }
     drawMembers();
+    drawOverview();
     drawPartA();
     cands.forEach((s,i)=>drawCand(s,i));
     drawPartD();
@@ -19458,6 +19552,7 @@ function cocReportEditor(host,o){
   let stepsBox=null, barBox=null;
   const readyCount=()=>cands.filter(s=>!cocChairMissing(cocCand(rep,g,s,marks,sem)).length).length;
   function paintSteps(){
+    paintOverview();
     const sub=coded.filter(cd=>marks[cd.key]?.submitted).length, of=coded.length;
     const ready=readyCount(), lk=locked();
     if(stepsBox&&stepsBox.isConnected){
@@ -19490,6 +19585,67 @@ function cocReportEditor(host,o){
     setTimeout(()=>cocGoTo(sec?(d.querySelector('[data-sec="'+sec+'"]')||d):d),30);
   }
 
+  /* ---- The panel's marks, at a glance ----
+     C1.3 sits inside each candidate's collapsed card, so a Chair could get
+     all the way to Part D without having looked at what the members
+     actually gave. This puts every candidate's marks side by side near the
+     top: each member's total and recommendation, the average, what the
+     members recommend and where the Chair's determination stands. A row
+     opens that candidate at C1.3. Repainted with the step bar on every
+     save, so the last two columns follow the Chair's edits. */
+  let ovBox=null;
+  function drawOverview(){ ovBox=el("div",{}); host.append(ovBox); }
+  const ovShort=n=>String(n||"").replace(/^(dr|prof|professor|a\/prof|assoc\.?\s*prof|mr|mrs|ms)\.?\s+/i,"").trim().split(/\s+/).pop()||"";
+  function paintOverview(){
+    if(!ovBox||!ovBox.isConnected) return;
+    if(!cands.length){ ovBox.replaceChildren(); return; }
+    const nSub=coded.filter(cd=>marks[cd.key]?.submitted).length;
+    const card=cardShell("Panel marks at a glance",el("span",{class:"muted ui"},
+      nSub===coded.length?"All "+coded.length+" members’ marks are in":nSub+" of "+coded.length+" members’ marks in so far"),"main");
+    card.classList.add("cx-anchor"); card.dataset.anchor="overview";
+    const t=el("table",{class:"cx-pmx"});
+    t.append(el("thead",{},el("tr",{},el("th",{},"Candidate"),
+      ...coded.map(cd=>el("th",{class:"c",title:(cd.m.name||"")+(cd.isChair?" (Chair)":"")},cd.code+" "+ovShort(cd.m.name))),
+      el("th",{class:"c"},"Average /20"),el("th",{class:"c"},"Members recommend"),el("th",{class:"c"},"Your determination"),el("th",{},"Status"))));
+    const tb=el("tbody",{});
+    cands.forEach(st=>{
+      const c=cocCand(rep,g,st,marks,sem), ag=c._agg;
+      const open=()=>openCandAt(st.id,c._absent?"C1.1":"C1.3");
+      const tr=el("tr",{tabindex:"0",title:"Open "+st.name,onclick:open,
+        onkeydown:e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } }});
+      tr.append(el("td",{},el("strong",{},st.name),el("div",{class:"muted ui",style:"font-size:12px"},st.sid||"")));
+      if(c._absent){
+        tr.append(el("td",{colspan:String(coded.length+3),class:"c"},el("span",{class:"nil"},"Did not present — assessment deferred")));
+      }else{
+        ag.rows.forEach(rw=>tr.append(el("td",{class:"c"},
+          rw.absent?el("span",{class:"nil",title:"Recorded the candidate as absent"},"absent")
+          :rw.withdrew?el("span",{class:"nil",title:"Withdrew — conflict of interest"},"withdrew")
+          :!rw.submitted?el("span",{class:"nil",title:"Mark sheet not submitted yet"},"not in yet")
+          :el("span",{},el("span",{class:"tot"},cocFmt(rw.total)),rw.rec?el("span",{class:"pill rec oc-"+rw.rec},rw.rec):""))));
+        const tots=ag.counted.map(r=>r.total), spread=tots.length>1?Math.max(...tots)-Math.min(...tots):0;
+        const recs=new Set(ag.counted.map(r=>r.rec).filter(Boolean));
+        const warn=[spread>=4?"totals differ by "+cocFmt(spread):"",recs.size>1?"different outcomes recommended":""].filter(Boolean).join("; ");
+        tr.append(el("td",{class:"c"},ag.n?el("span",{class:"avg"+(warn?" warn":""),title:warn?"⚠ Members' "+warn:""},
+          cocFmt(ag.avg.total)+(warn?" ⚠":"")):el("span",{class:"nil"},"—")));
+        tr.append(el("td",{class:"c"},ag.majority?el("span",{class:"pill oc-"+ag.majority},ag.majority)
+          :recs.size>1?el("span",{class:"pill pending",title:[...recs].join(", ")},"Split"):el("span",{class:"nil"},"—")));
+        tr.append(el("td",{class:"c"},c._final!=null||c._outcome?el("span",{},
+          c._final!=null?el("span",{class:"tot"},cocFmt(c._final)):"",c._outcome?el("span",{class:"pill rec oc-"+c._outcome},c._outcome):""):el("span",{class:"nil"},"—")));
+      }
+      const miss=locked()?[]:cocChairMissing(c);
+      tr.append(el("td",{},locked()?el("span",{class:"pill approved"},"Approved")
+        :miss.length?el("span",{class:"pill pending",title:"Still needed: "+miss.join(", ")},miss.length+" to complete")
+        :el("span",{class:"pill approved"},"✓ Ready")));
+      tb.append(tr);
+    });
+    t.append(tb);
+    card.append(el("div",{class:"tscroll"},t),
+      el("p",{class:"muted ui",style:"margin:0;padding:8px 16px 12px;font-size:12.5px"},
+        "Each member’s total out of 20 and their recommended outcome. Click a candidate to see the full marks (C1.3) and complete their determination."+
+        (nSub<coded.length?" Members’ marks appear here as they submit.":"")));
+    ovBox.replaceChildren(card);
+  }
+
   function drawMembers(){
     const nSub=coded.filter(cd=>marks[cd.key]?.submitted).length;
     const c=cardShell("Panel members' mark sheets",el("span",{class:"row ui",style:"gap:8px;font-size:13px;color:var(--ink-soft)"},
@@ -19504,9 +19660,14 @@ function cocReportEditor(host,o){
       const started=md&&Object.keys(md.cand||{}).length;
       const stp=md?.submitted?el("span",{class:"pill approved"},"Submitted "+cocDay(md.submittedAt))
         :started?el("span",{class:"pill pending"},"In progress"):el("span",{class:"pill none"},"Not started");
-      if(!md?.submitted) outstanding.push(cd);
+      /* The Chair's own row: there is nobody to remind but themselves, so it
+         takes them to their own mark sheet instead. */
+      const mine=role==="chair"&&!!cd.uid&&cd.uid===S.uid;
+      if(!md?.submitted&&!mine) outstanding.push(cd);
       const acts=el("div",{class:"row",style:"gap:5px"});
-      if(!md?.submitted){
+      if(!md?.submitted&&mine){
+        if(!locked()&&o.onMyMarks) acts.append(el("button",{class:"btn xs",onclick:o.onMyMarks},"✎ Enter my marks"));
+      }else if(!md?.submitted){
         acts.append(emailButton(memberEmails(cd.m),"CoC examination report — "+(g.label||"panel")+": your marks",
           "Dear "+(cd.m.name||"")+",\n\nCould you please enter your marks and comments for the "+(g.label||"CoC panel")+" candidates in the MRes Supervision Hub (CoC assessment tab) and sign and submit them?\n\n"+
           (cocWin(rep).state==="open"&&rep.window?.closesAt?"Marking closes "+cocDT(rep.window.closesAt)+".\n\n":"")+"Thank you,\n"+(S.userName||""),"✉ Remind"));
@@ -19525,6 +19686,7 @@ function cocReportEditor(host,o){
       tb.append(el("tr",{},
         el("td",{},el("strong",{},cd.code)),
         el("td",{},cd.m.name||"—",cd.isChair?el("span",{class:"pill blue",style:"margin-left:6px"},"Chair"):"",
+          mine?el("span",{class:"muted ui",style:"margin-left:6px;font-size:12px"},"(you)"):"",
           !cd.uid?el("div",{class:"muted ui",style:"font-size:12px"},"No hub login"):""),
         el("td",{},stp),
         el("td",{},md?.submitted?(md.sign?el("img",{src:md.sign.img,class:"coc-sig sm",alt:"Signature"})
@@ -20041,10 +20203,10 @@ async function viewCocAssess(v){
         :md&&Object.keys(md.cand||{}).length?el("span",{class:"pill pending"},"In progress")
         :el("span",{class:"pill none"},"Not started");
       let report=el("span",{class:"muted"},me.isChair?"\u2014":"Chair's job");
-      let next="", nextCls="none", mode="marks";
+      let next="", nextCls="none", mode="";
       if(me.isChair&&rp){
         const st=cocStatus(cocGroupView(g,rp),rp,chairMarks[g.id]||{});
-        report=el("span",{class:"pill "+st.cls},st.key==="marking"||st.key==="closed"?st.sub+"/"+st.of+" sheets in":st.txt);
+        report=el("span",{class:"pill "+st.cls},st.key==="marking"||st.key==="closed"?st.sub+"/"+st.of+" sheets in":st.key==="chair"?"Ready for you":st.txt);
       }
       if(!rp||w.state==="none") next="Wait for the MRes office to open marking";
       else if(w.state==="scheduled") next="Marking opens "+cocDay(rp.window.opensAt);
@@ -20052,11 +20214,12 @@ async function viewCocAssess(v){
       else if(!md?.submitted&&!approved&&w.state==="closed"){ next="Marking closed \u2014 ask the office to reopen"; nextCls="missed"; }
       else if(me.isChair&&!approved){ const st=cocStatus(cocGroupView(g,rp),rp,chairMarks[g.id]||{});
         if(st.sub===st.of){ next="Complete and approve the report"; nextCls="pending"; mode="chair"; }
-        else next="Waiting for "+(st.of-st.sub)+" member sheet"+(st.of-st.sub===1?"":"s"); }
+        else { next="Waiting for "+(st.of-st.sub)+" member sheet"+(st.of-st.sub===1?"":"s"); mode="chair"; } }
       else if(me.isChair&&approved){ next="Approved \u2014 download the Word form"; nextCls="approved"; mode="chair"; }
       else { next="Done \u2014 the Chair has your marks"; nextCls="approved"; }
       if(nextCls==="pending") todo.push(g);
-      const go=el("button",{class:"btn xs"+(S.cocPanel===g.id?"":" ghost"),onclick:()=>{ S.cocPanel=g.id; S.cocMode=mode; viewCocAssess(v); }},
+      const go=el("button",{class:"btn xs"+(S.cocPanel===g.id?"":" ghost"),onclick:()=>{ S.cocPanel=g.id; S.cocModeBy=S.cocModeBy||{};
+          if(mode) S.cocModeBy[g.id]=mode; else delete S.cocModeBy[g.id]; viewCocAssess(v); }},
         S.cocPanel===g.id?"Showing below":"Open");
       tb.append(el("tr",{class:S.cocPanel===g.id?"on":""},
         el("td",{},el("strong",{},g.label||"Panel"),el("div",{class:"muted ui",style:"font-size:12px"},groupStudents(g).length+" candidate"+(groupStudents(g).length===1?"":"s")+" \u00B7 you are "+me.code)),
@@ -20089,36 +20252,169 @@ async function viewCocAssess(v){
   if(docsLinkOf(g)) v.append(el("div",{class:"row",style:"margin:-4px 0 14px"},joinLink(docsLinkOf(g),DOCS_OPEN),
     el("span",{class:"muted ui",style:"font-size:12.5px"},"Proposals and slides for the candidates you are assessing.")));
 
+  /* My own sheet, and — for the Chair — every member's, read together. */
+  let md=null, panelMarks={};
+  if(rep){
+    const [own,all]=await Promise.all([
+      DB.get("cocMarks",cocMarkId(g.id,me.key)).catch(e=>{ console.warn("own sheet unreadable",e); return null; }),
+      me.isChair?cocGetMarks(cocGroupView(g,rep)).catch(()=>({})):Promise.resolve({})]);
+    md=own; panelMarks=all||{};
+    if(md) panelMarks[me.key]=md;
+  }
+
+  /* ---- The Chair's two jobs ----
+     The Chair marks the candidates like every other member AND completes
+     the panel's report. The report used to sit behind a small second tab
+     that was easy to miss, so a Chair could submit their own marks and
+     never open the panel's. Both jobs are now side by side, each saying
+     where it stands; the screen opens on whichever needs the Chair now
+     (the report, once their own marks are in), and submitting their own
+     marks moves them straight on to it. A choice made by clicking is
+     remembered per panel for the rest of the session. */
+  S.cocModeBy=S.cocModeBy||{};
+  const goMode=m=>{
+    S.cocModeBy[g.id]=m;
+    viewCocAssess(v).then(()=>{ const j=v.querySelector(".cx-jobs");
+      if(j&&j.getBoundingClientRect().top<0) j.scrollIntoView({behavior:"smooth",block:"start"}); });
+  };
+  let mode="marks";
   if(me.isChair){
-    const mode=S.cocMode==="chair"?"chair":"marks";
-    const t=el("div",{class:"subtabs ui",style:"margin-bottom:14px"});
-    [["marks","My marks"],["chair","Panel report (Chair)"]].forEach(([id,l])=>t.append(el("button",{class:mode===id?"active":"",
-      onclick:()=>{ S.cocMode=id; viewCocAssess(v); }},l)));
-    v.append(t);
+    const gv=rep?cocGroupView(g,rep):g;
+    const cands=groupStudents(gv).map(id=>students.find(s=>s.id===id)).filter(Boolean);
+    const locked=!!rep&&(rep.status==="approved"||rep.status==="received");
+    const ownSub=!!md?.submitted, wOpen=cocOpen(rep);
+    const coded=cocCoded(gv);
+    const missing=rep?coded.filter(cd=>!panelMarks[cd.key]?.submitted):coded;
+    const othersMissing=missing.filter(cd=>cd.key!==me.key);
+    const allIn=!!rep&&coded.length>0&&!missing.length;
+    const ready=allIn&&!locked?cands.filter(s=>!cocChairMissing(cocCand(rep,gv,s,panelMarks,sem)).length).length:0;
+    const ownDone=cands.filter(s=>cocMemberDone(md?.cand?.[s.id],cocChairAbsent(rep,s.id))).length;
+    const namesOf=list=>list.map(cd=>cd.key===me.key?"you":(cd.m.name||cd.code)).join(", ");
+    const pl=(n,w)=>n+" "+w+(n===1?"":"s");
+    mode=S.cocModeBy[g.id]||((locked||ownSub)?"chair":"marks");
+    const j1={done:ownSub,attn:!ownSub&&!locked&&wOpen,
+      sub:ownSub?"Signed and submitted "+cocDay(md.submittedAt)
+        :locked?"The report is approved"
+        :!rep?"Opens when the MRes office opens marking"
+        :wOpen?ownDone+" of "+pl(cands.length,"candidate")+" complete — then sign & submit"
+        :w.state==="scheduled"?"Marking opens "+cocDT(rep.window.opensAt)
+        :"Marking is closed",
+      pill:ownSub?["approved","✓ Submitted"]:locked?["none","Locked"]:!rep||!wOpen?["none","Not open"]
+        :Object.keys(md?.cand||{}).length?["pending","In progress"]:["pending","To do"]};
+    const j2={done:locked,attn:allIn&&!locked,
+      sub:locked?(rep.status==="received"?"Approved · received by the Research Office":"Approved and signed "+cocDay(rep.approvedAt)+" — download the Word form")
+        :!rep?"Fills in as the members submit their marks"
+        :allIn?"All "+coded.length+" members’ marks are in — "+ready+" of "+pl(cands.length,"candidate")+" ready to approve"
+        :(coded.length-missing.length)+" of "+coded.length+" members’ marks in — waiting for "+namesOf(missing),
+      pill:locked?["approved","✓ Approved"]:allIn?["pending","Ready for you"]:!rep?["none","Not open"]
+        :["blue",(coded.length-missing.length)+" of "+coded.length+" in"]};
+    const job=(id,n,title,j)=>{
+      const b=el("button",{type:"button",role:"tab","aria-selected":String(mode===id),
+        class:"cx-role"+(mode===id?" on":"")+(j.done?" done":"")+(j.attn?" attn":""),
+        title:id==="chair"&&mode===id?"Jump to the panel marks":"",
+        onclick:()=>{ if(mode!==id){ goMode(id); return; }
+          /* Already here: take the Chair to the panel's marks themselves. */
+          const a=id==="chair"&&v.querySelector('[data-anchor="overview"]');
+          if(a) a.scrollIntoView({behavior:"smooth",block:"start"}); }},
+        el("span",{class:"n"},j.done?"✓":String(n)),
+        el("span",{class:"tx"},el("b",{},title),el("span",{},j.sub)),
+        el("span",{class:"pill "+j.pill[0]},j.pill[1]));
+      if(j.attn&&mode!==id) b.append(el("span",{class:"dot","aria-hidden":"true"}));
+      return b;
+    };
+    v.append(el("div",{class:"cx-jobs ui"},
+      el("div",{class:"cx-jobs-h"},el("b",{},"You chair this panel, so you have two jobs:"),
+        el("span",{},"mark the candidates yourself, then review the whole panel’s marks and approve the report.")),
+      el("div",{class:"cx-roles",role:"tablist","aria-label":"Your jobs as Panel Chair"},
+        job("marks",1,"My marks",j1),
+        el("span",{class:"cx-role-arr","aria-hidden":"true"},"→"),
+        job("chair",2,"Panel marks & report",j2))));
+    const cta=(tone,title,txt,label,fn)=>el("div",{class:"cx-cta ui"+(tone?" "+tone:""),role:"status"},
+      el("div",{class:"t"},el("b",{},title),txt||""),
+      label?el("button",{class:"btn sm",onclick:fn},label):"");
+    if(mode==="marks"&&allIn&&!locked)
+      v.append(cta("","All the panel’s marks are in.",
+        "Next: look over the panel marks, complete each candidate’s determination, then approve and sign the report.",
+        "Open the panel report →",()=>goMode("chair")));
+    else if(mode==="marks"&&ownSub&&!locked)
+      v.append(cta("soft","Your marks are in — the panel report is next.",
+        "Still waiting for "+namesOf(othersMissing)+". You can see who is outstanding, and remind them, in the report.",
+        "Go to the panel report →",()=>goMode("chair")));
+    else if(mode==="marks"&&!ownSub&&!locked&&wOpen&&coded.length>1&&!othersMissing.length)
+      v.append(cta("amber","Everyone else on the panel has submitted.",
+        "Sign and submit your own marks below and the panel report is ready for you."));
+    else if(mode==="chair"&&rep&&!ownSub&&!locked)
+      v.append(cta("amber","Your own marks aren’t submitted yet.",
+        "The report can’t be approved until every member’s sheet — including yours — is in.",
+        "✎ Enter my marks",()=>goMode("marks")));
     if(mode==="chair"){
-      if(!rep){ v.append(emptyState("The report opens with marking","The MRes office opens marking for the panel; the report fills in as members submit.")); return; }
+      if(!rep){ v.append(emptyState("The report opens with marking","The MRes office opens marking for the panel; the report fills in as members submit.")); refreshCocBadge(); return; }
       const host=el("div",{}); v.append(host);
-      let marks={};
-      try{ marks=await cocGetMarks(g); }catch(e){}
-      cocReportEditor(host,{g,rep,marks,students,sem,role:"chair",noBand:true});
+      cocReportEditor(host,{g,rep,marks:panelMarks,students,sem,role:"chair",noBand:true,onMyMarks:()=>goMode("marks")});
+      refreshCocBadge();
       return;
     }
   }
   const host=el("div",{}); v.append(host);
+  const chairCd=cocCoded(g).find(c=>c.isChair);
+  const toChair=!me.isChair&&chairCd?{chairEmails:memberEmails(chairCd.m),chairName:chairCd.m.name||""}:{};
   if(!rep){
-    cocMemberSheet(host,{g,rep:null,students,cd:me,md:{},mode:"self"});
+    cocMemberSheet(host,{g,rep:null,students,cd:me,md:{},mode:"self",selfChair:!!me.isChair,...toChair});
+    refreshCocBadge();
     return;
   }
-  let md=null;
-  try{ md=await DB.get("cocMarks",cocMarkId(g.id,me.key)); }catch(e){ console.warn("own sheet unreadable",e); }
   if(!md&&cocOpen(rep)){
     const init={semesterId:g.semesterId||S.activeSem,groupId:g.id,memberKey:me.key,uid:S.uid,name:me.m.name||"",email:memberEmails(me.m)[0]||"",cand:{},updatedAt:Date.now()};
     try{ await DB.set("cocMarks",cocMarkId(g.id,me.key),init); md=init; }catch(e){ v.append(cocRuleHelp(e)); return; }
   }
-  cocMemberSheet(host,{g,rep,students,cd:me,md:md||{},mode:"self",onSubmitted:()=>{
-    const chair=cocCoded(g).find(c=>c.isChair);
-    if(chair&&!chair.uid!==undefined&&chair.uid!==S.uid) toast("Submitted — the Chair can now see your marks.");
-  }});
+  cocMemberSheet(host,{g,rep,students,cd:me,md:md||{},mode:"self",selfChair:!!me.isChair,...toChair,
+    onNext:me.isChair?{label:"Go to the panel report →",fn:()=>goMode("chair")}:null,
+    onSubmitted:()=>{
+      refreshCocBadge();
+      if(me.isChair){
+        /* Straight on to the Chair's second job. */
+        S.cocModeBy[g.id]="chair";
+        setTimeout(()=>viewCocAssess(v).then(()=>{
+          toast("Your marks are submitted. Next: the panel report.");
+          const j=v.querySelector(".cx-jobs"); if(j) j.scrollIntoView({behavior:"smooth",block:"start"});
+        }),60);
+      }else toast("Submitted — the Chair can now see your marks.");
+    }});
+  refreshCocBadge();
+}
+
+/* ---- What is waiting for me in CoC assessment ----
+   A count on the "CoC assessment" menu item, so a member sees there are
+   marks to submit and a Chair sees the panel report is ready for them —
+   from any screen, without having to open the tab to find out. Counts one
+   per panel: my sheet still to submit while marking is open, or (as
+   Chair) every member's marks in and the report not yet approved.
+   Silent on any failure: it is a hint, never a blocker. */
+async function refreshCocBadge(){
+  const b=S.cocTabBtn;
+  if(!b||!b.isConnected||S.role==="admin") return;
+  const dot=b.querySelector(".nbadge"); if(!dot) return;
+  const paint=(n,why)=>{ dot.textContent=String(n); dot.style.display=n?"inline-flex":"none";
+    b.title=n?why.join("\n"):(b.dataset.label||""); };
+  if(!S.activeSem){ paint(0,[]); return; }
+  try{
+    const groups=await DB.list("panelGroups",{semesterId:S.activeSem});
+    const mine=groups.filter(g=>isAssessorReleased(g)&&cocMe(g));
+    const why=[];
+    await Promise.all(mine.map(async g=>{
+      let rep=null; try{ rep=await cocGetReport(g.id); }catch(e){ return; }
+      if(!rep||rep.status==="approved"||rep.status==="received") return;
+      const me=cocMe(g); if(!me) return;
+      let own=null; try{ own=await DB.get("cocMarks",cocMarkId(g.id,me.key)); }catch(e){}
+      if(!own?.submitted){ if(cocOpen(rep)) why.push((g.label||"Panel")+": submit your marks"); return; }
+      if(me.isChair){
+        const mk=await cocGetMarks(g).catch(()=>({}));
+        const coded=cocCoded(g);
+        if(coded.length&&coded.every(cd=>mk[cd.key]?.submitted)) why.push((g.label||"Panel")+": the panel report is ready for you");
+      }
+    }));
+    paint(why.length,why);
+  }catch(e){ console.warn("CoC badge unavailable:",e?.message||e); }
 }
 
 /* ============================================================
