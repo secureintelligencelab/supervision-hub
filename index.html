@@ -20107,7 +20107,9 @@ function cocReportEditor(host,o){
             el("span",{style:"flex:1;min-width:200px"},"Send the panel's consolidated feedback \u2014 the outcome, conditions and comments, never the marks \u2014 to the candidates' supervisors, and to the candidates when you're ready. "+
               (nS||nT?"So far: supervisors "+nS+" of "+n+", candidates "+nT+" of "+n+".":"Nothing has been released yet.")),
             el("button",{class:"btn sm",onclick:async()=>{ try{ await save.flush(); }catch(e){} cocPanelReleaseDialog([pb],sem,()=>o.onChange?o.onChange():draw()); }},
-              nS||nT?"Release / update the feedback\u2026":"Release this panel's feedback\u2026"))));
+              nS||nT?"Release / update the feedback\u2026":"Release this panel's feedback\u2026"),
+            pb.rows.some(r=>r.rel)?el("button",{class:"btn sm ghost",title:"Take the feedback off the student portal, or back from everyone",
+              onclick:()=>cocWithdrawDialog([pb],sem,()=>o.onChange?o.onChange():draw())},"Withdraw\u2026"):"")));
       }
       /* Major Revisions: when the revised proposal comes in, the office
          reopens the report so it can be re-assessed. */
@@ -20604,7 +20606,7 @@ async function viewCocAdmin(v){
     ["If a member can't use the hub.","Open the report and use \u201C\u270E Enter for them\u201D on their row to type in marks they emailed you. If the Chair has no login, you can approve on their behalf once they confirm the report to you."],
     ["When the Chair approves.","Open the report, check it, complete the Research Office section (D2) at the bottom and press \u201CMark as received\u201D. Download one Word form from its row, or tick several panels and use \u201C\u2913 Word forms (ZIP)\u201D."],
     ["A candidate didn't present.","The Chair records it in the report and approves it for everyone else. The row then shows \u201C\u26A0 <name> absent \u2014 follow up\u2026\u201D: choose a follow-up panel (a new panel and a separate report; the approved report stays as it is) or reopen this report so the same panel adds their marks and the Chair re-approves."],
-    ["Release the feedback and export marks.","Once a report is approved, press \u201CRelease feedback\u2026\u201D on its row (or use the \u201COutcomes & Moodle marks\u201D tab, which has a card per panel). Choose \u201CSupervisors only\u201D to let the candidates' supervisors see it first, or \u201CSupervisors and students\u201D to put it in the student portal too; emails can be prepared as well. Marks are never released. The same tab has the marks report and Moodle CSV for the unit coordinator."],
+    ["Release the feedback and export marks.","Once a report is approved, press \u201CRelease feedback\u2026\u201D on its row (or use the \u201COutcomes & Moodle marks\u201D tab, which has a card per panel). Choose \u201CSupervisors only\u201D to let the candidates' supervisors see it first, or \u201CSupervisors and students\u201D to put it in the student portal too; emails can be prepared as well. Marks are never released. \u201CWithdraw\u2026\u201D (next to it, once something is released) takes it off the student portal or back from everyone. The same tab has the marks report and Moodle CSV for the unit coordinator."],
     ["Changing the deadline or reopening.","Use \u201CWindow\u201D on a row to extend or reopen marking; \u201CClose now\u201D stops it. Inside a report, \u201CReturn to the Chair\u201D reopens an approved report."],
     ["Trying it out first.","Open marking on a panel, open its report and press \u201C\u2691 Fill with test marks\u201D, approve on the Chair's behalf and download the Word form to check it. Then \u201C\u21BA Reset report\u2026\u201D wipes it clean."]],
     {open:!rows.some(x=>x.rep)}));
@@ -20668,7 +20670,9 @@ async function viewCocAdmin(v){
     const pb=isLockedRep(rep)?cocPanelBundle(g0,rep,marks,students,sem):null;
     const nFb=pb?pb.rows.length:0, nFbSup=pb?pb.rows.filter(r=>cocRelSup(r.rel)).length:0, nFbStu=pb?pb.rows.filter(r=>cocRelStu(r.rel)).length:0;
     if(pb&&nFb) acts.append(el("button",{class:"btn xs"+(nFbStu===nFb?" ghost":""),title:"Release the panel's feedback to the candidates' supervisors and/or the candidates",
-      onclick:()=>cocPanelReleaseDialog([pb],sem,()=>viewCocAdmin(v))},nFbStu===nFb?"Feedback…":"Release feedback…"));
+      onclick:()=>cocPanelReleaseDialog([pb],sem,()=>viewCocAdmin(v))},nFbStu===nFb?"Update feedback…":"Release feedback…"));
+    if(pb&&pb.rows.some(r=>r.rel)) acts.append(el("button",{class:"btn xs ghost",title:"Take the feedback off the student portal, or back from everyone",
+      onclick:()=>cocWithdrawDialog([pb],sem,()=>viewCocAdmin(v))},"Withdraw…"));
     tb.append(el("tr",{},
       el("td",{},cb),
       el("td",{style:"min-width:160px"},el("strong",{},g.label||"Panel"),
