@@ -1378,6 +1378,27 @@
   .coc-outv .b.note{border-left:3px solid var(--blue)}
   .coc-outv .h{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--ink-soft);margin-bottom:3px}
   .coc-outprev{border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;max-height:42vh;overflow:auto;background:var(--paper-2)}
+  .coc-outaud{background:var(--amber-soft);color:var(--amber-ink);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600;margin-bottom:10px}
+  .coc-aud{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}
+  .coc-aud .coc-opt{align-items:flex-start}
+  .coc-audt{display:grid;gap:3px}
+  .coc-audt b{font-size:14px}
+  .coc-audt small{font-size:12.5px;color:var(--ink-soft);font-weight:400;line-height:1.4}
+  .coc-relpick{display:grid;gap:10px;max-height:34vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper-2)}
+  .coc-relpan{display:grid;gap:4px}
+  .coc-relpan + .coc-relpan{border-top:1px solid var(--line);padding-top:10px}
+  .coc-relpan .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
+  .coc-relpick .it{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;row-gap:2px;align-items:center;padding:6px 4px;margin:0;border-radius:8px;cursor:pointer;font-weight:500;color:var(--ink)}
+  .coc-relpick .it:hover{background:var(--sunken)}
+  .coc-relpick .it.off{opacity:.6;cursor:default}
+  .coc-relpick .it .nm{display:grid;gap:1px;min-width:0}
+  .coc-relpick .it .nm small,.coc-relpick .it .rs{font-size:12px;color:var(--ink-soft);font-weight:400}
+  .coc-relpick .it .rs{grid-column:2 / -1}
+  .coc-mailq{display:grid;gap:6px}
+  .coc-mailq .it{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+  .coc-mailq .it .nm{flex:1;min-width:200px;display:grid;gap:2px}
+  .coc-mailq .it .nm small{font-size:12px;color:var(--ink-soft);word-break:break-all}
+  .coc-panline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-soft)}
   .sp-assess{border-left:4px solid #1F1F5C}
   @media (max-width:700px){
     .coc-marks{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -5195,9 +5216,13 @@ async function viewPanels(v){
   await buildAgenda();
 
   const mine=students.filter(s=>s.principalUid===S.uid||s.coUid===S.uid);
-  /* Released CoC outcomes for my students (staffKeys/cocout:<id>). */
+  /* Released CoC feedback for my students: the supervisors' copy on the
+     panel record (released to supervisors only, or to everyone), or — for
+     an outcome released before supervisors had their own copy — the
+     student's notice (staffKeys/cocout:<id>). */
   const outcomes={};
-  await Promise.all(mine.map(async s=>{ try{ const o=await DB.getStaffKey(cocOutKeyOf(s.id)); if(o&&o.kind==="cocout") outcomes[s.id]=o; }catch(e){} }));
+  mine.forEach(s=>{ const o=cocSupOutcome(s.id,groups); if(o) outcomes[s.id]=o; });
+  await Promise.all(mine.filter(s=>!outcomes[s.id]).map(async s=>{ try{ const o=await DB.getStaffKey(cocOutKeyOf(s.id)); if(o&&o.kind==="cocout") outcomes[s.id]=o; }catch(e){} }));
   /* What to call a panel to the person sitting on it. Once released, its
      real name \u2014 which is usually a supervisor's, and that is the point.
      Before release, a neutral number, because the name alone would tell an
@@ -5561,9 +5586,18 @@ async function viewPanels(v){
       arranging===mine.length
         ? "The coordinator is still arranging your students' panels. Assessors, times and the meeting link appear here once each panel is finalised."
         : "The coordinator is still arranging "+arranging+" of your students' panels. Details appear here once they are finalised."));
+    /* Feedback the office has released to the supervisors. */
+    const withFb=mine.filter(s=>outcomes[s.id]);
+    if(withFb.length){
+      const early=withFb.filter(s=>outcomes[s.id].audience==="supervisors");
+      host.append(noticeBar("green",
+        "The panel's feedback has been released for "+(withFb.length===mine.length?(mine.length===1?"your student":"all "+mine.length+" of your students"):withFb.length+" of your "+mine.length+" students")+
+        " \u2014 press \u201Cview feedback\u201D in the Outcome column."+
+        (early.length?" "+(early.length===1?early[0].name+" can't":early.length+" of them can't")+" see it yet: it has been released to you first, so you can prepare to discuss it.":"")));
+    }
     const c=cardShell("My students' CoC",null,"info");
     const t=el("table",{});
-    t.append(el("thead",{},el("tr",{},...["Student","Proposal title","My role","Panel","Chair","CoC time","Outcome"].map(h=>el("th",{},h)))));
+    t.append(el("thead",{},el("tr",{},...["Student","Proposal title","My role","Panel","Chair","CoC time","Outcome & feedback"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
     mine.sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(s=>{
       const g0=groupOfStudent(groups,s.id);
@@ -5614,10 +5648,12 @@ async function viewPanels(v){
         whenCell,
         el("td",{},outcomes[s.id]?el("button",{class:"btn xs ghost",onclick:()=>{
             const box=el("div",{style:"max-height:65vh;overflow:auto"},cocOutcomeView(outcomes[s.id]));
-            modal("CoC outcome — "+(s.name||""),box,async()=>true,"Close");
+            modal("CoC outcome and feedback — "+(s.name||""),box,async()=>true,"Close");
             const m=[...document.querySelectorAll(".modal")].pop(); if(m){ m.classList.add("wide"); const cb=m.querySelector(".btn.ghost"); if(cb) cb.remove(); } }},
-            (outcomes[s.id].deferred?"Deferred":outcomes[s.id].outcome.code)+" · view")
-          :el("span",{class:"muted ui",style:"font-size:12.5px"},"Not released"))));
+            (outcomes[s.id].deferred?"Deferred":outcomes[s.id].outcome.code||"Outcome")+" · view feedback")
+          :el("span",{class:"muted ui",style:"font-size:12.5px"},"Not released"),
+          outcomes[s.id]?el("div",{class:"muted ui",style:"font-size:11.5px;margin-top:3px"},
+            outcomes[s.id].audience==="supervisors"?"Not yet released to "+(s.name||"the student"):"The student can see it too"):"")));
     });
     t.append(tb); c.append(t); host.append(c);
   }
@@ -16927,7 +16963,7 @@ async function studentPortalData(en,sems){
     studentCocLoad(en),
     studentNotesLoad(en),
     /* The CoC outcome, once the office releases it (staffKeys/cocout:<id>). */
-    DB.getStaffKey(cocOutKeyOf(en.id)).then(o=>o&&o.kind==="cocout"?o:null,()=>null)]);
+    DB.getStaffKey(cocOutKeyOf(en.id)).then(o=>o&&o.kind==="cocout"&&o.audience!=="supervisors"?o:null,()=>null)]);
   if(ttR.ok){
     classes=ttR.r
       .filter(t=>t.status==="approved" && unitIds.includes(t.unitId) && t.supervisorUid===en.principalUid)
@@ -17675,9 +17711,13 @@ async function pinBlocksFor(u,sems,preload,opts={}){
           changed
         };
       }
+      /* The panel's feedback, once the office has released it to the
+         supervisors (never the marks). Only ever this reader's own
+         students, so it sits safely in their own PIN document. */
+      const outcome=cocSupOutcome(s.id,groups)||null;
       return {id:s.id, name:s.name||"Student", sid:s.sid||"", title:titleOf(s),
               role:s.principalUid===u.id?"principal supervisor":"co-supervisor",
-              coc, con};
+              coc, con, outcome};
     });
 
     out.push({label:sem.label||"Semester", panels, students:stus});
@@ -18082,6 +18122,23 @@ function renderStaffPinView(who,blocks,opts={}){
     }
     grid.append(a,b);
     c.append(grid);
+    // The panel's feedback, once released to the supervisors
+    if(s.outcome){
+      const o=s.outcome;
+      c.append(el("div",{class:"sp-sub",style:"margin-top:12px"},
+        el("div",{class:"sp-label"},spIcon("award",14),"CoC outcome & feedback"),
+        el("div",{class:"row",style:"gap:8px;align-items:center"},
+          el("span",{class:"pill "+(o.deferred?"pending":o.outcome?.code==="C"?"approved":o.outcome?.code==="NC"?"missed":"pending")},o.deferred?"Deferred":o.outcome?.code||"—"),
+          el("span",{style:"font-weight:600"},o.outcome?.label||""),
+          el("span",{style:"flex:1"}),
+          el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
+            const box=el("div",{style:"max-height:65vh;overflow:auto"},cocOutcomeView(o));
+            modal("CoC outcome and feedback — "+(s.name||""),box,async()=>true,"Close");
+            const m=[...document.querySelectorAll(".modal")].pop(); if(m){ m.classList.add("wide"); const cb=m.querySelector(".modal-foot .btn.ghost"); if(cb) cb.remove(); } }},"View feedback")),
+        el("div",{class:"sp-small",style:"margin-top:6px"},o.audience==="supervisors"
+          ?"Released to you first — "+(s.name||"the student")+" can't see it yet."
+          :"Released "+(o.releasedAt?cocDay(o.releasedAt):"")+" — "+(s.name||"the student")+" can see it too.")));
+    }
     return c;
   }
 
@@ -20039,6 +20096,19 @@ function cocReportEditor(host,o){
         Object.assign(rep,patch); toast(role==="admin"?"Returned to the Chair.":"Approval withdrawn."); draw();
       }},role==="admin"?"Return to the Chair":"✎ Withdraw approval to edit"));
       b.append(acts);
+      /* Releasing the panel's feedback (office only): to the candidates'
+         supervisors first, or to supervisors and candidates together. */
+      if(role==="admin"&&cands.length){
+        const pb=cocPanelBundle(g0,rep,marks,students,sem);
+        const nS=pb.rows.filter(r=>cocRelSup(r.rel)).length, nT=pb.rows.filter(r=>cocRelStu(r.rel)).length, n=pb.rows.length;
+        b.append(el("div",{class:"coc-decl",style:"margin-top:14px;border-left:3px solid var(--accent)"},
+          el("strong",{},"Release the feedback"),
+          el("div",{class:"row",style:"margin-top:8px"},
+            el("span",{style:"flex:1;min-width:200px"},"Send the panel's consolidated feedback \u2014 the outcome, conditions and comments, never the marks \u2014 to the candidates' supervisors, and to the candidates when you're ready. "+
+              (nS||nT?"So far: supervisors "+nS+" of "+n+", candidates "+nT+" of "+n+".":"Nothing has been released yet.")),
+            el("button",{class:"btn sm",onclick:async()=>{ try{ await save.flush(); }catch(e){} cocPanelReleaseDialog([pb],sem,()=>o.onChange?o.onChange():draw()); }},
+              nS||nT?"Release / update the feedback\u2026":"Release this panel's feedback\u2026"))));
+      }
       /* Major Revisions: when the revised proposal comes in, the office
          reopens the report so it can be re-assessed. */
       const mrr=cands.filter(s=>{ const cv=cocCand(rep,g,s,marks,sem); return !cv._absent&&cv._outcome==="MRR"; });
@@ -20534,7 +20604,7 @@ async function viewCocAdmin(v){
     ["If a member can't use the hub.","Open the report and use \u201C\u270E Enter for them\u201D on their row to type in marks they emailed you. If the Chair has no login, you can approve on their behalf once they confirm the report to you."],
     ["When the Chair approves.","Open the report, check it, complete the Research Office section (D2) at the bottom and press \u201CMark as received\u201D. Download one Word form from its row, or tick several panels and use \u201C\u2913 Word forms (ZIP)\u201D."],
     ["A candidate didn't present.","The Chair records it in the report and approves it for everyone else. The row then shows \u201C\u26A0 <name> absent \u2014 follow up\u2026\u201D: choose a follow-up panel (a new panel and a separate report; the approved report stays as it is) or reopen this report so the same panel adds their marks and the Chair re-approves."],
-    ["Release outcomes and export marks.","Switch to the \u201COutcomes & Moodle marks\u201D tab: release each approved student's outcome to the portal and/or by email (never the marks), and download the marks report or Moodle CSV for the unit coordinator."],
+    ["Release the feedback and export marks.","Once a report is approved, press \u201CRelease feedback\u2026\u201D on its row (or use the \u201COutcomes & Moodle marks\u201D tab, which has a card per panel). Choose \u201CSupervisors only\u201D to let the candidates' supervisors see it first, or \u201CSupervisors and students\u201D to put it in the student portal too; emails can be prepared as well. Marks are never released. The same tab has the marks report and Moodle CSV for the unit coordinator."],
     ["Changing the deadline or reopening.","Use \u201CWindow\u201D on a row to extend or reopen marking; \u201CClose now\u201D stops it. Inside a report, \u201CReturn to the Chair\u201D reopens an approved report."],
     ["Trying it out first.","Open marking on a panel, open its report and press \u201C\u2691 Fill with test marks\u201D, approve on the Chair's behalf and download the Word form to check it. Then \u201C\u21BA Reset report\u2026\u201D wipes it clean."]],
     {open:!rows.some(x=>x.rep)}));
@@ -20593,6 +20663,12 @@ async function viewCocAdmin(v){
     acts.append(el("button",{class:"btn xs ghost",onclick:()=>windowDialog([g])},rep?"Window":"Open marking…"));
     if(rep) acts.append(el("button",{class:"btn xs ghost",onclick:()=>cocDownload(g,sem,students,rep,marks)},"⤓ Word"));
     acts.append(emailButton(coded.flatMap(cd=>memberEmails(cd.m)),"CoC examination report — "+(g.label||"panel"),"Dear panel members,\n\n","✉ Panel"));
+    /* Once approved: the panel's feedback, to its candidates' supervisors
+       and (when the office is ready) to the candidates. */
+    const pb=isLockedRep(rep)?cocPanelBundle(g0,rep,marks,students,sem):null;
+    const nFb=pb?pb.rows.length:0, nFbSup=pb?pb.rows.filter(r=>cocRelSup(r.rel)).length:0, nFbStu=pb?pb.rows.filter(r=>cocRelStu(r.rel)).length:0;
+    if(pb&&nFb) acts.append(el("button",{class:"btn xs"+(nFbStu===nFb?" ghost":""),title:"Release the panel's feedback to the candidates' supervisors and/or the candidates",
+      onclick:()=>cocPanelReleaseDialog([pb],sem,()=>viewCocAdmin(v))},nFbStu===nFb?"Feedback…":"Release feedback…"));
     tb.append(el("tr",{},
       el("td",{},cb),
       el("td",{style:"min-width:160px"},el("strong",{},g.label||"Panel"),
@@ -20601,7 +20677,10 @@ async function viewCocAdmin(v){
       el("td",{},rep?el("div",{class:"cx-sheets"},el("div",{class:"top"},cocProgBar(nSub,coded.length,nSub<coded.length),nSub+"/"+coded.length),chips):chips),
       el("td",{style:"min-width:170px"},cocPipe(st),
         el("div",{class:"row",style:"gap:5px;margin-top:6px"},w.state==="none"?"":el("span",{class:"pill "+w.cls,style:"font-size:11px;white-space:normal"},w.txt),
-          pd.date?el("span",{class:"pill "+dueState(pd.date).cls,style:"font-size:11px"},"Report due "+prettyDate(pd.date)):"")),
+          pd.date?el("span",{class:"pill "+dueState(pd.date).cls,style:"font-size:11px"},"Report due "+prettyDate(pd.date)):"",
+          pb&&nFb?el("span",{class:"pill "+(nFbStu===nFb?"approved":nFbSup?"blue":"none"),style:"font-size:11px;white-space:normal",
+            title:"Feedback released to supervisors: "+nFbSup+" of "+nFb+" · to students: "+nFbStu+" of "+nFb},
+            nFbStu===nFb?"Feedback released":nFbSup||nFbStu?"Feedback: supervisors "+nFbSup+"/"+nFb+" · students "+nFbStu+"/"+nFb:"Feedback not released"):"")),
       el("td",{},acts)));
     /* Candidates who did not present get their own line under the panel,
        with the follow-up action once the report is approved. */
@@ -20746,8 +20825,14 @@ function cocResetDialog(g,rep,done){
       el("span",{},el("strong",{},title),el("div",{class:"muted",style:"font-size:13px;font-weight:400"},sub)));
   };
   const agree=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"});
+  /* Feedback already released from this report goes with it. A student's
+     own notice is only removed while they are still on this panel, so one
+     moved on to a follow-up panel keeps what that panel released. */
+  const relIds=Object.keys(rep?.release||{});
+  const supCopies=Object.keys(g.outcomesOut||{}).length;
   modal("Reset "+(g.label||"this report"),
     el("div",{},
+      relIds.length||supCopies?noticeBar("amber","Feedback has already been released from this report"+(relIds.length?" for "+relIds.length+" student"+(relIds.length===1?"":"s"):"")+". Resetting withdraws it from the students and their supervisors too (an email already sent can't be recalled)."):"",
       opt("clear","Clear everything, keep marking open",
         "Every member's marks, comments and signatures, the Chair's work, the approval and the office section are wiped. The marking window stays as it is, so the panel can start again straight away."),
       opt("remove","Remove the report completely",
@@ -20767,7 +20852,11 @@ function cocResetDialog(g,rep,done){
              history:[{at:now,by:S.userName||"",what:"report reset by the office"}],updatedAt:now}
           : {...o.data,cand:{},submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:now}}));
       }
+      if(supCopies) ops.push({type:"update",coll:"panelGroups",id:g.id,data:{outcomesOut:{}}});
+      const onPanel=new Set(groupStudents(g));
+      relIds.filter(id=>onPanel.has(id)&&cocRelStu(rep.release[id])).forEach(id=>ops.push({type:"delete",coll:"staffKeys",id:cocOutKeyOf(id)}));
       await DB.batchWrite(ops);
+      if(supCopies){ g.outcomesOut={}; cocRefreshPins(); }
       toast(mode==="remove"?"Report removed — the panel is back to Not opened.":"Report reset — marking can start again.");
       if(mode==="remove") S.cocOpenGid=null;
       done(); return true;
@@ -20929,19 +21018,23 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
 /* ============================================================
    OUTCOMES TO STUDENTS, and MARKS FOR MOODLE (office)
    ------------------------------------------------------------
-   1. Releasing an outcome. Once a report is approved, the office prepares
-      each student's outcome notice: the outcome, conditions and dates, the
-      panel's consolidated feedback and (optionally) each assessor's own
-      comments, anonymised — never the marks — plus anything the office
-      wants to add. It is released to the student portal and to the
-      student's supervisors in the hub, and/or emailed to the student with
-      the supervisors copied.
+   1. Releasing the feedback. Once a report is approved, the office
+      releases the panel's feedback — a whole panel at a time, several
+      panels together, or one student. Each student's notice has the
+      outcome, conditions and dates, the panel's consolidated feedback and
+      (optionally) each assessor's own comments, anonymised — never the
+      marks — plus anything the office wants to add. It goes to one of two
+      audiences: the student's supervisors only (so they can prepare), or
+      the supervisors and the student. Emails can be prepared as well: to
+      the student with the supervisors copied, or to the supervisors.
 
-      The notice is published as one small document, staffKeys/
-      cocout:<student record id>, exactly like the student's CoC time
-      (staffKeys/coc:<id>): readable by name, never listable, written only
-      by the office. So no rules change is needed, and the reports and mark
-      sheets themselves stay private.
+      The supervisors' copy lives on the panel record (panelGroups/{id}.
+      outcomesOut), which only signed-in staff can read. The student's copy
+      is published as one small document, staffKeys/cocout:<student record
+      id>, exactly like the student's CoC time (staffKeys/coc:<id>):
+      readable by name, never listable, written only by the office. So no
+      rules change is needed, and the reports and mark sheets themselves
+      stay private.
 
    2. Marks for Moodle. An Excel workbook (outcomes & marks; a Moodle
       upload sheet; every assessor's marks and comments) and a Moodle CSV,
@@ -20975,10 +21068,18 @@ function cocOutcomeData(g0,rep,marks,st,sem,opts){
 }
 
 /* Plain text, for the email. */
-function cocOutcomeText(o){
+function cocOutcomeText(o,opts={}){
   const L=[];
-  L.push("Dear "+(o.name||"")+",","");
-  L.push("The panel has completed the assessment of your Confirmation of Candidature"+(o.seminarDate?" (seminar on "+longDate(o.seminarDate)+")":"")+".","");
+  /* opts.forSupervisors: the same notice, addressed to the supervisors
+     before it has been released to the student. */
+  if(opts.forSupervisors){
+    L.push("Dear "+((opts.supNames||[]).join(" and ")||"colleagues")+",","");
+    L.push("The panel has completed the assessment of "+(o.name||"your student")+"'s Confirmation of Candidature"+(o.seminarDate?" (seminar on "+longDate(o.seminarDate)+")":"")+". Its feedback is below.","");
+    L.push("It has NOT been released to "+(o.name||"the student")+" yet, so that you can prepare to discuss it with them. You can also read it in the MRes Supervision Hub, under CoC \u2192 Your students.","");
+  }else{
+    L.push("Dear "+(o.name||"")+",","");
+    L.push("The panel has completed the assessment of your Confirmation of Candidature"+(o.seminarDate?" (seminar on "+longDate(o.seminarDate)+")":"")+".","");
+  }
   L.push("OUTCOME: "+(o.outcome.code&&o.outcome.code!=="DEF"?o.outcome.code+" — ":"")+o.outcome.label);
   if(o.outcome.meaning) L.push(o.outcome.meaning);
   if(o.conditions) L.push("","CONDITIONS / REVISIONS REQUIRED:",o.conditions);
@@ -20989,7 +21090,8 @@ function cocOutcomeText(o){
   if((o.assessors||[]).length){ L.push("","COMMENTS FROM EACH ASSESSOR");
     o.assessors.forEach(a=>{ L.push("",a.label+":"); if(a.strengths) L.push("  Strengths: "+a.strengths); if(a.concerns) L.push("  Concerns: "+a.concerns); if(a.improvements) L.push("  Improvements: "+a.improvements); }); }
   if(o.note) L.push("","FROM THE MRES OFFICE:",o.note);
-  L.push("","Please discuss this outcome with your supervisors. You can also see it in the MRes Supervision Hub student portal.","","Kind regards,",o.releasedBy||"MRes Coordination");
+  if(opts.forSupervisors) L.push("","Kind regards,",o.releasedBy||"MRes Coordination");
+  else L.push("","Please discuss this outcome with your supervisors. You can also see it in the MRes Supervision Hub student portal.","","Kind regards,",o.releasedBy||"MRes Coordination");
   return L.join("\n");
 }
 
@@ -20997,6 +21099,9 @@ function cocOutcomeText(o){
    supervisors' view all draw it with this. */
 function cocOutcomeView(o){
   const w=el("div",{class:"coc-outv"});
+  /* Released to the supervisors ahead of the student. */
+  if(o.audience==="supervisors") w.append(el("div",{class:"coc-outaud"},
+    "Released to the supervisors only \u2014 "+(o.name||"the student")+" can't see this yet."));
   const cls=o.deferred?"pending":o.outcome.code==="C"?"approved":o.outcome.code==="NC"?"missed":"pending";
   w.append(el("div",{class:"coc-outhead"},
     el("span",{class:"pill "+cls,style:"font-size:13px"},o.deferred?"Deferred":o.outcome.code||"—"),
@@ -21019,75 +21124,351 @@ function cocOutcomeView(o){
   return w;
 }
 
-/* Everything the office's two screens need about one student. */
-function cocOutcomeRows(groups,reps,allMarks,students,sem){
-  const out=[];
-  groups.forEach(g0=>{
+/* ---- releasing feedback, panel by panel ----
+   Once a panel's Chair has approved the report, the office releases the
+   panel's feedback for its candidates, to one of two audiences:
+     · Supervisors only — each candidate's principal and co-supervisor see
+       the notice in the hub (CoC tab → Your students, and on their PIN
+       page), so they can prepare before the student hears. Their copy is
+       kept on the panel record, panelGroups/{id}.outcomesOut[student record
+       id], which only signed-in staff can read — a student can't reach it.
+     · Supervisors and students — as above, and the student's own copy is
+       published to staffKeys/cocout:<id> for the student portal.
+   The report keeps the log, cocReports/{id}.release[student record id].
+   Every write for one release goes in ONE batch, so a failure part-way
+   can't leave a student released without the report recording it. No
+   rules change: panelGroups is already open to signed-in staff and
+   staffKeys to the office. */
+
+/* One panel's report and candidates, as the office's screens need them. */
+function cocPanelBundle(g0,rep,marks,students,sem){
+  const g=cocGroupView(g0,rep);
+  const approved=!!rep&&(rep.status==="approved"||rep.status==="received");
+  const rows=groupStudents(g).map(id=>students.find(s=>s.id===id)).filter(Boolean).map(st=>({
+    g0,g,rep,marks,st,approved,c:rep?cocCand(rep,g,st,marks,sem):null,rel:rep?.release?.[st.id]||null}));
+  return {g0,g,rep,marks,approved,rows};
+}
+function cocPanelRows(groups,reps,allMarks,students,sem){
+  return groups.map(g0=>{
     const rep=reps.find(r=>r.id===g0.id)||null;
     const g=cocGroupView(g0,rep);
     const marks={}; cocCoded(g).forEach(cd=>{ const d=allMarks.find(m=>m.id===cocMarkId(g.id,cd.key)); if(d) marks[cd.key]=d; });
-    groupStudents(g).forEach(id=>{
-      const st=students.find(s=>s.id===id); if(!st) return;
-      const c=rep?cocCand(rep,g,st,marks,sem):null;
-      const approved=rep&&(rep.status==="approved"||rep.status==="received");
-      out.push({g0,g,rep,marks,st,c,approved,rel:rep?.release?.[id]||null});
-    });
-  });
-  return out.sort((a,b)=>String(a.st.name).localeCompare(String(b.st.name)));
+    return cocPanelBundle(g0,rep,marks,students,sem);
+  }).sort((a,b)=>String(a.g.label||"").localeCompare(String(b.g.label||"")));
 }
 
-/* ---- release one student's outcome ---- */
-function cocReleaseDialog(row,sem,done){
-  const {g0,rep,marks,st}=row;
-  const prev=row.rel||{};
+/* Who a release reached. A release made before the two audiences existed
+   carries only `portal`, which meant the student portal AND the
+   supervisors' view together. */
+const cocRelStu=rel=>!!rel&&(rel.students!==undefined?!!rel.students:!!rel.portal);
+const cocRelSup=rel=>!!rel&&(rel.supervisors!==undefined?!!rel.supervisors:!!rel.portal);
+/* Re-approved, or amended by the office, after it was released. */
+const cocRelStale=(rel,rep)=>!!rel&&!!rep&&Math.max(rep.approvedAt||0,rep.amendedAt||0)>(rel.at||0);
+const cocSupsOf=st=>[st.principalUid,st.coUid].filter(Boolean).map(uid=>staffById(uid)).filter(Boolean);
+const cocSupNamesOf=st=>[st.principalName||supName(st.principalUid)||"",st.coUid?(st.coName||supName(st.coUid)||""):""].filter(Boolean);
+
+/* The notice a supervisor may see for one of their students: the copy on
+   the panel record (the latest, if the student has sat on two panels). */
+function cocSupOutcome(stId,groups){
+  let best=null;
+  (groups||[]).forEach(g=>{ const o=g?.outcomesOut?.[stId];
+    if(o&&o.kind==="cocout"&&(!best||(o.releasedAt||0)>(best.releasedAt||0))) best=o; });
+  return best;
+}
+
+/* The PIN pages carry a snapshot of what each supervisor sees, so a
+   release refreshes them — quietly, and only if anyone has a PIN. */
+function cocRefreshPins(){
+  try{ publishSignInKeys({quiet:true,onlyIfInUse:true}).catch(e=>console.warn("PIN refresh after release",e)); }
+  catch(e){ console.warn("PIN refresh after release",e); }
+}
+
+/* picks: [{pg (a panel bundle), row, o (the notice)}]; aud: "students" (supervisors
+   and students) or "supervisors" (supervisors only). */
+async function cocWriteRelease(picks,aud,opts={}){
+  const now=Date.now(), toStu=aud==="students";
+  const byP=new Map(), ops=[];
+  for(const {pg,row,o} of picks){
+    const gid=pg.g0.id;
+    if(!byP.has(gid)) byP.set(gid,{pg,out:{...(pg.g0.outcomesOut||{})},release:{...(pg.rep.release||{})},names:[]});
+    const b=byP.get(gid), prev=row.rel||{}, id=row.st.id;
+    const notice={...o,groupId:gid,audience:toStu?"students":"supervisors"};
+    b.out[id]=notice;
+    b.release[id]={at:now,by:S.userName||"",note:o.note||"",assessors:!!opts.assessors,
+      supervisors:true,students:toStu,portal:toStu,
+      supervisorsAt:cocRelSup(prev)?(prev.supervisorsAt||prev.at||now):now,
+      studentsAt:toStu?(cocRelStu(prev)?(prev.studentsAt||prev.at||now):now):0,
+      emailedAt:prev.emailedAt||0,outcome:o.outcome?.code||""};
+    b.names.push(row.st.name||"");
+    if(toStu) ops.push({type:"set",coll:"staffKeys",id:cocOutKeyOf(id),data:notice,merge:false});
+    /* Supervisors only, after it had already gone to the student: take the
+       student's copy back off the portal. Never touches a notice this panel
+       didn't release (a student moved on to a follow-up panel). */
+    else if(cocRelStu(prev)) ops.push({type:"delete",coll:"staffKeys",id:cocOutKeyOf(id)});
+  }
+  const hist=new Map();
+  for(const [gid,{pg,out,release,names}] of byP){
+    const h=cocHist(pg.rep,"feedback released to "+(toStu?"supervisors and students":"supervisors only")+" ("+names.join(", ")+")");
+    hist.set(gid,h);
+    ops.push({type:"update",coll:"panelGroups",id:gid,data:{outcomesOut:out}});
+    ops.push({type:"update",coll:"cocReports",id:gid,data:{release,updatedAt:now,history:h}});
+  }
+  await DB.batchWrite(ops);
+  for(const [gid,{pg,out,release}] of byP){
+    pg.g0.outcomesOut=out; pg.rep.release=release; pg.rep.history=hist.get(gid);
+    pg.rows.forEach(r=>{ r.rel=release[r.st.id]||null; });
+  }
+  cocRefreshPins();
+}
+
+/* mode: "students" takes it off the student portal only (the supervisors
+   keep it); "all" withdraws it from everyone. */
+async function cocWriteWithdraw(picks,mode,sem){
+  const now=Date.now(), byP=new Map(), ops=[];
+  for(const {pg,row} of picks){
+    const gid=pg.g0.id;
+    if(!byP.has(gid)) byP.set(gid,{pg,out:{...(pg.g0.outcomesOut||{})},release:{...(pg.rep.release||{})},names:[]});
+    const b=byP.get(gid), prev=row.rel||{}, id=row.st.id;
+    if(cocRelStu(prev)) ops.push({type:"delete",coll:"staffKeys",id:cocOutKeyOf(id)});
+    if(mode==="all"){ delete b.out[id]; delete b.release[id]; }
+    else{
+      /* A release made before supervisors had their own copy lived only in
+         the student's notice, so the supervisors' copy is made now. */
+      const base=b.out[id]||cocOutcomeData(pg.g0,pg.rep,pg.marks,row.st,sem,{note:prev.note||"",assessors:prev.assessors!==false});
+      b.out[id]={...base,groupId:gid,audience:"supervisors"};
+      b.release[id]={...prev,students:false,portal:false,studentsAt:0,supervisors:true,supervisorsAt:prev.supervisorsAt||prev.at||now};
+    }
+    b.names.push(row.st.name||"");
+  }
+  const hist=new Map();
+  for(const [gid,{pg,out,release,names}] of byP){
+    const h=cocHist(pg.rep,(mode==="all"?"feedback withdrawn":"feedback taken off the student portal")+" ("+names.join(", ")+")");
+    hist.set(gid,h);
+    ops.push({type:"update",coll:"panelGroups",id:gid,data:{outcomesOut:out}});
+    /* update, not set: a merging set can't remove a student from the map,
+       which is why a withdrawal used to leave its record behind. */
+    ops.push({type:"update",coll:"cocReports",id:gid,data:{release,updatedAt:now,history:h}});
+  }
+  await DB.batchWrite(ops);
+  for(const [gid,{pg,out,release}] of byP){
+    pg.g0.outcomesOut=out; pg.rep.release=release; pg.rep.history=hist.get(gid);
+    pg.rows.forEach(r=>{ r.rel=release[r.st.id]||null; });
+  }
+  cocRefreshPins();
+}
+
+/* Read fresh and write back, so a stale screen can't undo another change. */
+async function cocMarkEmailed(gid,stId){
+  const rep=await DB.get("cocReports",gid,{raw:true});
+  const rel=rep?.release?.[stId]; if(!rel) return;
+  await DB.update("cocReports",gid,{release:{...rep.release,[stId]:{...rel,emailedAt:Date.now()}}});
+}
+
+const cocOutPill=c=>!c?el("span",{class:"muted"},"—"):c._absent?el("span",{class:"pill missed"},"Deferred")
+  :c._outcome?el("span",{class:"pill "+(c._outcome==="C"?"approved":c._outcome==="NC"?"missed":"pending")},c._outcome):el("span",{class:"muted"},"—");
+function cocRelLine(rel){
+  if(!rel) return "Not released";
+  if(cocRelStu(rel)) return "Supervisors and student since "+cocDay(rel.studentsAt||rel.at)+(rel.emailedAt?" · emailed":"");
+  if(cocRelSup(rel)) return "Supervisors only since "+cocDay(rel.supervisorsAt||rel.at);
+  return rel.emailedAt?"Emailed "+cocDay(rel.emailedAt):"Not released";
+}
+
+/* ---- the release dialog: one panel, several, or one student ----
+   opts.one: just this student. opts.only: a Set of student ids in view
+   (the screen's filters) — only they start ticked. */
+function cocPanelReleaseDialog(pgs,sem,done,opts={}){
+  const panels=(pgs||[]).filter(p=>p&&p.rep&&p.rows.length);
+  if(!panels.length){ toast("No approved report to release from.",true); return; }
+  const keyOf=(p,r)=>r.st.id+"|"+p.g0.id;
+  const pick=new Set();
+  panels.forEach(p=>p.rows.forEach(r=>{
+    if(!p.approved) return;
+    const on=opts.one?r.st.id===opts.one:((!opts.only||opts.only.has(r.st.id))&&!r.c?._absent);
+    if(on) pick.add(keyOf(p,r));
+  }));
+  const oneRow=opts.one?panels.flatMap(p=>p.rows.map(r=>({p,r}))).find(x=>x.r.st.id===opts.one):null;
+  const prev=oneRow?.r.rel||null;
+  let aud=opts.audience||(prev?(cocRelStu(prev)?"students":"supervisors"):"students");
+  const chosen=()=>panels.flatMap(p=>p.rows.filter(r=>pick.has(keyOf(p,r))).map(r=>({p,r})));
+
   const note=el("textarea",{rows:"3",placeholder:"e.g. Please book a meeting with your supervisors this week to plan the revisions."});
-  note.value=prev.note||"";
-  const cbA=el("input",{type:"checkbox",style:"width:auto;margin:0",...(prev.assessors===false?{}:{checked:"checked"})});
-  const cbP=el("input",{type:"checkbox",style:"width:auto;margin:0",...(prev.portal===false?{}:{checked:"checked"})});
+  if(oneRow) note.value=prev?.note||"";
+  const prevA=chosen().map(x=>x.r.rel).filter(Boolean);
+  const cbA=el("input",{type:"checkbox",style:"width:auto;margin:0",...(prevA.length&&prevA.every(r=>r.assessors===false)?{}:{checked:"checked"})});
   const cbE=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+  const noteFor=r=>oneRow||cocT(note.value)?note.value:(r.rel?.note||"");
+  const noticeOf=({p,r})=>cocOutcomeData(p.g0,p.rep,p.marks,r.st,sem,{note:noteFor(r),assessors:cbA.checked});
+
+  const audBox=el("div",{class:"coc-aud"});
+  const listBox=el("div",{class:"coc-relpick"});
+  const warnBox=el("div",{});
+  const prevSel=el("select",{style:"width:auto;min-width:220px;max-width:100%"});
   const prevBox=el("div",{class:"coc-outprev"});
-  const data=()=>cocOutcomeData(g0,rep,marks,st,sem,{note:note.value,assessors:cbA.checked});
-  const paint=()=>prevBox.replaceChildren(cocOutcomeView(data()));
-  [note].forEach(x=>x.addEventListener("input",paint)); cbA.addEventListener("change",paint);
-  paint();
-  const sups=[st.principalUid,st.coUid].filter(Boolean).map(uid=>staffById(uid)).filter(Boolean);
-  const cc=[...new Set(sups.flatMap(emailsOf))];
-  modal("Release the CoC outcome — "+(st.name||""),
+  const eLbl=el("span",{});
+  prevSel.addEventListener("change",()=>paintPrev());
+  note.addEventListener("input",()=>paintPrev());
+  cbA.addEventListener("change",()=>paintPrev());
+
+  function paintAud(){
+    const opt=(val,title,sub)=>el("button",{type:"button",class:"coc-opt"+(aud===val?" on":""),"aria-pressed":aud===val?"true":"false",
+      onclick:()=>{ aud=val; paintAud(); paintRest(); }},
+      el("span",{class:"coc-audt"},el("b",{},title),el("small",{},sub)));
+    audBox.replaceChildren(
+      opt("supervisors","Supervisors only — for now","Each student's principal and co-supervisor see it in the hub. Students don't see it yet; release it to them later from here."),
+      opt("students","Supervisors and students","Supervisors see it in the hub, and each student sees it in their student portal."));
+  }
+  function paintList(){
+    listBox.replaceChildren(...panels.map(p=>{
+      const st=cocStatus(p.g,p.rep,p.marks);
+      const sec=el("div",{class:"coc-relpan"});
+      const ids=p.rows.map(r=>keyOf(p,r));
+      const all=p.approved&&ids.length>1?el("button",{type:"button",class:"btn xs ghost",onclick:()=>{
+        const every=ids.every(k=>pick.has(k)); ids.forEach(k=>every?pick.delete(k):pick.add(k)); paintList(); paintRest(); }},"All / none"):"";
+      sec.append(el("div",{class:"hd"},el("strong",{},p.g.label||"Panel"),el("span",{class:"pill "+st.cls,style:"font-size:11px"},st.txt),
+        p.approved?"":el("span",{class:"muted",style:"font-size:12.5px"},"Can be released once the Chair approves the report"),
+        el("span",{style:"flex:1"}),all));
+      p.rows.forEach(r=>{
+        const k=keyOf(p,r);
+        const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(pick.has(k)?{checked:"checked"}:{}),...(p.approved?{}:{disabled:"disabled"})});
+        cb.addEventListener("change",()=>{ cb.checked?pick.add(k):pick.delete(k); paintRest(); });
+        const sups=cocSupNamesOf(r.st);
+        sec.append(el("label",{class:"it"+(p.approved?"":" off")},cb,
+          el("span",{class:"nm"},el("span",{},r.st.name||"",r.st.sid?el("span",{class:"muted"},"  "+r.st.sid):""),
+            el("small",{},(sups.length?"Supervisors: "+sups.join(", "):"No supervisor on record")+(r.c?._absent?" · did not present — sends a deferral notice":""))),
+          cocOutPill(r.c),
+          el("small",{class:"rs"},cocRelLine(r.rel),cocRelStale(r.rel,p.rep)?el("span",{class:"pill pending",style:"font-size:10.5px;margin-left:5px"},"Changed since"):"")));
+      });
+      return sec;
+    }));
+  }
+  function paintPrev(){
+    const ch=chosen();
+    const x=ch.find(c=>keyOf(c.p,c.r)===prevSel.value)||ch[0];
+    prevBox.replaceChildren(x?cocOutcomeView({...noticeOf(x),audience:aud==="students"?"students":"supervisors"})
+      :el("p",{class:"muted",style:"margin:0"},"Tick at least one student to preview their notice."));
+  }
+  function paintRest(){
+    const ch=chosen(), keep=prevSel.value;
+    prevSel.replaceChildren(...ch.map(({p,r})=>el("option",{value:keyOf(p,r)},(r.st.name||"")+(panels.length>1?" — "+(p.g.label||""):""))));
+    if(ch.some(({p,r})=>keyOf(p,r)===keep)) prevSel.value=keep;
+    prevSel.disabled=ch.length<2;
+    paintPrev();
+    const back=ch.filter(x=>cocRelStu(x.r.rel)).length;
+    const nP=new Set(ch.map(x=>x.p.g0.id)).size;
+    warnBox.replaceChildren(
+      noticeBar(ch.length?"blue":"amber",ch.length
+        ?"Releasing to "+(aud==="students"?"supervisors and students":"supervisors only")+": "+ch.length+" student"+(ch.length===1?"":"s")+(nP>1?" on "+nP+" panels":"")+"."
+        :"No student is ticked yet."),
+      aud==="supervisors"&&back?noticeBar("amber",back+" of them can already see it in the student portal. Releasing to supervisors only takes it back off their portal until you release it to students again."):"");
+    eLbl.textContent=aud==="students"
+      ?"Then prepare an email to each student, copying their supervisors (you send each one from your mail app)"
+      :"Then prepare an email to each student's supervisors, with the feedback, saying it hasn't gone to the student yet";
+  }
+  paintAud(); paintList(); paintRest();
+
+  const title=oneRow?"Release the CoC feedback — "+(oneRow.r.st.name||"")
+    :panels.length===1?"Release the feedback — "+(panels[0].g.label||"Panel"):"Release the feedback — "+panels.length+" panels";
+  modal(title,
     el("div",{class:"grid",style:"gap:12px"},
-      cocTip("This is exactly what "+(st.name||"the student")+" will see. It never includes marks. The outcome, conditions and feedback come from the approved report; add anything else from the office below."),
-      prevBox,
-      el("div",{},el("label",{},"Additional comments or conditions from the MRes office (optional)"),note),
+      cocTip("Each student's notice has the outcome, any conditions and due date, and the panel's consolidated feedback from the approved report — never the marks. You can add each assessor's own comments (anonymised) and a note from the office."),
+      el("div",{},el("label",{},"Who sees it"),audBox),
+      el("div",{},el("label",{},oneRow?"Student":"Students"),listBox),
+      warnBox,
       el("label",{class:"coc-chk"},cbA,el("span",{},"Include each assessor's own comments (shown as Assessor A, B, C — notes written only for the Chair are never included)")),
-      el("label",{class:"coc-chk"},cbP,el("span",{},"Show it in the student portal, and to "+(sups.length?sups.map(u=>u.name).join(" and "):"the supervisors")+" in the hub")),
-      el("label",{class:"coc-chk"},cbE,el("span",{},"Then open an email to "+(st.email||"the student (no email on record)")+(cc.length?", copying the supervisors":"")))),
+      el("div",{},el("label",{},"Additional comments or conditions from the MRes office (optional)"+(oneRow?"":" — added to every notice in this release")),note,
+        oneRow?"":el("div",{class:"coc-tip"},"Leave it blank to keep any note a student was already given.")),
+      el("div",{},el("div",{class:"row",style:"gap:8px;margin-bottom:6px;align-items:center"},el("label",{style:"margin:0"},"Preview"),prevSel),prevBox),
+      el("label",{class:"coc-chk",style:"align-items:flex-start"},cbE,eLbl)),
     async()=>{
-      const o=data();
-      const rel={at:Date.now(),by:S.userName||"",note:o.note,assessors:cbA.checked,portal:cbP.checked,
-        emailedAt:cbE.checked&&st.email?Date.now():(prev.emailedAt||0),outcome:o.outcome.code};
-      if(cbP.checked) await DB.setStaffKey(cocOutKeyOf(st.id),o);
-      else { try{ await DB.removeStaffKey(cocOutKeyOf(st.id)); }catch(e){} }
-      const release={...(rep.release||{}),[st.id]:rel};
-      await DB.set("cocReports",g0.id,{release,updatedAt:Date.now(),history:cocHist(rep,"outcome released for "+(st.name||"")+(cbP.checked?" (portal)":"")+(rel.emailedAt?" (email)":""))});
-      rep.release=release;
-      toast("Outcome released"+(cbP.checked?" to the portal":"")+".");
-      if(cbE.checked){
-        const body=cocOutcomeText(o);
-        try{ await copyText(body); }catch(e){}
-        if(st.email){ openEmail(st.email,"Confirmation of Candidature outcome — "+(st.name||""),body,cc.join(","));
-          toast("The email text is also on your clipboard, in case your mail app shortens it."); }
-        else toast("No email on record for this student — the text is on your clipboard.",true);
-      }
-      done(); return true;
+      const ch=chosen();
+      if(!ch.length){ toast("Tick at least one student.",true); return false; }
+      const picks=ch.map(x=>({pg:x.p,row:x.r,o:noticeOf(x)}));
+      await cocWriteRelease(picks,aud,{assessors:cbA.checked});
+      toast("Feedback released to "+(aud==="students"?"supervisors and students":"supervisors only")+" — "+picks.length+" student"+(picks.length===1?"":"s")+".");
+      const mail=cbE.checked;
+      if(done) done();
+      if(mail) setTimeout(()=>cocEmailQueue(aud,picks),0);
+      return true;
     },"Release");
   const m=[...document.querySelectorAll(".modal")].pop(); if(m) m.classList.add("wide");
 }
-async function cocWithdrawRelease(row,done){
-  if(!window.confirm("Withdraw "+(row.st.name||"this student")+"'s outcome from the portal and the supervisors' view? (An email already sent can't be recalled.)")) return;
-  try{ await DB.removeStaffKey(cocOutKeyOf(row.st.id)); }catch(e){}
-  const release={...(row.rep.release||{})}; delete release[row.st.id];
-  await DB.set("cocReports",row.g0.id,{release,updatedAt:Date.now(),history:cocHist(row.rep,"outcome withdrawn for "+(row.st.name||""))});
-  row.rep.release=release;
-  toast("Withdrawn."); done();
+
+/* One ready-written email per student, opened one at a time — a mail link
+   can only carry one message, and a long one may be cut short, so the full
+   text also goes on the clipboard. */
+function cocEmailQueue(aud,picks){
+  const toStu=aud==="students";
+  const list=el("div",{class:"coc-mailq"});
+  picks.forEach(({pg,row,o})=>{
+    const st=row.st, sups=cocSupsOf(st);
+    const supMails=[...new Set(sups.flatMap(emailsOf))];
+    const to=toStu?String(st.email||"").trim():supMails.join(",");
+    const cc=toStu?supMails.join(","):"";
+    const subj=toStu?"Confirmation of Candidature outcome — "+(st.name||"")
+      :"CoC feedback for "+(st.name||"your student")+" — not yet released to the student";
+    const body=cocOutcomeText(o,toStu?{}:{forSupervisors:true,supNames:sups.map(u=>u.name).filter(Boolean)});
+    const stat=el("small",{class:"muted"},"");
+    const go=el("button",{class:"btn xs",...(to?{}:{disabled:"disabled"}),onclick:async()=>{
+      try{ await copyText(body); }catch(e){}
+      openEmail(to,subj,body,cc);
+      stat.textContent="✓ Opened";
+      go.classList.add("ghost");
+      if(toStu) cocMarkEmailed(pg.g0.id,st.id).catch(e=>console.warn("could not record the email",e));
+    }},"✉ Open email");
+    list.append(el("div",{class:"it"},
+      el("div",{class:"nm"},el("strong",{},st.name||""),
+        el("small",{},to?"To "+to.split(",").join(", ")+(cc?" · cc "+cc.split(",").join(", "):"")
+          :toStu?"No email on record for this student":"No email on record for the supervisors")),
+      stat,
+      el("button",{class:"btn xs ghost",onclick:async()=>{ const ok=await copyText(body); toast(ok?"Email text copied.":"Copy failed.",!ok); }},"Copy text"),
+      go));
+  });
+  modal(toStu?"Email the students":"Email the supervisors",
+    el("div",{class:"grid",style:"gap:10px"},
+      cocTip("One email per student, ready written. Press “✉ Open email”: your mail app opens with it, so you can check it and press Send. Some mail apps shorten long messages, so the full text is put on your clipboard each time as well."),
+      list),
+    async()=>true,"Done");
+  const m=[...document.querySelectorAll(".modal")].pop();
+  if(m){ m.classList.add("wide"); const cb=m.querySelector(".modal-foot .btn.ghost"); if(cb) cb.remove(); }
+}
+
+/* ---- withdrawing ---- */
+function cocWithdrawDialog(pgs,sem,done,opts={}){
+  const rows=[]; (pgs||[]).forEach(p=>p.rows.forEach(r=>{ if(r.rel&&(!opts.only||opts.only.has(r.st.id))) rows.push({p,r}); }));
+  if(!rows.length){ toast("Nothing has been released here yet.",true); return; }
+  const keyOf=({p,r})=>r.st.id+"|"+p.g0.id;
+  let mode=rows.some(x=>cocRelStu(x.r.rel))?"students":"all";
+  const pick=new Set(rows.map(keyOf));
+  const optBox=el("div",{class:"coc-aud"}), listBox=el("div",{class:"coc-relpick"});
+  function paint(){
+    const opt=(val,title,sub)=>el("button",{type:"button",class:"coc-opt"+(mode===val?" on":""),"aria-pressed":mode===val?"true":"false",
+      onclick:()=>{ mode=val; paint(); }},el("span",{class:"coc-audt"},el("b",{},title),el("small",{},sub)));
+    optBox.replaceChildren(
+      opt("students","Take it off the student portal only","The supervisors keep seeing it in the hub. Use this if it reached the students too soon."),
+      opt("all","Withdraw it completely","Removed from the student portal and from the supervisors' view. The report itself isn't changed."));
+    listBox.replaceChildren(...rows.map(x=>{
+      const k=keyOf(x), can=mode==="all"||cocRelStu(x.r.rel);
+      const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(pick.has(k)&&can?{checked:"checked"}:{}),...(can?{}:{disabled:"disabled"})});
+      cb.addEventListener("change",()=>{ cb.checked?pick.add(k):pick.delete(k); });
+      return el("label",{class:"it"+(can?"":" off")},cb,
+        el("span",{class:"nm"},el("span",{},x.r.st.name||""),el("small",{},x.p.g.label||"")),
+        el("small",{class:"rs"},cocRelLine(x.r.rel)));
+    }));
+  }
+  paint();
+  modal("Withdraw released feedback",
+    el("div",{class:"grid",style:"gap:12px"},optBox,listBox,
+      cocTip("An email that has already been sent can't be recalled.")),
+    async()=>{
+      const ch=rows.filter(x=>pick.has(keyOf(x))&&(mode==="all"||cocRelStu(x.r.rel)));
+      if(!ch.length){ toast("Tick at least one student.",true); return false; }
+      await cocWriteWithdraw(ch.map(x=>({pg:x.p,row:x.r})),mode,sem);
+      toast(mode==="all"?"Withdrawn from students and supervisors.":"Taken off the student portal — the supervisors still see it.");
+      if(done) done();
+      return true;
+    },"Withdraw");
+  const btns=document.querySelectorAll(".modal .btn"); btns[btns.length-1].classList.add("danger");
+  const m=[...document.querySelectorAll(".modal")].pop(); if(m) m.classList.add("wide");
 }
 
 /* ---- marks report for Moodle ---- */
@@ -21122,7 +21503,7 @@ function cocMarksExport(rows,sem,opts){
       !c._absent&&(c._outcome==="CMR"||c._outcome==="MRR")&&c._dueBy?longDate(c._dueBy):"",
       c._absent?"":(c.det?.represent==="Y"?"Yes":c.det?.represent==="N"?"No":""),
       ...COC_FB.map(([k])=>c._absent?"":cocT(c.fb?.[k])),
-      statusOf(r),r.rel?"Released "+cocDay(r.rel.at):"Not released"]);
+      statusOf(r),cocRelLine(r.rel)]);
     out.moodle.push([st.sid||"",st.email||"",st.name||"",fin,fin===""?"":Math.round(fin/COC_TOTAL*1000)/10,
       c._absent?"Deferred":(o?.c||""),cocMoodleFeedback(c)]);
     ag.rows.forEach(rw=>out.assess.push([st.sid||"",st.name||"",r.g.label||"",rw.code,rw.name,rw.cd.isChair?"Chair":"Member",
@@ -21136,7 +21517,7 @@ function cocMarksExport(rows,sem,opts){
 const COC_MAIN_HEAD=["Student ID","Student","Email","Principal supervisor","Panel","Chair","Seminar date",
   "Research quality (avg /10)","Feasibility (avg /5)","Presentation (avg /5)","Panel average /20","Final mark /20","Final mark %",
   "Reason final mark differs","Outcome code","Outcome","Reason for outcome (members split or majority overridden)","Conditions / revisions","Revisions due","Re-presentation",
-  "Strengths","Concerns / gaps","Improvements required","Minority / dissenting view","Report status","Released to student"];
+  "Strengths","Concerns / gaps","Improvements required","Minority / dissenting view","Report status","Feedback released"];
 const COC_MOODLE_HEAD=["ID number","Email address","Full name","CoC mark (/20)","CoC mark (%)","Outcome","Feedback comments"];
 const COC_ASSESS_HEAD=["Student ID","Student","Panel","Code","Assessor","Role","Research /10","Feasibility /5","Presentation /5","Total /20",
   "Recommended outcome","Conflict of interest","Strengths","Concerns","Improvements","Note for the Chair","Sheet"];
@@ -21148,7 +21529,7 @@ function cocDownloadMarksXlsx(rows,sem,opts){
     rows:[title(cap,head.length),{cells:[(sem?.label||"")+(opts.scope?"  ·  "+opts.scope:"")+"  ·  exported "+todayLabel()+(opts.provisional?"  ·  includes PROVISIONAL marks from reports not yet approved":"")]},
       {cells:head,s:1,h:32},...data.map(r=>({cells:r,s:2}))]});
   const sheets=[
-    sheet("CoC outcomes & marks",COC_MAIN_HEAD,x.main,[12,22,26,20,22,18,14,11,11,11,11,11,10,28,9,26,34,40,14,11,40,40,40,30,20,16],"CoC outcomes and marks"),
+    sheet("CoC outcomes & marks",COC_MAIN_HEAD,x.main,[12,22,26,20,22,18,14,11,11,11,11,11,10,28,9,26,34,40,14,11,40,40,40,30,20,36],"CoC outcomes and marks"),
     sheet("Moodle upload",COC_MOODLE_HEAD,x.moodle,[14,28,24,12,12,10,90],"Moodle upload — map “ID number” (or “Email address”) to the student, and the mark and feedback columns to the CoC grade item"),
     sheet("Assessor marks & comments",COC_ASSESS_HEAD,x.assess,[12,22,20,6,20,8,10,10,10,9,10,24,40,40,40,30,18],"Every assessor's marks and comments (office use only)")];
   saveBlob(xlsxBlob(sheets),("CoC_marks_"+(sem?.label||"")+(opts.scope?"_"+opts.scope:"")).replace(/[^\w\-]+/g,"_")+".xlsx");
@@ -21162,35 +21543,53 @@ function cocDownloadMoodleCsv(rows,sem,opts){
   toast("Moodle CSV downloaded.");
 }
 
-/* ---- the office's Outcomes & marks screen ---- */
+/* ---- the office's Outcomes & marks screen ----
+   One card per panel: its report's stage, who has its feedback so far,
+   and its candidates. Feedback is released a panel at a time (or one
+   student at a time), to the supervisors first or to supervisors and
+   students together. */
 function cocOutcomesView(v,ctx,redraw){
   const {groups,reps,allMarks,students,sem}=ctx;
-  const allRows=cocOutcomeRows(groups,reps,allMarks,students,sem);
-  /* Filter by discipline (the student's area) and by supervisor (principal
-     or co). The table, bulk release and both downloads all follow it, so a
-     unit coordinator can be sent just the IT students, or one supervisor
-     can be given their own students' results. */
+  const allPanels=cocPanelRows(groups,reps,allMarks,students,sem).filter(p=>p.rows.length);
+  const allRows=allPanels.flatMap(p=>p.rows);
+  /* Filter by panel, by discipline (the student's area) and by supervisor
+     (principal or co). The cards, the releases and both downloads all
+     follow it, so a unit coordinator can be sent just the IT students, or
+     one supervisor can be given their own students' results. */
   const F=S.cocOutFilter=S.cocOutFilter||{area:"",sup:""};
+  F.pan=F.pan||"";
   const areaOf=st=>String(st.area||"").trim();
   const areas=[...new Set(allRows.map(r=>areaOf(r.st)))].sort((a,b)=>(a===""?1:b===""?-1:a.localeCompare(b)));
   const supIds=[...new Set(allRows.flatMap(r=>[r.st.principalUid,r.st.coUid]).filter(Boolean))]
     .sort((a,b)=>String(supName(a)).localeCompare(String(supName(b))));
   if(F.area&&!areas.includes(F.area==="__none"?"":F.area)) F.area="";
   if(F.sup&&!supIds.includes(F.sup)) F.sup="";
-  const rows=allRows.filter(r=>(!F.area||(F.area==="__none"?areaOf(r.st)==="":areaOf(r.st)===F.area))
-    &&(!F.sup||r.st.principalUid===F.sup||r.st.coUid===F.sup));
-  const scope=[F.area?(F.area==="__none"?"No discipline":F.area):"",F.sup?supName(F.sup):""].filter(Boolean).join(" \u00B7 ");
-  v.append(cocGuide("outcomes","Releasing outcomes and exporting marks",[
-    ["Release each outcome once the Chair has approved the report.","Press “Release…” on a student's row. You see exactly what they will get — the outcome, conditions, due date and the panel's feedback, never the marks — and can add comments or conditions from the office."],
-    ["Choose how it reaches them.","It can appear in the student portal (and to their supervisors in the hub), open an email to the student with the supervisors copied, or both. “Release approved to portal” releases every selected approved student at once, without an office note."],
-    ["Changed your mind?","“Update…” re-releases with changes; “Withdraw” takes it back off the portal (an email already sent can't be recalled). A “changed since release” flag appears if the report is re-approved after you released it."],
+  if(F.pan&&!allPanels.some(p=>p.g0.id===F.pan)) F.pan="";
+  const rowOk=r=>(!F.area||(F.area==="__none"?areaOf(r.st)==="":areaOf(r.st)===F.area))
+    &&(!F.sup||r.st.principalUid===F.sup||r.st.coUid===F.sup);
+  const narrowed=!!(F.area||F.sup);
+  const shownPanels=allPanels.filter(p=>!F.pan||p.g0.id===F.pan)
+    .map(p=>({p,shown:p.rows.filter(rowOk)})).filter(x=>x.shown.length);
+  const rows=shownPanels.flatMap(x=>x.shown).sort((a,b)=>String(a.st.name).localeCompare(String(b.st.name)));
+  const panLabel=F.pan?(allPanels.find(p=>p.g0.id===F.pan)?.g.label||"Panel"):"";
+  const scope=[panLabel,F.area?(F.area==="__none"?"No discipline":F.area):"",F.sup?supName(F.sup):""].filter(Boolean).join(" · ");
+  const onlyOf=shown=>narrowed?new Set(shown.map(r=>r.st.id)):null;
+
+  v.append(cocGuide("outcomes","Releasing feedback and exporting marks",[
+    ["Release a panel's feedback once its Chair has approved the report.","Each panel has its own card below. Press “Release this panel's feedback…”: you see exactly what each candidate will get — the outcome, any conditions and due date, the panel's consolidated feedback and, if you choose, each assessor's own comments (anonymised). Marks are never included. You can add a note from the office."],
+    ["Choose who sees it.","“Supervisors only” puts it in each candidate's supervisors' CoC tab in the hub (and on their PIN page), so they can prepare before the student hears; the students don't see it yet. “Supervisors and students” also puts it in each student's portal. Release to the supervisors first and to the students later, or to both at once."],
+    ["Emails, if you want them.","Leave “Then prepare an email” ticked and you get one ready-written email per student — to the student with their supervisors copied, or (supervisors only) to the supervisors — each opened in your mail app to check and send."],
+    ["One student, or a change of mind.","“Release…” / “Update…” on a student's row does just that student (with their own office note, say). “Withdraw…” takes the feedback off the student portal only, or back from everyone (an email already sent can't be recalled). “Changed since” appears if the report is amended or re-approved after release — release it again to send the new version."],
     ["Marks for Moodle.","“⤓ Marks report (Excel)” gives the unit coordinator every student's panel averages, final mark (/20 and %), outcome and feedback, a ready-made Moodle upload sheet, and each assessor's marks and comments. “⤓ Moodle CSV” is the upload sheet on its own, for Moodle's grade import (match on ID number or email address)."],
-    ["Just one discipline or one supervisor?","Use the Discipline and Supervisor filters above the list. The table, \u201CRelease approved to portal\u201D and both downloads then cover only those students, and the file name and heading say which selection it is."]],
-    {open:!rows.some(r=>r.rel)}));
+    ["Just one panel, discipline or supervisor?","Use the filters above the cards. The cards, releases and both downloads then cover only those students, and the file name and heading say which selection it is."]],
+    {open:!allRows.some(r=>r.rel)}));
+
   const provisional=el("input",{type:"checkbox",style:"width:auto;margin:0",...(S.cocProvisional?{checked:"checked"}:{})});
   provisional.addEventListener("change",()=>{ S.cocProvisional=provisional.checked; });
-  const sel=S.cocOutSel=S.cocOutSel||new Set();
-  const approvedRows=rows.filter(r=>r.approved);
+  const panSel=el("select",{style:"width:auto;min-width:180px",onchange:e=>{ F.pan=e.target.value; redraw(); }},
+    el("option",{value:""},"All panels"),
+    ...allPanels.map(p=>el("option",{value:p.g0.id,...(F.pan===p.g0.id?{selected:"selected"}:{})},
+      (p.g.label||"Panel")+" — "+cocStatus(p.g,p.rep,p.marks).txt)));
   const areaSel=el("select",{style:"width:auto;min-width:150px",onchange:e=>{ F.area=e.target.value; redraw(); }},
     el("option",{value:""},"All disciplines"),
     ...areas.map(a=>el("option",{value:a===""?"__none":a,...((F.area===(a===""?"__none":a))?{selected:"selected"}:{})},
@@ -21200,75 +21599,86 @@ function cocOutcomesView(v,ctx,redraw){
     ...supIds.map(id=>el("option",{value:id,...(F.sup===id?{selected:"selected"}:{})},
       supName(id)+" ("+allRows.filter(r=>r.st.principalUid===id||r.st.coUid===id).length+")")));
   v.append(el("div",{class:"toolbar",style:"margin-bottom:10px"},
+    el("div",{class:"field"},el("label",{},"Panel"),panSel),
     el("div",{class:"field"},el("label",{},"Discipline"),areaSel),
     el("div",{class:"field"},el("label",{},"Supervisor (principal or co)"),supSel),
-    (F.area||F.sup)?el("button",{class:"btn sm ghost",style:"align-self:flex-end",onclick:()=>{ F.area=""; F.sup=""; redraw(); }},"Clear filters"):"",
+    (F.pan||F.area||F.sup)?el("button",{class:"btn sm ghost",style:"align-self:flex-end",onclick:()=>{ F.pan=""; F.area=""; F.sup=""; redraw(); }},"Clear filters"):"",
     el("span",{class:"muted ui",style:"align-self:flex-end;font-size:13px"},
-      (F.area||F.sup)?"Showing "+rows.length+" of "+allRows.length+" students \u2014 downloads and bulk release use this selection too.":allRows.length+" students")));
+      (F.pan||F.area||F.sup)?"Showing "+rows.length+" of "+allRows.length+" students — releases and downloads use this selection too.":allRows.length+" students")));
+
+  const apprPanels=shownPanels.filter(x=>x.p.approved);
+  v.append(el("div",{class:"stat"},
+    statBox(apprPanels.length+" / "+shownPanels.length,"Panels approved"),
+    statBox(rows.filter(r=>cocRelSup(r.rel)).length+" / "+rows.length,"Released to supervisors"),
+    statBox(rows.filter(r=>cocRelStu(r.rel)).length+" / "+rows.length,"Released to students")));
+
   v.append(el("div",{class:"row",style:"margin-bottom:12px;gap:8px"},
     el("button",{class:"btn sm",onclick:()=>cocDownloadMarksXlsx(rows,sem,{provisional:provisional.checked,scope})},"⤓ Marks report (Excel)"),
     el("button",{class:"btn sm ghost",onclick:()=>cocDownloadMoodleCsv(rows,sem,{provisional:provisional.checked,scope})},"⤓ Moodle CSV"),
     el("label",{class:"coc-chk",style:"font-size:13px"},provisional,el("span",{},"Include reports not yet approved (provisional)")),
     el("span",{style:"flex:1"}),
-    el("button",{class:"btn sm ghost",onclick:async()=>{
-      const pick=approvedRows.filter(r=>sel.has(r.st.id)&&!r.c?._absent);
-      if(!pick.length){ toast("Tick approved students first.",true); return; }
-      if(!window.confirm("Release the outcome to the portal (and supervisors) for "+pick.length+" student"+(pick.length===1?"":"s")+"? No office note is added and no email is sent — use “Release…” on a row for that.")) return;
-      /* Every outcome and every report stamp in ONE batch: it used to be a
-         round trip per student and per panel, with no error handling, so a
-         failure part-way left some students released without the report
-         recording it (and nothing on screen said so). */
-      const byG=new Map(), ops=[];
-      for(const r of pick){
-        const o=cocOutcomeData(r.g0,r.rep,r.marks,r.st,sem,{note:r.rel?.note||"",assessors:r.rel?.assessors!==false});
-        ops.push({type:"set",coll:"staffKeys",id:cocOutKeyOf(r.st.id),data:o,merge:false});
-        const rel={at:Date.now(),by:S.userName||"",note:o.note,assessors:r.rel?.assessors!==false,portal:true,emailedAt:r.rel?.emailedAt||0,outcome:o.outcome.code};
-        if(!byG.has(r.g0.id)) byG.set(r.g0.id,{r,release:{...(r.rep.release||{})}});
-        byG.get(r.g0.id).release[r.st.id]=rel;
-      }
-      for(const {r,release} of byG.values()) ops.push({type:"set",coll:"cocReports",id:r.g0.id,
-        data:{release,updatedAt:Date.now(),history:cocHist(r.rep,"outcomes released to the portal")}});
-      try{ await DB.batchWrite(ops); }
-      catch(err){ console.error("bulk release failed",err); toast("Nothing was released — "+(err?.message||"please try again."),true); return; }
-      sel.clear(); toast(pick.length+" outcome"+(pick.length===1?"":"s")+" released to the portal."); redraw();
-    }},"Release approved to portal")));
-  const c=cardShell("Outcomes — "+(sem?.label||"")+(scope?" · "+scope:""),el("span",{class:"muted ui"},
-    approvedRows.length+" of "+rows.length+" approved · "+rows.filter(r=>r.rel).length+" released"),"main");
-  if(!rows.length){ c.append(el("p",{class:"muted",style:"padding:16px;margin:0"},allRows.length?"No students match these filters.":"No students are on a panel yet.")); v.append(c); return; }
-  const t=el("table",{});
-  t.append(el("thead",{},el("tr",{},...["","Student","Panel","Report","Final mark","Outcome","Released to student",""].map(h=>el("th",{},h)))));
-  const tb=el("tbody",{});
-  rows.forEach(r=>{
-    const {st,c:cv,rep,approved,rel}=r;
-    const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(sel.has(st.id)?{checked:"checked"}:{}),...(approved?{}:{disabled:"disabled"})});
-    cb.addEventListener("change",()=>{ cb.checked?sel.add(st.id):sel.delete(st.id); });
-    const stt=rep?cocStatus(r.g,rep,r.marks):{cls:"none",txt:"Not opened"};
-    const stale=rel&&rep?.approvedAt&&rep.approvedAt>rel.at;
-    const acts=el("div",{class:"row",style:"gap:5px"});
-    if(approved) acts.append(el("button",{class:"btn xs"+(rel?" ghost":""),onclick:()=>cocReleaseDialog(r,sem,redraw)},rel?"Update…":"Release…"));
-    if(rel) acts.append(el("button",{class:"btn xs ghost",onclick:()=>cocWithdrawRelease(r,redraw)},"Withdraw"));
-    if(approved&&cv&&!cv._absent&&cv._outcome==="MRR") acts.append(el("button",{class:"btn xs blue",
-      title:"The revised proposal has arrived \u2014 reopen the report so it can be re-assessed",
-      onclick:()=>cocResubDialog(r.g0,rep,st,r.marks,sem,redraw)},"\u21BB Re-assess\u2026"));
-    tb.append(el("tr",{},
-      el("td",{},cb),
-      el("td",{style:"min-width:150px"},el("strong",{},st.name||""),el("div",{class:"muted ui",style:"font-size:12px"},st.sid||"")),
-      el("td",{class:"muted"},r.g.label||""),
-      el("td",{},el("span",{class:"pill "+stt.cls,style:"white-space:nowrap"},stt.txt)),
-      el("td",{},!cv||cv._absent||cv._final==null?el("span",{class:"muted"},"—"):
-        el("span",{class:"mono",title:approved?"":"Provisional — report not approved"},cocFmt(cv._final)+"/20"+(approved?"":" *"))),
-      el("td",{},!cv?el("span",{class:"muted"},"—"):cv._absent?el("span",{class:"pill missed"},"Deferred")
-        :cv._outcome?el("span",{class:"pill "+(cv._outcome==="C"?"approved":cv._outcome==="NC"?"missed":"pending")},cv._outcome):el("span",{class:"muted"},"—")),
-      el("td",{},rel?el("div",{},el("span",{class:"pill approved"},"Released "+cocDay(rel.at)),
-          el("div",{class:"muted ui",style:"font-size:11.5px;margin-top:3px"},[rel.portal?"portal":"",rel.emailedAt?"email":""].filter(Boolean).join(" + ")),
-          stale?el("div",{style:"margin-top:3px"},el("span",{class:"pill pending",style:"font-size:11px"},"Changed since release")):"")
-        :el("span",{class:"muted"},approved?"Not yet":"After approval")),
-      el("td",{},acts)));
+    apprPanels.length>1?el("button",{class:"btn sm ghost",
+      title:"Release the feedback of several approved panels in one go",
+      onclick:()=>cocPanelReleaseDialog(apprPanels.map(x=>x.p),sem,redraw,{only:narrowed?new Set(rows.map(r=>r.st.id)):null})},
+      "Release several panels…"):""));
+
+  if(!shownPanels.length){
+    const c=cardShell("Outcomes — "+(sem?.label||"")+(scope?" · "+scope:""),el("span",{}),"main");
+    c.append(el("p",{class:"muted",style:"padding:16px;margin:0"},allRows.length?"No students match these filters.":"No students are on a panel yet."));
+    v.append(c); return;
+  }
+
+  shownPanels.forEach(({p,shown})=>{
+    const st=cocStatus(p.g,p.rep,p.marks);
+    const nSup=shown.filter(r=>cocRelSup(r.rel)).length, nStu=shown.filter(r=>cocRelStu(r.rel)).length;
+    const right=el("div",{class:"row",style:"gap:6px;align-items:center"},
+      el("span",{class:"pill "+st.cls,style:"white-space:nowrap"},st.txt),
+      p.approved?el("button",{class:"btn xs"+(nStu===shown.length?" ghost":""),
+        onclick:()=>cocPanelReleaseDialog([p],sem,redraw,{only:onlyOf(shown)})},
+        nSup||nStu?"Release / update this panel's feedback…":"Release this panel's feedback…"):"",
+      shown.some(r=>r.rel)?el("button",{class:"btn xs ghost",onclick:()=>cocWithdrawDialog([p],sem,redraw,{only:onlyOf(shown)})},"Withdraw…"):"");
+    const c=cardShell(p.g.label||"Panel",right);
+    const chair=cocCoded(p.g).find(x=>x.isChair);
+    c.append(el("div",{class:"coc-panline ui"},
+      chair?.m?.name?el("span",{},"Chair: "+chair.m.name):"",
+      el("span",{class:"pill "+(nSup===shown.length?"approved":nSup?"blue":"none"),style:"font-size:11.5px"},"Supervisors "+nSup+"/"+shown.length),
+      el("span",{class:"pill "+(nStu===shown.length?"approved":nStu?"blue":"none"),style:"font-size:11.5px"},"Students "+nStu+"/"+shown.length),
+      p.approved?"":el("span",{class:"muted"},p.rep?"The feedback can be released once the Chair approves the report.":"Marking hasn't been opened for this panel yet.")));
+    const t=el("table",{});
+    t.append(el("thead",{},el("tr",{},...["Student","Final mark","Outcome","Supervisors","Student sees it",""].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    shown.forEach(r=>{
+      const {st,c:cv,rep,approved,rel}=r;
+      const stale=cocRelStale(rel,rep);
+      const sups=cocSupNamesOf(st);
+      const acts=el("div",{class:"row",style:"gap:5px"});
+      if(approved) acts.append(el("button",{class:"btn xs ghost",onclick:()=>cocPanelReleaseDialog([p],sem,redraw,{one:st.id})},rel?"Update…":"Release…"));
+      if(rel) acts.append(el("button",{class:"btn xs ghost",onclick:()=>cocWithdrawDialog([p],sem,redraw,{only:new Set([st.id])})},"Withdraw…"));
+      if(approved&&cv&&!cv._absent&&cv._outcome==="MRR") acts.append(el("button",{class:"btn xs blue",
+        title:"The revised proposal has arrived — reopen the report so it can be re-assessed",
+        onclick:()=>cocResubDialog(r.g0,rep,st,r.marks,sem,redraw)},"↻ Re-assess…"));
+      const small=t0=>el("div",{class:"muted ui",style:"font-size:11.5px;margin-top:3px"},t0);
+      tb.append(el("tr",{},
+        el("td",{style:"min-width:150px"},el("strong",{},st.name||""),el("div",{class:"muted ui",style:"font-size:12px"},st.sid||"")),
+        el("td",{},!cv||cv._absent||cv._final==null?el("span",{class:"muted"},"—"):
+          el("span",{class:"mono",title:approved?"":"Provisional — report not approved"},cocFmt(cv._final)+"/20"+(approved?"":" *"))),
+        el("td",{},cocOutPill(cv)),
+        el("td",{style:"min-width:140px"},cocRelSup(rel)?el("span",{class:"pill approved"},"Released "+cocDay(rel.supervisorsAt||rel.at))
+            :el("span",{class:"muted"},approved?"Not yet":"After approval"),
+          small(sups.length?sups.join(", "):"No supervisor on record")),
+        el("td",{style:"min-width:140px"},cocRelStu(rel)?el("div",{},el("span",{class:"pill approved"},"Released "+cocDay(rel.studentsAt||rel.at)),
+            small(["portal",rel.emailedAt?"email":""].filter(Boolean).join(" + ")))
+          :rel?.emailedAt&&!cocRelSup(rel)?el("div",{},el("span",{class:"pill blue"},"Emailed "+cocDay(rel.emailedAt)))
+          :cocRelSup(rel)?el("span",{class:"pill pending"},"Not yet — supervisors only")
+          :el("span",{class:"muted"},approved?"Not yet":"After approval"),
+          stale?el("div",{style:"margin-top:3px"},el("span",{class:"pill pending",style:"font-size:11px",title:"The report was amended or re-approved after this was released — release it again to send the new version"},"Changed since release")):""),
+        el("td",{},acts)));
+    });
+    t.append(tb); c.append(t);
+    v.append(c);
   });
-  t.append(tb); c.append(t);
-  c.append(el("p",{class:"muted ui",style:"margin:0;padding:10px 16px;font-size:12px;border-top:1px solid var(--line)"},
-    "* Provisional: the report isn't approved yet. Final marks are shown here for the office only — students never see marks."));
-  v.append(c);
+  v.append(el("p",{class:"muted ui",style:"margin:0 0 14px;font-size:12px"},
+    "* Provisional: the report isn't approved yet. Final marks are shown here for the office only — released feedback never includes marks."));
 }
 
 /* ============================================================
