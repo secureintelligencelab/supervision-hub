@@ -1498,7 +1498,7 @@
   .cx-secnav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;background:var(--sunken);border-bottom:1px solid var(--line);position:sticky;top:62px;z-index:3}
   details.coc-cand:has(.cx-secnav){overflow:clip}
   [data-sec]{scroll-margin-top:122px}
-  details.coc-cand,.cx-anchor{scroll-margin-top:76px}
+  details.coc-cand,.cx-anchor,.coc-sec[data-step]{scroll-margin-top:76px}
   .cx-sn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-strong);background:var(--paper-2);border-radius:999px;
     padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer}
   .cx-sn:hover{border-color:var(--accent)}
@@ -1514,6 +1514,61 @@
   .cx-need button{border:1px solid color-mix(in srgb,var(--amber) 45%,transparent);background:var(--paper-2);color:var(--ink);border-radius:999px;
     padding:3px 10px;font:inherit;font-size:12px;cursor:pointer}
   .cx-need button:hover{border-color:var(--accent);color:var(--accent)}
+  .cx-need-live{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--amber) 40%,transparent)}
+  .cx-need-live .t{font-weight:700;margin-right:4px}
+  /* conflict of interest: a required question, not a toggle */
+  .cx-step.todo .st{color:var(--amber-ink)}
+  .cx-coi{display:grid;gap:10px;border:1px solid var(--line-strong);border-radius:12px;padding:14px 16px;background:var(--paper-2);
+    transition:background .2s,border-color .2s}
+  .cx-coi.need{border-color:color-mix(in srgb,var(--amber) 65%,var(--line-strong));border-left:5px solid var(--amber);
+    background:color-mix(in srgb,var(--amber-soft) 60%,var(--paper-2))}
+  .cx-coi.done{border-color:color-mix(in srgb,var(--green) 45%,var(--line-strong))}
+  .cx-coi-q{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .cx-coi-q .q{font-size:15.5px;font-weight:700;color:var(--ink);line-height:1.35}
+  .cx-req{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 8px;border-radius:99px;
+    background:var(--green-soft);color:var(--green-ink);white-space:nowrap}
+  .cx-coi.need .cx-req{background:var(--amber-ink);color:var(--amber-soft)}
+  .cx-coi-sub{font-size:13px;color:var(--ink-soft);margin-top:-4px;line-height:1.45}
+  .cx-coi-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .cx-coi-opt{display:flex;gap:12px;align-items:flex-start;text-align:left;border:2px solid var(--line-strong);background:var(--paper-2);
+    border-radius:12px;padding:12px 14px;font:inherit;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
+  .cx-coi-opt:hover:not([disabled]){border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  .cx-coi-opt:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  .cx-coi-opt[disabled]{cursor:default}
+  .cx-coi-opt[disabled]:not(.on){opacity:.55}
+  .cx-coi-opt .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--line-strong);background:var(--paper-2);flex:none;
+    margin-top:1px;display:grid;place-items:center;transition:border-color .15s,background .15s}
+  .cx-coi-opt .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:transparent}
+  .cx-coi-opt .tx{display:grid;gap:3px;min-width:0}
+  .cx-coi-opt .tx b{font-size:14px}
+  .cx-coi-opt .tx span{font-size:12.5px;color:var(--ink-soft);line-height:1.4}
+  .cx-coi-opt.on{border-color:var(--accent);background:var(--accent-tint)}
+  .cx-coi-opt.on .dot{border-color:var(--accent);background:var(--accent)}
+  .cx-coi-opt.on .dot::after{background:#fff}
+  .cx-coi-opt.declared.on{border-color:var(--amber);background:var(--amber-soft)}
+  .cx-coi-opt.declared.on .dot{border-color:var(--amber);background:var(--amber)}
+  .cx-coi-hint{font-size:12.5px;font-weight:600;color:var(--amber-ink)}
+  .cx-coi-more{display:grid;gap:6px;padding-top:10px;border-top:1px dashed var(--line-strong)}
+  .cx-coi-more label{margin:0}
+  .cx-coi-more .coc-tip{margin:2px 0 0}
+  .cx-coi.nag{animation:cxnag .45s ease-in-out 2}
+  @keyframes cxnag{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  @media (prefers-reduced-motion:reduce){ .cx-coi.nag{animation:none;box-shadow:0 0 0 3px var(--amber)} }
+  .cx-coi-nudge{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--amber-soft);
+    color:var(--amber-ink);font-size:13px;line-height:1.45;border:1px solid color-mix(in srgb,var(--amber) 40%,transparent)}
+  .cx-coi-nudge strong{color:inherit}
+  .cx-chip.coi{border-color:color-mix(in srgb,var(--amber) 65%,var(--line-strong))}
+  .cx-chip.coi .m{color:var(--amber-ink);font-weight:600}
+  /* "Not quite ready" list behind the submit button */
+  .cx-miss-list{display:grid;gap:8px}
+  .cx-miss-it{display:grid;gap:7px;padding:10px 12px;border-radius:10px;background:var(--sunken);border:1px solid var(--line)}
+  .cx-miss-go{border:1px solid var(--line-strong);background:var(--paper-2);color:var(--ink);border-radius:999px;padding:4px 11px;
+    font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+  .cx-miss-go:hover{border-color:var(--accent);color:var(--accent)}
+  .cx-miss-go.coi{border-color:var(--amber);background:var(--amber-soft);color:var(--amber-ink)}
+  .cx-miss-go.coi:hover{border-color:var(--amber-ink)}
+  .coc-bar .btn.go.wait{background:var(--paper-2);color:var(--ink);border-color:var(--line-strong);box-shadow:none}
+  .coc-bar .btn.go.wait:hover{border-color:var(--accent);color:var(--accent-deep,var(--accent))}
   /* report stepper (Chair / office) */
   .cx-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0 0 14px;background:var(--paper-2);
     border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
@@ -1569,7 +1624,7 @@
     .cx-steps button:nth-child(-n+2){border-bottom:1px solid var(--line)}
   }
   @media (max-width:600px){
-    .cx-outs,.cx-cmts{grid-template-columns:minmax(0,1fr)}
+    .cx-outs,.cx-cmts,.cx-coi-opts{grid-template-columns:minmax(0,1fr)}
     .cx-rubric .r{grid-template-columns:1fr}
     .coc-bar{flex-wrap:wrap}
     .coc-bar .cx-bar{width:auto;flex:1}
@@ -18313,6 +18368,19 @@ function cocMemberMissing(c,chairAbsent){
   return out;
 }
 const cocMemberDone=(c,chairAbsent)=>!cocMemberMissing(c,chairAbsent).length;
+/* Which step of the mark sheet a missing item lives in (the sections carry
+   a matching data-step), and how to name it on a button. */
+function cocMissStep(m){
+  if(m==="conflict of interest"||m==="nature of the interest") return "coi";
+  if(m==="strengths"||m==="concerns") return "cmt";
+  return "marks";
+}
+function cocMissLabel(m){
+  if(m==="conflict of interest") return "Conflict of interest";
+  if(m==="nature of the interest") return "Describe the interest";
+  if(m==="recommended outcome") return "Recommended outcome";
+  return m.charAt(0).toUpperCase()+m.slice(1);
+}
 /* Did the Chair (or office) record this candidate as not having presented? */
 const cocChairAbsent=(rep,sid)=>rep?.cand?.[sid]?.present==="N";
 function cocTotal(c){
@@ -19238,14 +19306,79 @@ function cocMemberSheet(host,o){
     d.open=true; openMem[g.id+sid]=true;
     if(scroll) setTimeout(()=>cocGoTo(d),30);
   }
+  /* Everything still missing, candidate by candidate, in sheet order. */
+  const missingAll=()=>cands.map(s=>({s,miss:cocMemberMissing(md.cand[s.id],cocChairAbsent(rep,s.id))})).filter(x=>x.miss.length);
+  /* Candidates still without a conflict-of-interest answer (and who presented). */
+  const coiUnanswered=()=>cands.filter(s=>!cocChairAbsent(rep,s.id)&&!md.cand[s.id]?.absent&&!md.cand[s.id]?.coi);
+  const coiDrawers=new Map();
+  const closeTop=()=>{ const bg=[...document.querySelectorAll(".modal-bg")].pop(); if(bg&&bg._close) bg._close(); };
+  /* Open a candidate and land on the exact step that still needs something. */
+  function goMissing(sid,step){
+    const d=cardNodes.get(sid); if(!d) return;
+    d.open=true; openMem[g.id+sid]=true;
+    setTimeout(()=>{
+      const t=(step&&d.querySelector('[data-step="'+step+'"]'))||d;
+      cocGoTo(t);
+      if(step==="coi"){
+        const b=t.querySelector(".cx-coi"); if(!b) return;
+        b.classList.remove("nag"); void b.offsetWidth; b.classList.add("nag");
+        setTimeout(()=>{ const f=b.querySelector(".cx-coi-opt:not([disabled])"); try{ if(f) f.focus({preventScroll:true}); }catch(e){} },400);
+      }
+    },30);
+  }
+  function goFirstMissing(){
+    const f=missingAll()[0];
+    if(f) goMissing(f.s.id,cocMissStep(f.miss[0]));
+  }
+  /* "I have no conflict with any of them" — only fills candidates not yet
+     answered, so a declared interest is never overwritten. */
+  function bulkNone(list){
+    if(!list.length) return;
+    if(!window.confirm("Declare that you have no actual, potential or perceived conflict of interest with each of these candidates?\n\n"+
+      list.map(s=>"• "+s.name).join("\n")+
+      "\n\nIf you do have an interest with any of them, press Cancel and answer for that candidate on their card instead.")) return;
+    list.forEach(s=>{ const c=md.cand[s.id]=md.cand[s.id]||{}; c.coi="none"; c.withdrew=false; const f=coiDrawers.get(s.id); if(f) f(); });
+    save();
+    cands.forEach(s=>{ const f=painters.get(s.id); if(f) f(); });
+    paintBar();
+    toast("No conflict of interest recorded for "+list.length+" candidate"+(list.length===1?"":"s")+".");
+  }
+  /* Pressing submit with something missing used to do nothing at all (the
+     button was disabled). Now it says exactly what is missing, with a
+     button that goes straight to each item. */
+  function showMissing(left){
+    left.forEach(x=>{ if(x.miss.some(m=>cocMissStep(m)==="coi")){
+      const d=cardNodes.get(x.s.id), b=d&&d.querySelector(".cx-coi.need"); if(b) b.classList.add("nag"); } });
+    const coiList=left.filter(x=>x.miss.includes("conflict of interest")).map(x=>x.s);
+    const list=el("div",{class:"cx-miss-list"});
+    left.forEach(x=>list.append(el("div",{class:"cx-miss-it"},el("strong",{},x.s.name),
+      el("div",{class:"row",style:"gap:6px"},...x.miss.map(m=>el("button",{type:"button",class:"cx-miss-go"+(cocMissStep(m)==="coi"?" coi":""),
+        onclick:()=>{ closeTop(); goMissing(x.s.id,cocMissStep(m)); }},cocMissLabel(m)+" →"))))));
+    const nItems=left.reduce((n,x)=>n+x.miss.length,0);
+    const body=el("div",{class:"grid",style:"gap:12px"},
+      el("p",{style:"margin:0"},"Everything you have entered is saved. Before you can "+(o.mode==="behalf"?"submit":"sign and submit")+
+        ", complete "+(nItems===1?"this item":"these "+nItems+" items")+":"),
+      list,
+      coiList.length?el("div",{class:"cx-coi-nudge"},
+        el("span",{style:"flex:1;min-width:200px"},"The conflict of interest question is required for every candidate who presented — even when you have none, choose “No — no conflict of interest”."),
+        o.mode==="self"&&coiList.length>1?el("button",{type:"button",class:"btn xs",onclick:()=>{ closeTop(); bulkNone(coiList); }},"No conflict with any of these "+coiList.length+"…"):""):"");
+    modal("Not quite ready to submit",body,async()=>{ const f=left[0]; goMissing(f.s.id,cocMissStep(f.miss[0])); return true; },"Take me to the first one →");
+  }
   function paintBar(){
     const done=cands.filter(doneOf).length;
     if(over) paintOver(done);
     if(!bar) return;
-    bar.querySelector(".cnt").textContent=done+" of "+cands.length+" candidate"+(cands.length===1?"":"s")+" complete";
+    const left=missingAll(), nItems=left.reduce((n,x)=>n+x.miss.length,0);
+    bar.querySelector(".cnt").textContent=nItems?done+" of "+cands.length+" done · "+nItems+" item"+(nItems===1?"":"s")+" to go"
+      :done+" of "+cands.length+" candidate"+(cands.length===1?"":"s")+" complete";
     const pb=bar.querySelector(".cx-bar > i"); if(pb) pb.style.width=(cands.length?Math.round(done/cands.length*100):0)+"%";
-    const nx=bar.querySelector(".cx-next"); if(nx) nx.style.display=done===cands.length?"none":"";
-    const b=bar.querySelector(".go"); if(b) b.disabled=!(done===cands.length&&cands.length);
+    const nx=bar.querySelector(".cx-next"); if(nx) nx.style.display=left.length?"":"none";
+    /* Never disabled: when something is missing it looks quieter and, when
+       pressed, lists what is missing instead of silently doing nothing. */
+    const b=bar.querySelector(".go");
+    if(b){ const ready=!left.length&&cands.length>0;
+      b.classList.toggle("wait",!ready);
+      b.title=ready?"":"Not ready yet — press to see what is still needed"; }
   }
   /* "Your progress": a ring and one chip per candidate; a chip opens and
      scrolls to that candidate. */
@@ -19255,11 +19388,21 @@ function cocMemberSheet(host,o){
       const abs=cocChairAbsent(rep,s.id)||!!md.cand[s.id]?.absent;
       const miss=cocMemberMissing(md.cand[s.id],cocChairAbsent(rep,s.id));
       const ok=!miss.length;
-      chips.append(el("button",{type:"button",class:"cx-chip "+(abs?"abs":ok?"ok":Object.keys(md.cand[s.id]||{}).length?"mid":""),
-        title:ok?(abs?"Did not present":"Complete"):"Still needed: "+miss.join(", "),onclick:()=>openCard(s.id,true)},
+      const noCoi=miss.includes("conflict of interest");
+      chips.append(el("button",{type:"button",class:"cx-chip "+(abs?"abs":ok?"ok":Object.keys(md.cand[s.id]||{}).length?"mid":"")+(noCoi?" coi":""),
+        title:ok?(abs?"Did not present":"Complete"):"Still needed: "+miss.join(", "),
+        onclick:()=>ok?openCard(s.id,true):goMissing(s.id,cocMissStep(miss[0]))},
         el("span",{class:"d"},ok&&!abs?"✓":abs?"–":String(i+1)),s.name,
-        el("span",{class:"m"},abs?"absent":ok?"complete":miss.length+" to do")));
+        el("span",{class:"m"},abs?"absent":ok?"complete":miss.length===1?"needs "+miss[0]:noCoi?"COI + "+(miss.length-1)+" more":miss.length+" to do")));
     });
+    /* One click for the common case: no conflict with anyone on the panel.
+       Offered only on the member's own sheet, and only fills the blanks. */
+    const unans=coiUnanswered();
+    const bulk=!md.submitted&&canEdit()&&o.mode==="self"&&unans.length>=2?
+      el("div",{class:"cx-coi-nudge",style:"margin:12px 16px 0"},
+        el("span",{style:"flex:1;min-width:200px"},el("strong",{},"Conflict of interest not answered for "+unans.length+" candidates."),
+          " Every candidate needs an answer, even when you have no conflict."),
+        el("button",{type:"button",class:"btn xs",onclick:()=>bulkNone(unans)},"I have no conflict with any of them…")):"";
     const closes=rep?.window?.closesAt;
     over.replaceChildren(el("div",{class:"cx-over-top"},cocRing(done,cands.length),
       el("div",{style:"flex:1;min-width:180px"},
@@ -19270,7 +19413,7 @@ function cocMemberSheet(host,o){
           md.submitted?(o.selfChair?"Your signed sheet is in the panel report.":"Your signed sheet is with the Chair."):
           (closes&&cocOpen(rep)?"Marking closes "+cocDT(closes)+" · ":"")+"Click a name to jump to it. Everything saves as you type.")),
       !md.submitted&&canEdit()&&done===cands.length&&cands.length&&o.mode!=="office"?el("button",{class:"btn",onclick:submit},o.mode==="behalf"?"✓ Submit on their behalf":"✓ Sign & submit"):""),
-      chips);
+      bulk,chips);
   }
   function card(st,idx){
     const c=md.cand[st.id]=md.cand[st.id]||{};
@@ -19292,12 +19435,23 @@ function cocMemberSheet(host,o){
             ["Seminar",day?prettyDate(day)+(sl?", "+clockRange(sl.start,sl.end):""):"Not scheduled"],
             ["Supervisors",[st.principalName||supName(st.principalUid),st.coName].filter(Boolean).join(" · ")||"—"])));
     const steps=[];
+    let needBox=null;
     const paintCard=()=>{
       const chairAbs=cocChairAbsent(rep,st.id);
       const miss=cocMemberMissing(c,chairAbs);
       pill.className="pill "+(chairAbs||c.absent?"missed":miss.length?"pending":"approved");
-      pill.textContent=chairAbs||c.absent?"Did not present":miss.length?miss.length+" to complete":"✓ Complete";
+      pill.textContent=chairAbs||c.absent?"Did not present":miss.length===1?"Needs "+miss[0]:miss.length?miss.length+" to complete":"✓ Complete";
       pill.title=miss.length?"Still needed: "+miss.join(", "):"";
+      /* The live "still needed" list at the foot of the card: names each
+         missing item and jumps to it, so nothing is left to guess. */
+      if(needBox){
+        const show=!ro&&!chairAbs&&!c.absent&&miss.length>0&&Object.keys(c).some(k=>k!=="absent");
+        needBox.style.display=show?"":"none";
+        if(show) needBox.replaceChildren(
+          el("span",{class:"t"},"Still needed for "+st.name.split(/\s+/)[0]+":"),
+          ...miss.map(m=>el("button",{type:"button",class:"cx-miss-go"+(cocMissStep(m)==="coi"?" coi":""),
+            onclick:()=>goMissing(st.id,cocMissStep(m))},cocMissLabel(m)+" ↑")));
+      }
       const t=cocTotal(c);
       totP.style.display=t==null?"none":""; totP.textContent=cocFmt(t)+"/"+COC_TOTAL;
       const wd=c.coi==="declared"&&c.withdrew;
@@ -19329,21 +19483,44 @@ function cocMemberSheet(host,o){
     // 1 · conflict of interest
     const s1=cocStepHead(1,"Conflict of interest","actual, potential or perceived");
     steps.push(()=>{ const ok=c.coi==="none"||(c.coi==="declared"&&!!cocT(c.coiDetail));
-      s1.set(ok,ok?(c.coi==="none"?"None declared":c.withdrew?"Declared · withdrew":"Declared"):"Choose one"); });
+      s1.set(ok,ok?(c.coi==="none"?"None declared":c.withdrew?"Declared · withdrew":"Declared"):c.coi==="declared"?"Describe the interest":"Required — answer below");
+      const b=coiBox.querySelector(".cx-coi");
+      if(b){ b.classList.toggle("need",!c.coi); b.classList.toggle("done",ok); if(c.coi) b.classList.remove("nag"); } });
+    /* Asked as a direct, required question with two large choices. It
+       used to be a small two-way toggle that read like a label, and
+       members filled in everything else without noticing it — then could
+       not work out why they couldn't submit. */
     const coiBox=el("div",{});
+    const first=st.name.split(/\s+/)[0];
     const drawCoi=()=>{
-      coiBox.replaceChildren(
-        cocYN(c.coi||"",v=>{ c.coi=v; if(v!=="declared"){ c.withdrew=false; } save(); drawCoi(); drawMarks(); paintPill(st.id); },
-          {vals:[["none","No conflict of interest"],["declared","I have an interest to declare"]],ro}));
+      const pick=v=>{ if(ro) return; c.coi=v; if(v!=="declared"){ c.withdrew=false; } save(); drawCoi(); drawMarks(); paintPill(st.id);
+        if(v==="declared") setTimeout(()=>{ const t=coiBox.querySelector("textarea"); try{ if(t&&!cocT(c.coiDetail)) t.focus(); }catch(e){} },30); };
+      const opt=(v,head,sub)=>el("button",{type:"button",role:"radio","aria-checked":c.coi===v?"true":"false",
+        class:"cx-coi-opt "+v+(c.coi===v?" on":""),disabled:ro?"disabled":null,onclick:()=>pick(v)},
+        el("span",{class:"dot","aria-hidden":"true"}),el("span",{class:"tx"},el("b",{},head),el("span",{},sub)));
+      const q=el("div",{class:"cx-coi"+(c.coi?"":" need")},
+        el("div",{class:"cx-coi-q"},
+          el("span",{class:"q",id:"coiq-"+st.id},"Do you have a conflict of interest with "+st.name+"?"),
+          el("span",{class:"cx-req"},c.coi?"Answered":"Required")),
+        el("div",{class:"cx-coi-sub"},"Actual, potential or perceived — for example supervising or co-authoring with "+first+", a close personal or work relationship, or a financial interest."),
+        el("div",{class:"cx-coi-opts",role:"radiogroup","aria-labelledby":"coiq-"+st.id,"aria-required":"true"},
+          opt("none","No — no conflict of interest","I can assess "+first+" independently."),
+          opt("declared","Yes — I have an interest to declare","You describe it next. Declaring does not disqualify you.")),
+        !c.coi&&!ro?el("div",{class:"cx-coi-hint"},"↑ Choose one — even if you have no conflict. You can’t submit until this is answered for every candidate."):"",
+        !c.coi&&ro?el("div",{class:"cx-coi-hint"},"Not answered."):"");
+      coiBox.replaceChildren(q);
       if(c.coi==="declared"){
-        coiBox.append(el("label",{style:"margin-top:10px"},"Nature of the interest",el("span",{style:"color:var(--clay);margin-left:3px"},"*")),
+        q.append(el("div",{class:"cx-coi-more"},
+          el("label",{},"Nature of the interest",el("span",{style:"color:var(--clay);margin-left:3px"},"*")),
           cocArea(c.coiDetail,v=>{ c.coiDetail=v; save(); paintPill(st.id); },{ro,rows:2,ph:"e.g. I co-authored a paper with the candidate in 2025."}),
-          el("div",{style:"margin-top:8px"},cocCheck(!!c.withdrew,"I withdrew from assessing this candidate (no marks from me)",v=>{ c.withdrew=v; save(); drawMarks(); paintPill(st.id); },{ro})));
+          cocTip("If you should not assess this candidate, tick below — no marks or comments will then be needed from you for "+first+"."),
+          cocCheck(!!c.withdrew,"I withdrew from assessing this candidate (no marks from me)",v=>{ c.withdrew=v; save(); drawMarks(); paintPill(st.id); },{ro})));
       }
+      steps.forEach(f=>f());
     };
     drawCoi();
-    body.append(el("div",{class:"coc-sec"},s1.node,
-      cocTip("Declare anything a reasonable person might see as a conflict — supervising or co-authoring with the candidate, a close personal or work relationship, or a financial interest. A declaration doesn't disqualify you; if you should not assess this candidate, tick “I withdrew”."),coiBox));
+    coiDrawers.set(st.id,()=>{ drawCoi(); drawMarks(); });
+    restBox.append(el("div",{class:"coc-sec","data-step":"coi"},s1.node,coiBox));
     // 2 · marks and recommended outcome
     const s2=cocStepHead(2,"Marks and recommended outcome","out of "+COC_TOTAL);
     steps.push(()=>{ const wd=c.coi==="declared"&&c.withdrew;
@@ -19354,6 +19531,12 @@ function cocMemberSheet(host,o){
     const drawMarks=()=>{
       marksBox.replaceChildren();
       if(c.coi==="declared"&&c.withdrew){ marksBox.append(el("p",{class:"muted",style:"margin:0"},"You withdrew from assessing this candidate, so no marks or outcome are recorded from you.")); return; }
+      /* Marks can be entered in any order, but keep step 1 in view: it is
+         the one people skip. */
+      if(!c.coi&&!ro) marksBox.append(el("div",{class:"cx-coi-nudge",style:"margin:0 0 12px"},
+        el("span",{style:"flex:1;min-width:180px"},el("strong",{},"Step 1 isn\u2019t answered yet."),
+          " Declare whether you have a conflict of interest with "+first+" \u2014 it is required before you can submit."),
+        el("button",{type:"button",class:"btn xs",onclick:()=>goMissing(st.id,"coi")},"\u2191 Go to step 1")));
       const tot=cocTotalBox();
       const warn=el("div",{class:"coc-tip",style:"color:var(--amber-ink);font-weight:600"});
       const paintTot=()=>{ const t=cocTotal(c); tot.set(t);
@@ -19373,7 +19556,7 @@ function cocMemberSheet(host,o){
             el("div",{class:"r"},el("b",{},"Bands / "+COC_TOTAL),el("span",{},"17–20 Excellent · 13–16 Good · 10–12 Satisfactory · below 10 Not yet satisfactory. A total below 10 would not normally support confirmation without conditions.")))));
     };
     drawMarks();
-    body.append(el("div",{class:"coc-sec"},s2.node,marksBox));
+    restBox.append(el("div",{class:"coc-sec","data-step":"marks"},s2.node,marksBox));
     // 3 · comments
     const s3=cocStepHead(3,"Comments for the Chair","used to draft the panel feedback");
     steps.push(()=>{ const wd=c.coi==="declared"&&c.withdrew; const ok=wd||(!!cocT(c.strengths)&&!!cocT(c.concerns));
@@ -19384,8 +19567,10 @@ function cocMemberSheet(host,o){
      ["improvements","Improvements required",false,"Specific changes the candidate should make…"],
      ["dissent","Anything else for the Chair",false,"e.g. a view you expect to differ from the panel's (not shown to the candidate as written)"]]
       .forEach(([k,l,req,ph])=>cm.append(cocField(l,c[k],v=>{ c[k]=v; save(); paintPill(st.id); },{ro,rows:3,req,ph})));
-    body.append(el("div",{class:"coc-sec"},s3.node,
+    restBox.append(el("div",{class:"coc-sec","data-step":"cmt"},s3.node,
       cocTip("The Chair combines everyone's comments into the feedback the candidate reads, so write in full sentences about the proposal and presentation."),cm));
+    needBox=el("div",{class:"cx-need cx-need-live",role:"status",style:"display:none"});
+    body.append(needBox);
     /* Next candidate: closes this one and opens the next, so the sheet
        reads as a sequence rather than one long page. */
     const nextSt=cands[idx+1];
@@ -19435,10 +19620,10 @@ function cocMemberSheet(host,o){
       const closes=rep?.window?.closesAt;
       host.append(cocGuide("member","How to complete your assessment",[
         ["Read the proposal and slides first.",docsLinkOf(g)?"They are in the panel's shared folder (link above).":"The MRes office shares them with the panel."],
-        ["Work through each candidate.","Each candidate has three numbered steps: 1 declare any conflict of interest, 2 enter the three marks (use \u2212 / + or type) and pick your recommended outcome, 3 write your comments for the Chair. Each step turns into a green tick when it is done, and the progress ring at the top fills up."],
+        ["Work through each candidate.","Each candidate has three numbered steps: 1 answer the conflict of interest question (required for every candidate \u2014 choose \u201CNo \u2014 no conflict of interest\u201D if you have none), 2 enter the three marks (use \u2212 / + or type) and pick your recommended outcome, 3 write your comments for the Chair. Each step turns into a green tick when it is done, and the progress ring at the top fills up."],
         ["A candidate didn't present?","Choose \u201CNo \u2014 absent\u201D at the top of their card \u2014 nothing else is needed for them and you can still submit for everyone else. The Chair records the absence and the MRes office arranges their later presentation."],
         ["Everything saves as you type.","You can stop and come back later on any device \u2014 look for \u201C\u2713 Saved\u201D in the bar at the bottom. \u201CNext to complete\u201D in that bar takes you to whatever is still missing."],
-        [o.selfChair?"Sign & submit your marks.":"Sign & submit to the Chair.","When every candidate is complete, press the button in the bottom bar, draw or type your signature and tick the declaration. This replaces the Word form: there is nothing to email."],
+        [o.selfChair?"Sign & submit your marks.":"Sign & submit to the Chair.","When every candidate is complete, press the button in the bottom bar, draw or type your signature and tick the declaration. If anything is still missing, the button lists exactly what and takes you to it. This replaces the Word form: there is nothing to email."],
         ["Need to change something?","After submitting, \u201CWithdraw to edit\u201D reopens your sheet while marking is open and the Chair hasn't approved the report. You'll need to sign again."],
         ...(o.selfChair?[["Then, as Chair, the panel report.","When you submit, the screen moves on to \u201CPanel marks & report\u201D, where you see every member\u2019s marks side by side, complete each candidate\u2019s determination and approve and sign the report."]]:[])],
         {sub:closes?"\u00B7 marking closes "+cocDT(closes):"",foot:"Your marks are visible only to you, the Panel Chair and the MRes office."}));
@@ -19452,7 +19637,7 @@ function cocMemberSheet(host,o){
     }
     cands.forEach((st,i)=>{ host.append(card(st,i)); painters.get(st.id)?.(); });
     if(!cands.length) host.append(emptyState("No candidates on this panel","The coordinator hasn't seated any students on it yet."));
-    const nextBtn=()=>el("button",{class:"btn sm ghost cx-next",type:"button",onclick:()=>{ const s=firstOpen(); if(s) openCard(s.id,true); }},"Next to complete \u2192");
+    const nextBtn=()=>el("button",{class:"btn sm ghost cx-next",type:"button",onclick:goFirstMissing},"Next to complete \u2192");
     if(o.mode==="office"&&cands.length){
       bar=el("div",{class:"coc-bar ui"},cocProgBar(0,cands.length),
         el("span",{class:"cnt"},""),ss.node,el("span",{style:"flex:1"}),
@@ -19468,8 +19653,8 @@ function cocMemberSheet(host,o){
   }
   async function submit(){
     await save.flush();
-    const bad=cands.filter(s=>!cocMemberDone(md.cand[s.id],cocChairAbsent(rep,s.id)));
-    if(bad.length){ toast("Still to complete: "+bad.map(s=>s.name).join(", "),true); openCard(bad[0].id,true); return; }
+    const left=missingAll();
+    if(left.length){ showMissing(left); return; }
     let patch;
     if(o.mode==="behalf"){
       const how=el("input",{placeholder:"e.g. by email on "+longDate(ymdOf(new Date()))});
