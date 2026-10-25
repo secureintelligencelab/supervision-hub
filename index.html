@@ -18304,6 +18304,38 @@ const COC_OFFICE_CHK=[
   ["f","Conditions and second seminar dates diarised"]];
 const COC_MODES=["On campus","Online (Teams)","Hybrid"];
 const cocOutcome=c=>COC_OUTCOMES.find(o=>o.c===c)||null;
+/* The standard "Conditions, revisions or actions" wording for CMR and MRR.
+   Filled into the Chair's C1.6 box when one of those outcomes is chosen,
+   and fully editable. The Moodle link is a semester setting (CoC reports
+   → Report settings), with this one as the default. */
+const COC_REVISED_LINK_DEFAULT="https://lms.cihe.edu.au/mod/turnitintooltwo/view.php?id=61594";
+function cocRevisedLink(sem){
+  const t=String(sem?.cocRevisedLink||"").trim();
+  return t&&/^https?:\/\/[^\s\/]+\.[^\s]+$/i.test(linkHref(t))?linkHref(t):COC_REVISED_LINK_DEFAULT;
+}
+function cocStdConditions(code,sem){
+  const o=cocOutcome(code);
+  if(!o||!(code==="CMR"||code==="MRR")) return "";
+  return "The student is required to complete all necessary revisions and submit the revised proposal within "+o.weeks+
+    " weeks of the panel\u2019s report ("+(code==="CMR"?"minor":"major")+" revisions) through the RES915/RES916 Moodle unit, "+
+    "under the Submission of Assignment section, using the following link: POST COC REVISED FINAL PROPOSAL ("+cocRevisedLink(sem)+").\n\n"+
+    "The student must also share the CoC panel\u2019s feedback and comments with their supervision team and consult with their "+
+    "supervisors throughout the revision process to ensure that all concerns and recommendations are appropriately addressed.";
+}
+/* Is this text still one of the standard wordings, untouched? */
+const cocIsStdConditions=(t,sem)=>{ t=String(t==null?"":t).trim(); return !!t&&["CMR","MRR"].some(k=>t===cocStdConditions(k,sem)); };
+/* Web addresses in a piece of text, so they can be made clickable. */
+function cocUrlParts(t){
+  const out=[], s=String(t==null?"":t), re=/https?:\/\/[^\s<>"]+/g; let last=0, m;
+  while((m=re.exec(s))){
+    let u=m[0]; while(/[).,;:!?\]]$/.test(u)) u=u.slice(0,-1);
+    if(m.index>last) out.push({t:s.slice(last,m.index)});
+    out.push({url:u}); last=m.index+u.length; re.lastIndex=last;
+  }
+  if(last<s.length) out.push({t:s.slice(last)});
+  return out;
+}
+const cocLinkify=t=>cocUrlParts(t).map(x=>x.url?el("a",{href:x.url,target:"_blank",rel:"noopener"},x.url):x.t);
 function cocBand(t){
   if(t==null) return "";
   return t>=17?"Excellent":t>=13?"Good":t>=10?"Satisfactory":"Not yet satisfactory";
@@ -18752,6 +18784,13 @@ function cocDocxBuild(ctx){
     return String(t==null?"":t).split("\n").map((ln,i)=>(i?'<w:r>'+rp+'<w:br/></w:r>':'')+'<w:r>'+rp+'<w:t xml:space="preserve">'+X(ln)+'</w:t></w:r>').join("");
   };
   const box=(on,label,o={})=>r(on?"☒":"☐",{...o,font:"MS Gothic"})+r(" "+label,o);
+  /* text with any web address made a clickable link */
+  const links=[];
+  const rl=(t,o={})=>cocUrlParts(t).map(x=>{
+    if(!x.url) return r(x.t,o);
+    const id="rIdLnk"+(links.length+1); links.push({id,url:x.url});
+    return '<w:hyperlink r:id="'+id+'" w:history="1">'+r(x.url,{...o,color:"194698",u:true})+'</w:hyperlink>';
+  }).join("")||r("",o);
   const p=(runs,o={})=>'<w:p><w:pPr>'+(o.keep?'<w:keepNext/>':'')+'<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after??0)+'" w:line="'+(o.line||252)+'" w:lineRule="auto"/>'+
     (o.align?'<w:jc w:val="'+o.align+'"/>':'')+'</w:pPr>'+(runs||"")+'</w:p>';
   const cellXml=(content,o={})=>{
@@ -18977,7 +19016,7 @@ function cocDocxBuild(ctx){
       {cells:[L("Candidature Outcome"),{c:COC_OUTCOMES.map(o=>p(box(c._outcome===o.c,o.long,{sz:17}))).join("")}]},
       ...(c._outcomeWhy?[{cells:[L("Reason for the outcome",{sub:c._outcomeWhy==="split"?"The panel members recommended different outcomes":"The outcome differs from the panel members\u2019 majority"}),
         {c:p(r(cocOutcomeWhyText(c),{i:true,sz:16,color:"595959"}))+p(r(cocT(det.outcomeReason),{sz:18}),{before:60}),padV:90}]}]:[]),
-      {cells:[L("Conditions, Revisions or actions required by Candidate",{sub:"Attach additional documents if required"}),V(cocT(det.conditions),{padV:90})]},
+      {cells:[L("Conditions, Revisions or actions required by Candidate",{sub:"Attach additional documents if required"}),V(p(rl(cocT(det.conditions),{sz:18})),{padV:90})]},
       {cells:[L("Revisions due by (refer to B3)"),V((c._outcome==="CMR"||c._outcome==="MRR")&&c._dueBy?longDate(c._dueBy):"")]},
       {cells:[L("Re-Presentation required?"),{c:p(box(det.represent==="Y","Yes",{sz:17})+r("       ",{sz:17})+box(det.represent==="N","No",{sz:17}))}]},
       {cells:[L("Chair verification"),{c:p(box(!!rep?.chairSign?.img,"I have verified the marks and comments recorded above with each panel member, and confirm they accurately reflect the panel’s assessment of this candidate.",{sz:17,b:true}))}]}]);
@@ -19061,7 +19100,8 @@ function cocDocxBuild(ctx){
     '<Relationship Id="rIdStyles" Type="'+RELNS+'/styles" Target="styles.xml"/>'+
     '<Relationship Id="rIdSettings" Type="'+RELNS+'/settings" Target="settings.xml"/>'+
     '<Relationship Id="rIdFooter" Type="'+RELNS+'/footer" Target="footer1.xml"/>'+
-    media.map(m=>'<Relationship Id="'+m.rid+'" Type="'+RELNS+'/image" Target="media/'+m.name+'"/>').join("")+'</Relationships>';
+    media.map(m=>'<Relationship Id="'+m.rid+'" Type="'+RELNS+'/image" Target="media/'+m.name+'"/>').join("")+
+    links.map(l=>'<Relationship Id="'+l.id+'" Type="'+RELNS+'/hyperlink" Target="'+X(l.url)+'" TargetMode="External"/>').join("")+'</Relationships>';
   const ct=P+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/>'+
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
@@ -19558,17 +19598,26 @@ function cocMemberSheet(host,o){
     drawMarks();
     restBox.append(el("div",{class:"coc-sec","data-step":"marks"},s2.node,marksBox));
     // 3 · comments
-    const s3=cocStepHead(3,"Comments for the Chair","used to draft the panel feedback");
+    const s3=cocStepHead(3,"Comments and feedback","for the student, and for the Chair");
     steps.push(()=>{ const wd=c.coi==="declared"&&c.withdrew; const ok=wd||(!!cocT(c.strengths)&&!!cocT(c.concerns));
       s3.set(ok,wd?"Not needed (withdrew)":ok?"Done":"Strengths & concerns needed"); });
-    const cm=el("div",{class:"cx-cmts"});
-    [["strengths","Strengths of the proposal and presentation",true,"What works well — the gap, the questions, the design, the delivery…"],
-     ["concerns","Concerns, weaknesses or gaps identified",true,"What is missing, unclear or at risk…"],
-     ["improvements","Improvements required",false,"Specific changes the candidate should make…"],
-     ["dissent","Anything else for the Chair",false,"e.g. a view you expect to differ from the panel's (not shown to the candidate as written)"]]
-      .forEach(([k,l,req,ph])=>cm.append(cocField(l,c[k],v=>{ c[k]=v; save(); paintPill(st.id); },{ro,rows:3,req,ph})));
+    const fld=([k,l,req,ph,cls])=>{ const f=cocField(l,c[k],v=>{ c[k]=v; save(); paintPill(st.id); },{ro,rows:3,req,ph});
+      if(cls) f.style.gridColumn="1/-1"; return f; };
+    const cm=el("div",{class:"cx-cmts"},
+      ...[["strengths","Strengths of the proposal and presentation",true,"What works well \u2014 the research gap, the questions, the design, the delivery\u2026"],
+          ["concerns","Concerns, weaknesses or gaps",true,"What is missing, unclear or at risk\u2026"],
+          ["improvements","Improvements or revisions the student should make",false,"Specific changes, e.g. narrow RQ2 to one sector; add a data-access plan and a short ethics section.",true]].map(fld));
+    const cmChair=el("div",{class:"cx-cmts"},
+      fld(["dissent","Note for the Chair",false,"e.g. a minority or dissenting view, or a point to raise when the panel agrees the outcome.",true]));
+    const cmHead=(t,sub)=>el("div",{class:"ui",style:"margin:4px 0 2px"},el("strong",{style:"font-size:14px"},t),
+      el("div",{class:"coc-tip",style:"margin:2px 0 8px"},sub));
     restBox.append(el("div",{class:"coc-sec","data-step":"cmt"},s3.node,
-      cocTip("The Chair combines everyone's comments into the feedback the candidate reads, so write in full sentences about the proposal and presentation."),cm));
+      cmHead("Feedback for the student",
+        "Write to the candidate, in full sentences, about the proposal and the presentation. The Chair combines every member\u2019s feedback into the panel\u2019s feedback that the student receives, and your own comments may also be shared with the student anonymously (as Assessor A, B or C)."),
+      cm,
+      el("div",{style:"margin-top:16px"},cmHead("Note for the Chair only",
+        "Optional, and never shared with the student. Use it for anything the Chair should know before deciding the outcome.")),
+      cmChair));
     needBox=el("div",{class:"cx-need cx-need-live",role:"status",style:"display:none"});
     body.append(needBox);
     /* Next candidate: closes this one and opens the next, so the sheet
@@ -19620,7 +19669,7 @@ function cocMemberSheet(host,o){
       const closes=rep?.window?.closesAt;
       host.append(cocGuide("member","How to complete your assessment",[
         ["Read the proposal and slides first.",docsLinkOf(g)?"They are in the panel's shared folder (link above).":"The MRes office shares them with the panel."],
-        ["Work through each candidate.","Each candidate has three numbered steps: 1 answer the conflict of interest question (required for every candidate \u2014 choose \u201CNo \u2014 no conflict of interest\u201D if you have none), 2 enter the three marks (use \u2212 / + or type) and pick your recommended outcome, 3 write your comments for the Chair. Each step turns into a green tick when it is done, and the progress ring at the top fills up."],
+        ["Work through each candidate.","Each candidate has three numbered steps: 1 answer the conflict of interest question (required for every candidate \u2014 choose \u201CNo \u2014 no conflict of interest\u201D if you have none), 2 enter the three marks (use \u2212 / + or type) and pick your recommended outcome, 3 write your feedback for the student (strengths and concerns are required) and, if you wish, a note for the Chair only. Each step turns into a green tick when it is done, and the progress ring at the top fills up."],
         ["A candidate didn't present?","Choose \u201CNo \u2014 absent\u201D at the top of their card \u2014 nothing else is needed for them and you can still submit for everyone else. The Chair records the absence and the MRes office arranges their later presentation."],
         ["Everything saves as you type.","You can stop and come back later on any device \u2014 look for \u201C\u2713 Saved\u201D in the bar at the bottom. \u201CNext to complete\u201D in that bar takes you to whatever is still missing."],
         [o.selfChair?"Sign & submit your marks.":"Sign & submit to the Chair.","When every candidate is complete, press the button in the bottom bar, draw or type your signature and tick the declaration. If anything is still missing, the button lists exactly what and takes you to it. This replaces the Word form: there is nothing to email."],
@@ -20033,10 +20082,24 @@ function cocReportEditor(host,o){
     // first visit with every sheet in: draft the feedback from the members' comments
     const allIn=coded.every(cd=>marks[cd.key]?.submitted);
     if(!R&&allIn&&!raw.fbDrafted&&COC_FB.every(([k])=>!cocT(raw.fb[k]))){
-      COC_FB.forEach(([k])=>{ raw.fb[k]=combine(k,st.id); });
+      /* The members' "Note for the Chair" is not shared with the student,
+         so it is not copied into the student-facing dissent box; the Chair
+         can still draft it from the notes with the button below it. */
+      COC_FB.forEach(([k])=>{ if(k!=="dissent") raw.fb[k]=combine(k,st.id); });
       raw.fbDrafted=true; save();
     }
-    const c=cocCand(rep,g,st,marks,sem);
+    let c=cocCand(rep,g,st,marks,sem);
+    /* The standard conditions wording: filled in for CMR / MRR, swapped
+       when the outcome changes while it is still untouched, and cleared
+       if the outcome becomes C or NC. Anything the Chair has typed is
+       never overwritten. */
+    if(!R&&!locked()&&!c._absent){
+      const dt=raw.det, want=cocStdConditions(c._outcome,sem), cur=cocT(dt.conditions), std=cocIsStdConditions(cur,sem);
+      let ch=false;
+      if(want&&((!cur&&dt.condDrafted!==c._outcome)||(std&&cur!==want))){ dt.conditions=want; dt.condDrafted=c._outcome; ch=true; }
+      else if(!want&&std){ dt.conditions=""; dt.condDrafted=""; ch=true; }
+      if(ch){ save(); c=cocCand(rep,g,st,marks,sem); }
+    }
     const miss=cocChairMissing(c);
     const d=el("details",{class:"coc-cand card","data-sid":st.id});
     if(openState[g.id+st.id]!==undefined?openState[g.id+st.id]:idx===0) d.open=true;
@@ -20202,11 +20265,11 @@ function cocReportEditor(host,o){
             if(cocT(ta.value)&&!window.confirm("Replace what is written here with the members' comments?")) return;
             ta.value=combine(k,st.id); raw.fb[k]=ta.value; save(); }},"↻ Draft from members"):""),
         ta,
-        quotes.length?el("details",{class:"coc-guide"},el("summary",{},"What the members wrote ("+quotes.length+")"),
+        quotes.length?el("details",{class:"coc-guide"},el("summary",{},(k==="dissent"?"Members\u2019 notes for the Chair \u2014 not shared with the student (":"What the members wrote (")+quotes.length+")"),
           el("div",{},...quotes.map(q=>el("div",{class:"coc-quote"},el("strong",{},q.cd.code+" "+(q.cd.m.name||"")+": "),q.t)))):""));
     });
     body.append(tag("C1.4",cocSec("C1.4 Panel feedback to the candidate","consolidated by the Chair",
-      cocTip("This is what the candidate reads. It starts as the members' comments listed as bullets \u2014 rewrite them into one voice, merge repeated points and remove anything that names or identifies a member. \u201CWhat the members wrote\u201D under each box shows the originals; \u201C\u21BB Draft from members\u201D starts that box again."),fb)));
+      cocTip("This is what the candidate reads. It starts as the members' comments listed as bullets \u2014 rewrite them into one voice, merge repeated points and remove anything that names or identifies a member. \u201CWhat the members wrote\u201D under each box shows the originals; \u201C\u21BB Draft from members\u201D starts that box again. The minority or dissenting view box starts empty: the members\u2019 notes for the Chair are private, so only write there what the candidate should read."),fb)));
     // C1.5
     const it=el("div",{class:"grid",style:"gap:8px"});
     COC_ITEMS.forEach(([k,lab])=>it.append(el("div",{class:"row",style:"justify-content:space-between;flex-wrap:nowrap;gap:12px"},
@@ -20218,11 +20281,12 @@ function cocReportEditor(host,o){
     const fin=cocInput(finManual?det.finalMark:"",v=>{ det.finalMark=v===""?"":cocNum(v); det.finalAuto=false; save(); redraw(); },
       {type:"number",ro:R,onChange:true,ph:c._finalDefault==null?"":cocFmt(c._finalDefault),attrs:{min:"0",max:"20",step:"0.1",style:"max-width:130px;font-family:var(--mono);font-size:17px"}});
     const outs=cocOutcomeCards(c._outcome,v=>{ const x=cocOutcome(v);
-        det.outcome=x.c; det.outcomeAuto=false; if((x.c==="CMR"||x.c==="MRR")&&!det.dueBy) det.dueBy=cocAddDays(ymdOf(new Date()),x.weeks*7);
+        det.outcome=x.c; det.outcomeAuto=false;
+        if((x.c==="CMR"||x.c==="MRR")&&(!det.dueBy||det.dueAuto)){ det.dueBy=cocAddDays(ymdOf(new Date()),x.weeks*7); det.dueAuto=true; }
         save(); redraw(); },{ro:R,votes:ag.tally,of:ag.n});
     const needsRev=c._outcome==="CMR"||c._outcome==="MRR";
     body.append(tag("C1.6",cocSec("C1.6 Panel Chair’s determination",null,
-      cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. If the members recommend different outcomes with no majority, or you choose a different outcome from the majority, say why under the outcome \u2014 it is printed on the report. For CMR, list the minor revisions (due within 2 weeks); for MRR, the major revisions (resubmission within 4 weeks) \u2014 the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. If the candidate is confirmed after an MRR resubmission, tick the cap box: the mark is capped at 10/20."),
+      cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. If the members recommend different outcomes with no majority, or you choose a different outcome from the majority, say why under the outcome \u2014 it is printed on the report. For CMR (minor revisions, due within 2 weeks) and MRR (major revisions, resubmission within 4 weeks) the conditions box is filled in with the standard wording \u2014 edit it as you need, and the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. If the candidate is confirmed after an MRR resubmission, tick the cap box: the mark is capped at 10/20."),
       cocKV(["Final mark / 20",el("div",{},el("div",{class:"row"},fin,
           c._final!=null?el("span",{class:"pill "+(c._final>=17?"approved":c._final>=13?"blue":c._final>=10?"pending":"missed")},cocBand(c._final)):"",
           el("span",{class:"muted ui"},c._finalDefault!=null?(!finManual?"Using the ":"The ")+(c._resub?.mode==="chair"?"Chair's resubmission total ":"panel average ")+cocFmt(c._base)+(c._capOn?" (capped at 10)":""):"Waiting for the members' marks")),
@@ -20236,8 +20300,23 @@ function cocReportEditor(host,o){
             el("label",{for:"why-"+st.id},"Reason for the outcome",el("span",{class:"req",title:"Required"}," *")),
             (()=>{ const ta=cocArea(det.outcomeReason,v=>{ det.outcomeReason=v; save(); },{ro:R,rows:3,
               ph:"e.g. After discussing the presentation, the panel agreed the revisions needed are minor, so CMR rather than MRR."}); ta.id="why-"+st.id; return ta; })()):"")],
-        ["Conditions, revisions or actions",cocArea(det.conditions,v=>{ det.conditions=v; save(); },{ro:R,rows:3,ph:needsRev?"Required for "+c._outcome:"If any"})],
-        ...(needsRev?[["Revisions due by",cocInput(c._dueBy,v=>{ det.dueBy=v; save(); },{type:"date",ro:R,attrs:{style:"max-width:200px"}})]]:[]),
+        ["Conditions, revisions or actions",(()=>{
+          const std=cocStdConditions(c._outcome,sem);
+          const ta=cocArea(det.conditions,v=>{ det.conditions=v; save(); },{ro:R,rows:needsRev?7:3,
+            ph:needsRev?"Required for "+c._outcome:"If any \u2014 e.g. additional supervision or support identified in C1.5"});
+          if(!needsRev||R) return ta;
+          const note=el("span",{class:"coc-tip",style:"margin:0;flex:1;min-width:200px"},
+            cocIsStdConditions(det.conditions,sem)
+              ?"Standard wording for "+c._outcome+" \u2014 edit it freely, and add any specific revisions the panel requires."
+              :"Use the standard wording for "+c._outcome+" if you wish, then edit it.");
+          return el("div",{},ta,el("div",{class:"row",style:"gap:8px;margin-top:6px;align-items:center"},note,
+            el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
+              if(cocT(ta.value)&&cocT(ta.value)!==std&&!window.confirm("Replace what is written here with the standard wording for "+c._outcome+"?")) return;
+              ta.value=std; det.conditions=std; det.condDrafted=c._outcome; save();
+              note.textContent="Standard wording for "+c._outcome+" \u2014 edit it freely, and add any specific revisions the panel requires.";
+            }},"\u21BA Use the standard wording")));
+        })()],
+        ...(needsRev?[["Revisions due by",cocInput(c._dueBy,v=>{ det.dueBy=v; det.dueAuto=false; save(); },{type:"date",ro:R,attrs:{style:"max-width:200px"}})]]:[]),
         ["Re-presentation required?",cocYN(det.represent||"",v=>{ det.represent=v; save(); redraw(); },{ro:R})]))));
     if(!R){ body.append(need); paintNeed(miss); paintNav(miss); }
     d.append(body);
@@ -20799,15 +20878,20 @@ async function viewCocAdmin(v){
   // settings: coordinator name & research office address live on the semester
   const coord=el("input",{value:cocT(sem?.cocCoordinator),placeholder:"e.g. Dr Jane Citizen"});
   const roIn=el("input",{type:"email",value:researchOfficeEmail(sem),placeholder:"research.office@cihe.edu.au"});
+  const rvIn=el("input",{type:"text",inputmode:"url",autocomplete:"off",spellcheck:"false",value:cocT(sem?.cocRevisedLink),placeholder:COC_REVISED_LINK_DEFAULT});
   const saveSet=el("button",{class:"btn sm ghost",onclick:async()=>{
-    try{ await DB.update("semesters",sem.id,{cocCoordinator:cocT(coord.value),researchOfficeEmail:cocT(roIn.value)});
+    const rv=cocT(rvIn.value);
+    if(rv&&!/^https?:\/\/[^\s\/]+\.[^\s]+$/i.test(linkHref(rv))){ toast("That Moodle link doesn\u2019t look like a web address.",true); return; }
+    try{ await DB.update("semesters",sem.id,{cocCoordinator:cocT(coord.value),researchOfficeEmail:cocT(roIn.value),cocRevisedLink:rv?linkHref(rv):""});
       S.semesters=await DB.list("semesters"); S.semesters.sort((a,b)=>(a.label>b.label?-1:1)); toast("Saved."); }
     catch(e){ toast(e?.message||"Could not save.",true); } }},"Save");
   v.append(el("details",{class:"cfold",style:"margin-bottom:14px"},el("summary",{},el("div",{class:"csection"},el("div",{class:"cs-mark"},"⚙"),
-      el("div",{class:"cs-body"},el("h3",{},"Report settings for "+(sem?.label||"this semester")),el("p",{},"Printed on every report: the Course Coordinator (A1) and the Research Office address."))),el("div",{class:"cfold-right"},el("span",{class:"chev"},"›"))),
+      el("div",{class:"cs-body"},el("h3",{},"Report settings for "+(sem?.label||"this semester")),el("p",{},"Printed on every report: the Course Coordinator (A1) and the Research Office address \u2014 and the Moodle link for revised proposals used in the standard conditions wording."))),el("div",{class:"cfold-right"},el("span",{class:"chev"},"›"))),
     el("div",{class:"cfold-body"},el("div",{class:"card",style:"padding:14px 16px"},
       el("div",{class:"row",style:"align-items:flex-end"},el("div",{class:"field",style:"flex:1"},el("label",{},"Course Coordinator"),coord),
-        el("div",{class:"field",style:"flex:1"},el("label",{},"Research Office email"),roIn),saveSet)))));
+        el("div",{class:"field",style:"flex:1"},el("label",{},"Research Office email"),roIn),saveSet),
+      el("div",{class:"field",style:"margin-top:12px"},el("label",{},"Moodle link for revised proposals (POST COC REVISED FINAL PROPOSAL)"),rvIn,
+        el("div",{class:"coc-tip"},"Used in the standard conditions wording the Chair gets for CMR and MRR. Leave it empty to use "+COC_REVISED_LINK_DEFAULT+". Changing it doesn\u2019t alter wording a Chair has already saved."))))));
 
   // bulk actions
   const sel=new Set(S.cocSel||[]);
@@ -20916,7 +21000,7 @@ async function viewCocAdmin(v){
           const to=[...new Set(gs.flatMap(g=>cocCoded(g).flatMap(cd=>memberEmails(cd.m))))];
           openEmail("", "CoC examination reports — marking is open",
             "Dear panel members,\n\nMarking for the Confirmation of Candidature panel"+(gs.length===1?" "+(gs[0].label||""):"s")+" is open in the MRes Supervision Hub from "+cocDT(o)+(cl?" until "+cocDT(cl):"")+".\n\n"+
-            "How to assess (there is no Word form to fill in):\n1. Sign in to the MRes Supervision Hub with your email and password and open \u201CCoC assessment\u201D.\n2. For each candidate: declare any conflict of interest, enter your three marks and recommended outcome, and write your comments for the Chair (strengths and concerns are required).\n3. Your work saves as you type. When every candidate is complete, press \u201CSign & submit to the Chair\u201D and sign.\n\nThe Panel Chair then reviews everyone\u2019s entries, approves and signs the report in the hub, and sends the completed form to the Research Office.\n\n"+
+            "How to assess (there is no Word form to fill in):\n1. Sign in to the MRes Supervision Hub with your email and password and open \u201CCoC assessment\u201D.\n2. For each candidate: declare any conflict of interest, enter your three marks and recommended outcome, and write your feedback for the student (strengths and concerns are required) and, if you wish, a note for the Chair only.\n3. Your work saves as you type. When every candidate is complete, press \u201CSign & submit to the Chair\u201D and sign.\n\nThe Panel Chair then reviews everyone\u2019s entries, approves and signs the report in the hub, and sends the completed form to the Research Office.\n\n"+
             "If you usually use a PIN, you'll need your email and password to assess — use “Forgotten your password?” on the sign-in page if needed.\n\nThank you,\nMRes Coordination\n","",to.join(","));
         }
         viewCocAdmin(v); return true;
@@ -21297,7 +21381,7 @@ function cocOutcomeView(o){
     el("div",{},el("div",{class:"t"},o.outcome.label||"Outcome"),
       el("div",{class:"s"},[o.panel,o.seminarDate?"seminar "+longDate(o.seminarDate):"",o.releasedAt?"released "+cocDay(o.releasedAt):""].filter(Boolean).join(" · ")))));
   if(o.outcome.meaning) w.append(el("p",{class:"m"},o.outcome.meaning));
-  const blk=(h,t)=>el("div",{class:"b"},el("div",{class:"h"},h),el("div",{class:"x"},t));
+  const blk=(h,t)=>el("div",{class:"b"},el("div",{class:"h"},h),el("div",{class:"x"},cocLinkify(t)));
   if(o.conditions) w.append(blk("Conditions / revisions required",o.conditions));
   if(o.dueBy||o.represent) w.append(el("div",{class:"row",style:"gap:8px;margin:8px 0"},
     o.dueBy?el("span",{class:"pill pending"},"Due by "+longDate(o.dueBy)):"",
