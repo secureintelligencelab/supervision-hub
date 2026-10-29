@@ -18279,6 +18279,9 @@ const COC_OUTCOMES=[
    meaning:"The candidate re-attempts confirmation within 4 weeks of the panel’s report, addressing the major recommendations, and may be asked to re-present. CoC Chair or Panel reviews the response."},
   {c:"NC", label:"Candidature not confirmed",           long:"NC — candidature Not Confirmed", weeks:0,
    meaning:"The CoC is a pass/fail hurdle for RES915. A final Not Confirmed outcome results in a Fail grade for RES915 and non-progression to Year 2. The candidate will be directed to re-enrol in RES915, or may exit with a Graduate Certificate in Research Methods if its requirements are met. The candidate may appeal in writing to the Course Coordinator within 10 working days of formal notification."}];
+/* Outcome text is shown from the current COC_OUTCOMES list, not the copy saved when the
+   outcome was released, so wording corrections also reach outcomes released earlier. */
+function cocMeaning(out){ const d=COC_OUTCOMES.find(x=>x.c===out?.code); return d?d.meaning:(out?.meaning||""); }
 const COC_SCHOOLS=["IT","Accounting","Business","Early Childhood"];
 const COC_PREREQ=[
   ["1","CoC research written proposal","Required"],
@@ -21354,7 +21357,7 @@ function cocOutcomeText(o,opts={}){
     L.push("The panel has completed the assessment of your Confirmation of Candidature"+(o.seminarDate?" (seminar on "+longDate(o.seminarDate)+")":"")+".","");
   }
   L.push("OUTCOME: "+(o.outcome.code&&o.outcome.code!=="DEF"?o.outcome.code+" — ":"")+o.outcome.label);
-  if(o.outcome.meaning) L.push(o.outcome.meaning);
+  if(cocMeaning(o.outcome)) L.push(cocMeaning(o.outcome));
   if(o.conditions) L.push("","CONDITIONS / REVISIONS REQUIRED:",o.conditions);
   if(o.dueBy) L.push("","Due by: "+longDate(o.dueBy));
   if(o.represent==="Y") L.push("","You will be asked to present again to the panel.");
@@ -21380,7 +21383,7 @@ function cocOutcomeView(o){
     el("span",{class:"pill "+cls,style:"font-size:13px"},o.deferred?"Deferred":o.outcome.code||"—"),
     el("div",{},el("div",{class:"t"},o.outcome.label||"Outcome"),
       el("div",{class:"s"},[o.panel,o.seminarDate?"seminar "+longDate(o.seminarDate):"",o.releasedAt?"released "+cocDay(o.releasedAt):""].filter(Boolean).join(" · ")))));
-  if(o.outcome.meaning) w.append(el("p",{class:"m"},o.outcome.meaning));
+  if(cocMeaning(o.outcome)) w.append(el("p",{class:"m"},cocMeaning(o.outcome)));
   const blk=(h,t)=>el("div",{class:"b"},el("div",{class:"h"},h),el("div",{class:"x"},cocLinkify(t)));
   if(o.conditions) w.append(blk("Conditions / revisions required",o.conditions));
   if(o.dueBy||o.represent) w.append(el("div",{class:"row",style:"gap:8px;margin:8px 0"},
