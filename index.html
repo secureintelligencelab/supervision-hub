@@ -1191,8 +1191,17 @@
   .ap-gl b{font-size:14.5px}
   .ap-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 0 26px}
   .ap-chips:empty{display:none}
-  .ap-chip{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:5px 8px;border-radius:999px;border:1px solid var(--line-strong);background:var(--paper-2);color:var(--ink);cursor:pointer}
-  .ap-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .ap-chipq{flex-basis:100%;font-size:12.5px;color:var(--ink-soft);margin-bottom:2px}
+  .ap-chipq.need{color:var(--amber-ink);font-weight:600}
+  .ap-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:1.2;padding:6px 11px 6px 8px;border-radius:999px;
+    border:1.5px dashed var(--line-strong);background:var(--paper-2);color:var(--ink);cursor:pointer;max-width:100%}
+  .ap-chip b{font:700 12.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .ap-chipn{color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ap-chipi{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;background:var(--sunken);color:var(--ink-soft)}
+  .ap-chip:hover{border-color:var(--accent)}
+  .ap-chip.on{border-style:solid;background:var(--accent);border-color:var(--accent);color:#fff}
+  .ap-chip.on .ap-chipn{color:#fff;opacity:.85}
+  .ap-chip.on .ap-chipi{background:#fff;color:var(--accent)}
   .ap-help{font-size:13px;background:var(--blue-soft);color:var(--ink);border-radius:10px;padding:10px 14px;line-height:1.5}
   .ap-help b{color:var(--blue-ink)}
   .ap-help ul{margin:4px 0 0;padding-left:18px}
@@ -23368,18 +23377,29 @@ function renderAppealStudent(pt0){
     /* 2 */
     const s2=sec("2","Grounds for appeal","Tick every ground that applies and pick the evidence that supports it. Explain each ticked ground in Section 3. Definitions are from QA72 clause 5.6.1.");
     const gWrap=el("div",{class:"ap-grounds"});
+    /* Evidence whose "Ground" in Section 4 names a ticked ground counts as
+       supporting it, so the student doesn't have to say it twice. Only ever
+       adds — a pick made here by hand is never taken away. */
+    const syncEv=()=>{ AP_GROUNDS.forEach(g=>{ const gr=f.grounds[g.k]; if(!gr.on) return;
+      ev.forEach(x=>{ if(x.ground===g.label&&!gr.ev.includes(x.id)){ gr.ev=[...gr.ev,x.id].sort(apEvSort); dirty=true; } }); }); };
     const drawGrounds=()=>{
+      syncEv();
       gWrap.replaceChildren(...AP_GROUNDS.map(g=>{
         const gr=f.grounds[g.k];
         const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); cb.checked=!!gr.on;
         cb.onchange=()=>{ gr.on=cb.checked; touch(); drawGrounds(); drawEv(); };
         const chips=el("div",{class:"ap-chips"});
         if(gr.on){
-          chips.append(el("span",{class:"muted ui",style:"font-size:12px"},"Evidence IDs: "));
-          if(!ev.length) chips.append(el("span",{class:"muted ui",style:"font-size:12px"},"add evidence in Section 4, then pick it here"));
+          const none=!gr.ev.length;
+          chips.append(el("span",{class:"ap-chipq ui"+(none&&ev.length?" need":"")},
+            !ev.length?"Add your evidence in Section 4 \u2014 it will appear here to select.":
+            none?"Which evidence supports this ground? Tap to select:":"Supported by (tap to change):"));
           ev.forEach(x=>{ const on=gr.ev.includes(x.id);
-            chips.append(el("button",{type:"button",class:"ap-chip"+(on?" on":""),title:x.label||"",onclick:()=>{
-              gr.ev=on?gr.ev.filter(i=>i!==x.id):[...gr.ev,x.id].sort(apEvSort); touch(); drawGrounds(); }},x.id)); });
+            const nm=apT(x.label); const short=nm.length>30?nm.slice(0,29)+"\u2026":nm;
+            chips.append(el("button",{type:"button",class:"ap-chip"+(on?" on":""),"aria-pressed":on?"true":"false",
+              title:(on?"Selected: ":"Select ")+x.id+(nm?" \u2014 "+nm:""),onclick:()=>{
+              gr.ev=on?gr.ev.filter(i=>i!==x.id):[...gr.ev,x.id].sort(apEvSort); touch(); drawGrounds(); }},
+              el("span",{class:"ap-chipi","aria-hidden":"true"},on?"\u2713":"+"),el("b",{},x.id),short?el("span",{class:"ap-chipn"},short):"")); });
         }
         return el("div",{class:"ap-ground"+(gr.on?" on":""),"data-k":"g-"+g.k},
           el("label",{class:"ap-gl"},cb,el("div",{},el("b",{},g.label),el("div",{class:"muted",style:"font-size:13px"},g.what))),chips);
@@ -23428,9 +23448,9 @@ function renderAppealStudent(pt0){
       if(!ev.length) evWrap.append(el("div",{class:"sp-empty"},"No evidence added yet. Most appeals need at least one document that shows the ground you rely on."));
       const gOpts=[["","Ground supported…"],...AP_GROUNDS.map(g=>[g.label,g.label]),["General","General / background"]];
       ev.forEach((x,i)=>{
-        const lab=el("input",{value:x.label||"",placeholder:"Document or file name",oninput:e=>{ x.label=e.target.value; touch(); }});
+        const lab=el("input",{value:x.label||"",placeholder:"Document or file name",oninput:e=>{ x.label=e.target.value; touch(); },onchange:()=>drawGrounds()});
         const li=linkInput(x.url,v=>x.url=v); lab.dataset.k="evl-"+x.id; li.inp.dataset.k="evu-"+x.id;
-        const gs=el("select",{onchange:e=>{ x.ground=e.target.value; touch(); }},...gOpts.map(([v,t])=>el("option",{value:v,...(x.ground===v?{selected:"selected"}:{})},t)));
+        const gs=el("select",{onchange:e=>{ x.ground=e.target.value; touch(); drawGrounds(); }},...gOpts.map(([v,t])=>el("option",{value:v,...(x.ground===v?{selected:"selected"}:{})},t)));
         const wh=el("input",{value:x.what||"",placeholder:"Relevant page and what it shows",oninput:e=>{ x.what=e.target.value; touch(); }});
         evWrap.append(el("div",{class:"ap-ev","data-k":"ev-"+x.id},
           el("div",{class:"ap-evid"},x.id),
@@ -23518,7 +23538,7 @@ function renderAppealStudent(pt0){
       else{ if(!apT(x.label)) add("Give "+x.id+" a document name.","evl-"+x.id); if(!apLinkOk(x.url)) add("Add a working https:// link for "+x.id+".","evu-"+x.id); }
     });
     if(!ev.length) add("Add at least one piece of evidence in Section 4.","addev");
-    on.forEach(g=>{ if(!f.grounds[g.k].ev.length&&ev.length) add("Pick the evidence that supports \u201C"+g.label+"\u201D (Section 2).","g-"+g.k); });
+    on.forEach(g=>{ if(!f.grounds[g.k].ev.length&&ev.length) add("Select the evidence (E1, E2\u2026) that supports \u201C"+g.label+"\u201D \u2014 tap it under that ground in Section 2.","g-"+g.k); });
     AP_CHECKS.forEach((t,i)=>{ if(!f.checks[i+1]&&!(i===3&&!f.grounds.newev?.on)) add("Tick \u201C"+t.slice(0,48)+"\u2026\u201D in Section 6.","c-"+(i+1)); });
     const d=apDaysTo(pre.lodgeBy); if(d!=null&&d<0&&!apT(f.lateReason)) add("Explain why you are lodging after the deadline (Section 6).","late");
     if(!f.ccConflict) add("Answer the Course Coordinator conflict question (Section 6).","ccc");
