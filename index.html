@@ -1268,6 +1268,18 @@
   .rev-more summary{cursor:pointer;font-size:12.5px}
   .modal .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media (max-width:640px){ .modal .grid.two{grid-template-columns:1fr} }
+  .ap-probs{list-style:none;padding:0;margin:0}
+  .ap-probs li{margin:0 0 6px}
+  .ap-golink{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:center;justify-content:space-between;width:100%;cursor:pointer;
+    padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--paper-2);font-size:14px;line-height:1.4;color:var(--ink)}
+  .ap-golink:hover,.ap-golink:focus-visible{border-color:var(--accent);background:var(--accent-tint)}
+  .ap-golink:focus-visible{outline:2px solid var(--ring);outline-offset:1px}
+  .ap-go{flex:0 0 auto;font-size:12.5px;font-weight:650;color:var(--accent);white-space:nowrap}
+  .ap-miss{outline:2px solid var(--clay-ink);outline-offset:2px;border-radius:10px}
+  input.ap-miss,textarea.ap-miss,select.ap-miss{outline-offset:0;border-radius:8px}
+  .ap-flash{animation:apFlash 1.6s ease-out}
+  @keyframes apFlash{0%,35%{box-shadow:0 0 0 6px var(--ring)}100%{box-shadow:0 0 0 0 transparent}}
+  @media (prefers-reduced-motion:reduce){ .ap-flash{animation:none;box-shadow:0 0 0 3px var(--ring)} }
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -23369,7 +23381,7 @@ function renderAppealStudent(pt0){
             chips.append(el("button",{type:"button",class:"ap-chip"+(on?" on":""),title:x.label||"",onclick:()=>{
               gr.ev=on?gr.ev.filter(i=>i!==x.id):[...gr.ev,x.id].sort(apEvSort); touch(); drawGrounds(); }},x.id)); });
         }
-        return el("div",{class:"ap-ground"+(gr.on?" on":"")},
+        return el("div",{class:"ap-ground"+(gr.on?" on":""),"data-k":"g-"+g.k},
           el("label",{class:"ap-gl"},cb,el("div",{},el("b",{},g.label),el("div",{class:"muted",style:"font-size:13px"},g.what))),chips);
       }));
     };
@@ -23377,7 +23389,7 @@ function renderAppealStudent(pt0){
 
     /* 3 */
     const s3=sec("3","Your statement of appeal","For each ticked ground, say what happened, when it happened and which procedure or policy clause applies. Refer to your evidence by its ID (E1, E2 and so on).");
-    AP_STMT.forEach(q=>s3.append(fld(q.t,area(f.stmt[q.k],v=>f.stmt[q.k]=v,q.k==="b"?8:4,q.k==="d"?"Not applicable":""),q.h)));
+    AP_STMT.forEach(q=>{ const ta=area(f.stmt[q.k],v=>f.stmt[q.k]=v,q.k==="b"?8:4,q.k==="d"?"Not applicable":""); ta.dataset.k="s-"+q.k; s3.append(fld(q.t,ta,q.h)); });
     out.push(s3);
 
     /* 4 */
@@ -23392,7 +23404,7 @@ function renderAppealStudent(pt0){
     const always=el("div",{class:"ap-always"});
     always.append(el("div",{class:"ap-box"},apBox(true),el("span",{},"Your formal written outcome notice (PR72 3.7.3) ",el("span",{class:"pill approved"},"on file in the hub"))));
     always.append(el("div",{class:"ap-box"},apBox(true),el("span",{},"The panel feedback and required revisions you received (PR72 3.7.4) ",el("span",{class:"pill approved"},"on file in the hub"))));
-    const revIn=linkInput(f.revisedLink,v=>f.revisedLink=v);
+    const revIn=linkInput(f.revisedLink,v=>f.revisedLink=v); revIn.inp.dataset.k="revised";
     const revNA=el("input",{type:"checkbox",style:"width:auto;margin:0"}); revNA.checked=!!f.revisedNA;
     revNA.onchange=()=>{ f.revisedNA=revNA.checked; touch(); revBox.style.opacity=revNA.checked?".45":""; };
     const revBox=el("div",{class:"ap-linkrow"},el("label",{},"Revised proposal — with tracked changes visible ",el("span",{class:"ap-req"},"required")),revIn.node,
@@ -23401,7 +23413,7 @@ function renderAppealStudent(pt0){
     always.append(revBox);
     if(!pre.afterResub) always.append(el("label",{class:"coc-chk",style:"margin:-4px 0 10px"},revNA,
       el("span",{style:"font-size:13px"},"Not applicable — I did not submit a revised proposal before this outcome")));
-    const corrIn=linkInput(f.corrLink,v=>f.corrLink=v);
+    const corrIn=linkInput(f.corrLink,v=>f.corrLink=v); corrIn.inp.dataset.k="corr";
     always.append(el("div",{class:"ap-linkrow"},el("label",{},"Resubmission correspondence, if applicable (one link to a folder or PDF)"),corrIn.node));
     s4.append(always);
     s4.append(el("h4",{class:"ap-h4"},"Presentation recording"));
@@ -23410,17 +23422,17 @@ function renderAppealStudent(pt0){
     s4.append(el("label",{class:"coc-chk",style:"align-items:flex-start"},rec,el("span",{},"I ask that any recording of my CoC presentation held by CIHE be considered in this appeal (PR72 3.6.2 and 3.9.2).")));
     s4.append(el("h4",{class:"ap-h4"},"Your evidence"));
     const evWrap=el("div",{class:"ap-evlist"});
-    const addBtn=el("button",{type:"button",class:"btn ghost sm"},"+ Add evidence");
+    const addBtn=el("button",{type:"button",class:"btn ghost sm","data-k":"addev"},"+ Add evidence");
     function drawEv(){
       evWrap.replaceChildren();
       if(!ev.length) evWrap.append(el("div",{class:"sp-empty"},"No evidence added yet. Most appeals need at least one document that shows the ground you rely on."));
       const gOpts=[["","Ground supported…"],...AP_GROUNDS.map(g=>[g.label,g.label]),["General","General / background"]];
       ev.forEach((x,i)=>{
         const lab=el("input",{value:x.label||"",placeholder:"Document or file name",oninput:e=>{ x.label=e.target.value; touch(); }});
-        const li=linkInput(x.url,v=>x.url=v);
+        const li=linkInput(x.url,v=>x.url=v); lab.dataset.k="evl-"+x.id; li.inp.dataset.k="evu-"+x.id;
         const gs=el("select",{onchange:e=>{ x.ground=e.target.value; touch(); }},...gOpts.map(([v,t])=>el("option",{value:v,...(x.ground===v?{selected:"selected"}:{})},t)));
         const wh=el("input",{value:x.what||"",placeholder:"Relevant page and what it shows",oninput:e=>{ x.what=e.target.value; touch(); }});
-        evWrap.append(el("div",{class:"ap-ev"},
+        evWrap.append(el("div",{class:"ap-ev","data-k":"ev-"+x.id},
           el("div",{class:"ap-evid"},x.id),
           el("div",{class:"ap-evbody"},
             el("div",{class:"ap-evgrid"},el("div",{},el("label",{},"Document"),lab),el("div",{},el("label",{},"Ground"),gs)),
@@ -23460,13 +23472,13 @@ function renderAppealStudent(pt0){
     /* 6 */
     const s6=sec("6","Before you submit","");
     AP_CHECKS.forEach((t,i)=>{
-      const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); cb.checked=!!f.checks[i+1];
+      const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0","data-k":"c-"+(i+1)}); cb.checked=!!f.checks[i+1];
       cb.onchange=()=>{ f.checks[i+1]=cb.checked; touch(); };
       s6.append(el("label",{class:"coc-chk",style:"align-items:flex-start;margin:0 0 8px;display:flex"},cb,el("span",{},t)));
     });
     const ccName=pt.contacts?.cc?.name;
     s6.append(el("h4",{class:"ap-h4"},"Course Coordinator conflict"));
-    const ynWrap=el("div",{class:"seg",style:"margin:4px 0 8px"});
+    const ynWrap=el("div",{class:"seg",style:"margin:4px 0 8px","data-k":"ccc"});
     const yn=[["no","No"],["yes","Yes"],["unsure","Not sure"]];
     const drawYn=()=>ynWrap.replaceChildren(...yn.map(([v,t])=>el("button",{type:"button",class:f.ccConflict===v?"active":"",onclick:()=>{ f.ccConflict=v; touch(); drawYn(); }},t)));
     drawYn();
@@ -23474,7 +23486,8 @@ function renderAppealStudent(pt0){
       fld("Details (optional)",area(f.ccConflictNote,v=>f.ccConflictNote=v,2,"e.g. They were my co-supervisor in 2025.")),
       el("p",{class:"sp-note",style:"margin:0"},"If so, your appeal goes straight to the Head of School (PR72 3.10.3). The office checks this as well."));
     const late=apDaysTo(pre.lodgeBy);
-    if(late!=null&&late<0) s6.append(fld("Why are you lodging after "+apLong(pre.lodgeBy)+"?",area(f.lateReason,v=>f.lateReason=v,3,"Explain the circumstances. The office decides whether a late appeal can be accepted (PR72 3.10.1)."),null,true));
+    if(late!=null&&late<0){ const lr=area(f.lateReason,v=>f.lateReason=v,3,"Explain the circumstances. The office decides whether a late appeal can be accepted (PR72 3.10.1)."); lr.dataset.k="late";
+      s6.append(fld("Why are you lodging after "+apLong(pre.lodgeBy)+"?",lr,null,true)); }
     out.push(s6);
 
     /* the bar */
@@ -23489,30 +23502,54 @@ function renderAppealStudent(pt0){
   }
 
   /* ---- lodging ---- */
+  /* Each problem names the field it is about (data-k), so the list can
+     take the student straight there. */
   function problems(){
-    const pre=pt.pre||{}, p=[];
+    const pre=pt.pre||{}, p=[], add=(t,k)=>p.push({t,k});
     const on=AP_GROUNDS.filter(g=>f.grounds[g.k]?.on);
-    if(!on.length) p.push("Tick at least one ground in Section 2.");
-    ["a","b","c","e"].forEach(k=>{ if(!apT(f.stmt[k])) p.push("Complete Section 3"+k.toUpperCase()+" ("+AP_STMT.find(q=>q.k===k).t.slice(3)+")."); });
-    if(f.grounds.newev?.on&&(!apT(f.stmt.d)||/^not applicable\.?$/i.test(apT(f.stmt.d)))) p.push("You ticked New evidence — explain it in Section 3D.");
-    if(!f.revisedNA&&!apT(f.revisedLink)) p.push("Add the link to your revised proposal with tracked changes (Section 4).");
-    [["revised proposal",f.revisedNA?"":f.revisedLink],["resubmission correspondence",f.corrLink]].forEach(([n,u])=>{ if(apT(u)&&!apLinkOk(u)) p.push("The "+n+" link must start with https://"); });
+    if(!on.length) add("Tick at least one ground in Section 2.","g-"+AP_GROUNDS[0].k);
+    ["a","b","c","e"].forEach(k=>{ if(!apT(f.stmt[k])) add("Complete Section 3"+k.toUpperCase()+" ("+AP_STMT.find(q=>q.k===k).t.slice(3)+").","s-"+k); });
+    if(f.grounds.newev?.on&&(!apT(f.stmt.d)||/^not applicable\.?$/i.test(apT(f.stmt.d)))) add("You ticked New evidence \u2014 explain it in Section 3D.","s-d");
+    if(!f.revisedNA&&!apT(f.revisedLink)) add("Add the link to your revised proposal with tracked changes (Section 4).","revised");
+    else if(!f.revisedNA&&!apLinkOk(f.revisedLink)) add("The revised proposal link must start with https://","revised");
+    if(apT(f.corrLink)&&!apLinkOk(f.corrLink)) add("The resubmission correspondence link must start with https://","corr");
     ev.forEach(x=>{
-      if(!apT(x.label)&&!apT(x.url)) p.push(x.id+" is empty — fill it in or remove it.");
-      else{ if(!apT(x.label)) p.push("Give "+x.id+" a document name."); if(!apLinkOk(x.url)) p.push("Add a working https:// link for "+x.id+"."); }
+      if(!apT(x.label)&&!apT(x.url)) add(x.id+" is empty \u2014 fill it in or remove it.","evl-"+x.id);
+      else{ if(!apT(x.label)) add("Give "+x.id+" a document name.","evl-"+x.id); if(!apLinkOk(x.url)) add("Add a working https:// link for "+x.id+".","evu-"+x.id); }
     });
-    on.forEach(g=>{ if(!f.grounds[g.k].ev.length&&ev.length) p.push("Pick the evidence that supports “"+g.label+"” (Section 2)."); });
-    if(!ev.length) p.push("Add at least one piece of evidence in Section 4.");
-    AP_CHECKS.forEach((t,i)=>{ if(!f.checks[i+1]&&!(i===3&&!f.grounds.newev?.on)) p.push("Tick “"+t.slice(0,48)+"…” in Section 6."); });
-    const d=apDaysTo(pre.lodgeBy); if(d!=null&&d<0&&!apT(f.lateReason)) p.push("Explain why you are lodging after the deadline (Section 6).");
-    if(!f.ccConflict) p.push("Answer the Course Coordinator conflict question (Section 6).");
+    if(!ev.length) add("Add at least one piece of evidence in Section 4.","addev");
+    on.forEach(g=>{ if(!f.grounds[g.k].ev.length&&ev.length) add("Pick the evidence that supports \u201C"+g.label+"\u201D (Section 2).","g-"+g.k); });
+    AP_CHECKS.forEach((t,i)=>{ if(!f.checks[i+1]&&!(i===3&&!f.grounds.newev?.on)) add("Tick \u201C"+t.slice(0,48)+"\u2026\u201D in Section 6.","c-"+(i+1)); });
+    const d=apDaysTo(pre.lodgeBy); if(d!=null&&d<0&&!apT(f.lateReason)) add("Explain why you are lodging after the deadline (Section 6).","late");
+    if(!f.ccConflict) add("Answer the Course Coordinator conflict question (Section 6).","ccc");
     return p;
   }
+  /* Scroll to a field, put the cursor in it and make it flash. */
+  function goTo(k){
+    const t=main.querySelector('[data-k="'+k+'"]'); if(!t) return;
+    t.scrollIntoView({behavior:"smooth",block:"center"});
+    const foc=t.matches("input,textarea,select,button")?t:(t.querySelector(".ap-chip")||t.querySelector("input,textarea,select,button"));
+    setTimeout(()=>{ try{ foc?.focus({preventScroll:true}); }catch(e){}
+      t.classList.remove("ap-flash"); void t.offsetWidth; t.classList.add("ap-flash"); },350);
+  }
+  /* Outline everything still missing; each outline clears as soon as the
+     student changes that field. */
+  function markMissing(list){
+    main.querySelectorAll(".ap-miss").forEach(n=>n.classList.remove("ap-miss"));
+    list.forEach(x=>main.querySelector('[data-k="'+x.k+'"]')?.classList.add("ap-miss"));
+  }
+  const unmark=e=>{ const n=e.target?.closest?.(".ap-miss"); if(n) n.classList.remove("ap-miss"); };
+  main.addEventListener("input",unmark); main.addEventListener("change",unmark); main.addEventListener("click",unmark);
   async function lodgeIt(btn){
     const p=problems();
     if(p.length){
-      modal("A few things to finish",el("div",{},el("p",{class:"muted",style:"margin:0 0 8px"},"Your draft is saved. Before you can lodge:"),
-        el("ul",{class:"ap-probs"},...p.map(t=>el("li",{},t)))),async()=>true,"OK");
+      markMissing(p);
+      const close=()=>{ const bg=[...document.querySelectorAll(".modal-bg")].pop(); bg?._close?.(); };
+      modal(p.length===1?"One thing to finish":"A few things to finish",el("div",{},
+        el("p",{class:"muted",style:"margin:0 0 8px"},"Your draft is saved. Before you can lodge"+(p.length>1?" (each is outlined in red on the form)":"")+":"),
+        el("ul",{class:"ap-probs"},...p.map(x=>el("li",{},el("button",{type:"button",class:"ap-golink",
+          onclick:()=>{ close(); goTo(x.k); }},el("span",{},x.t),el("span",{class:"ap-go","aria-hidden":"true"},"Go there \u2192")))))),
+        async()=>{ setTimeout(()=>goTo(p[0].k),30); return true; },p.length===1?"Take me there":"Take me to the first one");
       const fb=[...document.querySelectorAll(".modal .btn.ghost")].pop(); fb?.remove();
       dirty=true; await saveNow(true); return;
     }
@@ -23955,6 +23992,8 @@ async function apDetailView(v,code,back){
     el("div",{class:"ap-headr"},apStagePill(rec.stage),
       due?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:6px"},"Determination due "+apLong(due)+" ",ds.txt&&!["closed","withdrawn","notaccepted"].includes(rec.stage)?el("span",{class:"pill "+ds.cls},ds.txt):""):"",
       el("div",{class:"row",style:"gap:6px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap"},
+        admin?el("button",{class:"btn sm ghost",title:"Send this appeal back to the start, e.g. to test it again",
+          onclick:()=>apResetDialog({rec,pt,sem,reload})},"↺ Reset"):"",
         el("button",{class:"btn sm",onclick:()=>apDownload(pt,rec,sem)},"⤓ Word form")))));
 
   /* the next step, for whoever is looking */
@@ -23977,9 +24016,9 @@ async function apDetailView(v,code,back){
   /* the office record */
   v.append(apFold("a7","7A Receipt and eligibility · 7B Conflict of interest",rec.stage==="open"||rec.stage==="lodged"?"To complete when the appeal is lodged":"Received "+apLong(rec.a7.receivedOn),
     apRecordRO7AB(rec,pt,st,groups),false));
-  v.append(apFold("c7","7C Course Coordinator review",rec.cc?.sign?"Signed "+cocDT(rec.cc.sign.at):rec.ccUid?"Not completed":"Not applicable (Course Coordinator conflicted)",
+  v.append(apFold("c7","7C Course Coordinator review",rec.cc?.sign?"Signed "+cocDT(rec.cc.sign.at):rec.ccUid?"Not completed":rec.coi?.cc?.conflicted?"Not applicable (Course Coordinator conflicted)":"Not reached yet",
     apRecordRO7C(rec),false));
-  v.append(apFold("d7","7D "+(rec.dmRole==="adr"?"Associate Dean Research":"Head of School")+" decision",rec.dm?.sign?"Signed "+cocDT(rec.dm.sign.at):"Not completed",apRecordRO7D(rec),false));
+  v.append(apFold("d7","7D "+(rec.dmRole==="adr"?"Associate Dean Research":"Head of School")+" decision",rec.dm?.sign?"Signed "+cocDT(rec.dm.sign.at):rec.stage==="dm"?"Not completed":"Not reached yet",apRecordRO7D(rec),false));
   v.append(apFold("e7","7E Notification and records",rec.e7?.notifiedOn?"Notified "+apLong(rec.e7.notifiedOn):"Not notified",apRecordRO7E(rec),false));
   if(admin) v.append(apFold("tools","Office tools and history",apPl((rec.history||[]).length,"entry"),apAdminTools({rec,pt,sem,saveRec,savePortal,reload,back}),false));
 }
@@ -24388,6 +24427,7 @@ function apAdminTools(ctx){
   if(rec.stage==="closed") btns.append(el("button",{class:"btn sm ghost",onclick:async()=>{
     if(!window.confirm("Reopen at 7E? The student's page keeps the released decision until you release again.")) return;
     await saveRec({stage:"decided"},"reopened at 7E"); reload(); }},"Reopen 7E"));
+  btns.append(el("button",{class:"btn sm ghost",onclick:()=>apResetDialog(ctx)},"↺ Reset this appeal…"));
   btns.append(el("button",{class:"btn sm ghost",onclick:()=>{
     if(!window.confirm("Delete this appeal and the student's form? This can't be undone.")) return;
     DB.batchWrite([{type:"delete",coll:"appeals",id:rec.id},{type:"delete",coll:"appealPortal",id:rec.id}]).then(()=>{ toast("Deleted."); back(); },e=>toast(e?.message||"Couldn't delete.",true)); }},"Delete"));
@@ -24397,6 +24437,57 @@ function apAdminTools(ctx){
   (rec.history||[]).slice().reverse().forEach(h=>ul.append(el("li",{},el("span",{class:"mono"},cocDT(h.at)),el("span",{},h.what+(h.by?" — "+h.by:"")))));
   W.append(ul);
   return W;
+}
+/* ---- reset: back to the start, keeping the same code ---------------------
+   For testing the whole flow again, or for an appeal that went wrong. Two
+   depths: back to the student's draft (their answers kept, unlocked, every
+   review and signature cleared), or completely blank. The code, the
+   student and the hub's prefilled details stay; the history keeps a line
+   saying it was reset. */
+function apResetDialog(ctx){
+  const {rec,pt,sem,reload}=ctx;
+  let mode="draft";
+  const opt=(val,title,sub)=>{
+    const r=el("input",{type:"radio",name:"apreset",style:"width:auto;margin:3px 0 0",...(val===mode?{checked:"checked"}:{})});
+    r.addEventListener("change",()=>{ if(r.checked) mode=val; });
+    return el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 12px;cursor:pointer"},r,
+      el("span",{},el("strong",{},title),el("div",{class:"muted",style:"font-size:13px;font-weight:400"},sub)));
+  };
+  const keepOff=el("input",{type:"checkbox",style:"width:auto;margin:0"}); keepOff.checked=true;
+  const clock=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+  const newDeadline=addBusinessDays(apToday(),AP_LODGE_DAYS,sem);
+  const me=S.userName||"you";
+  modal("Reset "+(rec.name||"this")+"\u2019s appeal",el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 12px;font-size:13.5px"},"Sends the appeal back to the start. The appeal code ("+apFmt(rec.id)+"), the student and the details the hub filled in stay the same. "+
+      "Every review, conflict assessment, decision and signature (7A\u20137E) is cleared, and the student\u2019s form is unlocked."),
+    opt("draft","Back to the student\u2019s draft","Their grounds, statement and evidence links stay, unlocked and unsigned, so they (or you, testing) only need to sign and lodge again."),
+    opt("blank","Completely blank","Also clears everything the student wrote and every evidence link they added \u2014 as if the code had just been issued."),
+    el("label",{class:"coc-chk",style:"margin:0 0 8px"},keepOff,el("span",{},"Keep the evidence links the office added ("+((pt.officeEvidence||[]).length)+")")),
+    el("label",{class:"coc-chk",style:"margin:0 0 12px"},clock,el("span",{},"Restart the 10-working-day clock from today (lodge by "+apLong(newDeadline)+")")),
+    el("div",{class:"ap-flag soft"},el("b",{},"Testing every part yourself? "),
+      "Open the student\u2019s link in a private window to play the student. For the officers, either sign in as each of them, or \u2014 from this one account \u2014 name "+me+" as Course Coordinator, Head of School and Associate Dean Research under ",
+      el("b",{},"Appeal officers"),", or use ",el("b",{},"Reassign or send back"),
+      " on this appeal. The hub then shows you each officer\u2019s form in turn. Put the real officers back when you finish.")),
+    async()=>{
+      const now=Date.now();
+      const pre={...(pt.pre||{})};
+      if(clock.checked){ pre.noticeDate=apToday(); pre.lodgeBy=newDeadline; }
+      const portal={status:mode==="blank"?"issued":"draft",pre,lodgedAt:0,relodgedAt:0,decisionOut:null,request:null,requests:[],
+        officeEvidence:keepOff.checked?(pt.officeEvidence||[]):[],updatedAt:now};
+      if(mode==="blank"){ portal.student={}; portal.evidence=[]; portal.savedAt=0; }
+      else{ const st={...(pt.student||{})}; delete st.sign; portal.student=st; }
+      const a7={noticeDate:pre.noticeDate||rec.a7?.noticeDate||"",deadline:pre.lodgeBy||rec.a7?.deadline||"",prior:rec.a7?.prior||"none"};
+      const recPatch={stage:"open",officers:{},officerUids:[],ccUid:"",dmUid:"",dmRole:"",coi:{},a7,cc:{},dm:{},e7:{},result:"",
+        notAccepted:null,seenRelodge:0,updatedAt:now,
+        history:apHist(rec,"reset to "+(mode==="blank"?"a blank form":"the student\u2019s draft")+(clock.checked?"; clock restarted":""))};
+      /* `set` without merge on the student map, so a blank reset really
+         empties it; everything else is a plain field update. */
+      await DB.batchWrite([{type:"update",coll:"appeals",id:rec.id,data:recPatch},{type:"update",coll:"appealPortal",id:rec.id,data:portal}]);
+      toast("Appeal reset \u2014 the student\u2019s form is open again with the same code.");
+      reload(); return true;
+    },"Reset appeal");
+  apWide();
+  const b=[...document.querySelectorAll(".modal .btn")].pop(); b?.classList.add("danger");
 }
 function apReassignDialog(ctx){
   const {rec,pt,saveRec,savePortal,reload}=ctx;
