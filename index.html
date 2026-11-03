@@ -1140,6 +1140,134 @@
     .sp-fresh .sp-i,.sp-search{display:none}
     .sp-card{break-inside:avoid}
   }
+
+  /* ---- CoC outcome appeals ------------------------------------------- */
+  .ap-main{max-width:900px}
+  .ap-save{font-size:12px;white-space:nowrap}
+  @media (max-width:560px){ .ap-save{display:none} }
+  .ap-statuscard .ap-shead{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .ap-statuscard .grow{flex:1;min-width:200px}
+  .ap-h1{font-size:22px;margin:0 0 2px;letter-spacing:-.02em}
+  .ap-steps{list-style:none;padding:0;margin:16px 0 4px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .ap-steps li{display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--sunken);font-size:12.5px;line-height:1.35}
+  .ap-steps li b{display:block;font-size:13px;margin-bottom:1px}
+  .ap-steps li span:not(.n){color:var(--ink-soft)}
+  .ap-steps .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--paper-2);border:1px solid var(--line-strong)}
+  .ap-steps li.on{border-color:var(--accent);background:var(--accent-tint)}
+  .ap-steps li.on .n{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .ap-steps li.done .n{background:var(--green-soft);color:var(--green-ink);border-color:transparent}
+  @media (max-width:700px){ .ap-steps{grid-template-columns:1fr 1fr} }
+  .ap-due{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--blue-soft);color:var(--blue-ink);font-size:13.5px}
+  .ap-due.soon{background:var(--amber-soft);color:var(--amber-ink)}
+  .ap-due.late{background:var(--clay-soft);color:var(--clay-ink)}
+  .ap-ask{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--clay-soft);color:var(--ink);font-size:14px;border-left:4px solid var(--clay-ink)}
+  .ap-ask b{display:block;font-size:12.5px;color:var(--clay-ink);margin-bottom:4px}
+  .ap-warn{padding:12px 14px;border-radius:10px;background:var(--amber-soft);color:var(--ink);font-size:14px;line-height:1.5}
+  .ap-sech{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+  .ap-sech h2{font-size:17px;font-weight:650;margin:2px 0 2px;letter-spacing:-.015em}
+  .ap-sech .s{font-size:13px;color:var(--ink-soft);line-height:1.45}
+  .ap-sech .grow{flex:1;min-width:0}
+  .ap-secn{flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:15px;background:#1F1F5C;color:#fff}
+  .ap-secn.sm{width:22px;height:22px;border-radius:6px;font-size:12px;display:inline-grid;margin-right:8px;vertical-align:middle}
+  .ap-h4{font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--ink);text-transform:uppercase;letter-spacing:.06em}
+  .ap-kv{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px}
+  .ap-kv .k,.ap-kv .v{padding:8px 12px;border-bottom:1px solid var(--line)}
+  .ap-kv .k{background:var(--sunken);font-weight:600;font-size:13px;color:var(--ink-soft)}
+  .ap-kv .v{min-width:0;overflow-wrap:anywhere}
+  .ap-kv .k:nth-last-child(2),.ap-kv .v:last-child{border-bottom:0}
+  .ap-kv .v input{margin:0}
+  @media (max-width:560px){ .ap-kv{grid-template-columns:1fr} .ap-kv .k{border-bottom:0;padding-bottom:2px} }
+  .ap-box{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px}
+  .ap-box.off{color:var(--ink-soft)}
+  .ap-tick{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--paper-2)}
+  .ap-tick.on{background:var(--accent);border-color:var(--accent)}
+  .ap-fld{margin:12px 0 0}
+  .ap-fld > label{display:block;font-weight:600;margin-bottom:5px}
+  .ap-req{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--clay-soft);color:var(--clay-ink);vertical-align:middle}
+  .ap-grounds{display:grid;gap:8px}
+  .ap-ground{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--paper-2)}
+  .ap-ground.on{border-color:var(--accent);background:var(--accent-tint)}
+  .ap-gl{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:400;margin:0}
+  .ap-gl b{font-size:14.5px}
+  .ap-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 0 26px}
+  .ap-chips:empty{display:none}
+  .ap-chip{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:5px 8px;border-radius:999px;border:1px solid var(--line-strong);background:var(--paper-2);color:var(--ink);cursor:pointer}
+  .ap-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .ap-help{font-size:13px;background:var(--blue-soft);color:var(--ink);border-radius:10px;padding:10px 14px;line-height:1.5}
+  .ap-help b{color:var(--blue-ink)}
+  .ap-help ul{margin:4px 0 0;padding-left:18px}
+  .ap-always{border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .ap-linkrow{margin:10px 0}
+  .ap-linkrow > label{display:block;font-weight:600;margin-bottom:4px;font-size:13.5px}
+  .ap-link{display:flex;gap:6px;align-items:center}
+  .ap-link input{flex:1;min-width:0;margin:0}
+  .ap-prov{font-size:11.5px;font-weight:600;color:var(--green-ink);white-space:nowrap}
+  .ap-prov.warn{color:var(--amber-ink)} .ap-prov.bad{color:var(--clay-ink)}
+  .ap-evlist{display:grid;gap:10px}
+  .ap-ev{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--paper-2)}
+  .ap-evid{flex:0 0 auto;width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font:700 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--sunken);border:1px solid var(--line)}
+  .ap-evbody{flex:1;min-width:0;display:grid;gap:8px}
+  .ap-evbody label{font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:3px;display:block}
+  .ap-evbody input,.ap-evbody select{margin:0}
+  .ap-evgrid{display:grid;grid-template-columns:1fr 200px;gap:8px}
+  @media (max-width:600px){ .ap-evgrid{grid-template-columns:1fr} .ap-ev{padding:10px} .ap-evid{width:32px;height:32px} }
+  .ap-evx{flex:0 0 auto}
+  .ap-decl{margin:0 0 8px;padding-left:20px;font-size:14px;line-height:1.55}
+  .ap-bar{position:sticky;bottom:0;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 14px;margin:6px -4px 0;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 -6px 18px rgba(16,24,40,.08)}
+  .ap-probs{margin:0;padding-left:18px;line-height:1.55;font-size:14px}
+  .ap-pre{white-space:pre-wrap;font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+  .ap-quote{background:var(--sunken);border-left:3px solid var(--line-strong);padding:10px 12px;border-radius:6px}
+  .ap-ro h4.ap-roh{display:flex;align-items:center;font-size:14px;margin:18px 0 8px}
+  .ap-ro h4.ap-roh:first-child{margin-top:0}
+  .ap-stmt{margin:0 0 10px}
+  .ap-stmt .t{font-weight:650;font-size:13px;margin-bottom:3px}
+  .ap-glist{display:grid;gap:0}
+  .ap-subh{font-weight:700;font-size:13px;margin:14px 0 6px;color:var(--ink)}
+  .ap-flag{margin:8px 0;padding:9px 12px;border-radius:8px;background:var(--amber-soft);font-size:13.5px;line-height:1.45}
+  .ap-flag.soft{background:var(--blue-soft)}
+  .ap-evt{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+  .ap-evt th{text-align:left;font-size:12px;color:var(--ink-soft);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--sunken)}
+  .ap-evt td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+  .ap-table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .ap-table th{text-align:left;font-size:12px;color:var(--ink-soft);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--sunken);white-space:nowrap}
+  .ap-table td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  .ap-table tr:last-child td{border-bottom:0}
+  .ap-table tr.ap-mine td{background:var(--amber-soft)}
+  .ap-head{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;padding:16px 18px;margin-bottom:12px}
+  .ap-head .grow{flex:1;min-width:240px}
+  .ap-headr{text-align:right;min-width:200px}
+  .ap-path{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:12.5px}
+  .ap-pchip{padding:3px 9px;border-radius:999px;background:var(--sunken);border:1px solid var(--line)}
+  .ap-path .arr{color:var(--ink-soft)}
+  .ap-next{padding:16px 18px;margin-bottom:12px;border-left:4px solid var(--amber-ink)}
+  .ap-next.done{border-left-color:var(--green-ink)}
+  .ap-nexth{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .ap-nexth strong{font-size:15.5px}
+  .ap-form .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:640px){ .ap-form .grid.two{grid-template-columns:1fr} }
+  .ap-form .field{margin:8px 0 0}
+  .ap-coi{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0}
+  .ap-coi.hit{border-color:var(--clay-ink);background:var(--clay-soft)}
+  .ap-coiwhy{font-size:13px;font-weight:600;color:var(--clay-ink)}
+  @media (max-width:640px){ .ap-coi{grid-template-columns:1fr} }
+  .ap-route{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--green-soft);font-size:13.5px}
+  .ap-off{display:grid;grid-template-columns:minmax(200px,1fr) minmax(220px,1.2fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start}
+  .ap-off select,.ap-off input{margin:0}
+  @media (max-width:640px){ .ap-off{grid-template-columns:1fr} }
+  .ap-fold{margin-bottom:8px}
+  .ap-fold .csection{padding-left:4px}
+  .ap-req1{padding:8px 10px;border-radius:8px;background:var(--sunken);margin:6px 0;font-size:13.5px}
+  .ap-req1 b{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:2px}
+  .ap-hist{list-style:none;padding:0;margin:0;font-size:13px;max-height:260px;overflow:auto}
+  .ap-hist li{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)}
+  .ap-hist .mono{flex:0 0 auto;color:var(--ink-soft);font-size:12px}
+  .ap-decision .ap-pre{font-size:15px}
+  .rev-card .rev-row.late{box-shadow:inset 3px 0 0 var(--clay-ink)}
+  .rev-more{margin-top:8px}
+  .rev-more summary{cursor:pointer;font-size:12.5px}
+  .modal .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:640px){ .modal .grid.two{grid-template-columns:1fr} }
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -2764,7 +2892,8 @@ function getFactoryAuth(){
    ============================================================ */
 
 const mem = { users:{}, semesters:{}, students:{}, timetables:{}, consultations:{}, attendance:{}, notes:{},
-              panelPool:{}, panels:{}, panelGroups:{}, staffKeys:{}, cocReports:{}, cocMarks:{} };
+              panelPool:{}, panels:{}, panelGroups:{}, staffKeys:{}, cocReports:{}, cocMarks:{},
+              appeals:{}, appealPortal:{} };
 let memSeed = false;
 function seedDemo(){
   if(memSeed) return; memSeed=true;
@@ -2905,6 +3034,64 @@ function seedDemo(){
     cand:{st1:{rq:8.5,fe:4,pr:4.5,rec:"C",coi:"none",strengths:"Strong literature review and a well-justified federated design.",concerns:"Timeline for the second experiment is tight.",improvements:"",dissent:""}},
     submitted:false,updatedAt:dayAgo(0.2)};
   mem.cocMarks["pg1__e_p_raman_uow_edu_au"]={semesterId:"s2-2026",groupId:"pg1",memberKey:"e_p_raman_uow_edu_au",uid:null,name:"Dr Priya Raman",email:"p.raman@uow.edu.au",cand:{},submitted:false};
+
+  /* CoC appeals and revised proposals (demo). Dr Novak's panel has an
+     approved report: Sara Haddad was Not Confirmed and has an appeal code;
+     Liam O'Brien owes minor revisions in three days; Priya Nair's major
+     revisions are two days overdue. */
+  {
+    const ymdIn=n=>ymdOf(new Date(Date.now()+n*86400000));
+    mk("st5",{semesterId:"s2-2026",sid:"45005",name:"Sara Haddad",email:"sara@stu.edu",mobile:"+61 433 555 005",campus:"NSW",area:"IT",
+      proposalTitle:"Lightweight intrusion detection for IoT gateways using federated anomaly scoring",unitIds:["u1"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
+    mk("st6",{semesterId:"s2-2026",sid:"45006",name:"Liam O'Brien",email:"liam@stu.edu",mobile:"",campus:"NSW",area:"IT",
+      proposalTitle:"Trust signals in open-source package ecosystems",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+    mk("st7",{semesterId:"s2-2026",sid:"45007",name:"Priya Nair",email:"priya@stu.edu",mobile:"",campus:"ACT",area:"IT",
+      proposalTitle:"Carbon-aware scheduling for university HPC clusters",unitIds:["u1"],principalUid:"supD",coUid:"supC",principalName:"Dr Novak",coName:"Dr Patel"});
+    const sem=ymdIn(-12);
+    const M=[{id:"n3a",kind:"internal",uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu",mobile:"+61 400 777 888",org:"Internal"},
+             {id:"n3b",kind:"internal",uid:"panA",name:"Dr Hana Ibrahim",email:"h.ibrahim@uni.edu",mobile:"+61 400 121 343",org:"Internal"},
+             {id:"n1c",kind:"external",name:"Dr Priya Raman",email:"p.raman@uow.edu.au",mobile:"+61 433 090 121",org:"University of Wollongong"}];
+    const note=(id,sid,name,title,code,label,dueBy,cond,fb)=>({kind:"cocout",studentDocId:id,sid,name,title,panel:"Dr Novak Panel",chair:"Dr Novak",
+      seminarDate:sem,note:"",releasedAt:dayAgo(3),releasedBy:"Admin Office",deferred:false,outcome:{code,label,meaning:""},
+      conditions:cond,dueBy,represent:"",feedback:fb,assessors:[],groupId:"pg3",audience:"students"});
+    const out={
+      st5:note("st5","45005","Sara Haddad",mem.students.st5.proposalTitle,"NC","Candidature not confirmed","","",
+        {concerns:"The research questions are not answerable with the proposed data; the methodology chapter does not justify the sampling of IoT devices.",
+         improvements:"A substantially revised proposal would be required."}),
+      st6:note("st6","45006","Liam O'Brien",mem.students.st6.proposalTitle,"CMR","Confirmed subject to minor Revisions",ymdIn(3),"Tighten RQ2 and add a data management plan.",{}),
+      st7:note("st7","45007","Priya Nair",mem.students.st7.proposalTitle,"MRR","Major Revisions & Re-submission",ymdIn(-2),"Re-scope the evaluation and add an ethics section.",{})};
+    mem.panelGroups["pg3"]={semesterId:"s2-2026",label:"Dr Novak Panel",updatedAt:dayAgo(3),members:M,chairKey:"u_supD",
+      meetingLink:"https://teams.microsoft.com/l/meetup/coc-panel-c",studentIds:["st5","st6","st7"],
+      sessions:[{id:"se7",date:sem,start:"09:00",end:"12:30",direct:true}],availability:{},chosenSessionId:"se7",
+      slotMins:20,presMins:10,qaMins:10,delibMins:60,
+      slots:[{start:"09:00",qaStart:"09:10",end:"09:20",studentDocId:"st5"},{start:"09:20",qaStart:"09:30",end:"09:40",studentDocId:"st6"},
+             {start:"09:40",qaStart:"09:50",end:"10:00",studentDocId:"st7"}],
+      finalized:true,finalizedAt:dayAgo(20),assessorsReleased:true,assessorsReleasedAt:dayAgo(20),studentsReleased:true,outcomesOut:out};
+    const rel=a=>({at:dayAgo(3),by:"Admin Office",note:"",assessors:false,supervisors:true,students:true,portal:true,
+      supervisorsAt:dayAgo(4),studentsAt:dayAgo(3),emailedAt:dayAgo(3),outcome:a});
+    mem.cocReports["pg3"]={semesterId:"s2-2026",groupId:"pg3",panelLabel:"Dr Novak Panel",chairKey:"u_supD",chairUid:"supD",
+      memberUids:["supD","panA"],memberKeys:["u_supD","u_panA","e_p_raman_uow_edu_au"],window:{opensAt:dayAgo(12),closesAt:dayAgo(5)},
+      partA:{},status:"approved",approvedAt:dayAgo(4),chairSign:{name:"Dr Novak",img:cocDemoSig("D. Novak"),at:dayAgo(4)},
+      cand:{st5:{present:"Y",det:{outcome:"NC",finalMark:"7"}},st6:{present:"Y",det:{outcome:"CMR",finalMark:"14",dueBy:ymdIn(3)}},
+            st7:{present:"Y",det:{outcome:"MRR",finalMark:"11",dueBy:ymdIn(-2)}}},
+      release:{st5:rel("NC"),st6:rel("CMR"),st7:rel("MRR")},history:[],updatedAt:dayAgo(3)};
+    mem.staffKeys["cocout:st5"]=out.st5; mem.staffKeys["cocout:st6"]=out.st6; mem.staffKeys["cocout:st7"]=out.st7;
+    mem.staffKeys["config:appeals"]={kind:"config",officeEmail:"research.office@cihe.edu.au",at:dayAgo(30),officers:{
+      cc:{uid:"supE",name:"Dr Wong",email:"e.wong@uni.edu"},hos:{uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu"},
+      adr:{uid:"supD",name:"Dr Novak",email:"d.novak@uni.edu"}}};
+    /* Sara's appeal: code issued, not started. Code K7QX-M2PA-9RTB. */
+    const code="K7QXM2PA9RTB", notice=ymdOf(new Date(dayAgo(3)));
+    const lodgeBy=addBusinessDays(notice,10,mem.semesters["s2-2026"]);
+    mem.appealPortal[code]={kind:"appeal",code,semesterId:"s2-2026",studentDocId:"st5",sid:"45005",name:"Sara Haddad",status:"issued",
+      pre:{fullName:"Sara Haddad",sid:"45005",campus:"NSW",email:"sara@stu.edu",mobile:"+61 433 555 005",principal:"Dr Smith",co:"Dr Patel",
+        discipline:"Information Technology",unit:"RES915 — Literature, Methodology and Proposal",title:mem.students.st5.proposalTitle,
+        cocDate:sem,panelRef:"Dr Novak Panel — Chair: Dr Novak",outcome:"NC",afterResub:false,noticeDate:notice,lodgeBy,resubDate:""},
+      contacts:{cc:{name:"Dr Wong",email:"e.wong@uni.edu"},office:"research.office@cihe.edu.au"},
+      student:{},evidence:[],officeEvidence:[],issuedAt:dayAgo(2),issuedBy:"Admin Office",updatedAt:dayAgo(2)};
+    mem.appeals[code]={code,semesterId:"s2-2026",studentDocId:"st5",sid:"45005",name:"Sara Haddad",groupId:"pg3",stage:"open",
+      officers:{},officerUids:[],ccUid:"",dmUid:"",dmRole:"",coi:{},a7:{noticeDate:notice,deadline:lodgeBy,prior:"none"},
+      cc:{},dm:{},e7:{},result:"",createdAt:dayAgo(2),updatedAt:dayAgo(2),history:[{at:dayAgo(2),by:"Admin Office",what:"appeal code issued"}]};
+  }
 }
 function cocDemoSig(name){
   try{ const c=document.createElement("canvas"); c.width=900; c.height=260; const x=c.getContext("2d");
@@ -10397,6 +10584,9 @@ async function myNoteStudents(){
    ============================================================ */
 function renderLogin(opts){
   opts=opts||{};
+  /* Opened from the link in an appeal email (?appeal=CODE): straight to the
+     appeal sign-in, once per page load. */
+  if(!S.apUrlDone){ S.apUrlDone=true; const ac=apUrlCode(); if(ac&&!opts.mode){ renderAppealGate(ac); return; } }
   S.cocLastSig=null;
   /* Nothing read under one person's sign-in is served to the next. */
   forgetAllReads();
@@ -10548,7 +10738,10 @@ function renderLogin(opts){
         el("label",{style:"display:flex;align-items:center;gap:8px;font-weight:500;margin:10px 0 4px;cursor:pointer"},
           remember,"Remember my ID on this device"),
         btn,
-        el("p",{class:"muted",style:"margin-top:12px"},"See your meeting times, attendance and CoC, and message your supervisors. No password required — your ID is your key.")
+        el("p",{class:"muted",style:"margin-top:12px"},"See your meeting times, attendance and CoC, and message your supervisors. No password required — your ID is your key."),
+        el("p",{style:"margin-top:10px;font-size:13.5px"},"Appealing a Not Confirmed CoC outcome? ",
+          el("a",{href:"#",onclick:e=>{ e.preventDefault(); renderAppealGate("",{sid:sid.value.trim()}); }},"Open your appeal form"),
+          el("span",{class:"muted"}," (needs the appeal code from your email)."))
       );
     }
   }
@@ -10706,8 +10899,14 @@ async function afterLogin(){
         .then(n=>{ counts[s.id]=n; }).catch(()=>{})));
       return list;
     }),
-    reloadStaffCaches()
+    reloadStaffCaches(),
+    apLoadCfg()
   ]);
+  /* "CoC appeals" in the menu: the office always; anyone else who holds an
+     appeal office, or has an appeal sent to them (a past holder). */
+  S.apShow=S.role==="admin"||apHoldsOffice(S.uid);
+  if(!S.apShow){ try{ S.apShow=(await DB.list("appeals",{officerUids:{$contains:S.uid}})).length>0; }catch(e){ S.apShow=false; } }
+  S.apOpen=null;
   S.semesters=sems;
   S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
   let defaultSem=S.semesters[0]?.id||null;
@@ -10736,6 +10935,7 @@ async function studentLookup(sid,remember){
        that live on a semester document are read through it, so fill it
        before drawing anything that consults one. */
     S.semesters=sems;
+    await apLoadCfg();
     document.body.innerHTML="";
     await renderStudentView(canonical,matches,sems);
   }catch(e){
@@ -10768,6 +10968,7 @@ const NAV_ICONS={
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   clipboard:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
   table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/>',
+  scale:'<path d="M12 3v18M7 21h10"/><path d="M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0z"/><path d="m19 7-3 6a3 3 0 0 0 6 0z"/>',
   menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>'
 };
@@ -10788,7 +10989,7 @@ function syncNav(){
   if(g) g.textContent=info?info.group:"";
   document.body.classList.remove("nav-open");
 }
-function goTab(id){ S.tab=id; drawMain(); try{ window.scrollTo({top:0}); }catch(e){} }
+function goTab(id){ S.tab=id; if(id!=="appeals") S.apOpen=null; drawMain(); try{ window.scrollTo({top:0}); }catch(e){} }
 
 /* ---- CoC panel sub-menu (staff) ----
    The items mirror the sections on the CoC panel screen, in the same
@@ -10845,15 +11046,15 @@ function renderApp(){
     ? [["Supervision",[["students","Students","users"],["schedule","Week planner","calendar"],
           ["timetables","Class timetables","clock"],["consultations","Consultation times","chat"],
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
-       ["Confirmation of Candidature",[["panels","CoC panels","award"],["cocsummary","Panel summary","table"],["cocreports","CoC reports","clipboard"]]],
+       ["Confirmation of Candidature",[["panels","CoC panels","award"],["cocsummary","Panel summary","table"],["cocreports","CoC reports","clipboard"],["appeals","CoC appeals","scale"]]],
        ["Reports & records",[["report","Summary report","chart"],["export","Moodle export","download"],["contacts","Contacts","book"]]],
        ["Administration",[["people","Semesters & staff","layers"],["settings","Settings","gear"]]]]
     : S.role==="panellist"
-    ? [["Confirmation of Candidature",[["panels","My CoC panels","award"],["cocreports","CoC assessment","clipboard"]]]]
+    ? [["Confirmation of Candidature",[["panels","My CoC panels","award"],["cocreports","CoC assessment","clipboard"],...(S.apShow?[["appeals","CoC appeals","scale"]]:[])]]]
     : [["My supervision",[["students","My students","users"],["schedule","My week","calendar"],["timetables","My class time","clock"],
           ["consultations",coOnly?"View consultation time":"Set consultation time","chat"],
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
-       ["Confirmation of Candidature",[["panels","CoC panel","award"],["cocreports","CoC assessment","clipboard"]]]];
+       ["Confirmation of Candidature",[["panels","CoC panel","award"],["cocreports","CoC assessment","clipboard"],...(S.apShow?[["appeals","CoC appeals","scale"]]:[])]]];
   const TABS=GROUPS.flatMap(g=>g[1]);
   S.navIndex={};
   GROUPS.forEach(([gl,items])=>items.forEach(([id,label])=>{ S.navIndex[id]={label,group:gl}; }));
@@ -10869,6 +11070,7 @@ function renderApp(){
       if(id==="notes"){ b.append(el("span",{class:"nbadge",style:"display:none"},"0")); S.notesTabBtn=b; }
       if(id==="cocreports"&&S.role!=="admin"){ b.dataset.label=label;
         b.append(el("span",{class:"nbadge attn",style:"display:none"},"0")); S.cocTabBtn=b; }
+      if(id==="appeals"){ b.append(el("span",{class:"nbadge attn",style:"display:none"},"0")); S.apTabBtn=b; }
       tabs.append(b);
       /* Staff: the CoC panel screen's sections as a sub-menu, so a
          supervisor or panel member can go straight to the students they
@@ -10924,6 +11126,8 @@ function renderApp(){
   drawMain();
   refreshUnreadBadge();
   refreshCocBadge();
+  refreshApBadge();
+  apStaffLinkNotice();
   showInboxBanner();
 }
 
@@ -11001,7 +11205,8 @@ async function drawMain(){
     panels:S.role==="admin"?viewPanelAdmin:viewPanels, report:viewReport, export:viewExport,
     contacts:viewContacts, people:viewPeople, settings:viewSettings,
     cocreports:S.role==="admin"?viewCocAdmin:viewCocAssess,
-    cocsummary:S.role==="admin"?viewCocSummary:null};
+    cocsummary:S.role==="admin"?viewCocSummary:null,
+    appeals:viewAppeals};
   const fn=views[S.tab]; if(!fn) return;
   try{ return await fn(v); }
   catch(err){
@@ -17478,7 +17683,9 @@ async function renderStudentView(sid,enrolments,sems){
     if(d.outcome){
       c.append(el("div",{class:"sp-label",style:"margin:0 0 10px"},"Your outcome"),cocOutcomeView(d.outcome),
         el("p",{class:"sp-note",style:"margin-top:12px"},"Please discuss this outcome with your supervisors."));
-      panelNode.append(c); return;
+      panelNode.append(c);
+      if(d.outcome?.outcome?.code==="NC") panelNode.append(apStudentCard(d));
+      return;
     }
     if(state==="error"){
       c.append(el("div",{class:"sp-empty"},"Your Confirmation of Candidature details can't be loaded right now. Please let your supervisor know \u2014 "+
@@ -22447,6 +22654,8 @@ async function viewCocSummary(v){
   /* who to remind */
   if(M.soonRows.length||M.marksRows.length) v.append(cpsRemindCard(M,sem,redraw));
   else v.append(noticeBar("green",M.nextDay?"No one needs a reminder right now. The next CoC is "+cpsNextLine(M)+".":"No one needs a reminder right now — no CoC is coming up and no marks are outstanding."));
+  /* students whose revised proposal is overdue or due soon */
+  { const rc=revDueCard(groups,reps,students,sem,redraw); if(rc) v.append(rc); }
 
   /* Assessment form links: the online form is the Supervision Hub; the
      Word Form Link is kept on the semester, and a panel can have its own. */
@@ -22649,6 +22858,2017 @@ async function cpsEmailAll(M,sem){
     (()=>{ const wi=cpsWordInfo(M.rows); return wi.url?"\nWord Form Link: "+wi.url:""; })()+
     "\n\nThank you,\nMRes Coordination\n","",to.join(","));
   toast(ok?"Summary table copied — paste it into the email.":"Couldn't copy the table — attach the Word file instead.",!ok);
+}
+
+
+/* ============================================================
+   17. CoC OUTCOME APPEALS  (QA72 5.6 · PR72 3.10)
+   ------------------------------------------------------------
+   A final Not Confirmed outcome can be appealed once, in writing, within
+   10 working days of the formal notice. The paper form has six sections
+   for the candidate and an office record (7A–7E) for the review. Here the
+   whole thing runs in the hub:
+
+     1. The office issues an APPEAL CODE to an eligible student (a released
+        NC outcome) and emails it to their student address. The code is the
+        student's key: with it and their student ID they open a form that
+        is already filled in from the hub (name, ID, supervisors, title,
+        CoC date, panel, outcome and dates) and complete the rest — grounds,
+        statement, links to their evidence on OneDrive / Google Drive (at
+        most ten), the link to the revised proposal with tracked changes —
+        then sign and lodge it. Nothing is uploaded: every document stays
+        in the student's own drive and the hub keeps only the links.
+     2. The office receives it (7A), checks for conflicts of interest (7B —
+        the hub flags them itself: an officer who supervises the student or
+        sat on their CoC panel) and sends it to the Course Coordinator, or
+        straight to the Head of School if the Coordinator is conflicted, or
+        to the Associate Dean Research if the Head of School is too.
+     3. The Course Coordinator reviews and signs (7C): dismissed, or
+        substantiated and referred on. The decision maker decides and signs
+        (7D): outcome upheld, or a newly constituted panel.
+     4. The office notifies the student (7E), releases the decision to their
+        appeal page and downloads the Word form — the CIHE layout, with the
+        student's, the Coordinator's and the decision maker's signatures.
+
+   OFFICES, NOT ROLES. Course Coordinator, Head of School and Associate
+   Dean Research are positions held by people who already have a hub
+   account as an admin, supervisor or panel member. The office names the
+   holder of each position once (staffKeys/config:appeals); that person
+   keeps their usual role and simply gains the "CoC appeals" screen,
+   showing the appeals that have reached them. A change of holder is one
+   change in one place, and an appeal already under way keeps the people
+   it was sent to.
+
+   Two collections, same document id (the appeal code):
+     appealPortal/{code}  the student's side. Readable by anyone who can
+        name it (rules: get, never list), writable by the student only in
+        their own fields and only while it is theirs to edit:
+        {kind:'appeal', code, semesterId, studentDocId, sid, name,
+         status:'issued'|'draft'|'lodged'|'returned'|'review'|'decided'|'closed'|'withdrawn',
+         pre:{...details from the hub...}, contacts:{cc,office},
+         student:{phone, corrections, grounds:{k:{on,ev:[ids]}}, stmt:{a..e},
+                  attach:{recording}, revisedLink, revisedNA, corrLink,
+                  ccConflict, ccConflictNote, lateReason, checks:{1..5},
+                  sign:{name,img,at}},
+         evidence:[{id:'E1',label,url,ground,what}]      // student, ≤10
+         officeEvidence:[{id:'O1',label,url,ground,what,by,at}],
+         request:{text,at,by}, requests:[...],           // asked of the student
+         decisionOut:{result,text,by,at},                 // once released
+         issuedAt, lodgedAt, relodgedAt, savedAt, updatedAt}
+     appeals/{code}       the office record. Admin, and the officers it has
+        been sent to (officerUids), only:
+        {code, semesterId, studentDocId, sid, name, groupId, stage:
+           'open'|'lodged'|'cc'|'dm'|'decided'|'closed'|'withdrawn'|'notaccepted',
+         officers:{cc,hos,adr:{uid,name,email}}, officerUids:[uid],
+         ccUid, dmUid, dmRole:'hos'|'adr',
+         a7:{receivedOn, receivedBy, noticeDate, deadline, onTime, lateAction,
+             prior, due, recording, recordingNote},
+         coi:{cc:{conflicted,detail,by,at}, hos:{...}, adr:{...}, detail, referredOn},
+         cc:{findings, det:'dismissed'|'substantiated', sign, at},
+         dm:{role, decision:'upheld'|'newpanel', independent, reasons, sign, at},
+         e7:{notifiedBy, notifiedOn, timeframe:'within'|'varied', variedOn, record},
+         result, history:[{at,by,what}], createdAt, updatedAt}
+   ============================================================ */
+const AP_LODGE_DAYS=10, AP_DECIDE_DAYS=20, AP_MAX_EV=10;
+const AP_CODE_ABC="ABCDEFGHJKMNPQRSTUVWXYZ23456789";   // no 0/O, 1/I/L
+const apNorm=c=>String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+const apFmt=c=>apNorm(c).replace(/(.{4})(?=.)/g,"$1-");
+function apMakeCode(){
+  const a=new Uint32Array(12); (window.crypto||window.msCrypto).getRandomValues(a);
+  return [...a].map(x=>AP_CODE_ABC[x%AP_CODE_ABC.length]).join("");
+}
+const apRefOf=x=>"CoC-APL-"+new Date(x?.createdAt||x?.issuedAt||Date.now()).getFullYear()+"-"+apNorm(x?.code).slice(-4);
+/* The hub's own address, so an appeal link opens the SAME copy of the hub
+   the office is using (a test site, a new host). Only a page opened from a
+   file on disk falls back to the published address. */
+const apHubUrl=()=>{ try{ if(/^https?:$/.test(window.location.protocol)) return window.location.origin+window.location.pathname; }catch(e){} return CPS_HUB_URL; };
+const apLink=code=>apHubUrl()+"?appeal="+apFmt(code);
+const apUrlCode=()=>{ try{ return apNorm(new URLSearchParams(window.location.search).get("appeal")||""); }catch(e){ return ""; } };
+
+const AP_GROUNDS=[
+  {k:"procedural",label:"Procedural error",what:"A material irregularity or misapplication of approved procedures that resulted in real disadvantage to you."},
+  {k:"bias",label:"Bias",what:"Actual or reasonably perceived bias by any person involved in making or recommending the decision."},
+  {k:"coi",label:"Conflict of interest",what:"An actual or potential conflict of interest of any person involved in making or recommending the decision that was not appropriately managed."},
+  {k:"newev",label:"New evidence",what:"New, relevant evidence of a significant nature that was not reasonably available to you at the time of the original decision and could materially affect the outcome."}];
+const AP_STMT=[
+  {k:"a",t:"A  The panel findings you are challenging",h:"Identify the finding, or quote the panel comment, that your appeal is about."},
+  {k:"b",t:"B  Facts supporting each ground",h:"Set out the facts in date order. Head each part with the ground it supports and link each point to an evidence ID."},
+  {k:"c",t:"C  How this affected the decision",h:"Explain the disadvantage you suffered, or how the issue could materially affect the outcome."},
+  {k:"d",t:"D  New evidence (if relied on)",h:"Say when the evidence became available, why it was not reasonably available at the time of the original decision, and how it could change the outcome. Otherwise write “Not applicable”."},
+  {k:"e",t:"E  The outcome you are seeking",h:"For example, reconsideration of your candidature by a newly constituted CoC Panel. The decision maker determines the outcome under QA72 5.6.3 and PR72 3.10.2."}];
+const AP_DECL_POINTS=[
+  "lodging an appeal does not guarantee a change to the outcome;",
+  "I may lodge only one appeal against a CoC outcome, and the decision reached is final (PR72 3.10.4); and",
+  "this appeal, my evidence and the decision will be kept on my candidate file (PR72 3.9.1)."];
+const AP_DECL="I declare that the information in this appeal is true and accurate to the best of my knowledge, and that I have identified the grounds and evidence I rely on. I understand that: "+AP_DECL_POINTS.join(" ");
+const AP_CHECKS=[
+  "I am lodging within 10 working days of the date on my formal outcome notice.",
+  "I have ticked at least one ground in Section 2 and explained each one in Section 3.",
+  "I have attached my outcome notice, panel feedback and the evidence listed in Section 4.",
+  "If I rely on new evidence, I have explained in Section 3D why it was not available earlier.",
+  "I have signed Section 5 and kept a copy of everything I am sending."];
+const AP_OFFICES=[
+  {k:"cc", label:"Course Coordinator",     short:"CC",  does:"Reviews each appeal first, unless conflicted (7C)."},
+  {k:"hos",label:"Head of School",         short:"HoS", does:"Decides substantiated appeals, and any appeal where the Course Coordinator is conflicted (7D)."},
+  {k:"adr",label:"Associate Dean Research", short:"ADR", does:"Decides where the Head of School is also conflicted (7D)."}];
+const apOfficeLabel=k=>(AP_OFFICES.find(o=>o.k===k)||{}).label||"";
+const AP_STAGES={
+  open:       {label:"Code issued",            cls:"none"},
+  lodged:     {label:"Lodged — to receive",cls:"pending"},
+  cc:         {label:"With Course Coordinator", cls:"blue"},
+  dm:         {label:"With decision maker",     cls:"blue"},
+  decided:    {label:"Decided — notify student",cls:"pending"},
+  closed:     {label:"Closed",                  cls:"approved"},
+  withdrawn:  {label:"Withdrawn",               cls:"none"},
+  notaccepted:{label:"Not accepted",            cls:"missed"}};
+const AP_RESULTS={
+  dismissed:{label:"Appeal dismissed — original outcome stands",short:"Dismissed",
+    text:"The Course Coordinator found that the grounds of appeal were not substantiated. The appeal is dismissed and the original Not Confirmed outcome stands."},
+  upheld:{label:"Original Not Confirmed outcome upheld",short:"Outcome upheld",
+    text:"Having considered the appeal, the decision maker has upheld the original Not Confirmed outcome."},
+  newpanel:{label:"Newly constituted CoC Panel to reconsider",short:"New panel",
+    text:"The appeal is upheld to the extent that a newly constituted CoC Panel will be convened to reconsider your candidature."},
+  notaccepted:{label:"Appeal not accepted",short:"Not accepted",
+    text:"The appeal could not be accepted for consideration."}};
+const apStagePill=s=>{ const d=AP_STAGES[s]||{label:s||"—",cls:"none"}; return el("span",{class:"pill "+d.cls},d.label); };
+const apT=s=>String(s==null?"":s).trim();
+const apToday=()=>ymdOf(new Date());
+const apDayOf=ms=>ms?ymdOf(new Date(ms)):"";
+const apLong=ymd=>ymd?longDate(ymd):"";
+const apDaysTo=ymd=>{ if(!ymd) return null; const t=new Date(); t.setHours(0,0,0,0);
+  const d=new Date(ymd+"T00:00:00"); return isNaN(d)?null:Math.round((d-t)/86400000); };
+const apLinkOk=u=>/^https:\/\/[^\s\/]+\.[^\s]+$/i.test(String(u||"").trim());
+const apProvider=u=>cpsProvider(u);
+const apHist=(rec,what)=>[...(rec?.history||[]),{at:Date.now(),by:S.userName||S.studentName||"",what}].slice(-80);
+const apPl=(n,w)=>n+" "+w+(n===1?"":"s");
+
+/* ---- the offices ------------------------------------------------------ */
+async function apLoadCfg(){
+  try{ const d=await DB.getStaffKey("config:appeals"); S.apCfg=d&&d.kind==="config"?d:{officers:{}}; }
+  catch(e){ console.warn("appeal offices unavailable",e); S.apCfg=S.apCfg||{officers:{}}; }
+  S.apCfg.officers=S.apCfg.officers||{};
+  return S.apCfg;
+}
+async function apSaveCfg(officers,extra={}){
+  const data={kind:"config",officers,officeEmail:apT(extra.officeEmail),at:Date.now(),by:S.userName||""};
+  await DB.batchWrite([{type:"set",coll:"staffKeys",id:"config:appeals",merge:false,data}]);
+  S.apCfg=data;
+}
+const apAllStaff=()=>[...(S.admins||[]),...(S.supervisors||[]),...(S.panellists||[])];
+const apStaff=uid=>uid?apAllStaff().find(u=>u.id===uid)||null:null;
+/* The holder of an office as {uid,name,email}, read through the live staff
+   record so a changed name or a second mailbox is picked up. */
+function apHolder(k,cfg){
+  const o=(cfg||S.apCfg||{}).officers?.[k]; if(!o||!o.uid) return null;
+  const u=apStaff(o.uid);
+  return {uid:o.uid,name:u?.name||o.name||"",email:(u?emailsOf(u):[o.email]).filter(Boolean).join(", ")};
+}
+const apHoldsOffice=uid=>!!uid&&AP_OFFICES.some(o=>S.apCfg?.officers?.[o.k]?.uid===uid);
+const apOfficeEmail=()=>apT(S.apCfg?.officeEmail)||researchOfficeEmail(activeSemester())||"";
+
+/* ---- conflicts of interest (PR72 3.10.3) -------------------------------
+   What the hub can see for itself: the officer supervises the candidate,
+   or sat on (or chaired) a CoC panel that assessed them. Anything else —
+   a personal relationship, say — is for the officer to declare. */
+function apConflicts(uid,st,groups){
+  if(!uid||!st) return [];
+  const why=[];
+  if(st.principalUid===uid) why.push("is the candidate’s principal supervisor (supervisory panel)");
+  if(st.coUid===uid) why.push("is the candidate’s co-supervisor (supervisory panel)");
+  (groups||[]).filter(g=>groupStudents(g).includes(st.id)||g?.outcomesOut?.[st.id]).forEach(g=>{
+    const m=groupMembers(g).find(x=>x&&x.uid===uid);
+    if(m) why.push((isChair(g,m)?"chaired":"sat on")+" the candidate’s CoC panel ("+(g.label||"Panel")+")");
+  });
+  return why;
+}
+/* Who reviews first and who decides, given who is conflicted. */
+function apRoute(officers,conf){
+  const ok=k=>!!officers?.[k]?.uid&&!conf?.[k];
+  const dm=ok("hos")?"hos":ok("adr")?"adr":"";
+  return {first:ok("cc")?"cc":dm?"dm":"",dmRole:dm,ccOk:ok("cc")};
+}
+const apUids=rec=>[...new Set([rec.ccUid,rec.dmUid].filter(Boolean))];
+
+/* ---- the NC outcomes an appeal can be lodged against -------------------
+   A released Not Confirmed notice (panelGroups.outcomesOut) is the formal
+   outcome. An NC on an approved report that has not been released yet is
+   shown too, so the office can see it coming. */
+function apEligible(groups,reps,students){
+  const out=[];
+  (groups||[]).forEach(g=>{
+    const rep=(reps||[]).find(r=>r.id===g.id)||null;
+    const locked=!!rep&&(rep.status==="approved"||rep.status==="received");
+    const ids=new Set([...groupStudents(g),...Object.keys(g.outcomesOut||{})]);
+    ids.forEach(id=>{
+      const st=(students||[]).find(s=>s.id===id); if(!st) return;
+      const notice=g.outcomesOut?.[id]||null;
+      const rel=rep?.release?.[id]||null;
+      const det=rep?.cand?.[id]?.det||{};
+      const code=notice?.outcome?.code||(locked?det.outcome:"");
+      if(code!=="NC") return;
+      const toStu=notice?(notice.audience==="students"||cocRelStu(rel)):false;
+      const at=rel?.emailedAt||rel?.studentsAt||(toStu?notice?.releasedAt:0)||0;
+      out.push({g,rep,st,notice,rel,released:toStu,noticeDate:at?apDayOf(at):"",
+        afterResub:!!rep?.cand?.[id]?.resub,resubAt:rep?.cand?.[id]?.resub?.at||0});
+    });
+  });
+  /* a student on two panels (a follow-up) keeps the latest */
+  const best=new Map();
+  out.forEach(r=>{ const p=best.get(r.st.id); if(!p||(r.notice?.releasedAt||0)>(p.notice?.releasedAt||0)) best.set(r.st.id,r); });
+  return [...best.values()].sort((a,b)=>String(a.st.name||"").localeCompare(String(b.st.name||"")));
+}
+
+/* ---- database rules ---------------------------------------------------- */
+const AP_RULES="// Paste inside  match /databases/{database}/documents { ... }\n"+
+"// Uses the isSignedIn() and isAdmin() helpers already defined at the top of the rules file.\n"+
+"// ============================================================\n"+
+"// CoC outcome appeals (appeals, appealPortal)\n"+
+"//   appealPortal/{code}  the student's side of one appeal. The document id\n"+
+"//     IS the appeal code the office emails to the student, so - like\n"+
+"//     staffKeys - anyone may fetch a document they can already name, and\n"+
+"//     nobody signed out may ask what exists. A signed-out student may\n"+
+"//     write only their own fields, only while it is theirs to edit, and\n"+
+"//     at most 10 evidence links.\n"+
+"//   appeals/{code}  the office record (7A-7E, conflicts, decisions,\n"+
+"//     signatures). The office, plus the officers it has been sent to.\n"+
+"// ============================================================\n"+
+"function apOfficer(code) {\n"+
+"  return isSignedIn()\n"+
+"    && get(/databases/$(database)/documents/appeals/$(code)).data\n"+
+"         .get('officerUids', []).hasAny([request.auth.uid]);\n"+
+"}\n\n"+
+"match /appealPortal/{code} {\n"+
+"  allow get: if true;\n"+
+"  allow list: if isAdmin();\n"+
+"  allow create, delete: if isAdmin();\n"+
+"  allow update: if isAdmin() || apOfficer(code)\n"+
+"    // the student, signed out, holding the code\n"+
+"    || (resource.data.status in ['issued', 'draft', 'returned']\n"+
+"        && request.resource.data.status in ['draft', 'returned', 'lodged']\n"+
+"        && request.resource.data.get('evidence', []).size() <= 10\n"+
+"        && request.resource.data.diff(resource.data).affectedKeys()\n"+
+"             .hasOnly(['student', 'evidence', 'status', 'savedAt',\n"+
+"                       'lodgedAt', 'relodgedAt', 'updatedAt']));\n"+
+"}\n\n"+
+"match /appeals/{code} {\n"+
+"  // officers list their own with  where('officerUids', 'array-contains', uid)\n"+
+"  allow read: if isAdmin()\n"+
+"    || (isSignedIn() && request.auth.uid in resource.data.officerUids);\n"+
+"  allow create, delete: if isAdmin();\n"+
+"  allow update: if isAdmin()\n"+
+"    || (isSignedIn()\n"+
+"        && resource.data.get('officerUids', []).hasAny([request.auth.uid])\n"+
+"        && request.resource.data.diff(resource.data).affectedKeys()\n"+
+"             .hasOnly(['stage', 'coi', 'cc', 'dm', 'ccUid', 'dmUid', 'dmRole', 'officerUids',\n"+
+"                       'result', 'history', 'updatedAt']));\n"+
+"}";
+function apRuleHelp(err){
+  const card=el("div",{class:"card",style:"border-left:4px solid var(--clay,#c2410c);margin-bottom:14px"});
+  card.append(
+    el("h3",{style:"margin:0 0 6px"},"Appeals can't be loaded yet"),
+    el("p",{class:"muted",style:"margin:0 0 10px"},"Firestore reported: "+(err?.message||"unknown error")),
+    el("p",{style:"margin:0 0 8px;font-size:14px"},
+      "Appeals live in two new collections, appeals and appealPortal. Anything the security rules don't mention is denied, so add these under Firestore Database → Rules and publish. They let a student edit only their own appeal (with the code you send them), the officers read and sign only appeals sent to them, and the office do everything."),
+    el("pre",{style:"white-space:pre-wrap;background:rgba(127,127,127,.1);padding:12px;border-radius:8px;font-size:12px;margin:0 0 10px;max-height:320px;overflow:auto"},AP_RULES),
+    el("div",{class:"row",style:"gap:8px"},
+      el("button",{class:"btn sm",onclick:()=>navigator.clipboard?.writeText(AP_RULES).then(()=>toast("Rules copied."),()=>toast("Copy failed — select the text manually.",true))},"⧉ Copy rules"),
+      el("button",{class:"btn ghost sm",onclick:()=>drawMain()},"↻ Retry")));
+  return card;
+}
+
+/* ---- reads ------------------------------------------------------------- */
+async function apGetPortal(code){ return await DB.get("appealPortal",apNorm(code)); }
+async function apGetRec(code){ return await DB.get("appeals",apNorm(code)); }
+function apWide(){ const bg=[...document.querySelectorAll(".modal-bg")].pop(); bg?.querySelector(".modal")?.classList.add("wide"); }
+
+/* Staff opening a student's appeal link in a browser where they are signed
+   in get the hub as usual; say so, and offer the student's page. */
+function apStaffLinkNotice(){
+  if(S.apUrlNoticed) return; const c=apUrlCode(); if(!c) return; S.apUrlNoticed=true;
+  const main=document.querySelector("main"), view=document.getElementById("view"); if(!main||!view) return;
+  const bar=noticeBar("blue","You opened a student\u2019s appeal link while signed in as staff, so the hub opened as usual. To test it as the student would, use a private window \u2014 or open the student\u2019s page here.",
+    el("button",{class:"btn sm",onclick:()=>renderAppealGate(c)},"Open the student\u2019s appeal page"),
+    el("button",{class:"btn ghost sm",onclick:()=>bar.remove()},"Dismiss"));
+  main.insertBefore(bar,view);
+}
+
+/* ============================================================
+   17A. APPEALS — the student's side
+   The student opens their appeal with the code from their email and their
+   student ID. Five wrong tries close the box for ten minutes on this
+   browser, like the staff PIN — it slows guessing, it is not a lock; the
+   code itself (12 characters from 31) is what makes guessing hopeless.
+   ============================================================ */
+const AP_TRIES=5, AP_LOCK_MS=10*60*1000;
+function apGate(){ try{ return JSON.parse(window.localStorage.getItem("sh-ap-tries")||"{}")||{}; }catch(e){ return {}; } }
+function apGateSave(g){ try{ window.localStorage.setItem("sh-ap-tries",JSON.stringify(g)); }catch(e){} }
+function apGateFail(){ const g=apGate(); g.n=(g.n||0)+1; if(g.n>=AP_TRIES){ g.until=Date.now()+AP_LOCK_MS; g.n=0; } apGateSave(g); return g; }
+
+/* The sign-in card: from the link in the email (?appeal=CODE), from the
+   student portal, or from the sign-in screen. */
+function renderAppealGate(code,opts={}){
+  forgetAllReads();
+  document.body.innerHTML="";
+  const codeIn=el("input",{placeholder:"e.g. K7QX-M2PA-9RTB",autocomplete:"off",autocapitalize:"characters",spellcheck:"false",
+    style:"letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase"});
+  codeIn.value=code?apFmt(code):"";
+  const sidIn=el("input",{placeholder:"e.g. cihe45001",autocapitalize:"none",autocorrect:"off",spellcheck:"false",autocomplete:"off"});
+  let saved=""; try{ saved=window.localStorage.getItem("sh-sid")||""; }catch(e){}
+  sidIn.value=opts.sid||saved||"";
+  const btn=el("button",{class:"btn",style:"width:100%;justify-content:center;margin-top:8px"},"Open my appeal");
+  btn.onclick=async()=>{ btn.disabled=true; await apOpen(codeIn.value,sidIn.value); btn.disabled=false; };
+  [codeIn,sidIn].forEach(i=>i.addEventListener("keydown",e=>{ if(e.key==="Enter") btn.click(); }));
+  const card=el("div",{class:"auth-card ui"},
+    el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"},
+      el("div",{},el("div",{class:"eyebrow ui",style:"margin:0 0 4px"},"Confirmation of Candidature"),
+        el("h1",{class:"auth-title"},"Outcome appeal")),themeButton()),
+    el("p",{class:"muted",style:"margin:6px 0 14px"},"Open the appeal form the MRes office set up for you. You need the appeal code from your email and your student ID."),
+    el("div",{style:"margin-bottom:11px"},el("label",{},"Appeal code"),codeIn,
+      el("p",{class:"muted",style:"margin:5px 0 0;font-size:12.5px"},"Twelve letters and numbers. Spaces, dashes and capitals don't matter.")),
+    el("div",{style:"margin-bottom:6px"},el("label",{},"Student ID"),sidIn),
+    btn,
+    el("p",{class:"muted",style:"margin-top:14px;font-size:12.5px"},
+      "Your code is personal: anyone holding it with your ID can see and edit your appeal until you lodge it. "+
+      "No code yet? Only a final Not Confirmed outcome can be appealed — contact the MRes office."),
+    el("p",{style:"margin-top:10px"},el("a",{href:"#",onclick:e=>{ e.preventDefault(); renderLogin({mode:"student"}); }},"← Back to sign in")));
+  document.body.append(el("div",{class:"auth-wrap"},card),toastNode());
+  setTimeout(()=>{ try{ (codeIn.value?sidIn:codeIn).focus(); }catch(e){} },60);
+}
+
+async function apOpen(code,sid){
+  const c=apNorm(code), s=String(sid||"").trim();
+  if(c.length<8){ toast("Type the appeal code from your email.",true); return; }
+  if(!s){ toast("Type your student ID.",true); return; }
+  const g=apGate();
+  if(g.until&&g.until>Date.now()){
+    toast("Too many attempts. Try again in "+Math.max(1,Math.ceil((g.until-Date.now())/60000))+" minutes.",true); return; }
+  if(DEMO) seedDemo();
+  let pt=null;
+  try{ pt=await apGetPortal(c); }
+  catch(e){ console.warn("appeal unreadable",e); toast("Appeals aren't switched on for this site yet — please contact the MRes office.",true); return; }
+  if(!pt||pt.kind!=="appeal"||normSid(pt.sid)!==normSid(s)){
+    const st=apGateFail();
+    toast(st.until&&st.until>Date.now()?"That code and ID don't match. Too many attempts — try again in 10 minutes."
+      :"That code and student ID don't match an appeal. Check both and try again.",true);
+    return;
+  }
+  apGateSave({});
+  S.studentSid=pt.sid; S.studentName=pt.name||"";
+  try{ const sems=await DB.list("semesters"); S.semesters=sems; }catch(e){}
+  document.body.innerHTML="";
+  renderAppealStudent(pt);
+}
+
+/* ---- the student's appeal page ---------------------------------------- */
+function renderAppealStudent(pt0){
+  let pt=JSON.parse(JSON.stringify(pt0));
+  const code=apNorm(pt.code||pt.id);
+  const f=JSON.parse(JSON.stringify(pt.student||{}));
+  f.grounds=f.grounds||{}; AP_GROUNDS.forEach(g=>{ f.grounds[g.k]=f.grounds[g.k]||{on:false,ev:[]}; f.grounds[g.k].ev=f.grounds[g.k].ev||[]; });
+  f.stmt=f.stmt||{}; f.attach=f.attach||{}; f.checks=f.checks||{};
+  if(f.phone==null) f.phone=pt.pre?.mobile||"";
+  let ev=(pt.evidence||[]).map(x=>({...x}));
+  const editable=()=>["issued","draft","returned"].includes(pt.status);
+
+  const saveLine=el("span",{class:"ap-save muted ui"},"");
+  const top=el("header",{class:"sp-top"},brandMark("mark"),
+    el("div",{style:"min-width:0"},el("div",{class:"ttl"},"CoC outcome appeal"),el("div",{class:"sub"},"MRes Supervision Hub")),
+    el("div",{class:"acts"},saveLine,themeButton("btn ghost sm"),
+      el("button",{class:"btn ghost sm",title:"Leave",onclick:async()=>{ if(editable()) await saveNow(true); S.studentSid=null; renderLogin({mode:"student"}); }},
+        spIcon("out",16),el("span",{class:"hide-xs"},"Leave"))));
+  const main=el("main",{class:"sp-main ap-main"});
+  document.body.append(el("div",{class:"sp"},top,main),toastNode());
+
+  /* saving: quietly, a moment after the student stops typing */
+  let timer=0, dirty=false, saving=false;
+  const stamp=t=>{ saveLine.textContent=t; };
+  async function saveNow(quiet){
+    if(!editable()||!dirty||saving) return true;
+    saving=true; clearTimeout(timer); stamp("Saving…");
+    try{
+      const now=Date.now(), status=pt.status==="returned"?"returned":"draft";
+      const data={student:f,evidence:ev,status,savedAt:now,updatedAt:now};
+      await DB.set("appealPortal",code,data);
+      pt={...pt,...data}; dirty=false; stamp("Saved "+new Date(now).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}));
+      saving=false; return true;
+    }catch(e){ saving=false; console.error(e); stamp("Not saved"); if(!quiet) toast("Couldn't save: "+(e?.message||e),true); return false; }
+  }
+  const touch=()=>{ dirty=true; stamp("Unsaved changes"); clearTimeout(timer); timer=setTimeout(()=>saveNow(true),1200); };
+  window.addEventListener("beforeunload",e=>{ if(dirty&&editable()){ e.preventDefault(); e.returnValue=""; } });
+
+  function draw(){
+    main.replaceChildren();
+    main.append(statusCard());
+    if(editable()) formCards().forEach(n=>main.append(n));
+    else{
+      if(pt.decisionOut) main.append(decisionCard());
+      main.append(el("section",{class:"sp-card"},
+        el("div",{class:"sp-head"},el("div",{class:"sp-ico blue"},spIcon("book",18)),el("div",{class:"grow"},el("h2",{},"Your appeal as lodged"),
+          el("div",{class:"s"},"Sections 1–6. The office record (Section 7) is completed by CIHE."))),
+        apReadOnly(pt,{student:true})));
+    }
+  }
+
+  /* ---- where things stand ---- */
+  function statusCard(){
+    const pre=pt.pre||{};
+    const d=apDaysTo(pre.lodgeBy);
+    const c=el("section",{class:"sp-card ap-statuscard"});
+    const st=pt.status;
+    const label={issued:"Not started",draft:"Draft — not lodged yet",returned:"The office has asked you for more",
+      lodged:"Lodged — waiting for the office",review:"Under review",decided:"Decision made",closed:"Decision issued",withdrawn:"Withdrawn"}[st]||st;
+    const cls={issued:"none",draft:"pending",returned:"missed",lodged:"blue",review:"blue",decided:"approved",closed:"approved",withdrawn:"none"}[st]||"none";
+    c.append(el("div",{class:"ap-shead"},
+      el("div",{class:"grow"},el("div",{class:"sp-label",style:"margin:0 0 4px"},"Appeal "+apRefOf(pt)),
+        el("h1",{class:"ap-h1"},pt.name||""),
+        el("div",{class:"muted ui",style:"font-size:13px"},(pt.sid||"")+" · "+(pre.unit||"RES915")+" · Not Confirmed outcome")),
+      el("span",{class:"pill "+cls,style:"font-size:13px"},label)));
+    const steps=[["Lodge","You complete and sign the form"],["Course Coordinator","Reviews the panel decision and your grounds"],
+      ["Head of School","If grounds are substantiated: upholds or convenes a new panel"],["Decision","Normally within 20 working days; final"]];
+    const at=st==="closed"||st==="decided"?3:st==="review"?1:st==="lodged"?1:0;
+    c.append(el("ol",{class:"ap-steps"},...steps.map(([t,s],i)=>el("li",{class:i<at?"done":i===at?"on":""},
+      el("span",{class:"n"},String(i+1)),el("div",{},el("b",{},t),el("span",{},s))))));
+    if(editable()&&pre.lodgeBy){
+      const late=d!=null&&d<0;
+      c.append(el("div",{class:"ap-due "+(late?"late":d<=3?"soon":"")},spIcon("clock",16),
+        el("span",{},late?"Your lodgement deadline was "+apLong(pre.lodgeBy)+". You can still lodge, but explain why it is late (Section 6).":
+          "Lodge by "+apLong(pre.lodgeBy)+" — "+(d===0?"today":apPl(d,"day")+" left")+" (10 working days from your outcome notice of "+apLong(pre.noticeDate)+").")));
+    }
+    if(st==="returned"&&pt.request?.text) c.append(el("div",{class:"ap-ask"},el("b",{},"From "+(pt.request.by||"the MRes office")+" · "+cocDay(pt.request.at)),
+      el("div",{},cocLinkify(pt.request.text)),el("div",{class:"muted",style:"font-size:12.5px;margin-top:6px"},"Make the changes below, then sign and lodge again.")));
+    if(!editable()){
+      const acts=el("div",{class:"row",style:"gap:8px;margin-top:12px;flex-wrap:wrap"},
+        el("button",{class:"btn sm",onclick:()=>apDownload(pt,null)},spIcon("dl",16),"Download my appeal (Word)"));
+      if(st==="lodged") acts.append(el("button",{class:"btn ghost sm",onclick:()=>apStudentNotify(pt)},"✉ Email the Course Coordinator"));
+      c.append(acts);
+      if(st==="lodged") c.append(el("p",{class:"sp-note",style:"margin-top:10px"},
+        "Your appeal is with the MRes office. You don't need to send the form again — the office can see it here. "+
+        "If the Course Coordinator sat on your supervisory panel or assessed your CoC, it goes straight to the Head of School (PR72 3.10.3)."));
+    }
+    return c;
+  }
+  function decisionCard(){
+    const o=pt.decisionOut, r=AP_RESULTS[o.result]||{label:o.result};
+    return el("section",{class:"sp-card ap-decision"},
+      el("div",{class:"sp-head"},el("div",{class:"sp-ico "+(o.result==="newpanel"?"green":"amber")},spIcon("award",18)),
+        el("div",{class:"grow"},el("h2",{},r.label),el("div",{class:"s"},(o.by?o.by+" · ":"")+cocDay(o.at)))),
+      el("div",{class:"ap-pre"},cocLinkify(o.text||r.text||"")),
+      el("p",{class:"sp-note",style:"margin-top:10px"},"The decision reached through this process is final; no further appeal can be made under PR72 (3.10.4). See also QA23 Student Grievance Handling Policy."));
+  }
+
+  /* ---- the form ---- */
+  function formCards(){
+    const pre=pt.pre||{};
+    const out=[];
+    out.push(el("section",{class:"sp-card ap-intro"},
+      el("div",{class:"ap-warn"},el("b",{},"Disagreeing with the panel is not enough on its own."),
+        " Disagreement with the academic judgement behind the outcome is not a valid ground. Your appeal must show at least one of the four grounds in Section 2: procedural error, bias, an unmanaged conflict of interest, or significant new evidence (QA72 5.6.2)."),
+      el("p",{class:"sp-note",style:"margin:10px 0 0"},"Your answers save as you go — you can leave and come back with your code until you lodge. ",
+        el("b",{},"Nothing is uploaded here:")," keep your documents in your own OneDrive or Google Drive and paste a link that the reviewers can open."),
+      el("p",{class:"sp-note",style:"margin:6px 0 0"},"Policy: ",
+        el("a",{href:"https://www.cihe.edu.au/document/hdr-candidate-coc-policy/",target:"_blank",rel:"noopener"},"QA72 Policy"),
+        " · ",el("a",{href:"https://www.cihe.edu.au/document/hdr-candidate-coc-procedure/",target:"_blank",rel:"noopener"},"PR72 Procedures"))));
+
+    /* 1 */
+    const s1=sec("1","Your details and the decision","Filled in from the hub. If something is wrong, say so in the box at the end of this section.");
+    const kv=el("div",{class:"ap-kv"});
+    const row=(k,v)=>kv.append(el("div",{class:"k"},k),el("div",{class:"v"},v||el("span",{class:"muted"},"—")));
+    row("Full name",pre.fullName); row("Student ID",pre.sid); row("Campus",pre.campus); row("Student email",pre.email);
+    const phone=el("input",{value:f.phone||"",placeholder:"Optional",oninput:e=>{ f.phone=e.target.value; touch(); }});
+    row("Phone",phone);
+    row("Principal supervisor",pre.principal); row("Associate supervisor",pre.co); row("Discipline",pre.discipline); row("Unit",pre.unit);
+    row("Research title",pre.title); row("CoC presentation date",apLong(pre.cocDate)); row("Panel Chair or reference",pre.panelRef);
+    s1.append(kv);
+    s1.append(el("h4",{class:"ap-h4"},"The outcome you are appealing"));
+    const kv2=el("div",{class:"ap-kv"});
+    kv2.append(el("div",{class:"k"},"Outcome"),el("div",{class:"v"},el("b",{},"Not Confirmed"),
+      el("div",{class:"ap-box"},apBox(!!pre.afterResub),"Issued after major revisions and resubmission (PR72 3.8.5)"),
+      pre.afterResub?"":el("div",{class:"ap-box",style:"align-items:flex-start"},apBox(!!apT(f.otherStage)),
+        el("div",{style:"flex:1"},"Other stage. Please describe:",
+          el("input",{value:f.otherStage||"",placeholder:"e.g. after the first CoC seminar",style:"margin-top:4px",oninput:e=>{ f.otherStage=e.target.value; touch(); }})))));
+    [["Date of formal outcome notice",apLong(pre.noticeDate)],["Last day to lodge",apLong(pre.lodgeBy)],
+     ["Date you are lodging this appeal",apLong(apToday())+" (set when you lodge)"],["Resubmission date",pre.resubDate?apLong(pre.resubDate):"Not applicable"]]
+      .forEach(([k,v])=>kv2.append(el("div",{class:"k"},k),el("div",{class:"v"},v||"—")));
+    s1.append(kv2);
+    s1.append(fld("Anything above that is wrong? (optional)",area(f.corrections,v=>f.corrections=v,2,"e.g. My campus is ACT, not NSW.")));
+    out.push(s1);
+
+    /* 2 */
+    const s2=sec("2","Grounds for appeal","Tick every ground that applies and pick the evidence that supports it. Explain each ticked ground in Section 3. Definitions are from QA72 clause 5.6.1.");
+    const gWrap=el("div",{class:"ap-grounds"});
+    const drawGrounds=()=>{
+      gWrap.replaceChildren(...AP_GROUNDS.map(g=>{
+        const gr=f.grounds[g.k];
+        const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); cb.checked=!!gr.on;
+        cb.onchange=()=>{ gr.on=cb.checked; touch(); drawGrounds(); drawEv(); };
+        const chips=el("div",{class:"ap-chips"});
+        if(gr.on){
+          chips.append(el("span",{class:"muted ui",style:"font-size:12px"},"Evidence IDs: "));
+          if(!ev.length) chips.append(el("span",{class:"muted ui",style:"font-size:12px"},"add evidence in Section 4, then pick it here"));
+          ev.forEach(x=>{ const on=gr.ev.includes(x.id);
+            chips.append(el("button",{type:"button",class:"ap-chip"+(on?" on":""),title:x.label||"",onclick:()=>{
+              gr.ev=on?gr.ev.filter(i=>i!==x.id):[...gr.ev,x.id].sort(apEvSort); touch(); drawGrounds(); }},x.id)); });
+        }
+        return el("div",{class:"ap-ground"+(gr.on?" on":"")},
+          el("label",{class:"ap-gl"},cb,el("div",{},el("b",{},g.label),el("div",{class:"muted",style:"font-size:13px"},g.what))),chips);
+      }));
+    };
+    drawGrounds(); s2.append(gWrap); out.push(s2);
+
+    /* 3 */
+    const s3=sec("3","Your statement of appeal","For each ticked ground, say what happened, when it happened and which procedure or policy clause applies. Refer to your evidence by its ID (E1, E2 and so on).");
+    AP_STMT.forEach(q=>s3.append(fld(q.t,area(f.stmt[q.k],v=>f.stmt[q.k]=v,q.k==="b"?8:4,q.k==="d"?"Not applicable":""),q.h)));
+    out.push(s3);
+
+    /* 4 */
+    const s4=sec("4","Supporting evidence","Give each document an ID and refer to it in Sections 2 and 3. Paste a link the reviewers can open — at most "+AP_MAX_EV+" items.");
+    s4.append(el("div",{class:"ap-help"},
+      el("b",{},"Sharing a link that works"),
+      el("ul",{},
+        el("li",{},el("b",{},"OneDrive / SharePoint: "),"right-click the file → Share → “Anyone with the link can view” (or “People in CIHE”) → Copy link."),
+        el("li",{},el("b",{},"Google Drive: "),"Share → General access → “Anyone with the link”, Viewer → Copy link."),
+        el("li",{},"Press ",el("b",{},"Test")," next to each link and check it opens in a private window. A link nobody can open is evidence nobody can read."))));
+    s4.append(el("h4",{class:"ap-h4"},"Always attach"));
+    const always=el("div",{class:"ap-always"});
+    always.append(el("div",{class:"ap-box"},apBox(true),el("span",{},"Your formal written outcome notice (PR72 3.7.3) ",el("span",{class:"pill approved"},"on file in the hub"))));
+    always.append(el("div",{class:"ap-box"},apBox(true),el("span",{},"The panel feedback and required revisions you received (PR72 3.7.4) ",el("span",{class:"pill approved"},"on file in the hub"))));
+    const revIn=linkInput(f.revisedLink,v=>f.revisedLink=v);
+    const revNA=el("input",{type:"checkbox",style:"width:auto;margin:0"}); revNA.checked=!!f.revisedNA;
+    revNA.onchange=()=>{ f.revisedNA=revNA.checked; touch(); revBox.style.opacity=revNA.checked?".45":""; };
+    const revBox=el("div",{class:"ap-linkrow"},el("label",{},"Revised proposal — with tracked changes visible ",el("span",{class:"ap-req"},"required")),revIn.node,
+      el("div",{class:"coc-tip"},"The Word file with Track Changes on, showing what you changed in response to the panel. Share it as “anyone with the link can view”."));
+    if(f.revisedNA) revBox.style.opacity=".45";
+    always.append(revBox);
+    if(!pre.afterResub) always.append(el("label",{class:"coc-chk",style:"margin:-4px 0 10px"},revNA,
+      el("span",{style:"font-size:13px"},"Not applicable — I did not submit a revised proposal before this outcome")));
+    const corrIn=linkInput(f.corrLink,v=>f.corrLink=v);
+    always.append(el("div",{class:"ap-linkrow"},el("label",{},"Resubmission correspondence, if applicable (one link to a folder or PDF)"),corrIn.node));
+    s4.append(always);
+    s4.append(el("h4",{class:"ap-h4"},"Presentation recording"));
+    const rec=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); rec.checked=!!f.attach.recording;
+    rec.onchange=()=>{ f.attach.recording=rec.checked; touch(); };
+    s4.append(el("label",{class:"coc-chk",style:"align-items:flex-start"},rec,el("span",{},"I ask that any recording of my CoC presentation held by CIHE be considered in this appeal (PR72 3.6.2 and 3.9.2).")));
+    s4.append(el("h4",{class:"ap-h4"},"Your evidence"));
+    const evWrap=el("div",{class:"ap-evlist"});
+    const addBtn=el("button",{type:"button",class:"btn ghost sm"},"+ Add evidence");
+    function drawEv(){
+      evWrap.replaceChildren();
+      if(!ev.length) evWrap.append(el("div",{class:"sp-empty"},"No evidence added yet. Most appeals need at least one document that shows the ground you rely on."));
+      const gOpts=[["","Ground supported…"],...AP_GROUNDS.map(g=>[g.label,g.label]),["General","General / background"]];
+      ev.forEach((x,i)=>{
+        const lab=el("input",{value:x.label||"",placeholder:"Document or file name",oninput:e=>{ x.label=e.target.value; touch(); }});
+        const li=linkInput(x.url,v=>x.url=v);
+        const gs=el("select",{onchange:e=>{ x.ground=e.target.value; touch(); }},...gOpts.map(([v,t])=>el("option",{value:v,...(x.ground===v?{selected:"selected"}:{})},t)));
+        const wh=el("input",{value:x.what||"",placeholder:"Relevant page and what it shows",oninput:e=>{ x.what=e.target.value; touch(); }});
+        evWrap.append(el("div",{class:"ap-ev"},
+          el("div",{class:"ap-evid"},x.id),
+          el("div",{class:"ap-evbody"},
+            el("div",{class:"ap-evgrid"},el("div",{},el("label",{},"Document"),lab),el("div",{},el("label",{},"Ground"),gs)),
+            el("div",{},el("label",{},"Link (OneDrive or Google Drive)"),li.node),
+            el("div",{},el("label",{},"Page and what it shows"),wh)),
+          el("button",{type:"button",class:"btn xs ghost ap-evx",title:"Remove "+x.id,"aria-label":"Remove "+x.id,onclick:()=>{
+            if((x.label||x.url)&&!window.confirm("Remove "+x.id+(x.label?" ("+x.label+")":"")+"?")) return;
+            ev.splice(i,1); AP_GROUNDS.forEach(g=>{ f.grounds[g.k].ev=f.grounds[g.k].ev.filter(id=>id!==x.id); });
+            touch(); drawEv(); drawGrounds(); }},"✕")));
+      });
+      addBtn.disabled=ev.length>=AP_MAX_EV;
+      addBtn.textContent=ev.length>=AP_MAX_EV?"Limit reached ("+AP_MAX_EV+" of "+AP_MAX_EV+")":"+ Add evidence ("+ev.length+" of "+AP_MAX_EV+")";
+      glyphize(addBtn);
+    }
+    addBtn.onclick=()=>{
+      if(ev.length>=AP_MAX_EV) return;
+      const used=new Set(ev.map(x=>x.id)); let n=1; while(used.has("E"+n)) n++;
+      ev.push({id:"E"+n,label:"",url:"",ground:"",what:""}); ev.sort((a,b)=>apEvSort(a.id,b.id));
+      touch(); drawEv(); drawGrounds();
+      setTimeout(()=>{ const ins=evWrap.querySelectorAll(".ap-ev input"); const t=[...ins].find(i=>!i.value); t?.focus(); },30);
+    };
+    drawEv();
+    s4.append(evWrap,el("div",{style:"margin-top:10px"},addBtn));
+    if((pt.officeEvidence||[]).length){
+      s4.append(el("h4",{class:"ap-h4"},"Added by the MRes office"),apEvTable(pt.officeEvidence));
+    }
+    out.push(s4);
+
+    /* 5 */
+    const s5=sec("5","Declaration","");
+    s5.append(el("p",{style:"margin:0 0 6px"},"I declare that the information in this appeal is true and accurate to the best of my knowledge, and that I have identified the grounds and evidence I rely on. I understand that:"),
+      el("ul",{class:"ap-decl"},...AP_DECL_POINTS.map(t=>el("li",{},t))),
+      el("p",{class:"sp-note"},f.sign?.img?"You signed on "+cocDT(f.sign.at)+". You sign again when you lodge.":"You sign when you lodge: draw your signature or type your name."));
+    if(f.sign?.img) s5.append(cocSigView(f.sign));
+    out.push(s5);
+
+    /* 6 */
+    const s6=sec("6","Before you submit","");
+    AP_CHECKS.forEach((t,i)=>{
+      const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); cb.checked=!!f.checks[i+1];
+      cb.onchange=()=>{ f.checks[i+1]=cb.checked; touch(); };
+      s6.append(el("label",{class:"coc-chk",style:"align-items:flex-start;margin:0 0 8px;display:flex"},cb,el("span",{},t)));
+    });
+    const ccName=pt.contacts?.cc?.name;
+    s6.append(el("h4",{class:"ap-h4"},"Course Coordinator conflict"));
+    const ynWrap=el("div",{class:"seg",style:"margin:4px 0 8px"});
+    const yn=[["no","No"],["yes","Yes"],["unsure","Not sure"]];
+    const drawYn=()=>ynWrap.replaceChildren(...yn.map(([v,t])=>el("button",{type:"button",class:f.ccConflict===v?"active":"",onclick:()=>{ f.ccConflict=v; touch(); drawYn(); }},t)));
+    drawYn();
+    s6.append(el("p",{style:"margin:0"},"Was the Course Coordinator"+(ccName?" ("+ccName+")":"")+" on your supervisory panel, or did they assess your CoC?"),ynWrap,
+      fld("Details (optional)",area(f.ccConflictNote,v=>f.ccConflictNote=v,2,"e.g. They were my co-supervisor in 2025.")),
+      el("p",{class:"sp-note",style:"margin:0"},"If so, your appeal goes straight to the Head of School (PR72 3.10.3). The office checks this as well."));
+    const late=apDaysTo(pre.lodgeBy);
+    if(late!=null&&late<0) s6.append(fld("Why are you lodging after "+apLong(pre.lodgeBy)+"?",area(f.lateReason,v=>f.lateReason=v,3,"Explain the circumstances. The office decides whether a late appeal can be accepted (PR72 3.10.1)."),null,true));
+    out.push(s6);
+
+    /* the bar */
+    const lodge=el("button",{class:"btn"},spIcon("send",16),pt.status==="returned"?"Sign and lodge again":"Sign and lodge my appeal");
+    lodge.onclick=()=>lodgeIt(lodge);
+    out.push(el("div",{class:"ap-bar"},
+      el("button",{class:"btn ghost",onclick:async()=>{ await saveNow(); apDownload({...pt,student:f,evidence:ev},null); }},spIcon("dl",16),"Download a draft (Word)"),
+      el("span",{style:"flex:1"}),
+      el("button",{class:"btn ghost",onclick:async()=>{ dirty=true; if(await saveNow()) toast("Draft saved. Come back with your code any time before you lodge."); }},"Save draft"),
+      lodge));
+    return out;
+  }
+
+  /* ---- lodging ---- */
+  function problems(){
+    const pre=pt.pre||{}, p=[];
+    const on=AP_GROUNDS.filter(g=>f.grounds[g.k]?.on);
+    if(!on.length) p.push("Tick at least one ground in Section 2.");
+    ["a","b","c","e"].forEach(k=>{ if(!apT(f.stmt[k])) p.push("Complete Section 3"+k.toUpperCase()+" ("+AP_STMT.find(q=>q.k===k).t.slice(3)+")."); });
+    if(f.grounds.newev?.on&&(!apT(f.stmt.d)||/^not applicable\.?$/i.test(apT(f.stmt.d)))) p.push("You ticked New evidence — explain it in Section 3D.");
+    if(!f.revisedNA&&!apT(f.revisedLink)) p.push("Add the link to your revised proposal with tracked changes (Section 4).");
+    [["revised proposal",f.revisedNA?"":f.revisedLink],["resubmission correspondence",f.corrLink]].forEach(([n,u])=>{ if(apT(u)&&!apLinkOk(u)) p.push("The "+n+" link must start with https://"); });
+    ev.forEach(x=>{
+      if(!apT(x.label)&&!apT(x.url)) p.push(x.id+" is empty — fill it in or remove it.");
+      else{ if(!apT(x.label)) p.push("Give "+x.id+" a document name."); if(!apLinkOk(x.url)) p.push("Add a working https:// link for "+x.id+"."); }
+    });
+    on.forEach(g=>{ if(!f.grounds[g.k].ev.length&&ev.length) p.push("Pick the evidence that supports “"+g.label+"” (Section 2)."); });
+    if(!ev.length) p.push("Add at least one piece of evidence in Section 4.");
+    AP_CHECKS.forEach((t,i)=>{ if(!f.checks[i+1]&&!(i===3&&!f.grounds.newev?.on)) p.push("Tick “"+t.slice(0,48)+"…” in Section 6."); });
+    const d=apDaysTo(pre.lodgeBy); if(d!=null&&d<0&&!apT(f.lateReason)) p.push("Explain why you are lodging after the deadline (Section 6).");
+    if(!f.ccConflict) p.push("Answer the Course Coordinator conflict question (Section 6).");
+    return p;
+  }
+  async function lodgeIt(btn){
+    const p=problems();
+    if(p.length){
+      modal("A few things to finish",el("div",{},el("p",{class:"muted",style:"margin:0 0 8px"},"Your draft is saved. Before you can lodge:"),
+        el("ul",{class:"ap-probs"},...p.map(t=>el("li",{},t)))),async()=>true,"OK");
+      const fb=[...document.querySelectorAll(".modal .btn.ghost")].pop(); fb?.remove();
+      dirty=true; await saveNow(true); return;
+    }
+    if(!apT(f.stmt.d)) f.stmt.d="Not applicable";
+    const sig=await cocSignDialog({title:"Sign your appeal",name:f.sign?.name||pt.pre?.fullName||pt.name||"",
+      intro:"Sign to lodge your appeal with the MRes office. After you lodge, the form is locked unless the office asks you for more.",
+      declaration:AP_DECL,saveLabel:"Sign and lodge"});
+    if(!sig) return;
+    btn.disabled=true;
+    try{
+      const now=Date.now(), again=!!pt.lodgedAt;
+      f.sign=sig;
+      const data={student:f,evidence:ev,status:"lodged",updatedAt:now,savedAt:now,...(again?{relodgedAt:now}:{lodgedAt:now})};
+      await DB.set("appealPortal",code,data);
+      pt={...pt,...data}; dirty=false; stamp("");
+      toast(again?"Lodged again. The office has been told on their screen.":"Appeal lodged. Keep a copy — download it below.");
+      draw(); window.scrollTo({top:0,behavior:"smooth"});
+    }catch(e){ console.error(e); toast("Couldn't lodge: "+(e?.message||e),true); btn.disabled=false; }
+  }
+
+  /* ---- little builders ---- */
+  function sec(n,title,sub){
+    return el("section",{class:"sp-card ap-sec"},el("div",{class:"ap-sech"},el("span",{class:"ap-secn"},n),
+      el("div",{class:"grow"},el("h2",{},title),sub?el("div",{class:"s"},sub):"")));
+  }
+  function area(val,set,rows,ph){
+    const t=el("textarea",{rows:String(rows||3),placeholder:ph||""}); t.value=val||"";
+    t.addEventListener("input",()=>{ set(t.value); touch(); }); return t;
+  }
+  function fld(label,input,help,req){
+    return el("div",{class:"ap-fld"},el("label",{},label,req?el("span",{class:"ap-req"},"required"):""),help?el("div",{class:"coc-tip",style:"margin:0 0 6px"},help):"",input);
+  }
+  function linkInput(val,set){
+    const inp=el("input",{type:"url",inputmode:"url",value:val||"",placeholder:"https://…",spellcheck:"false",autocomplete:"off"});
+    const tag=el("span",{class:"ap-prov"});
+    const test=el("a",{class:"btn xs ghost",target:"_blank",rel:"noopener"},"Test");
+    const upd=()=>{ const u=apT(inp.value), ok=apLinkOk(u), pv=apProvider(u);
+      tag.textContent=!u?"":ok?(pv||"Other site"):"Must start with https://"; tag.className="ap-prov"+(u&&!ok?" bad":u&&!pv?" warn":"");
+      if(ok){ test.href=u; test.style.display=""; } else { test.removeAttribute("href"); test.style.display="none"; } };
+    inp.addEventListener("input",()=>{ set(apT(inp.value)); upd(); touch(); });
+    inp.addEventListener("change",()=>{ set(apT(inp.value)); upd(); touch(); });
+    upd();
+    return {node:el("div",{class:"ap-link"},inp,tag,test),inp};
+  }
+  draw();
+}
+const apEvSort=(a,b)=>(parseInt(String(a).replace(/\D/g,""))||0)-(parseInt(String(b).replace(/\D/g,""))||0);
+const apBox=on=>el("span",{class:"ap-tick"+(on?" on":""),"aria-hidden":"true"},on?"✓":"");
+
+/* After lodging, the policy has the student email the Course Coordinator.
+   The office already sees the appeal on its screen; this is the courtesy
+   email, addressed for them. */
+function apStudentNotify(pt){
+  const to=[pt.contacts?.cc?.email,pt.contacts?.office].filter(Boolean).join(",");
+  if(!to){ toast("No Course Coordinator address on file — your appeal is already with the office.",true); return; }
+  const pre=pt.pre||{};
+  openEmail(to,"CoC outcome appeal lodged — "+(pt.name||"")+" ("+(pt.sid||"")+")",
+    "Dear "+(pt.contacts?.cc?.name||"Course Coordinator")+",\n\n"+
+    "I have lodged an appeal against my Confirmation of Candidature outcome (Not Confirmed) in the MRes Supervision Hub on "+apLong(apDayOf(pt.lodgedAt||Date.now()))+".\n\n"+
+    "Appeal reference: "+apRefOf(pt)+"\nStudent ID: "+(pt.sid||"")+"\nResearch title: "+(pre.title||"")+"\n"+
+    (pt.student?.ccConflict==="yes"?"\nPlease note: you were on my supervisory panel or assessed my CoC, so I understand the appeal should go to the Head of School (PR72 3.10.3).\n":"")+
+    "\nMy grounds, statement and evidence links are in the hub. A Word copy is attached.\n\nKind regards,\n"+(pt.name||""));
+  toast("Attach the Word copy you downloaded, if you'd like to.");
+}
+
+/* ---- read-only: Sections 1–6, as the office and the student see them --- */
+function apEvTable(list){
+  const t=el("table",{class:"ap-evt"});
+  t.append(el("thead",{},el("tr",{},...["ID","Document","Ground","Page and what it shows"].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  (list||[]).forEach(x=>tb.append(el("tr",{},
+    el("td",{},el("b",{},x.id)),
+    el("td",{},apLinkOk(x.url)?el("a",{href:x.url,target:"_blank",rel:"noopener"},x.label||x.url):el("span",{},x.label||"",x.url?el("span",{class:"pill missed",style:"margin-left:6px"},"bad link"):""),
+      apProvider(x.url)?el("span",{class:"muted",style:"font-size:12px;margin-left:6px"},apProvider(x.url)):"",
+      x.by?el("div",{class:"muted",style:"font-size:12px"},"added by "+x.by+(x.at?" · "+cocDay(x.at):"")):""),
+    el("td",{},x.ground||"—"),el("td",{},x.what||"—"))));
+  if(!(list||[]).length) tb.append(el("tr",{},el("td",{colspan:"4",class:"muted"},"None.")));
+  t.append(tb);
+  return el("div",{class:"tscroll"},t);
+}
+function apReadOnly(pt,opts={}){
+  const f=pt.student||{}, pre=pt.pre||{};
+  const w=el("div",{class:"ap-ro"});
+  const h=(n,t)=>el("h4",{class:"ap-roh"},el("span",{class:"ap-secn sm"},n),t);
+  const kv=pairs=>{ const k=el("div",{class:"ap-kv"}); pairs.forEach(([a,b])=>k.append(el("div",{class:"k"},a),el("div",{class:"v"},b||el("span",{class:"muted"},"—")))); return k; };
+  const link=u=>apLinkOk(u)?el("a",{href:u,target:"_blank",rel:"noopener"},apProvider(u)?"Open ("+apProvider(u)+")":u):(u?el("span",{},u," ",el("span",{class:"pill missed"},"not a valid link")):"");
+  w.append(h("1","Details and the decision"),kv([
+    ["Full name",pre.fullName],["Student ID",pre.sid],["Campus",pre.campus],["Student email",pre.email],["Phone",f.phone],
+    ["Principal supervisor",pre.principal],["Associate supervisor",pre.co],["Discipline",pre.discipline],["Unit",pre.unit],
+    ["Research title",pre.title],["CoC presentation date",apLong(pre.cocDate)],["Panel Chair or reference",pre.panelRef],
+    ["Outcome","Not Confirmed — "+(pre.afterResub?"issued after major revisions and resubmission (PR72 3.8.5)":"other stage"+(apT(f.otherStage)?": "+f.otherStage:""))],
+    ["Formal outcome notice",apLong(pre.noticeDate)],["Last day to lodge",apLong(pre.lodgeBy)],
+    ["Lodged",pt.lodgedAt?cocDT(pt.lodgedAt)+(pt.relodgedAt?" · re-lodged "+cocDT(pt.relodgedAt):""):"Not lodged yet"],
+    ["Resubmission date",pre.resubDate?apLong(pre.resubDate):"Not applicable"]]));
+  if(apT(f.corrections)) w.append(el("div",{class:"ap-flag"},el("b",{},"Corrections noted by the student: "),f.corrections));
+  w.append(h("2","Grounds"));
+  const gl=el("div",{class:"ap-glist"});
+  AP_GROUNDS.forEach(g=>{ const gr=f.grounds?.[g.k]||{}; gl.append(el("div",{class:"ap-box"+(gr.on?"":" off")},apBox(!!gr.on),
+    el("span",{},el("b",{},g.label),gr.on&&(gr.ev||[]).length?el("span",{class:"muted"}," — "+gr.ev.join(", ")):""))); });
+  w.append(gl);
+  w.append(h("3","Statement"));
+  AP_STMT.forEach(q=>w.append(el("div",{class:"ap-stmt"},el("div",{class:"t"},q.t),el("div",{class:"ap-pre"},apT(f.stmt?.[q.k])?cocLinkify(f.stmt[q.k]):el("span",{class:"muted"},"—")))));
+  w.append(h("4","Supporting evidence"));
+  w.append(kv([["Outcome notice","On file in the hub"],["Panel feedback","On file in the hub"],
+    ["Revised proposal (tracked changes)",f.revisedNA?"Not applicable (no revised proposal submitted)":link(f.revisedLink)],
+    ["Resubmission correspondence",link(f.corrLink)||"—"],
+    ["Presentation recording",f.attach?.recording?"Requested to be considered (PR72 3.6.2, 3.9.2)":"Not requested"]]));
+  w.append(apEvTable(pt.evidence||[]));
+  if((pt.officeEvidence||[]).length&&!opts.noOffice){ w.append(el("div",{class:"ap-subh"},"Added by the MRes office")); w.append(apEvTable(pt.officeEvidence)); }
+  w.append(h("5","Declaration"));
+  w.append(f.sign?.img?cocSigView(f.sign):el("span",{class:"muted"},"Not signed yet"));
+  w.append(h("6","Before submitting"));
+  const cl=el("div",{class:"ap-glist"});
+  AP_CHECKS.forEach((t,i)=>cl.append(el("div",{class:"ap-box"+(f.checks?.[i+1]?"":" off")},apBox(!!f.checks?.[i+1]),el("span",{},t))));
+  w.append(cl);
+  w.append(kv([["Course Coordinator conflict (student)",{yes:"Yes",no:"No",unsure:"Not sure"}[f.ccConflict]||"—"],
+    ["Details",f.ccConflictNote],...(apT(f.lateReason)?[["Reason for late lodgement",f.lateReason]]:[])]));
+  return w;
+}
+
+/* ---- in the student portal: My CoC, under a Not Confirmed outcome ------ */
+function apStudentCard(d){
+  const c=el("section",{class:"sp-card"});
+  c.append(el("div",{class:"sp-head"},el("div",{class:"sp-ico amber"},spIcon("book",18)),
+    el("div",{class:"grow"},el("h2",{},"Appealing this outcome"),el("div",{class:"s"},"QA72 5.6 · PR72 3.10"))));
+  c.append(el("p",{style:"margin:0 0 8px"},"You may appeal a final Not Confirmed outcome once, in writing, within ",el("b",{},"10 working days")," of your formal outcome notice. "+
+    "Disagreeing with the panel's academic judgement is not a ground on its own: you need to show procedural error, bias, an unmanaged conflict of interest or significant new evidence."),
+    el("p",{class:"sp-note",style:"margin:0 0 12px"},"The MRes office emails eligible students an appeal code. Enter it here to open your appeal form — it is already filled in with your details, and you add your grounds, statement and links to your evidence."));
+  const inp=el("input",{placeholder:"Appeal code",autocomplete:"off",spellcheck:"false",style:"text-transform:uppercase;letter-spacing:1.5px;max-width:240px"});
+  const go=el("button",{class:"btn",onclick:()=>apOpen(inp.value,S.studentSid||d.en.sid)},"Open my appeal form");
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go.click(); });
+  c.append(el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},inp,go));
+  const office=apT(S.apCfg?.officeEmail)||researchOfficeEmail(d.sem);
+  if(office) c.append(el("p",{class:"sp-note",style:"margin:10px 0 0"},"No code yet? ",
+    el("a",{href:"mailto:"+office+"?subject="+encodeURIComponent("CoC appeal code request — "+(d.en.name||"")+" ("+(d.en.sid||"")+")")},"Email the MRes office"),"."));
+  return c;
+}
+
+/* ============================================================
+   17B. APPEALS — the office and the officers
+   ============================================================ */
+async function viewAppeals(v){
+  v.innerHTML="";
+  const redraw=()=>viewAppeals(v);
+  if(S.apOpen) return apDetailView(v,S.apOpen,()=>{ S.apOpen=null; redraw(); });
+  const admin=S.role==="admin";
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),el("h2",{},admin?"CoC outcome appeals":"CoC appeals sent to you"))));
+  await apLoadCfg();
+  if(!admin) return apOfficerList(v,redraw);
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(redraw)); v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
+  const sem=activeSemester();
+  let students=[],groups=[],reps=[],recs=[],pts=[],apErr=null;
+  try{ [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]); }
+  catch(err){ v.append(panelRuleHelp(err)); return; }
+  try{ reps=await DB.list("cocReports",{semesterId:S.activeSem}); }catch(e){ console.warn("reports unavailable",e); }
+  try{ [recs,pts]=await Promise.all([DB.list("appeals",{semesterId:S.activeSem}),DB.list("appealPortal",{semesterId:S.activeSem})]); }
+  catch(err){ apErr=err; }
+  if(!v.isConnected) return;
+
+  v.append(cocGuide("appeals","How an appeal runs here",[
+    ["Name the officers","Course Coordinator, Head of School and Associate Dean Research — once, below. They keep their usual hub role and see the appeals sent to them under “CoC appeals”."],
+    ["Issue an appeal code","Students with a released Not Confirmed outcome are listed below. Issuing a code emails the student a link; the form opens already filled in from the hub."],
+    ["The student lodges","Grounds, statement, links to their evidence in OneDrive or Google Drive (up to 10) and the revised proposal with tracked changes, then they sign. You can add evidence links or ask them for more."],
+    ["Receive and route (7A, 7B)","The hub works out the lodgement deadline, prior appeals and the 20-working-day determination date, and flags conflicts of interest. Confirm, and it goes to the Course Coordinator — or the Head of School / Associate Dean Research if conflicted."],
+    ["Review and decide (7C, 7D)","Each officer records their findings or decision in the hub and signs."],
+    ["Notify and close (7E)","Email the student, release the decision to their appeal page and download the signed Word form for the candidate file."]],
+    {sub:"QA72 5.6 · PR72 3.10",open:false}));
+
+  if(apErr){ v.append(apRuleHelp(apErr)); }
+  const recOf=id=>recs.find(r=>r.studentDocId===id&&!["withdrawn"].includes(r.stage))||null;
+  const ptOf=code=>pts.find(p=>p.id===code)||null;
+
+  /* attention */
+  const attn=[];
+  recs.forEach(r=>{ const p=ptOf(r.id);
+    if(r.stage==="open"&&p?.status==="lodged") attn.push([r,"Lodged — receive and route it"]);
+    else if(r.stage!=="open"&&p?.status==="lodged"&&p?.relodgedAt&&p.relodgedAt>(r.seenRelodge||0)) attn.push([r,"The student has sent more"]);
+    else if(r.stage==="decided") attn.push([r,"Decided — notify the student and close"]);
+    else if(r.stage==="lodged") attn.push([r,"Receive and route it"]); });
+  if(attn.length) v.append(noticeBar("amber",apPl(attn.length,"appeal")+" need"+(attn.length===1?"s":"")+" you: "+
+    attn.map(([r,t])=>(r.name||"")+" ("+t.toLowerCase()+")").join("; ")+"."));
+  const missing=AP_OFFICES.filter(o=>!apHolder(o.k));
+  if(missing.length) v.append(noticeBar("amber","No "+missing.map(o=>o.label).join(", ")+" named yet. Set them under “Appeal officers” below before routing an appeal."));
+
+  /* appeals */
+  const ac=cardShell("Appeals — "+(sem?.label||""),el("span",{class:"muted ui",style:"font-size:12.5px"},apPl(recs.length,"appeal")));
+  if(!recs.length) ac.append(el("div",{class:"muted ui",style:"padding:14px 16px"},"No appeals in this semester yet."));
+  else{
+    const t=el("table",{class:"ap-table"});
+    t.append(el("thead",{},el("tr",{},...["Student","Reference","Stage","Student’s form","Lodged","Determination due",""].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    recs.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(r=>{
+      const p=ptOf(r.id), due=r.a7?.due||"", ds=dueState(due);
+      const open=el("button",{class:"btn xs",onclick:()=>{ S.apOpen=r.id; redraw(); }},"Open");
+      tb.append(el("tr",{},
+        el("td",{},el("b",{},r.name||""),el("div",{class:"muted",style:"font-size:12px"},r.sid||"")),
+        el("td",{class:"mono"},apRefOf(r)),
+        el("td",{},apStagePill(r.stage),r.result?el("div",{class:"muted",style:"font-size:12px;margin-top:2px"},(AP_RESULTS[r.result]||{}).short||r.result):""),
+        el("td",{},apPortalPill(p)),
+        el("td",{},p?.lodgedAt?cocDay(p.lodgedAt):el("span",{class:"muted"},"—")),
+        el("td",{},due&&!["closed","withdrawn","notaccepted"].includes(r.stage)?el("span",{},apLong(due)," ",ds.txt?el("span",{class:"pill "+ds.cls},ds.txt):""):(due?apLong(due):el("span",{class:"muted"},"—"))),
+        el("td",{style:"text-align:right"},open)));
+    });
+    t.append(tb); ac.append(el("div",{class:"tscroll"},t));
+  }
+  v.append(ac);
+
+  /* eligible */
+  const elig=apEligible(groups,reps,students);
+  const ec=cardShell("Students who can appeal (Not Confirmed)",
+    el("button",{class:"btn xs ghost",onclick:()=>apPickStudentDialog(students,recs,sem,redraw)},"+ Another student"));
+  ec.append(el("p",{class:"muted ui",style:"margin:10px 16px 0;font-size:12.5px"},
+    "Final Not Confirmed outcomes on this semester's panels. The deadline is 10 working days from the formal outcome notice (weekends and the semester's holidays are skipped). Issue a code only once the outcome has been released to the student."));
+  if(!elig.length) ec.append(el("div",{class:"muted ui",style:"padding:12px 16px"},"No Not Confirmed outcomes in this semester."));
+  else{
+    const t=el("table",{class:"ap-table"});
+    t.append(el("thead",{},el("tr",{},...["Student","Panel","Outcome notice","Lodge by","Appeal"].map(h=>el("th",{},h)))));
+    const tb=el("tbody",{});
+    elig.forEach(row=>{
+      const r=recOf(row.st.id), lodgeBy=r?.a7?.deadline||(row.noticeDate?addBusinessDays(row.noticeDate,AP_LODGE_DAYS,sem):"");
+      const ds=dueState(lodgeBy);
+      tb.append(el("tr",{},
+        el("td",{},el("b",{},row.st.name||""),el("div",{class:"muted",style:"font-size:12px"},(row.st.sid||"")+(row.afterResub?" · after resubmission":""))),
+        el("td",{},row.g.label||"Panel"),
+        el("td",{},row.released?(row.noticeDate?apLong(row.noticeDate):"Released"):el("span",{class:"pill none",title:"Release the outcome to the student on the CoC reports screen first"},"Not released to student")),
+        el("td",{},lodgeBy?el("span",{},apLong(lodgeBy)," ",!r||r.stage==="open"?el("span",{class:"pill "+ds.cls},ds.txt):""):el("span",{class:"muted"},"—")),
+        el("td",{},r?el("span",{class:"row",style:"gap:6px;flex-wrap:wrap"},apStagePill(r.stage),el("button",{class:"btn xs ghost",onclick:()=>{ S.apOpen=r.id; redraw(); }},"Open"))
+          :el("button",{class:"btn xs",disabled:row.released?null:"disabled",onclick:()=>apIssueDialog({st:row.st,row,sem,groups,recs},redraw)},"Issue appeal code"))));
+    });
+    t.append(tb); ec.append(el("div",{class:"tscroll"},t));
+  }
+  v.append(ec);
+
+  v.append(apOfficersFold(redraw));
+  refreshApBadge();
+  v.append(el("details",{class:"cfold",style:"margin-top:6px"},el("summary",{},el("div",{class:"csection"},el("div",{class:"cs-mark"},"⚙"),
+      el("div",{class:"cs-body"},el("h3",{},"Database rules for appeals"),el("p",{},"Needed once, in the Firebase console."))),
+      el("div",{class:"cfold-right"},el("span",{class:"chev"},"›"))),
+    el("div",{class:"cfold-body"},el("div",{class:"card",style:"padding:14px 16px"},
+      el("pre",{style:"white-space:pre-wrap;background:rgba(127,127,127,.1);padding:12px;border-radius:8px;font-size:12px;margin:0 0 10px;max-height:340px;overflow:auto"},AP_RULES),
+      el("button",{class:"btn sm",onclick:()=>navigator.clipboard?.writeText(AP_RULES).then(()=>toast("Rules copied."),()=>toast("Copy failed.",true))},"⧉ Copy rules")))));
+}
+function apPortalPill(p){
+  if(!p) return el("span",{class:"muted"},"—");
+  const m={issued:["Not started","none"],draft:["Draft","pending"],returned:["Asked for more","missed"],lodged:["Lodged","approved"],
+    review:["Locked — in review","blue"],decided:["Decision released","approved"],closed:["Decision released","approved"],withdrawn:["Withdrawn","none"]}[p.status]||[p.status,"none"];
+  return el("span",{class:"pill "+m[1],title:p.savedAt?"Last saved "+cocDT(p.savedAt):""},m[0]);
+}
+
+/* ---- naming the officers ---------------------------------------------- */
+function apOfficersFold(redraw){
+  const cfg=S.apCfg||{officers:{}};
+  const staff=apAllStaff().slice().sort((a,b)=>String(a.name||a.email||"").localeCompare(String(b.name||b.email||"")));
+  const picks={};
+  const rows=AP_OFFICES.map(o=>{
+    const cur=cfg.officers?.[o.k]?.uid||"";
+    const sel=el("select",{},el("option",{value:""},"— Vacant —"),
+      ...staff.map(u=>el("option",{value:u.id,...(u.id===cur?{selected:"selected"}:{})},(u.name||u.email||u.id)+" · "+staffRoleLabel(u)+(u.pendingLogin?" (no login yet)":""))));
+    picks[o.k]=sel;
+    const h=apHolder(o.k);
+    return el("div",{class:"ap-off"},el("div",{},el("b",{},o.label),el("div",{class:"muted",style:"font-size:12.5px"},o.does)),
+      el("div",{},sel,el("div",{class:"muted",style:"font-size:12px;margin-top:3px"},h?(h.email||"no email on file"):"Not set")));
+  });
+  const office=el("input",{type:"email",value:apT(cfg.officeEmail),placeholder:researchOfficeEmail(activeSemester())||"research.office@cihe.edu.au"});
+  const holders=AP_OFFICES.map(o=>apHolder(o.k)).filter(Boolean);
+  return el("details",{class:"cfold",style:"margin-top:6px",...(holders.length<3?{open:"open"}:{})},
+    el("summary",{},el("div",{class:"csection"},el("div",{class:"cs-mark"},"⚖"),
+      el("div",{class:"cs-body"},el("h3",{},"Appeal officers"),
+        el("p",{},holders.length?AP_OFFICES.map(o=>{ const h=apHolder(o.k); return o.short+": "+(h?h.name:"vacant"); }).join(" · "):"Not set yet"))),
+      el("div",{class:"cfold-right"},el("span",{class:"chev"},"›"))),
+    el("div",{class:"cfold-body"},el("div",{class:"card",style:"padding:14px 16px"},
+      el("p",{class:"muted",style:"margin:0 0 12px;font-size:13px"},
+        "These are positions, not hub roles. Pick the person who holds each one from the people who already have a hub account — an admin, a supervisor or a panel member. "+
+        "They keep their usual role and access, and get a “CoC appeals” item in their menu showing only the appeals sent to them. "+
+        "When someone else takes over, change it here; appeals already under way stay with the people they were sent to (you can reassign one from the appeal itself)."),
+      ...rows,
+      el("div",{class:"ap-off"},el("div",{},el("b",{},"MRes office address"),el("div",{class:"muted",style:"font-size:12.5px"},"Copied on officers’ and students’ emails, and shown to students for questions.")),office),
+      el("div",{class:"row",style:"margin-top:12px"},el("button",{class:"btn sm",onclick:async()=>{
+        const officers={};
+        AP_OFFICES.forEach(o=>{ const uid=picks[o.k].value; if(uid){ const u=apStaff(uid); officers[o.k]={uid,name:u?.name||"",email:u?.email||""}; } });
+        const e=office.value.trim(); if(e&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ toast("That office email doesn't look right.",true); return; }
+        try{ await apSaveCfg(officers,{officeEmail:e}); toast("Appeal officers saved."); redraw(); }
+        catch(err){ toast("Couldn't save: "+(err?.message||err),true); }
+      }},"Save officers")))));
+}
+
+/* ---- issuing a code ----------------------------------------------------- */
+function apPickStudentDialog(students,recs,sem,redraw){
+  const free=students.filter(s=>!recs.some(r=>r.studentDocId===s.id&&r.stage!=="withdrawn")).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  if(!free.length){ toast("Every student in this semester already has an appeal.",true); return; }
+  const sel=el("select",{},...free.map(s=>el("option",{value:s.id},(s.name||"")+" · "+(s.sid||""))));
+  modal("Issue an appeal code to another student",el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"For a Not Confirmed outcome that isn't on a panel in the hub (for example one notified on paper). You set the outcome notice date yourself."),
+    el("div",{class:"field"},el("label",{},"Student"),sel)),async()=>{
+      const st=free.find(s=>s.id===sel.value); if(!st) return false;
+      setTimeout(()=>apIssueDialog({st,row:null,sem,groups:[],recs},redraw),50); return true; },"Next");
+}
+function apIssueDialog({st,row,sem,groups,recs},redraw){
+  const g=row?.g||null, sl=g?slotOfStudent(g,st.id):null;
+  const chairM=g?groupMembers(g).find(m=>isChair(g,m)):null;
+  const notice=el("input",{type:"date",value:row?.noticeDate||apToday()});
+  const lodge=el("input",{type:"date"});
+  let lodgeAuto=true;
+  const calc=()=>{ if(lodgeAuto) lodge.value=addBusinessDays(notice.value,AP_LODGE_DAYS,sem)||""; };
+  notice.addEventListener("input",calc); lodge.addEventListener("input",()=>{ lodgeAuto=false; }); calc();
+  const resub=el("input",{type:"checkbox",style:"width:auto;margin:0"}); resub.checked=!!row?.afterResub;
+  const resubDate=el("input",{type:"date",value:row?.resubAt?apDayOf(row.resubAt):""});
+  const ref=el("input",{value:g?((g.label||"Panel")+(chairM?" — Chair: "+(chairM.name||""):"")):""});
+  const cocDate=el("input",{type:"date",value:g&&sl?slotDate(g,sl):""});
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0"}); mail.checked=true;
+  const prior=(recs||[]).filter(r=>r.studentDocId===st.id||normSid(r.sid)===normSid(st.sid));
+  const body=el("div",{class:"grid",style:"gap:12px"},
+    el("p",{class:"muted",style:"margin:0;font-size:13.5px"},"Creates "+(st.name||"the student")+"’s appeal, filled in from the hub, and a private appeal code. The code goes to "+(st.email||"their student email")+" with a link to the form."),
+    prior.length?noticeBar("amber","This student already has "+apPl(prior.length,"appeal")+" on file. Only one appeal against a CoC outcome is allowed (PR72 3.10.4).") : "",
+    el("div",{class:"grid two"},
+      el("div",{class:"field"},el("label",{},"Date of formal outcome notice"),notice,cocTip("The date on the written notice from the Research Office.")),
+      el("div",{class:"field"},el("label",{},"Last day to lodge"),lodge,cocTip("10 working days later, worked out for you."))),
+    el("div",{class:"grid two"},
+      el("div",{class:"field"},el("label",{},"CoC presentation date"),cocDate),
+      el("div",{class:"field"},el("label",{},"Panel Chair or reference"),ref)),
+    el("label",{class:"coc-chk"},resub,el("span",{},"Not Confirmed was issued after major revisions and resubmission (PR72 3.8.5)")),
+    el("div",{class:"field"},el("label",{},"Resubmission date (if applicable)"),resubDate),
+    el("label",{class:"coc-chk"},mail,el("span",{},"Then email the code to "+(st.email||"the student"))));
+  modal("Issue appeal code — "+(st.name||""),body,async()=>{
+    if(!notice.value){ toast("Set the outcome notice date.",true); return false; }
+    if(!st.email&&mail.checked){ toast("No email on file for this student — untick the email box and give them the code another way.",true); return false; }
+    const code=apMakeCode(), now=Date.now();
+    const units=unitsOf(sem).filter(u=>(st.unitIds||[]).includes(u.id)).map(u=>u.code).filter(Boolean);
+    const cc=apHolder("cc");
+    const pre={fullName:st.name||"",sid:st.sid||"",campus:st.campus||"",email:st.email||"",mobile:st.mobile||"",
+      principal:st.principalName||supName(st.principalUid)||"",co:st.coUid?(st.coName||supName(st.coUid)||""):"",
+      discipline:cpsAreaName(st.area||"")||st.area||"",unit:(units.length?units.join(" / "):"RES915")+(units.includes("RES915")||!units.length?" — Literature, Methodology and Proposal":""),
+      title:titleOf(st)||row?.notice?.title||"",cocDate:cocDate.value||"",panelRef:apT(ref.value),outcome:"NC",
+      afterResub:resub.checked,noticeDate:notice.value,lodgeBy:lodge.value||addBusinessDays(notice.value,AP_LODGE_DAYS,sem)||"",
+      resubDate:resub.checked?(resubDate.value||""):""};
+    const contacts={cc:cc?{name:cc.name,email:cc.email}:null,office:apOfficeEmail()};
+    const portal={kind:"appeal",code,semesterId:sem.id,studentDocId:st.id,sid:st.sid||"",name:st.name||"",status:"issued",
+      pre,contacts,student:{},evidence:[],officeEvidence:[],issuedAt:now,issuedBy:S.userName||"",updatedAt:now};
+    const rec={code,semesterId:sem.id,studentDocId:st.id,sid:st.sid||"",name:st.name||"",groupId:g?.id||"",stage:"open",
+      officers:{},officerUids:[],ccUid:"",dmUid:"",dmRole:"",coi:{},
+      a7:{noticeDate:notice.value,deadline:pre.lodgeBy,prior:prior.length?"exists":"none"},
+      cc:{},dm:{},e7:{},result:"",createdAt:now,updatedAt:now,
+      history:[{at:now,by:S.userName||"",what:"appeal code issued"}]};
+    await DB.batchWrite([{type:"set",coll:"appealPortal",id:code,data:portal,merge:false},{type:"set",coll:"appeals",id:code,data:rec,merge:false}]);
+    toast("Appeal code issued: "+apFmt(code));
+    if(mail.checked) apMailCode({...portal,id:code});
+    redraw(); return true;
+  },"Issue code");
+  apWide();
+}
+function apMailCode(pt){
+  const pre=pt.pre||{};
+  openEmail(pt.pre?.email||"","Your CoC outcome appeal — appeal code",
+    "Dear "+(pt.name||"")+",\n\n"+
+    "Your Confirmation of Candidature outcome is Not Confirmed (formal notice dated "+apLong(pre.noticeDate)+"). "+
+    "If you wish to appeal, you can lodge your appeal online in the MRes Supervision Hub. The form is already filled in with your details.\n\n"+
+    "Open your appeal: "+apLink(pt.code||pt.id)+"\n"+
+    "Appeal code: "+apFmt(pt.code||pt.id)+"\n"+
+    "Sign in with this code and your student ID.\n\n"+
+    "Lodge by: "+(pre.lodgeBy?dueLong(pre.lodgeBy):"10 working days from your outcome notice")+" (10 working days from the formal notice; QA72 5.6.1, PR72 3.10.1). One appeal only; the decision is final.\n\n"+
+    "What you will need:\n"+
+    "- At least one ground: procedural error, bias, an unmanaged conflict of interest, or significant new evidence. Disagreeing with the panel's academic judgement is not enough on its own (QA72 5.6.2).\n"+
+    "- Your statement, referring to your evidence by ID (E1, E2 ...).\n"+
+    "- Links to your evidence in OneDrive or Google Drive, shared so that anyone with the link can view (up to 10 documents). Nothing is uploaded to the hub.\n"+
+    "- The link to your revised proposal with tracked changes visible.\n"+
+    "- Your signature (drawn or typed) when you lodge.\n\n"+
+    "Your answers save as you go, so you can come back with the same code until you lodge. Please keep the code private.\n\n"+
+    "Kind regards,\n"+(S.userName||"MRes Coordination"),pt.contacts?.office||"");
+}
+
+/* ---- the officers' list ------------------------------------------------- */
+async function apOfficerList(v,redraw){
+  const mine=AP_OFFICES.filter(o=>S.apCfg?.officers?.[o.k]?.uid===S.uid).map(o=>o.label);
+  v.append(el("p",{class:"muted ui",style:"margin:-4px 0 14px;font-size:13.5px"},
+    mine.length?"You are recorded as "+mine.join(" and ")+". Appeals reach you here when the MRes office routes them to you.":
+    "Appeals the MRes office has sent to you for review or decision."));
+  let recs=[];
+  try{ recs=await DB.list("appeals",{officerUids:{$contains:S.uid}}); }
+  catch(err){ v.append(apRuleHelp(err)); return; }
+  if(!v.isConnected) return;
+  if(!recs.length){ v.append(emptyState("No appeals for you","When the office routes a CoC outcome appeal to you, it appears here and you get an email.")); return; }
+  const card=cardShell("Your appeals",el("span",{}));
+  const t=el("table",{class:"ap-table"});
+  t.append(el("thead",{},el("tr",{},...["Student","Reference","You act as","Stage","Determination due",""].map(h=>el("th",{},h)))));
+  const tb=el("tbody",{});
+  recs.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(r=>{
+    const role=r.ccUid===S.uid&&r.dmUid===S.uid?"Course Coordinator / decision maker":r.ccUid===S.uid?"Course Coordinator":r.dmUid===S.uid?apOfficeLabel(r.dmRole)+" (decision maker)":"Reader";
+    const mineNow=apMyTurn(r);
+    const ds=dueState(r.a7?.due||"");
+    tb.append(el("tr",{class:mineNow?"ap-mine":""},
+      el("td",{},el("b",{},r.name||""),el("div",{class:"muted",style:"font-size:12px"},r.sid||"")),
+      el("td",{class:"mono"},apRefOf(r)),el("td",{},role),
+      el("td",{},apStagePill(r.stage),mineNow?el("span",{class:"pill pending",style:"margin-left:6px"},"Your action"):""),
+      el("td",{},r.a7?.due?el("span",{},apLong(r.a7.due)," ",ds.txt&&!["closed","decided"].includes(r.stage)?el("span",{class:"pill "+ds.cls},ds.txt):""):"—"),
+      el("td",{style:"text-align:right"},el("button",{class:"btn xs",onclick:()=>{ S.apOpen=r.id; redraw(); }},"Open"))));
+  });
+  t.append(tb); card.append(el("div",{class:"tscroll"},t)); v.append(card);
+}
+const apMyTurn=r=>(r.stage==="cc"&&r.ccUid===S.uid)||(r.stage==="dm"&&r.dmUid===S.uid);
+
+/* ---- one appeal ---------------------------------------------------------- */
+async function apDetailView(v,code,back){
+  v.innerHTML="";
+  const admin=S.role==="admin";
+  const reload=()=>apDetailView(v,code,back);
+  let rec,pt,st=null,groups=[];
+  try{ [rec,pt]=await Promise.all([apGetRec(code),apGetPortal(code)]); }
+  catch(err){ v.append(apRuleHelp(err)); return; }
+  if(!rec||!pt){ v.append(emptyState("Appeal not found","It may have been deleted."),el("button",{class:"btn sm",onclick:back},"← Back")); return; }
+  try{ st=await DB.get("students",rec.studentDocId); }catch(e){}
+  try{ groups=await DB.list("panelGroups",{semesterId:rec.semesterId}); }catch(e){}
+  await apLoadCfg();
+  if(!v.isConnected) return;
+  refreshApBadge();
+  const sem=semOf(rec.semesterId)||activeSemester();
+  const isCC=!!rec.ccUid&&rec.ccUid===S.uid, isDM=!!rec.dmUid&&rec.dmUid===S.uid;
+  rec.a7=rec.a7||{}; rec.coi=rec.coi||{}; rec.cc=rec.cc||{}; rec.dm=rec.dm||{}; rec.e7=rec.e7||{}; rec.officers=rec.officers||{};
+
+  async function saveRec(patch,what){
+    const now=Date.now(), data={...patch,updatedAt:now};
+    if(what) data.history=apHist(rec,what);
+    await DB.update("appeals",code,data); Object.assign(rec,data);
+  }
+  async function savePortal(patch){ await DB.update("appealPortal",code,{...patch,updatedAt:Date.now()}); Object.assign(pt,patch); }
+
+  /* header */
+  v.append(el("div",{class:"row",style:"margin-bottom:10px"},el("button",{class:"btn ghost sm",onclick:back},"← All appeals")));
+  const due=rec.a7.due, ds=dueState(due);
+  const path=[];
+  if(rec.ccUid) path.push(["Course Coordinator",rec.officers.cc?.name||apStaff(rec.ccUid)?.name||""]);
+  if(rec.dmUid) path.push([apOfficeLabel(rec.dmRole),rec.officers[rec.dmRole]?.name||apStaff(rec.dmUid)?.name||""]);
+  v.append(el("div",{class:"card ap-head"},
+    el("div",{class:"grow"},
+      el("div",{class:"eyebrow ui"},"CoC outcome appeal · "+apRefOf(rec)),
+      el("h2",{style:"margin:2px 0 4px"},rec.name||""),
+      el("div",{class:"muted ui",style:"font-size:13px"},[rec.sid,pt.pre?.unit,pt.pre?.title].filter(Boolean).join(" · ")),
+      path.length?el("div",{class:"ap-path"},...path.flatMap(([r,n],i)=>[i?el("span",{class:"arr"},"→"):"",el("span",{class:"ap-pchip"},el("b",{},r),n?" "+n:"")])):""),
+    el("div",{class:"ap-headr"},apStagePill(rec.stage),
+      due?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:6px"},"Determination due "+apLong(due)+" ",ds.txt&&!["closed","withdrawn","notaccepted"].includes(rec.stage)?el("span",{class:"pill "+ds.cls},ds.txt):""):"",
+      el("div",{class:"row",style:"gap:6px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap"},
+        el("button",{class:"btn sm",onclick:()=>apDownload(pt,rec,sem)},"⤓ Word form")))));
+
+  /* the next step, for whoever is looking */
+  const next=apNextCard({rec,pt,st,groups,sem,admin,isCC,isDM,saveRec,savePortal,reload});
+  if(next) v.append(next);
+
+  /* the student's appeal */
+  const relNew=pt.relodgedAt&&pt.relodgedAt>(rec.seenRelodge||0)&&rec.stage!=="open";
+  if(relNew&&admin){ v.append(noticeBar("blue","The student re-lodged on "+cocDT(pt.relodgedAt)+" after your request.",
+    el("button",{class:"btn xs",onclick:async()=>{ await saveRec({seenRelodge:pt.relodgedAt},"re-lodged form noted"); if(pt.status==="lodged"&&rec.stage!=="lodged"&&rec.stage!=="open") await savePortal({status:"review"}); reload(); }},"Mark as seen"))); }
+  v.append(apFold("student","The student’s appeal (Sections 1–6)",
+    pt.lodgedAt?"Lodged "+cocDT(pt.lodgedAt)+(pt.relodgedAt?" · re-lodged "+cocDT(pt.relodgedAt):""):"Not lodged yet — "+({issued:"not started",draft:"draft saved "+(pt.savedAt?relTime(pt.savedAt):""),returned:"with the student"}[pt.status]||pt.status),
+    apReadOnly(pt,{noOffice:true}),true));
+
+  /* evidence added by the office, and requests to the student */
+  v.append(apFold("evidence","Evidence added by the office, and requests to the student",
+    apPl((pt.officeEvidence||[]).length,"office item")+" · "+apPl((pt.requests||[]).length,"request"),
+    apOfficeEvidence({rec,pt,admin,isCC,isDM,savePortal,saveRec,reload}),false));
+
+  /* the office record */
+  v.append(apFold("a7","7A Receipt and eligibility · 7B Conflict of interest",rec.stage==="open"||rec.stage==="lodged"?"To complete when the appeal is lodged":"Received "+apLong(rec.a7.receivedOn),
+    apRecordRO7AB(rec,pt,st,groups),false));
+  v.append(apFold("c7","7C Course Coordinator review",rec.cc?.sign?"Signed "+cocDT(rec.cc.sign.at):rec.ccUid?"Not completed":"Not applicable (Course Coordinator conflicted)",
+    apRecordRO7C(rec),false));
+  v.append(apFold("d7","7D "+(rec.dmRole==="adr"?"Associate Dean Research":"Head of School")+" decision",rec.dm?.sign?"Signed "+cocDT(rec.dm.sign.at):"Not completed",apRecordRO7D(rec),false));
+  v.append(apFold("e7","7E Notification and records",rec.e7?.notifiedOn?"Notified "+apLong(rec.e7.notifiedOn):"Not notified",apRecordRO7E(rec),false));
+  if(admin) v.append(apFold("tools","Office tools and history",apPl((rec.history||[]).length,"entry"),apAdminTools({rec,pt,sem,saveRec,savePortal,reload,back}),false));
+}
+function apFold(key,title,sub,body,open){
+  S.apFolds=S.apFolds||{};
+  const d=el("details",{class:"cfold ap-fold"});
+  d.open=S.apFolds[key]!==undefined?S.apFolds[key]:!!open;
+  d.addEventListener("toggle",()=>{ S.apFolds[key]=d.open; });
+  d.append(el("summary",{},el("div",{class:"csection"},el("div",{class:"cs-body"},el("h3",{},title),sub?el("p",{},sub):"")),
+    el("div",{class:"cfold-right"},el("span",{class:"chev"},"›"))),el("div",{class:"cfold-body"},el("div",{class:"card",style:"padding:14px 16px"},body)));
+  return d;
+}
+
+/* ---- what to do next ----------------------------------------------------- */
+function apNextCard(ctx){
+  const {rec,pt,admin,isCC,isDM}=ctx;
+  const box=(title,sub,...kids)=>el("div",{class:"card ap-next"},el("div",{class:"ap-nexth"},el("span",{class:"pill pending"},"Next step"),el("strong",{},title)),
+    sub?el("p",{class:"muted",style:"margin:4px 0 12px;font-size:13.5px"},sub):"",...kids);
+  if(rec.stage==="open"){
+    if(!admin) return null;
+    if(pt.status==="lodged") return box("Receive the appeal and route it (7A, 7B)","Lodged "+cocDT(pt.lodgedAt)+". Check the details the hub has worked out, confirm any conflicts, and send it on.",apReceiveForm(ctx));
+    return box("Waiting for the student to lodge",
+      "Code "+apFmt(rec.id)+" issued "+cocDay(pt.issuedAt)+". Student’s form: "+({issued:"not opened yet",draft:"draft saved "+relTime(pt.savedAt),returned:"returned to them for more"}[pt.status]||pt.status)+". Lodge by "+apLong(pt.pre?.lodgeBy)+".",
+      el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+        el("button",{class:"btn sm",onclick:()=>apMailCode(pt)},"✉ Email the code again"),
+        el("button",{class:"btn sm ghost",onclick:()=>copyText(apLink(rec.id)).then(()=>toast("Link copied."))},"⧉ Copy the link"),
+        el("span",{class:"mono",style:"align-self:center;font-size:13px"},apFmt(rec.id))));
+  }
+  if(rec.stage==="lodged"&&admin) return box("Route the appeal (7B)","Received. Confirm the conflict position and send it on.",apReceiveForm(ctx));
+  if(rec.stage==="cc"){
+    if(isCC) return box("Your review as Course Coordinator (7C)","Read the student’s appeal and evidence below, then record your findings on each ground and sign.",apCCForm(ctx));
+    if(admin) return box("With the Course Coordinator","Sent to "+(rec.officers.cc?.name||"the Course Coordinator")+" on "+apLong(rec.coi?.referredOn)+".",apChaseBtn(ctx,"cc"));
+  }
+  if(rec.stage==="dm"){
+    if(isDM) return box("Your decision as "+apOfficeLabel(rec.dmRole)+" (7D)",rec.cc?.det==="substantiated"?"The Course Coordinator found the grounds substantiated and referred the appeal to you.":"The appeal was referred to you as decision maker"+(rec.coi?.cc?.conflicted?" because the Course Coordinator is conflicted":"")+".",apDMForm(ctx));
+    if(admin) return box("With the "+apOfficeLabel(rec.dmRole),"Sent to "+(rec.officers[rec.dmRole]?.name||"the decision maker")+".",apChaseBtn(ctx,"dm"));
+  }
+  if(rec.stage==="decided"&&admin) return box("Notify the student and close (7E)",(AP_RESULTS[rec.result]||{}).label||"",apNotifyForm(ctx));
+  if(["closed","notaccepted","withdrawn"].includes(rec.stage)) return el("div",{class:"card ap-next done"},el("div",{class:"ap-nexth"},apStagePill(rec.stage),
+    el("strong",{},(AP_RESULTS[rec.result]||{}).label||"")),rec.e7?.notifiedOn?el("p",{class:"muted",style:"margin:6px 0 0;font-size:13.5px"},"Student notified "+apLong(rec.e7.notifiedOn)+(rec.e7.notifiedBy?" by "+rec.e7.notifiedBy:"")+"."):"");
+  return null;
+}
+function apChaseBtn(ctx,who){
+  const {rec}=ctx;
+  return el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+    el("button",{class:"btn sm ghost",onclick:()=>apMailOfficer(rec,ctx.pt,who==="cc"?"cc":rec.dmRole,true)},"✉ Email a reminder"));
+}
+
+/* 7A + 7B: receipt, eligibility, conflicts, routing */
+function apReceiveForm(ctx){
+  const {rec,pt,st,groups,sem,saveRec,savePortal,reload}=ctx;
+  const a=JSON.parse(JSON.stringify(rec.a7||{}));
+  const lodged=pt.lodgedAt?apDayOf(pt.lodgedAt):apToday();
+  a.receivedOn=a.receivedOn||lodged;
+  a.receivedBy=a.receivedBy||((S.userName||"")+", MRes office");
+  a.noticeDate=a.noticeDate||pt.pre?.noticeDate||"";
+  a.deadline=a.deadline||pt.pre?.lodgeBy||"";
+  const onTimeAuto=!a.deadline||lodged<=a.deadline;
+  a.onTime=a.onTime||(onTimeAuto?"Y":"N");
+  a.recording=a.recording||(pt.student?.attach?.recording?"Yes":"No");
+  const W=el("div",{class:"ap-form"});
+  const recvOn=el("input",{type:"date",value:a.receivedOn});
+  const dueIn=el("input",{type:"date"});
+  let dueAuto=!a.due;
+  const calcDue=()=>{ if(dueAuto) dueIn.value=addBusinessDays(recvOn.value,AP_DECIDE_DAYS,sem)||""; };
+  dueIn.value=a.due||""; recvOn.addEventListener("input",calcDue); dueIn.addEventListener("input",()=>{ dueAuto=false; }); calcDue();
+  const recvBy=el("input",{value:a.receivedBy});
+  const onY=el("input",{type:"radio",name:"apont",style:"width:auto;margin:0"}), onN=el("input",{type:"radio",name:"apont",style:"width:auto;margin:0"});
+  (a.onTime==="N"?onN:onY).checked=true;
+  const lateAct=el("input",{value:a.lateAction||"",placeholder:"e.g. Accepted — medical certificate provided"});
+  const recNote=el("input",{value:a.recordingNote||"",placeholder:a.recording==="Yes"?"Located? Where is it kept?":"Not requested"});
+  W.append(el("div",{class:"ap-subh"},"7A Receipt and eligibility"),
+    el("div",{class:"grid two"},
+      el("div",{class:"field"},el("label",{},"Received on"),recvOn),
+      el("div",{class:"field"},el("label",{},"Received by (name and role)"),recvBy)),
+    el("div",{class:"ap-kv"},
+      el("div",{class:"k"},"Outcome notice date"),el("div",{class:"v"},apLong(a.noticeDate)||"—"),
+      el("div",{class:"k"},"Lodgement deadline"),el("div",{class:"v"},apLong(a.deadline)||"—"),
+      el("div",{class:"k"},"Lodged"),el("div",{class:"v"},cocDT(pt.lodgedAt)+" ",el("span",{class:"pill "+(onTimeAuto?"approved":"missed")},onTimeAuto?"on time":"after the deadline")),
+      el("div",{class:"k"},"Prior CoC appeal"),el("div",{class:"v"},a.prior==="exists"?el("span",{class:"pill missed"},"A prior appeal exists — no further appeal can be considered (PR72 3.10.4)"):"None on file"),
+      el("div",{class:"k"},"Recording requested"),el("div",{class:"v"},a.recording)),
+    el("div",{class:"row",style:"gap:16px;margin:8px 0 4px;flex-wrap:wrap"},el("b",{class:"ui",style:"font-size:13px"},"Lodged on time?"),
+      el("label",{class:"coc-chk"},onY,"Yes, within 10 working days (PR72 3.10.1)"),el("label",{class:"coc-chk"},onN,"No")),
+    !onTimeAuto&&apT(pt.student?.lateReason)?el("div",{class:"ap-flag"},el("b",{},"Student’s reason for lodging late: "),pt.student.lateReason):"",
+    el("div",{class:"field"},el("label",{},"If late: action taken"),lateAct),
+    el("div",{class:"grid two"},
+      el("div",{class:"field"},el("label",{},"Determination due (receipt + 20 working days)"),dueIn),
+      el("div",{class:"field"},el("label",{},"Recording: located?"),recNote)));
+
+  /* 7B */
+  const offs={}; AP_OFFICES.forEach(o=>{ offs[o.k]=apHolder(o.k); });
+  const conf={}, auto={};
+  W.append(el("div",{class:"ap-subh",style:"margin-top:16px"},"7B Conflict of interest assessment (PR72 3.10.3)"));
+  if(pt.student?.ccConflict&&pt.student.ccConflict!=="no") W.append(el("div",{class:"ap-flag"},el("b",{},"The student says the Course Coordinator "+(pt.student.ccConflict==="yes"?"was":"may have been")+" on their supervisory panel or assessed their CoC. "),apT(pt.student.ccConflictNote)));
+  const boxes={};
+  AP_OFFICES.forEach(o=>{
+    const h=offs[o.k];
+    auto[o.k]=h?apConflicts(h.uid,st,groups):[];
+    const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"});
+    cb.checked=rec.coi?.[o.k]?.conflicted!=null?!!rec.coi[o.k].conflicted:auto[o.k].length>0||(o.k==="cc"&&pt.student?.ccConflict==="yes");
+    boxes[o.k]=cb;
+    W.append(el("div",{class:"ap-coi"+(auto[o.k].length?" hit":"")},
+      el("div",{},el("b",{},o.label),el("div",{class:"muted",style:"font-size:12.5px"},h?h.name+(h.email?" · "+h.email:""):"Vacant — name someone under Appeal officers")),
+      el("div",{},auto[o.k].length?el("div",{class:"ap-coiwhy"},"The hub found: "+h.name+" "+auto[o.k].join("; ")+"."):el("div",{class:"muted",style:"font-size:12.5px"},h?"No conflict found in the hub.":""),
+        h?el("label",{class:"coc-chk",style:"margin-top:4px"},cb,el("span",{},"Conflicted")):"")));
+  });
+  const detail=el("textarea",{rows:"2",placeholder:"Nature of any conflict, officer referred to"}); detail.value=rec.coi?.detail||"";
+  W.append(el("div",{class:"field",style:"margin-top:8px"},el("label",{},"Details and referral"),detail));
+  const routeLine=el("div",{class:"ap-route"});
+  const paintRoute=()=>{ AP_OFFICES.forEach(o=>{ conf[o.k]=boxes[o.k].checked; }); const r=apRoute(offs,conf);
+    routeLine.replaceChildren(r.first?el("span",{},"Goes to: ",el("b",{},r.first==="cc"?"Course Coordinator ("+offs.cc.name+")":apOfficeLabel(r.dmRole)+" ("+offs[r.dmRole].name+")"),
+      r.first==="cc"&&r.dmRole?el("span",{class:"muted"}," → then, if substantiated, "+apOfficeLabel(r.dmRole)+" ("+offs[r.dmRole].name+")"):"",
+      r.first==="dm"?el("span",{class:"muted"}," as decision maker"):""):el("span",{class:"pill missed"},"Nobody unconflicted to send it to — check the officers")); };
+  AP_OFFICES.forEach(o=>boxes[o.k].addEventListener("change",paintRoute)); paintRoute();
+  W.append(routeLine);
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0"}); mail.checked=true;
+  const collect=()=>({...a,receivedOn:recvOn.value,receivedBy:apT(recvBy.value),onTime:onN.checked?"N":"Y",lateAction:apT(lateAct.value),
+    due:dueIn.value,recordingNote:apT(recNote.value)});
+  W.append(el("label",{class:"coc-chk",style:"margin:10px 0 0"},mail,el("span",{},"Email the officer it goes to")),
+    el("div",{class:"row",style:"gap:8px;margin-top:12px;flex-wrap:wrap"},
+      el("button",{class:"btn",onclick:async()=>{
+        if(!recvOn.value){ toast("Set the date received.",true); return; }
+        const r=apRoute(offs,conf);
+        if(!r.first){ toast("Name an unconflicted Course Coordinator, Head of School or Associate Dean Research first.",true); return; }
+        if(a.prior==="exists"&&!window.confirm("A prior CoC appeal is on file, so under PR72 3.10.4 no further appeal can be considered. Route it anyway?")) return;
+        const now=Date.now(), off={}; AP_OFFICES.forEach(o=>{ if(offs[o.k]) off[o.k]={uid:offs[o.k].uid,name:offs[o.k].name,email:offs[o.k].email}; });
+        const coi={detail:apT(detail.value),referredOn:apToday()};
+        AP_OFFICES.forEach(o=>{ coi[o.k]={conflicted:!!conf[o.k],auto:auto[o.k],by:S.userName||"",at:now}; });
+        const ccUid=r.first==="cc"?offs.cc.uid:"", dmUid=r.dmRole?offs[r.dmRole].uid:"";
+        const patch={a7:collect(),coi,officers:off,ccUid,dmUid,dmRole:r.dmRole,stage:r.first,
+          officerUids:[r.first==="cc"?ccUid:dmUid].filter(Boolean),seenRelodge:pt.relodgedAt||0};
+        await ctx.saveRec(patch,"received and sent to "+(r.first==="cc"?"the Course Coordinator":apOfficeLabel(r.dmRole)));
+        await savePortal({status:"review"});
+        toast("Sent to "+(r.first==="cc"?offs.cc.name:offs[r.dmRole].name)+".");
+        if(mail.checked) apMailOfficer(rec,pt,r.first==="cc"?"cc":r.dmRole,false);
+        reload();
+      }},"Confirm receipt and send"),
+      el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({a7:collect(),stage:rec.stage==="open"?"lodged":rec.stage},"receipt details saved"); toast("Saved."); reload(); }},"Save without sending"),
+      el("button",{class:"btn ghost",onclick:()=>apNotAcceptDialog(ctx,collect())},"Not accepted…")));
+  return W;
+}
+function apNotAcceptDialog(ctx,a7){
+  const {rec,saveRec,reload}=ctx;
+  const why=el("textarea",{rows:"4"}); why.value=a7.prior==="exists"?"A prior appeal against your CoC outcome is on file. Under PR72 3.10.4 only one appeal may be lodged and the decision reached is final, so this appeal cannot be considered.":
+    "Your appeal was lodged after the 10-working-day deadline (PR72 3.10.1) and no grounds for accepting it late were established.";
+  modal("Appeal not accepted — "+(rec.name||""),el("div",{},el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"Closes the appeal as not accepted. You then notify the student under 7E."),
+    el("div",{class:"field"},el("label",{},"Reason (for the student)"),why)),async()=>{
+      await saveRec({a7,stage:"decided",result:"notaccepted",notAccepted:{text:apT(why.value),by:S.userName||"",at:Date.now()}},"not accepted");
+      reload(); return true; },"Not accepted");
+}
+
+/* 7C — the Course Coordinator */
+function apCCForm(ctx){
+  const {rec,pt,saveRec,savePortal,reload}=ctx;
+  const c=JSON.parse(JSON.stringify(rec.cc||{}));
+  const W=el("div",{class:"ap-form"});
+  const autoWhy=(rec.coi?.cc?.auto||[]);
+  W.append(el("div",{class:"ap-flag soft"},el("b",{},"First, conflicts. "),
+    "If you are on the candidate’s supervisory panel, assessed their CoC, or have any other conflict, don’t review it — declare it and the appeal goes to the "+(rec.officers?.hos?.uid?"Head of School":"Associate Dean Research")+" (PR72 3.10.3).",
+    autoWhy.length?el("div",{style:"margin-top:4px"},"The hub noted: you "+autoWhy.join("; ")+"."):"",
+    el("div",{style:"margin-top:8px"},el("button",{class:"btn xs ghost",onclick:()=>apDeclareDialog(ctx,"cc")},"I have a conflict — refer it on"))));
+  const findings=el("textarea",{rows:"8",placeholder:"Address each ground and the evidence relied on, with reasons."}); findings.value=c.findings||"";
+  const ground=el("div",{class:"ap-glist"});
+  AP_GROUNDS.forEach(g=>{ const gr=pt.student?.grounds?.[g.k]; if(gr?.on) ground.append(el("div",{class:"ap-box"},apBox(true),el("span",{},el("b",{},g.label),(gr.ev||[]).length?" — "+gr.ev.join(", "):""))); });
+  const dis=el("input",{type:"radio",name:"apccdet",style:"width:auto;margin:3px 0 0"}), sub=el("input",{type:"radio",name:"apccdet",style:"width:auto;margin:3px 0 0"});
+  if(c.det==="dismissed") dis.checked=true; if(c.det==="substantiated") sub.checked=true;
+  const dmLabel=apOfficeLabel(rec.dmRole)||"Head of School";
+  W.append(el("div",{class:"ap-subh"},"Grounds the student relies on"),ground,
+    el("div",{class:"field",style:"margin-top:10px"},el("label",{},"Findings on each ground"),findings),
+    el("div",{class:"ap-subh"},"Determination"),
+    el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 6px"},dis,el("span",{},el("b",{},"Grounds not substantiated."),
+      " Appeal dismissed and original outcome upheld.")),
+    el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex"},sub,el("span",{},el("b",{},"Grounds substantiated."),
+      " Referred to the "+dmLabel+(rec.officers?.[rec.dmRole]?.name?" ("+rec.officers[rec.dmRole].name+")":"")+".")));
+  const save=async(silent)=>{ const det=dis.checked?"dismissed":sub.checked?"substantiated":""; await saveRec({cc:{...c,findings:apT(findings.value),det}},silent?null:"Course Coordinator draft saved"); return det; };
+  W.append(el("div",{class:"row",style:"gap:8px;margin-top:14px;flex-wrap:wrap"},
+    el("button",{class:"btn",onclick:async()=>{
+      const det=dis.checked?"dismissed":sub.checked?"substantiated":"";
+      if(!apT(findings.value)){ toast("Record your findings on each ground.",true); return; }
+      if(!det){ toast("Choose a determination.",true); return; }
+      if(det==="substantiated"&&!rec.dmUid){ toast("There is no unconflicted decision maker to refer it to — ask the MRes office.",true); return; }
+      const sig=await cocSignDialog({title:"Sign the Course Coordinator review",name:S.userName||"",
+        intro:det==="dismissed"?"Signing dismisses the appeal; the office then notifies the student.":"Signing refers the appeal to the "+dmLabel+".",
+        declaration:"I have reviewed the panel decision, the grounds of appeal and the evidence relied on, and I have no conflict of interest in this appeal.",saveLabel:"Sign and submit"});
+      if(!sig) return;
+      const now=Date.now();
+      const patch={cc:{findings:apT(findings.value),det,sign:sig,at:now,by:S.userName||""}};
+      if(det==="dismissed"){ patch.stage="decided"; patch.result="dismissed"; }
+      else{ patch.stage="dm"; patch.officerUids=[...new Set([...(rec.officerUids||[]),rec.dmUid].filter(Boolean))]; }
+      await saveRec(patch,"Course Coordinator signed: "+(det==="dismissed"?"dismissed":"substantiated, referred to "+dmLabel));
+      toast("Signed and submitted.");
+      if(det==="substantiated") apMailOfficer(rec,pt,rec.dmRole,false,"The Course Coordinator found the grounds substantiated.");
+      else apMailOffice(rec,"The Course Coordinator dismissed the appeal (grounds not substantiated). Please notify the student and close it (7E).");
+      reload();
+    }},"Sign and submit"),
+    el("button",{class:"btn ghost",onclick:async()=>{ await save(); toast("Draft saved."); }},"Save draft"),
+    el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"Ask the student for more…")));
+  return W;
+}
+/* 7D — Head of School or Associate Dean Research */
+function apDMForm(ctx){
+  const {rec,pt,saveRec,reload}=ctx;
+  const d=JSON.parse(JSON.stringify(rec.dm||{}));
+  const W=el("div",{class:"ap-form"});
+  if(rec.dmRole==="hos") W.append(el("div",{class:"ap-flag soft"},el("b",{},"First, conflicts. "),
+    "If you have a conflict in this appeal, declare it and it goes to the Associate Dean Research (PR72 3.10.3).",
+    (rec.coi?.hos?.auto||[]).length?el("div",{style:"margin-top:4px"},"The hub noted: you "+rec.coi.hos.auto.join("; ")+"."):"",
+    el("div",{style:"margin-top:8px"},el("button",{class:"btn xs ghost",onclick:()=>apDeclareDialog(ctx,"hos")},"I have a conflict — refer it to the Associate Dean Research"))));
+  if(rec.cc?.sign) W.append(el("div",{class:"ap-subh"},"Course Coordinator’s findings"),el("div",{class:"ap-pre ap-quote"},rec.cc.findings||""),
+    el("div",{class:"muted",style:"font-size:12.5px;margin:4px 0 0"},"Grounds substantiated · signed "+(rec.cc.sign.name||"")+" "+cocDT(rec.cc.sign.at)));
+  const up=el("input",{type:"radio",name:"apdm",style:"width:auto;margin:3px 0 0"}), np=el("input",{type:"radio",name:"apdm",style:"width:auto;margin:3px 0 0"});
+  if(d.decision==="upheld") up.checked=true; if(d.decision==="newpanel") np.checked=true;
+  const ind=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); ind.checked=!!d.independent;
+  const indRow=el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:6px 0 0 24px"},ind,el("span",{},"Members of the new panel meet QA72 5.3.1 (independent, no conflict of interest, not supervisors) and none sat on the original panel."));
+  const paint=()=>{ indRow.style.display=np.checked?"":"none"; }; up.onchange=paint; np.onchange=paint; paint();
+  const reasons=el("textarea",{rows:"8",placeholder:"State the reasons for the decision and any arrangements for the new panel, including timing."}); reasons.value=d.reasons||"";
+  W.append(el("div",{class:"ap-subh"},"Decision maker"),el("div",{class:"ap-box"},apBox(true),el("span",{},rec.dmRole==="adr"?"Associate Dean Research (Head of School conflicted)":"Head of School ("+(rec.cc?.det==="substantiated"?"grounds substantiated":"Course Coordinator conflicted")+")")),
+    el("div",{class:"ap-subh"},"Decision"),
+    el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 6px"},up,el("span",{},el("b",{},"Original Not Confirmed outcome upheld."))),
+    el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex"},np,el("span",{},el("b",{},"Newly constituted CoC Panel convened"),", to reconsider the candidature.")),
+    indRow,
+    el("div",{class:"field",style:"margin-top:10px"},el("label",{},"Reasons and directions"),reasons),
+    el("div",{class:"row",style:"gap:8px;margin-top:14px;flex-wrap:wrap"},
+      el("button",{class:"btn",onclick:async()=>{
+        const decision=up.checked?"upheld":np.checked?"newpanel":"";
+        if(!decision){ toast("Choose a decision.",true); return; }
+        if(decision==="newpanel"&&!ind.checked){ toast("Confirm the new panel meets QA72 5.3.1.",true); return; }
+        if(!apT(reasons.value)){ toast("State the reasons for the decision.",true); return; }
+        const sig=await cocSignDialog({title:"Sign the decision",name:S.userName||"",
+          intro:"Your decision is final (PR72 3.10.4). The office notifies the student.",
+          declaration:"I have considered the appeal, the evidence"+(rec.cc?.sign?" and the Course Coordinator’s findings":"")+", and I have no conflict of interest in this appeal.",saveLabel:"Sign decision"});
+        if(!sig) return;
+        await saveRec({dm:{role:rec.dmRole,decision,independent:decision==="newpanel"?ind.checked:false,reasons:apT(reasons.value),sign:sig,at:Date.now(),by:S.userName||""},
+          stage:"decided",result:decision},apOfficeLabel(rec.dmRole)+" signed the decision: "+(AP_RESULTS[decision]||{}).short);
+        toast("Decision signed.");
+        apMailOffice(rec,"The "+apOfficeLabel(rec.dmRole)+" has decided: "+(AP_RESULTS[decision]||{}).label+". Please notify the student and close it (7E).");
+        reload();
+      }},"Sign decision"),
+      el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({dm:{...d,role:rec.dmRole,decision:up.checked?"upheld":np.checked?"newpanel":"",independent:ind.checked,reasons:apT(reasons.value)}},"decision draft saved"); toast("Draft saved."); }},"Save draft"),
+      el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"Ask the student for more…")));
+  return W;
+}
+/* An officer declares a conflict: the appeal moves to the next officer. */
+function apDeclareDialog(ctx,who){
+  const {rec,pt,saveRec,reload}=ctx;
+  const txt=el("textarea",{rows:"3",placeholder:"Nature of the conflict"});
+  const nextRole=who==="cc"?(rec.officers?.hos?.uid&&!rec.coi?.hos?.conflicted?"hos":rec.officers?.adr?.uid&&!rec.coi?.adr?.conflicted?"adr":""):
+    (rec.officers?.adr?.uid&&!rec.coi?.adr?.conflicted?"adr":"");
+  modal("Declare a conflict of interest",el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},nextRole?"The appeal goes to the "+apOfficeLabel(nextRole)+" ("+(rec.officers[nextRole]?.name||"")+") as decision maker, and you stop seeing it.":
+      "There is no unconflicted officer to send it to. The MRes office will be told so they can arrange it."),
+    el("div",{class:"field"},el("label",{},"Details"),txt)),async()=>{
+      if(!apT(txt.value)){ toast("Say briefly what the conflict is.",true); return false; }
+      const coi={...(rec.coi||{}),[who]:{...(rec.coi?.[who]||{}),conflicted:true,detail:apT(txt.value),by:S.userName||"",at:Date.now(),self:true}};
+      coi.detail=[apT(rec.coi?.detail),apOfficeLabel(who)+" declared a conflict: "+apT(txt.value)].filter(Boolean).join("\n");
+      const patch={coi};
+      if(nextRole){ patch.stage="dm"; patch.dmRole=nextRole; patch.dmUid=rec.officers[nextRole].uid; patch.officerUids=[rec.officers[nextRole].uid];
+        if(who==="cc") patch.ccUid=""; }
+      else{ patch.stage="lodged"; patch.officerUids=[]; if(who==="cc") patch.ccUid=""; else{ patch.dmUid=""; patch.dmRole=""; } }
+      await saveRec(patch,apOfficeLabel(who)+" declared a conflict"+(nextRole?"; referred to "+apOfficeLabel(nextRole):"; returned to the office"));
+      if(nextRole) apMailOfficer({...rec,...patch},pt,nextRole,false,"The "+apOfficeLabel(who)+" has declared a conflict of interest, so the appeal is referred to you (PR72 3.10.3).");
+      else apMailOffice(rec,"The "+apOfficeLabel(who)+" declared a conflict and there is no unconflicted officer to send the appeal to.");
+      toast("Conflict declared."); S.apOpen=null; drawMain(); return true;
+    },"Declare and refer");
+}
+/* 7E — tell the student */
+function apNotifyForm(ctx){
+  const {rec,pt,sem,saveRec,savePortal,reload}=ctx;
+  const e=JSON.parse(JSON.stringify(rec.e7||{}));
+  const W=el("div",{class:"ap-form"});
+  const res=AP_RESULTS[rec.result]||{label:rec.result,text:""};
+  const reasons=rec.result==="dismissed"?rec.cc?.findings:rec.result==="notaccepted"?rec.notAccepted?.text:rec.dm?.reasons;
+  const txt=el("textarea",{rows:"8"}); txt.value=e.studentText||(res.text+(apT(reasons)?"\n\nReasons:\n"+apT(reasons):"")+
+    (rec.result==="newpanel"?"\n\nThe MRes office will contact you with the arrangements for the new panel.":"")+
+    "\n\nThe decision reached through this process is final (PR72 3.10.4).");
+  const by=el("input",{value:e.notifiedBy||S.userName||""});
+  const on=el("input",{type:"date",value:e.notifiedOn||apToday()});
+  const withinAuto=!rec.a7?.due||on.value<=rec.a7.due;
+  const tw=el("input",{type:"radio",name:"aptf",style:"width:auto;margin:0"}), tv=el("input",{type:"radio",name:"aptf",style:"width:auto;margin:0"});
+  ((e.timeframe||(withinAuto?"within":"varied"))==="varied"?tv:tw).checked=true;
+  const varied=el("input",{type:"date",value:e.variedOn||""});
+  const loc=el("input",{value:e.record||"",placeholder:"File reference and any follow-up action"});
+  W.append(el("div",{class:"field"},el("label",{},"What the student is told (on their appeal page and in the email)"),txt),
+    el("div",{class:"grid two"},el("div",{class:"field"},el("label",{},"Candidate notified by"),by),el("div",{class:"field"},el("label",{},"Date notified"),on)),
+    el("div",{class:"row",style:"gap:16px;margin:6px 0;flex-wrap:wrap"},el("b",{class:"ui",style:"font-size:13px"},"Timeframe"),
+      el("label",{class:"coc-chk"},tw,"Determined within 20 working days of receipt (PR72 section 5)"),el("label",{class:"coc-chk"},tv,"Varied")),
+    el("div",{class:"grid two"},el("div",{class:"field"},el("label",{},"If varied: candidate and staff advised on"),varied),
+      el("div",{class:"field"},el("label",{},"Record location"),loc)));
+  const collect=()=>({studentText:apT(txt.value),notifiedBy:apT(by.value),notifiedOn:on.value,timeframe:tv.checked?"varied":"within",variedOn:varied.value,record:apT(loc.value)});
+  W.append(el("div",{class:"row",style:"gap:8px;margin-top:12px;flex-wrap:wrap"},
+    el("button",{class:"btn",onclick:async()=>{
+      const e7=collect(); if(!e7.notifiedOn){ toast("Set the date notified.",true); return; }
+      await saveRec({e7,stage:"closed"},"student notified; appeal closed ("+(res.short||rec.result)+")");
+      await savePortal({status:"closed",decisionOut:{result:rec.result,text:e7.studentText,by:e7.notifiedBy,at:Date.now()}});
+      openEmail(pt.pre?.email||"","Outcome of your CoC appeal — "+apRefOf(rec),
+        "Dear "+(rec.name||"")+",\n\n"+e7.studentText+"\n\nYou can also read this on your appeal page in the MRes Supervision Hub: "+apLink(rec.id)+"\n\nKind regards,\n"+(e7.notifiedBy||"MRes Coordination"),apOfficeEmail());
+      toast("Released to the student and closed. Download the Word form for the candidate file.");
+      reload();
+    }},"✉ Email the student, release and close"),
+    el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({e7:collect()},"notification details saved"); toast("Saved."); }},"Save without releasing")));
+  return W;
+}
+
+/* ---- evidence the office adds; asking the student for more -------------- */
+function apOfficeEvidence(ctx){
+  const {pt,admin,isCC,isDM,savePortal,reload}=ctx;
+  const W=el("div",{});
+  const list=(pt.officeEvidence||[]).map(x=>({...x}));
+  W.append(apEvTable(list));
+  if(admin){
+    const rowsBox=el("div",{class:"ap-evedit"});
+    list.forEach((x,i)=>rowsBox.append(el("div",{class:"row",style:"gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"},
+      el("b",{},x.id),el("span",{style:"flex:1;min-width:120px"},x.label||""),
+      el("button",{class:"btn xs ghost",onclick:()=>apOfficeEvDialog(ctx,list,i)},"✎ Edit"),
+      el("button",{class:"btn xs ghost",onclick:async()=>{ if(!window.confirm("Remove "+x.id+"?")) return; list.splice(i,1); await savePortal({officeEvidence:list}); reload(); }},"Remove"))));
+    W.append(rowsBox,el("div",{class:"row",style:"gap:8px;margin-top:10px"},el("button",{class:"btn sm",onclick:()=>apOfficeEvDialog(ctx,list,-1)},"+ Add an evidence link")),
+      el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},"For documents the office holds — the recording, correspondence, the original report. No limit. Shown to the officers and on the Word form as O1, O2…"));
+  }
+  W.append(el("div",{class:"ap-subh",style:"margin-top:16px"},"Requests to the student"));
+  const reqs=pt.requests||[];
+  if(!reqs.length) W.append(el("div",{class:"muted",style:"font-size:13px"},"None."));
+  reqs.forEach(r=>W.append(el("div",{class:"ap-req1"},el("b",{},cocDT(r.at)+" · "+(r.by||"")),el("div",{},r.text))));
+  if((admin||isCC||isDM)&&!["closed","withdrawn","notaccepted"].includes(ctx.rec.stage))
+    W.append(el("button",{class:"btn sm ghost",style:"margin-top:10px",onclick:()=>apAskDialog(ctx)},"Ask the student for more…"));
+  return W;
+}
+function apOfficeEvDialog(ctx,list,i){
+  const {savePortal,reload}=ctx;
+  const x=i>=0?list[i]:{id:"O"+(list.reduce((n,y)=>Math.max(n,parseInt(String(y.id).replace(/\D/g,""))||0),0)+1)};
+  const lab=el("input",{value:x.label||"",placeholder:"e.g. Recording of the CoC seminar"});
+  const url=el("input",{type:"url",value:x.url||"",placeholder:"https://…"});
+  const gs=el("select",{},...[["","Ground supported…"],...AP_GROUNDS.map(g=>[g.label,g.label]),["General","General / background"]].map(([v,t])=>el("option",{value:v,...(x.ground===v?{selected:"selected"}:{})},t)));
+  const wh=el("input",{value:x.what||"",placeholder:"Relevant page and what it shows"});
+  modal((i>=0?"Edit ":"Add ")+x.id,el("div",{class:"grid",style:"gap:10px"},
+    el("div",{class:"field"},el("label",{},"Document"),lab),el("div",{class:"field"},el("label",{},"Link"),url,cocTip("Share it so the officers can open it.")),
+    el("div",{class:"grid two"},el("div",{class:"field"},el("label",{},"Ground"),gs),el("div",{class:"field"},el("label",{},"Page and what it shows"),wh))),async()=>{
+      if(!apT(lab.value)){ toast("Name the document.",true); return false; }
+      if(!apLinkOk(url.value)){ toast("Paste a link starting with https://",true); return false; }
+      const item={...x,label:apT(lab.value),url:apT(url.value),ground:gs.value,what:apT(wh.value),by:S.userName||"",at:Date.now()};
+      if(i>=0) list[i]=item; else list.push(item);
+      await savePortal({officeEvidence:list}); toast("Saved."); reload(); return true; },"Save");
+}
+function apAskDialog(ctx){
+  const {rec,pt,savePortal,saveRec,reload}=ctx;
+  const txt=el("textarea",{rows:"5",placeholder:"e.g. Please add a link to the email from the panel Chair you mention in Section 3B, and check that link E2 opens — it asks for a sign-in."});
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0"}); mail.checked=true;
+  modal("Ask "+(rec.name||"the student")+" for more",el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"Reopens the student’s form so they can add evidence or change their statement, then sign and lodge again. The review stays where it is."),
+    el("div",{class:"field"},el("label",{},"Your request"),txt),
+    el("label",{class:"coc-chk",style:"margin-top:8px"},mail,el("span",{},"Email it to "+(pt.pre?.email||"the student")))),async()=>{
+      const t=apT(txt.value); if(!t){ toast("Write what you need.",true); return false; }
+      const r={text:t,at:Date.now(),by:S.userName||""};
+      await savePortal({status:"returned",request:r,requests:[...(pt.requests||[]),r]});
+      await saveRec({},"asked the student for more");
+      if(mail.checked) openEmail(pt.pre?.email||"","Your CoC appeal — more information needed",
+        "Dear "+(rec.name||"")+",\n\n"+t+"\n\nYour appeal form is open again: "+apLink(rec.id)+"\nSign in with your appeal code and student ID, make the changes, then sign and lodge again.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),apOfficeEmail());
+      toast("Request sent — the student’s form is open again."); reload(); return true; },"Send request");
+}
+
+/* ---- read-only office record --------------------------------------------- */
+function apRecordRO7AB(rec,pt,st,groups){
+  const a=rec.a7||{}, c=rec.coi||{};
+  const kv=pairs=>{ const k=el("div",{class:"ap-kv"}); pairs.forEach(([x,y])=>k.append(el("div",{class:"k"},x),el("div",{class:"v"},y||el("span",{class:"muted"},"—")))); return k; };
+  return el("div",{},kv([["Candidate",(rec.name||"")+" ("+(rec.sid||"")+")"],["Received on",apLong(a.receivedOn)],["Received by",a.receivedBy],
+    ["Outcome notice date",apLong(a.noticeDate)],["Lodgement deadline",apLong(a.deadline)],
+    ["Lodged on time",a.onTime==="N"?"No. Action taken: "+(a.lateAction||"—"):a.onTime==="Y"?"Yes, within 10 working days (PR72 3.10.1)":""],
+    ["Prior CoC appeal",a.prior==="exists"?"A prior CoC appeal exists (PR72 3.10.4)":a.prior?"None on file":""],
+    ["Determination due",apLong(a.due)],["Recording requested",(a.recording||"")+(a.recordingNote?" — "+a.recordingNote:"")]]),
+    el("div",{class:"ap-subh"},"7B Conflict of interest"),
+    kv(AP_OFFICES.map(o=>[o.label,c[o.k]?((rec.officers?.[o.k]?.name||"")+": "+(c[o.k].conflicted?"conflicted":"no conflict")+(c[o.k].self?" (declared by them)":"")+((c[o.k].auto||[]).length?" — hub: "+c[o.k].auto.join("; "):"")):""]).concat([["Details and referral",(c.detail||"")+(c.referredOn?(c.detail?"\n":"")+"Referred "+apLong(c.referredOn):"")]])));
+}
+function apRecordRO7C(rec){
+  const c=rec.cc||{};
+  if(!rec.ccUid&&!c.sign) return el("p",{class:"muted",style:"margin:0"},rec.coi?.cc?.conflicted?"The Course Coordinator is conflicted, so the "+apOfficeLabel(rec.dmRole||"hos")+" decides the appeal (PR72 3.10.3).":"Not reached yet.");
+  return el("div",{},el("div",{class:"ap-subh",style:"margin-top:0"},"Findings on each ground"),el("div",{class:"ap-pre ap-quote"},c.findings||el("span",{class:"muted"},"—")),
+    el("div",{class:"ap-subh"},"Determination"),el("div",{},c.det==="dismissed"?"Grounds not substantiated. Appeal dismissed and original outcome upheld.":c.det==="substantiated"?"Grounds substantiated. Referred to the "+apOfficeLabel(rec.dmRole||"hos")+".":el("span",{class:"muted"},"—")),
+    el("div",{class:"ap-subh"},"Course Coordinator"),c.sign?cocSigView(c.sign):el("span",{class:"muted"},(rec.officers?.cc?.name||"")+" — not signed"));
+}
+function apRecordRO7D(rec){
+  const d=rec.dm||{};
+  if(!d.sign&&rec.stage!=="dm") return el("p",{class:"muted",style:"margin:0"},rec.result==="dismissed"?"Not applicable — dismissed at Course Coordinator review.":"Not reached yet.");
+  return el("div",{},el("div",{},"Decision maker: "+(rec.dmRole==="adr"?"Associate Dean Research (Head of School conflicted)":"Head of School")),
+    el("div",{class:"ap-subh"},"Decision"),el("div",{},d.decision?(AP_RESULTS[d.decision]||{}).label+(d.decision==="newpanel"&&d.independent?" — members meet QA72 5.3.1 and none sat on the original panel":""):el("span",{class:"muted"},"—")),
+    el("div",{class:"ap-subh"},"Reasons and directions"),el("div",{class:"ap-pre ap-quote"},d.reasons||el("span",{class:"muted"},"—")),
+    el("div",{class:"ap-subh"},"Signature"),d.sign?cocSigView(d.sign):el("span",{class:"muted"},"Not signed"));
+}
+function apRecordRO7E(rec){
+  const e=rec.e7||{};
+  const k=el("div",{class:"ap-kv"});
+  [["Candidate notified by",e.notifiedBy],["Date notified",apLong(e.notifiedOn)],
+   ["Timeframe",e.timeframe==="varied"?"Varied — advised "+apLong(e.variedOn)+" (PR72 5.2.1)":e.timeframe?"Determined within 20 working days of receipt (PR72 section 5)":""],
+   ["Record location",e.record]].forEach(([x,y])=>k.append(el("div",{class:"k"},x),el("div",{class:"v"},y||el("span",{class:"muted"},"—"))));
+  return k;
+}
+
+/* ---- the office's tools --------------------------------------------------- */
+function apAdminTools(ctx){
+  const {rec,pt,sem,saveRec,savePortal,reload,back}=ctx;
+  const W=el("div",{});
+  const live=!["closed","withdrawn","notaccepted"].includes(rec.stage);
+  const btns=el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"});
+  if(live&&rec.stage!=="open") btns.append(el("button",{class:"btn sm ghost",onclick:()=>apReassignDialog(ctx)},"Reassign or send back…"));
+  if(live) btns.append(el("button",{class:"btn sm ghost",onclick:async()=>{
+    if(!window.confirm("Record that "+(rec.name||"the student")+" has withdrawn this appeal?")) return;
+    await saveRec({stage:"withdrawn",result:"",officerUids:[]},"withdrawn"); await savePortal({status:"withdrawn"}); reload(); }},"Withdrawn by the student"));
+  if(rec.stage==="closed") btns.append(el("button",{class:"btn sm ghost",onclick:async()=>{
+    if(!window.confirm("Reopen at 7E? The student's page keeps the released decision until you release again.")) return;
+    await saveRec({stage:"decided"},"reopened at 7E"); reload(); }},"Reopen 7E"));
+  btns.append(el("button",{class:"btn sm ghost",onclick:()=>{
+    if(!window.confirm("Delete this appeal and the student's form? This can't be undone.")) return;
+    DB.batchWrite([{type:"delete",coll:"appeals",id:rec.id},{type:"delete",coll:"appealPortal",id:rec.id}]).then(()=>{ toast("Deleted."); back(); },e=>toast(e?.message||"Couldn't delete.",true)); }},"Delete"));
+  W.append(btns);
+  W.append(el("div",{class:"ap-subh"},"History"));
+  const ul=el("ul",{class:"ap-hist"});
+  (rec.history||[]).slice().reverse().forEach(h=>ul.append(el("li",{},el("span",{class:"mono"},cocDT(h.at)),el("span",{},h.what+(h.by?" — "+h.by:"")))));
+  W.append(ul);
+  return W;
+}
+function apReassignDialog(ctx){
+  const {rec,pt,saveRec,savePortal,reload}=ctx;
+  const staff=apAllStaff().slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const pick=(cur)=>el("select",{},el("option",{value:""},"— None —"),...staff.map(u=>el("option",{value:u.id,...(u.id===cur?{selected:"selected"}:{})},(u.name||u.email)+" · "+staffRoleLabel(u))));
+  const ccSel=pick(rec.ccUid), dmSel=pick(rec.dmUid);
+  const role=el("select",{},el("option",{value:"hos",...(rec.dmRole!=="adr"?{selected:"selected"}:{})},"Head of School"),el("option",{value:"adr",...(rec.dmRole==="adr"?{selected:"selected"}:{})},"Associate Dean Research"));
+  const stage=el("select",{},...[["lodged","Back to the office (receipt and routing)"],["cc","With the Course Coordinator (7C)"],["dm","With the decision maker (7D)"],["decided","Decided — notify the student (7E)"]]
+    .map(([v,t])=>el("option",{value:v,...(rec.stage===v?{selected:"selected"}:{})},t)));
+  const clr=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+  modal("Reassign or send back",el("div",{class:"grid",style:"gap:10px"},
+    el("p",{class:"muted",style:"margin:0;font-size:13.5px"},"For a change of officer part-way through (leave, a late conflict) or to send a step back. Signatures already given stay unless you clear them."),
+    el("div",{class:"field"},el("label",{},"Course Coordinator for this appeal"),ccSel),
+    el("div",{class:"grid two"},el("div",{class:"field"},el("label",{},"Decision maker"),dmSel),el("div",{class:"field"},el("label",{},"Acting as"),role)),
+    el("div",{class:"field"},el("label",{},"Stage"),stage),
+    el("label",{class:"coc-chk"},clr,el("span",{},"Clear the signature of the step it goes back to"))),async()=>{
+      const ccUid=ccSel.value, dmUid=dmSel.value, s=stage.value;
+      if(s==="cc"&&!ccUid){ toast("Pick a Course Coordinator.",true); return false; }
+      if(s==="dm"&&!dmUid){ toast("Pick a decision maker.",true); return false; }
+      const off={...(rec.officers||{})};
+      if(ccUid){ const u=apStaff(ccUid); off.cc={uid:ccUid,name:u?.name||"",email:u?emailsOf(u).join(", "):""}; }
+      if(dmUid){ const u=apStaff(dmUid); off[role.value]={uid:dmUid,name:u?.name||"",email:u?emailsOf(u).join(", "):""}; }
+      const patch={ccUid,dmUid,dmRole:role.value,officers:off,stage:s,
+        officerUids:[...new Set([s==="cc"||s==="dm"?ccUid:"",s==="dm"?dmUid:""].filter(Boolean))]};
+      if(clr.checked){ if(s==="cc") patch.cc={...(rec.cc||{}),sign:null}; if(s==="dm") patch.dm={...(rec.dm||{}),sign:null}; }
+      if(s==="cc"||s==="dm") patch.result="";
+      await saveRec(patch,"reassigned / moved to "+(AP_STAGES[s]||{}).label);
+      if(s!=="decided") await savePortal({status:s==="lodged"?"lodged":"review"});
+      toast("Updated."); reload(); return true; },"Save");
+}
+
+/* ---- emails --------------------------------------------------------------- */
+function apMailOfficer(rec,pt,role,reminder,lead){
+  const o=role==="cc"?rec.officers?.cc||apHolder("cc"):rec.officers?.[role]||apHolder(role);
+  if(!o?.email){ toast("No email on file for the "+apOfficeLabel(role)+".",true); return; }
+  const due=rec.a7?.due;
+  openEmail(o.email,(reminder?"Reminder: ":"")+"CoC outcome appeal for your "+(role==="cc"?"review":"decision")+" — "+(rec.name||"")+" ("+apRefOf(rec)+")",
+    "Dear "+(o.name||apOfficeLabel(role))+",\n\n"+(lead?lead+"\n\n":"")+
+    (reminder?"A reminder that ":"")+"A Confirmation of Candidature outcome appeal from "+(rec.name||"")+" ("+(rec.sid||"")+") "+(reminder?"is waiting":"has been referred to you")+
+    " as "+apOfficeLabel(role)+(role==="cc"?" for review (PR72 3.10.2).":" for decision (PR72 3.10.2–3.10.3).")+"\n\n"+
+    "Please sign in to the MRes Supervision Hub and open “CoC appeals”: "+apHubUrl()+"\n"+
+    "The student’s grounds, statement and links to their evidence are there; you record your "+(role==="cc"?"findings and determination":"decision and reasons")+" and sign in the hub.\n\n"+
+    "First, please check for any conflict of interest: if you were on the student’s supervisory panel, assessed their CoC, or have any other conflict, declare it in the hub and the appeal will be referred on.\n\n"+
+    (due?"Determination due: "+dueLong(due)+" (20 working days from receipt, PR72 section 5).\n\n":"")+
+    "Thank you,\n"+(S.userName||"MRes Coordination"),apOfficeEmail());
+}
+function apMailOffice(rec,msg){
+  const to=apOfficeEmail(); if(!to) return;
+  openEmail(to,"CoC appeal "+apRefOf(rec)+" — "+(rec.name||""),"Hello,\n\n"+msg+"\n\nCoC appeals in the MRes Supervision Hub: "+apHubUrl()+"\n\nThank you,\n"+(S.userName||""));
+}
+
+/* ---- the menu badge -------------------------------------------------------- */
+async function refreshApBadge(){
+  const b=S.apTabBtn; if(!b||!b.isConnected) return;
+  try{
+    let n=0;
+    if(S.role==="admin"){
+      if(!S.activeSem) return;
+      const [recs,pts]=await Promise.all([DB.list("appeals",{semesterId:S.activeSem}),DB.list("appealPortal",{semesterId:S.activeSem})]);
+      recs.forEach(r=>{ const p=pts.find(x=>x.id===r.id);
+        if((r.stage==="open"&&p?.status==="lodged")||r.stage==="lodged"||r.stage==="decided"||(p?.relodgedAt&&p.relodgedAt>(r.seenRelodge||0)&&r.stage!=="open")) n++; });
+    }else{
+      const recs=await DB.list("appeals",{officerUids:{$contains:S.uid}});
+      n=recs.filter(apMyTurn).length;
+    }
+    const dot=b.querySelector(".nbadge"); if(!dot) return;
+    dot.textContent=String(n); dot.style.display=n?"inline-flex":"none";
+  }catch(e){ console.warn("appeal badge unavailable:",e?.message||e); }
+}
+
+/* ============================================================
+   17C. APPEALS — the Word form
+   The CIHE "CoC Outcome Appeal Form", filled in: Sections 1–6 from the
+   student's online form with their e-signature, and the office record
+   7A–7E with the Course Coordinator's and the decision maker's
+   e-signatures. Evidence is listed with clickable links. Built with the
+   same store-only zip as the other Word files.
+   ============================================================ */
+function apDocx(pt,rec,sem){
+  const X=xmlEsc, W=COC_PAGE_W, NAVY=COC_NAVY, LBL=COC_LABEL;
+  const media=[], links=[]; let picId=10;
+  const img=(bytes,wIn,hIn)=>{
+    const n=media.length+1, rid="rIdImg"+n; media.push({name:"image"+n+".png",bytes,rid});
+    const cx=Math.round(wIn*914400), cy=Math.round(hIn*914400), id=picId++;
+    return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/>'+
+      '<wp:docPr id="'+id+'" name="Picture '+id+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'+
+      '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'+
+      '<pic:nvPicPr><pic:cNvPr id="'+id+'" name="img'+id+'.png"/><pic:cNvPicPr/></pic:nvPicPr>'+
+      '<pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
+      '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'+
+      '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+  };
+  const sigImg=(sig,maxW=1.7,maxH=0.45)=>{
+    if(!sig?.img||!/^data:image\/png;base64,/.test(sig.img)) return "";
+    try{ const bytes=cocB64Bytes(sig.img.split(",")[1]), sz=cocPngSize(bytes), sc=Math.min(maxW/sz.w,maxH/sz.h); return img(bytes,sz.w*sc,sz.h*sc); }
+    catch(e){ return ""; }
+  };
+  const r=(t,o={})=>{
+    const rp='<w:rPr>'+(o.font?'<w:rFonts w:ascii="'+o.font+'" w:hAnsi="'+o.font+'" w:eastAsia="'+o.font+'"/>':'')+(o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+
+      (o.color?'<w:color w:val="'+o.color+'"/>':'')+'<w:sz w:val="'+(o.sz||18)+'"/><w:szCs w:val="'+(o.sz||18)+'"/>'+(o.u?'<w:u w:val="single"/>':'')+'</w:rPr>';
+    return String(t==null?"":t).split("\n").map((ln,i)=>(i?'<w:r>'+rp+'<w:br/></w:r>':'')+'<w:r>'+rp+'<w:t xml:space="preserve">'+X(ln)+'</w:t></w:r>').join("");
+  };
+  const hl=(text,url,o={})=>{ const id="rIdLnk"+(links.length+1); links.push({id,url}); return '<w:hyperlink r:id="'+id+'" w:history="1">'+r(text,{...o,color:"194698",u:true})+'</w:hyperlink>'; };
+  const rl=(t,o={})=>cocUrlParts(t).map(x=>x.url?hl(x.url,x.url,o):r(x.t,o)).join("")||r("",o);
+  const box=(on,label,o={})=>r(on?"☒":"☐",{...o,font:"MS Gothic"})+r(" "+label,o);
+  const p=(runs,o={})=>'<w:p><w:pPr>'+(o.keep?'<w:keepNext/>':'')+'<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after??0)+'" w:line="'+(o.line||252)+'" w:lineRule="auto"/>'+
+    (o.ind?'<w:ind w:left="'+o.ind+'"/>':'')+(o.align?'<w:jc w:val="'+o.align+'"/>':'')+'</w:pPr>'+(runs||"")+'</w:p>';
+  const cellXml=(content,o={})=>{
+    const brd=o.noBorder?'<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>':'';
+    const inner=Array.isArray(content)?content.join(""):(String(content||"").startsWith("<w:p")?content:p(content));
+    return '<w:tc><w:tcPr><w:tcW w:w="'+(o.w||1000)+'" w:type="dxa"/>'+(o.span>1?'<w:gridSpan w:val="'+o.span+'"/>':'')+brd+
+      (o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+
+      '<w:tcMar><w:top w:w="'+(o.padV??60)+'" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="'+(o.padV??60)+'" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tcMar>'+
+      '<w:vAlign w:val="'+(o.v||"top")+'"/></w:tcPr>'+(inner||p(""))+'</w:tc>';
+  };
+  const tbl=(widths,rows,o={})=>{
+    const tw=widths.reduce((a,b)=>a+b,0), bc=o.noBorder?'nil':'single';
+    let x='<w:tbl><w:tblPr><w:tblW w:w="'+tw+'" w:type="dxa"/><w:tblBorders>'+
+      ['top','left','bottom','right','insideH','insideV'].map(s=>'<w:'+s+' w:val="'+bc+'" w:sz="4" w:space="0" w:color="'+COC_BORDER+'"/>').join("")+
+      '</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'+
+      widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join("")+'</w:tblGrid>';
+    rows.forEach(row=>{
+      x+='<w:tr><w:trPr><w:cantSplit/>'+(row.header?'<w:tblHeader/>':'')+'</w:trPr>'; let gi=0;
+      row.cells.forEach(cell=>{ const span=cell.span||1, w=widths.slice(gi,gi+span).reduce((a,b)=>a+b,0); gi+=span; x+=cellXml(cell.c,{...cell,w,span}); });
+      x+='</w:tr>';
+    });
+    return x+'</w:tbl>';
+  };
+  const gap=(n=120)=>p("",{after:n});
+  const L=(t,o={})=>({c:p(r(t,{b:true,sz:17})),fill:LBL,...o});
+  const V=(t,o={})=>({c:typeof t==="string"&&t.startsWith("<w:")?t:p(r(t==null||t===""?"":t,{sz:18,...(o.run||{})})),...o});
+  const VL=(t,o={})=>({c:p(rl(t,{sz:18})),...o});
+  const hd=(t,o={})=>({c:p(r(t,{b:true,sz:17,color:"FFFFFF"})),fill:NAVY,...o});
+  const secBand=(n,title)=>tbl([700,W-700],[{cells:[{c:p(r(n,{b:true,sz:28,color:"FFFFFF"}),{align:"center"}),fill:NAVY,v:"center",padV:70},
+    {c:p(r(title,{b:true,sz:24,color:NAVY}),{keep:true}),fill:"E4E6F0",v:"center",padV:70}]}],{noBorder:true});
+  const subh=t=>p(r(t,{b:true,sz:19,color:NAVY}),{before:160,after:60,keep:true});
+  const note=t=>p(r(t,{i:true,sz:16,color:"595959"}),{before:40,after:80});
+  const bodyP=(runs,o={})=>p(runs,{after:80,...o});
+  const D=ymd=>ymd?longDate(ymd):"";
+
+  const pre=pt?.pre||{}, f=pt?.student||{}, ev=pt?.evidence||[], oev=pt?.officeEvidence||[];
+  const R=rec||{}, a7=R.a7||{}, coi=R.coi||{}, cc=R.cc||{}, dm=R.dm||{}, e7=R.e7||{};
+  const ref=apRefOf(pt||rec);
+  let body="";
+
+  /* ---- header ---- */
+  const logo=cocB64Bytes(COC_LOGO_B64);
+  body+=tbl([1250,W-1250-2700,2700],[{cells:[
+    {c:p(img(logo,0.62,0.62)),fill:NAVY,v:"center",padV:110},
+    {c:p(r("CIHE AUSTRALIA",{b:true,color:"C9CCE6",sz:16}))+p(r("Confirmation of Candidature",{b:true,color:"FFFFFF",sz:26}))+p(r("Outcome Appeal Form",{b:true,color:"FFFFFF",sz:26}))+
+       p(r("Master of Research · RES915/RES916 Literature, Methodology and Proposal",{color:"FFFFFF",sz:16})),fill:NAVY,v:"center",padV:110},
+    {c:p(r("OFFICE USE",{b:true,sz:15,color:NAVY}))+p(r("Appeal reference",{sz:15,color:"595959"}),{before:40})+p(r(ref,{b:true,sz:18}))+
+       p(r("Date received",{sz:15,color:"595959"}),{before:40})+p(r(D(a7.receivedOn)||"DD/MM/YYYY",{b:!!a7.receivedOn,sz:18})),fill:"F2F3F8",v:"center",padV:110}]}],{noBorder:true});
+  body+=gap(120);
+  const q=W/4;
+  body+=tbl([q,q,q,W-3*q],[
+    {cells:["DEADLINE","LODGE WITH","LIMIT","DECISION"].map(t=>hd(t))},
+    {cells:[
+      V(p(r("10 working days from formal notification of the outcome",{b:true,sz:16}))+p(r("QA72 5.6.1 · PR72 3.10.1",{sz:14,color:"595959"}))),
+      V(p(r("The Course Coordinator, in writing, with evidence",{b:true,sz:16}))+p(r("QA72 5.6.1 · PR72 3.10.2",{sz:14,color:"595959"}))),
+      V(p(r("One appeal only. The appeal decision is final",{b:true,sz:16}))+p(r("QA72 6.10.2 · PR72 3.10.4",{sz:14,color:"595959"}))),
+      V(p(r("Normally within 20 working days of receipt",{b:true,sz:16}))+p(r("PR72 section 5",{sz:14,color:"595959"})))]}]);
+  body+=gap(100);
+  body+=bodyP(r("Use this form to appeal a ",{sz:17})+r("final Not Confirmed",{b:true,sz:17})+r(" Confirmation of Candidature (CoC) outcome. A final Not Confirmed outcome is a Fail for the CoC hurdle, which means a Fail grade for RES915 and no progression to Year 2 (PR72 3.7.8).",{sz:17}));
+  body+=tbl([W],[{cells:[{c:p(r("Disagreeing with the panel is not enough on its own. ",{b:true,sz:17})+r("Disagreement with the academic judgement behind the outcome is not a valid ground. Your appeal must show at least one of the four grounds in Section 2: procedural error, bias, an unmanaged conflict of interest, or significant new evidence (QA72 5.6.2).",{sz:17})),fill:"FFF4E0"}]}]);
+  body+=note("Completed online in the MRes Supervision Hub. Signatures are electronic signatures captured in the hub; evidence is listed as links to the documents in the candidate’s and the office’s own storage. Generated "+cocDT(Date.now())+".");
+
+  /* ---- 1 ---- */
+  body+=gap(80)+secBand("1","Your details and the decision");
+  body+=note("Use the dates on your formal written outcome notice from the Research Office.");
+  const c4=[1900,2919,1900,W-1900-2919-1900];
+  body+=tbl(c4,[
+    {cells:[L("Full name"),V(pre.fullName,{span:3})]},
+    {cells:[L("Student ID"),V(pre.sid),L("Campus"),V(pre.campus)]},
+    {cells:[L("Student email"),V(pre.email),L("Phone"),V(f.phone||"")]},
+    {cells:[L("Principal supervisor"),V(pre.principal),L("Associate supervisor"),V(pre.co||"")]},
+    {cells:[L("Discipline"),V(pre.discipline),L("Unit"),V(pre.unit)]},
+    {cells:[L("Research title"),V(pre.title,{span:3})]},
+    {cells:[L("CoC presentation date"),V(D(pre.cocDate)),L("Panel Chair or reference"),V(pre.panelRef)]}]);
+  if(apT(f.corrections)) body+=note("Corrections noted by the candidate: "+f.corrections);
+  body+=subh("The outcome you are appealing");
+  body+=tbl(c4,[
+    {cells:[L("Outcome"),{span:3,c:p(r("Not Confirmed",{b:true,sz:18}))+p(box(!!pre.afterResub,"Issued after major revisions and resubmission (PR72 3.8.5)",{sz:17}))+
+      p(box(!pre.afterResub&&!!apT(f.otherStage),"Other stage. Please describe: "+(pre.afterResub?"":apT(f.otherStage)),{sz:17}))}]},
+    {cells:[L("Date of formal outcome notice"),V(D(pre.noticeDate)),L("Last day to lodge"),V(D(pre.lodgeBy))]},
+    {cells:[L("Date you are lodging this appeal"),V(pt?.lodgedAt?cocDay(pt.lodgedAt):""),L("Resubmission date"),V(pre.resubDate?D(pre.resubDate):"Not applicable")]}]);
+
+  /* ---- 2 ---- */
+  body+=gap(160)+secBand("2","Grounds for appeal");
+  body+=note("Tick every ground that applies and list the evidence that supports it. Explain each ticked ground in Section 3. Definitions are from QA72 clause 5.6.1.");
+  body+=tbl([800,2100,W-800-2100-2000,2000],[
+    {header:true,cells:[hd("Tick"),hd("Ground"),hd("What this ground means"),hd("Evidence IDs")]},
+    ...AP_GROUNDS.map(g=>{ const gr=f.grounds?.[g.k]||{}; return {cells:[{c:p(r(gr.on?"☒":"☐",{font:"MS Gothic",sz:22}),{align:"center"}),v:"center"},
+      V(g.label,{run:{b:true}}),V(g.what,{run:{sz:16}}),V(gr.on?(gr.ev||[]).join(", "):"")]}; })]);
+
+  /* ---- 3 ---- */
+  body+=gap(160)+secBand("3","Your statement of appeal");
+  body+=note("For each ticked ground, say what happened, when it happened and which procedure or policy clause applies. Refer to your evidence by its ID as listed in Section 4.");
+  AP_STMT.forEach(s=>{
+    body+=tbl([W],[{cells:[{c:p(r(s.t,{b:true,sz:18}),{keep:true})+p(r(s.h,{i:true,sz:15,color:"595959"}),{keep:true}),fill:LBL}]},
+      {cells:[{c:p(rl(apT(f.stmt?.[s.k])||"",{sz:18})),padV:100}]}]);
+    body+=gap(80);
+  });
+
+  /* ---- 4 ---- */
+  body+=gap(80)+secBand("4","Supporting evidence");
+  body+=note("Each item has an ID referred to in Sections 2 and 3. Documents are linked, not attached.");
+  const lk=(u,label)=>apLinkOk(u)?p(hl(label||u,u,{sz:17})):p(r(u||"",{sz:17}));
+  body+=tbl([W],[{cells:[{c:[
+    p(r("Always attach",{b:true,sz:18})),
+    p(box(true,"Your formal written outcome notice from the Research Office (PR72 3.7.3) — on file in the MRes Supervision Hub",{sz:17})),
+    p(box(true,"The panel feedback and required revisions you received (PR72 3.7.4) — on file in the MRes Supervision Hub",{sz:17})),
+    p(box(!f.revisedNA&&!!apT(f.revisedLink)||!!apT(f.corrLink),"Your revised proposal and resubmission correspondence, if applicable (PR72 3.8.3)",{sz:17})),
+    p(r("Presentation recording",{b:true,sz:18}),{before:60}),
+    p(box(!!f.attach?.recording,"I ask that any recording of my CoC presentation held by CIHE be considered in this appeal (PR72 3.6.2 and 3.9.2).",{sz:17}))],fill:"F7F7FA"}]}]);
+  body+=gap(80);
+  body+=tbl([3000,W-3000],[
+    {cells:[L("Revised proposal (tracked changes)"),{c:f.revisedNA?p(r("Not applicable — no revised proposal was submitted",{sz:17,i:true})):lk(f.revisedLink,f.revisedLink)}]},
+    {cells:[L("Resubmission correspondence"),{c:apT(f.corrLink)?lk(f.corrLink,f.corrLink):p(r("—",{sz:17}))}]}]);
+  body+=gap(80);
+  const evRows=list=>list.map(x=>({cells:[V(x.id,{run:{b:true}}),{c:apLinkOk(x.url)?p(hl(x.label||x.url,x.url,{sz:17}))+p(r(x.url,{sz:13,color:"7F7F7F"})):p(r((x.label||"")+(x.url?" ("+x.url+")":""),{sz:17}))},V(x.ground||""),V(x.what||"")]}));
+  const ew=[700,4338,1900,W-700-4338-1900];
+  body+=tbl(ew,[{header:true,cells:[hd("ID"),hd("Document (link)"),hd("Ground supported"),hd("Relevant page and what it shows")]},
+    ...(ev.length?evRows(ev):[{cells:[V("—",{span:4})]}])]);
+  if(oev.length){ body+=subh("Added by the MRes office"); body+=tbl(ew,[{header:true,cells:[hd("ID"),hd("Document (link)"),hd("Ground supported"),hd("Relevant page and what it shows")]},...evRows(oev)]); }
+
+  /* ---- 5 ---- */
+  body+=gap(160)+secBand("5","Declaration");
+  body+=bodyP(r("I declare that the information in this appeal is true and accurate to the best of my knowledge, and that I have identified the grounds and evidence I rely on. I understand that:",{sz:17}),{before:80});
+  AP_DECL_POINTS.forEach(t=>{ body+=p(r("–  ",{b:true,sz:17})+r(t,{sz:17}),{ind:360,after:40}); });
+  body+=gap(60);
+  const sg=f.sign;
+  body+=tbl([2400,3838,1100,2300],[{cells:[L("Signature or typed full name"),{c:sg?p(sigImg(sg))+p(r(sg.name||"",{sz:16,color:"595959"})):p(""),v:"center"},L("Date"),V(sg?cocDay(sg.at):"",{v:"center"})]}]);
+
+  /* ---- 6 ---- */
+  body+=gap(160)+secBand("6","Before you submit");
+  body+=tbl([W],[{cells:[{c:AP_CHECKS.map((t,i)=>p(box(!!f.checks?.[i+1],t,{sz:17}),{after:30})),fill:"F7F7FA"}]}]);
+  body+=gap(60);
+  body+=tbl([3000,W-3000],[
+    {cells:[L("Course Coordinator on your supervisory panel or assessed your CoC?"),V(({yes:"Yes",no:"No",unsure:"Not sure"}[f.ccConflict]||"")+(apT(f.ccConflictNote)?" — "+f.ccConflictNote:""))]},
+    ...(apT(f.lateReason)?[{cells:[L("Reason for lodging late"),V(f.lateReason)]}]:[])]);
+  body+=note("Where to send it: lodged online in the MRes Supervision Hub, where the Course Coordinator and the MRes office receive it. If the Course Coordinator was on the supervisory panel or assessed the CoC, the appeal goes straight to the Head of School (PR72 3.10.3).");
+
+  /* ---- 7: office use ---- */
+  body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+  body+=tbl([W],[{cells:[{c:p(r("OFFICE USE ONLY",{b:true,color:"FFFFFF",sz:18}))+p(r("Institutional review record",{b:true,color:"FFFFFF",sz:26}))+
+    p(r("Complete the stages that apply under PR72 clause 3.10. Candidates do not complete this section.",{i:true,color:"FFFFFF",sz:16})),fill:NAVY,padV:110}]}]);
+  const yes=(c,t)=>box(!!c,t,{sz:17});
+  body+=subh("7A Receipt and eligibility");
+  body+=tbl(c4,[
+    {cells:[L("Candidate name and ID"),V((pt?.name||R.name||"")+" · "+(pt?.sid||R.sid||""),{span:3})]},
+    {cells:[L("Received on"),V(D(a7.receivedOn)),L("Received by"),V(a7.receivedBy||"")]},
+    {cells:[L("Outcome notice date"),V(D(a7.noticeDate||pre.noticeDate)),L("Lodgement deadline"),V(D(a7.deadline||pre.lodgeBy))]},
+    {cells:[L("Lodged on time"),{span:3,c:p(yes(a7.onTime==="Y","Yes, within 10 working days (PR72 3.10.1)"))+p(yes(a7.onTime==="N","No. Action taken: "+(a7.onTime==="N"?(a7.lateAction||""):"")))}]},
+    {cells:[L("Prior CoC appeal"),{span:3,c:p(yes(a7.prior==="none","None on file"))+p(yes(a7.prior==="exists","A prior CoC appeal exists. No further appeal can be considered (PR72 3.10.4)"))}]},
+    {cells:[L("Determination due"),V(D(a7.due)),L("Recording requested"),V([a7.recording,a7.recordingNote].filter(Boolean).join(" — "))]}]);
+  body+=subh("7B Conflict of interest assessment (PR72 3.10.3)");
+  const ccC=!!coi.cc?.conflicted, hosC=!!coi.hos?.conflicted;
+  const coiLines=AP_OFFICES.filter(o=>coi[o.k]).map(o=>o.label+(R.officers?.[o.k]?.name?" ("+R.officers[o.k].name+")":"")+": "+(coi[o.k].conflicted?"conflicted":"no conflict")+
+    (coi[o.k].self?" — declared":"")+((coi[o.k].auto||[]).length?" — "+coi[o.k].auto.join("; "):"")).join("\n");
+  body+=tbl([1900,W-1900],[
+    {cells:[L("Assessment"),{c:p(yes(!ccC&&(!!R.ccUid||!!cc.sign),"Course Coordinator has no conflict and will review the appeal."))+
+      p(yes(ccC,"Course Coordinator is conflicted (for example, on the supervisory panel or assessed the candidate). Refer to the Head of School as decision maker."))+
+      p(yes(hosC,"Head of School is also conflicted. Refer to the Associate Dean Research."))}]},
+    {cells:[L("Details and referral"),V([coiLines,apT(coi.detail),coi.referredOn?"Referred "+D(coi.referredOn):""].filter(Boolean).join("\n"))]}]);
+  body+=subh("7C Course Coordinator review (where not conflicted)");
+  body+=tbl([1900,3300,1500,W-1900-3300-1500],[
+    {cells:[{...L("Findings on each ground"),span:4,c:p(r("Findings on each ground",{b:true,sz:17}))+p(r("Address each ground and the evidence relied on, with reasons.",{i:true,sz:15,color:"595959"}))}]},
+    {cells:[{c:p(rl(cc.findings||(ccC?"Not applicable — Course Coordinator conflicted.":""),{sz:18})),span:4,padV:100}]},
+    {cells:[L("Determination"),{span:3,c:p(yes(cc.det==="dismissed","Grounds not substantiated. Appeal dismissed and original outcome upheld."))+p(yes(cc.det==="substantiated","Grounds substantiated. Referred to the Head of School."))}]},
+    {cells:[L("Name"),V(cc.sign?.name||(R.ccUid||cc.sign?R.officers?.cc?.name||"":"")),L("Signature and date"),{c:cc.sign?p(sigImg(cc.sign,1.4,0.4))+p(r(cocDay(cc.sign.at),{sz:16})):p(""),v:"center"}]}]);
+  body+=subh("7D Head of School or Associate Dean Research decision");
+  const dmRole=dm.role||R.dmRole;
+  body+=tbl([1900,W-1900],[
+    {cells:[L("Decision maker"),{c:p(yes(dm.decision&&dmRole==="hos","Head of School (grounds substantiated, or Course Coordinator conflicted)"))+p(yes(dm.decision&&dmRole==="adr","Associate Dean Research (Head of School conflicted)"))}]},
+    {cells:[L("Decision"),{c:p(yes(dm.decision==="upheld","Original Not Confirmed outcome upheld."))+p(yes(dm.decision==="newpanel","Newly constituted CoC Panel convened to reconsider the candidature."))+
+      p(yes(dm.decision==="newpanel"&&dm.independent,"If a new panel: members meet QA72 5.3.1 (independent, no conflict of interest, not supervisors) and none sat on the original panel."))}]}]);
+  body+=gap(60);
+  body+=tbl([1900,3300,1500,W-1900-3300-1500],[
+    {cells:[{span:4,fill:LBL,c:p(r("Reasons and directions",{b:true,sz:17}))+p(r("State the reasons for the decision and any arrangements for the new panel, including timing.",{i:true,sz:15,color:"595959"}))}]},
+    {cells:[{c:p(rl(dm.reasons||"",{sz:18})),span:4,padV:100}]},
+    {cells:[L("Name and role"),V(dm.sign?(dm.sign.name+", "+apOfficeLabel(dmRole)):""),L("Signature and date"),{c:dm.sign?p(sigImg(dm.sign,1.4,0.4))+p(r(cocDay(dm.sign.at),{sz:16})):p(""),v:"center"}]}]);
+  body+=subh("7E Notification and records");
+  body+=tbl(c4,[
+    {cells:[L("Candidate notified by"),V(e7.notifiedBy||""),L("Date notified"),V(D(e7.notifiedOn))]},
+    {cells:[L("Timeframe"),{span:3,c:p(yes(e7.timeframe==="within","Determined within 20 working days of receipt (PR72 section 5)"))+p(yes(e7.timeframe==="varied","Varied. Candidate and staff advised of revised timeframe on "+(e7.variedOn?D(e7.variedOn):"DD/MM/YYYY")+" (PR72 5.2.1)"))}]},
+    {cells:[L("Record location"),V(e7.record||"",{span:3})]}]);
+  if(R.result==="notaccepted"&&R.notAccepted?.text){ body+=gap(60); body+=tbl([1900,W-1900],[{cells:[L("Not accepted — reason"),V(R.notAccepted.text)]}]); }
+  body+=note("Retain the appeal, evidence, conflict assessment, findings, decision and notification on the candidate file in line with the QA30 Records Management Policy (PR72 3.9.1). The decision reached through this process is final (PR72 3.10.4).");
+  body+=note("Policy basis: QA72 HDR Candidate CoC and Thesis Examination Policy, clauses 5.5 and 5.6; PR72 HDR Candidate CoC and Thesis Examination Procedures, clauses 3.7 to 3.10 and section 5. See also QA23 Student Grievance Handling Policy and QA24 Student Progression and Exclusion Policy.");
+  if(R.history?.length){
+    body+=subh("Hub record");
+    body+=tbl([2600,W-2600],R.history.map(h=>({cells:[V(cocDT(h.at),{run:{sz:15}}),V(h.what+(h.by?" — "+h.by:""),{run:{sz:15}})]})));
+  }
+
+  /* ---- package ---- */
+  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '+
+    'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '+
+    'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const P='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const doc=P+'<w:document '+NS+'><w:body>'+body+p("")+
+    '<w:sectPr><w:footerReference w:type="default" r:id="rIdFooter"/><w:pgSz w:w="11906" w:h="16838"/>'+
+    '<w:pgMar w:top="720" w:right="1134" w:bottom="720" w:left="1134" w:header="708" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  const fr=t=>'<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:t xml:space="preserve">'+X(t)+'</w:t></w:r>';
+  const fld=code=>['begin',null,'separate','1','end'].map((k,i)=>i===1?'<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:instrText xml:space="preserve"> '+code+' </w:instrText></w:r>':
+    i===3?fr("1"):'<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="'+k+'"/></w:r>').join("");
+  const footer=P+'<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/></w:pPr>'+fr("CRICOS Provider No. 03744B   |   CoC Outcome Appeal — "+ref+"   |   Page ")+fld("PAGE")+fr(" of ")+fld("NUMPAGES")+'</w:p></w:ftr>';
+  const styles=P+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault>'+
+    '<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+    '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'+
+    '</w:styles>';
+  const settings=P+'<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>';
+  const RELNS="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const docRels=P+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rIdStyles" Type="'+RELNS+'/styles" Target="styles.xml"/><Relationship Id="rIdSettings" Type="'+RELNS+'/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rIdFooter" Type="'+RELNS+'/footer" Target="footer1.xml"/>'+
+    media.map(m=>'<Relationship Id="'+m.rid+'" Type="'+RELNS+'/image" Target="media/'+m.name+'"/>').join("")+
+    links.map(l=>'<Relationship Id="'+l.id+'" Type="'+RELNS+'/hyperlink" Target="'+X(l.url)+'" TargetMode="External"/>').join("")+'</Relationships>';
+  const ct=P+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>';
+  const rootRels=P+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="'+RELNS+'/officeDocument" Target="word/document.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>';
+  const iso=new Date().toISOString().replace(/\.\d+Z$/,"Z");
+  const core=P+'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'+
+    '<dc:title>'+X("CoC Outcome Appeal — "+(pt?.name||R.name||"")+" ("+ref+")")+'</dc:title><dc:creator>MRes Supervision Hub</dc:creator>'+
+    '<dcterms:created xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:modified></cp:coreProperties>';
+  const enc=new TextEncoder(), U=s=>enc.encode(s);
+  return zipStore([
+    {name:"[Content_Types].xml",data:U(ct)},{name:"_rels/.rels",data:U(rootRels)},{name:"docProps/core.xml",data:U(core)},
+    {name:"word/document.xml",data:U(doc)},{name:"word/_rels/document.xml.rels",data:U(docRels)},
+    {name:"word/styles.xml",data:U(styles)},{name:"word/settings.xml",data:U(settings)},{name:"word/footer1.xml",data:U(footer)},
+    ...media.map(m=>({name:"word/media/"+m.name,data:m.bytes}))],"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+function apDownload(pt,rec,sem){
+  try{
+    const blob=apDocx(pt,rec,sem);
+    const nm=("CoC_Appeal_"+(pt?.name||rec?.name||"")+"_"+(pt?.sid||rec?.sid||"")+(rec?"":"_student_copy")).replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").replace(/_$/,"")+".docx";
+    saveBlob(blob,nm); toast("Word form downloaded.");
+  }catch(e){ console.error(e); toast("Couldn't build the Word form: "+(e?.message||e),true); }
+}
+
+/* ============================================================
+   17D. REVISED PROPOSALS DUE (Panel summary)
+   Students with Confirmed subject to minor Revisions (2 weeks) or Major
+   Revisions & Re-submission (4 weeks) owe a revised proposal by the date
+   on their outcome. The card lists everyone whose date has passed or falls
+   in the next 14 days, so the office can remind them by email (the
+   student, with their supervisors copied) and tick off what has arrived.
+   Kept on the panel record: panelGroups/{id}.revTrack[studentDocId] =
+     {remindedAt, remindN, receivedAt, receivedBy}
+   — admin-only writes to a collection the office already writes, so no
+   rules change.
+   ============================================================ */
+const REV_WINDOW_DAYS=14;
+function revDueRows(groups,reps,students){
+  const rows=[], seen=new Set();
+  (groups||[]).forEach(g=>{
+    const rep=(reps||[]).find(r=>r.id===g.id)||null;
+    const locked=!!rep&&(rep.status==="approved"||rep.status==="received");
+    const ids=new Set([...groupStudents(g),...Object.keys(g.outcomesOut||{})]);
+    ids.forEach(id=>{
+      const st=(students||[]).find(s=>s.id===id); if(!st) return;
+      const cand=rep?.cand?.[id]||{}, det=cand.det||{}, notice=g.outcomesOut?.[id]||null;
+      const code=(locked?det.outcome:"")||notice?.outcome?.code||"";
+      if(code!=="CMR"&&code!=="MRR") return;
+      const due=(locked?det.dueBy:"")||notice?.dueBy||""; if(!due) return;
+      const key=id+"|"+due; if(seen.has(key)) return; seen.add(key);
+      const tr=g.revTrack?.[id]||{};
+      const rel=rep?.release?.[id]||null;
+      const toStu=cocRelStu(rel)||notice?.audience==="students";
+      rows.push({g,rep,st,code,due,tr,toStu,days:apDaysTo(due),received:!!tr.receivedAt||!!cand.resub&&code==="MRR"&&(cand.resub.round||1)>1});
+    });
+  });
+  return rows.sort((a,b)=>String(a.due).localeCompare(String(b.due))||String(a.st.name||"").localeCompare(String(b.st.name||"")));
+}
+function revEmails(st){
+  const to=String(st.email||"").trim();
+  const cc=[st.principalUid,st.coUid].filter(Boolean).map(uid=>staffById(uid)).filter(Boolean).flatMap(emailsOf);
+  return {to,cc:[...new Set(cc)].join(",")};
+}
+function revReminderText(r,sem){
+  const o=cocOutcome(r.code), late=r.days!=null&&r.days<0;
+  const first=String(r.st.name||"").trim().split(/\s+/)[0]||"";
+  return {subject:(late?"Overdue: ":"Reminder: ")+"your revised CoC proposal "+(late?"was due ":"is due ")+longDate(r.due),
+    body:"Dear "+(first||r.st.name||"")+",\n\n"+
+      (late?"Our records show that your revised Confirmation of Candidature proposal was due on "+dueLong(r.due)+" and has not been received yet."
+        :"A reminder that your revised Confirmation of Candidature proposal is due on "+dueLong(r.due)+(r.days===0?" (today).":r.days===1?" (tomorrow).":" (in "+r.days+" days)."))+"\n\n"+
+      "Your CoC outcome was "+(o?o.long:r.code)+". "+(o?.meaning||"")+"\n\n"+
+      "Please submit the revised proposal through the RES915/RES916 Moodle unit, under the Submission of Assignment section, using: POST COC REVISED FINAL PROPOSAL ("+cocRevisedLink(sem)+").\n\n"+
+      "Share the panel's feedback with your supervision team and work through the revisions with them. The conditions and the panel's feedback are in the student portal of the MRes Supervision Hub (My CoC): "+CPS_HUB_URL+"\n\n"+
+      (late?"If something has prevented you from submitting, please reply to this email as soon as possible.\n\n":"")+
+      "Kind regards,\n"+(S.userName||"MRes Coordination")};
+}
+async function revTrackWrite(g,stId,patch,what){
+  const cur=JSON.parse(JSON.stringify(g.revTrack||{}));
+  cur[stId]={...(cur[stId]||{}),...patch};
+  await DB.update("panelGroups",g.id,{revTrack:cur});
+  g.revTrack=cur;
+}
+async function revRemind(rows,sem,redraw,noMail){
+  const ok=rows.filter(r=>r.st.email);
+  if(!noMail){
+    if(!ok.length){ toast("No student email on file.",true); return; }
+    if(ok.length===1){ const {subject,body}=revReminderText(ok[0],sem), m=revEmails(ok[0].st); openEmail(m.to,subject,body,m.cc); }
+    else{
+      const bcc=ok.map(r=>r.st.email).join(",");
+      openEmail("","Reminder: your revised CoC proposal",
+        "Dear students,\n\nA reminder that your revised Confirmation of Candidature proposal is due, or overdue, on the date in your CoC outcome (your outcome notice and the student portal of the MRes Supervision Hub, My CoC, show the date and the conditions).\n\n"+
+        "Please submit it through the RES915/RES916 Moodle unit, under the Submission of Assignment section, using: POST COC REVISED FINAL PROPOSAL ("+cocRevisedLink(sem)+").\n\n"+
+        "Work through the panel's feedback with your supervisors. If something is stopping you from submitting on time, please reply to this email.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),"",bcc);
+    }
+  }
+  const who=noMail?rows:ok, now=Date.now();
+  try{
+    for(const r of who) await revTrackWrite(r.g,r.st.id,{remindedAt:now,remindN:(r.tr.remindN||0)+1,remindedBy:S.userName||""});
+    toast((noMail?"Noted as reminded: ":"Reminder noted for ")+apPl(who.length,"student")+".");
+  }catch(e){ toast("The email opened, but the reminder couldn't be noted: "+(e?.message||e),true); }
+  redraw&&redraw();
+}
+function revDueCard(groups,reps,students,sem,redraw){
+  const all=revDueRows(groups,reps,students);
+  const open=all.filter(r=>!r.received&&r.days!=null&&r.days<=REV_WINDOW_DAYS);
+  const later=all.filter(r=>!r.received&&r.days!=null&&r.days>REV_WINDOW_DAYS);
+  const got=all.filter(r=>r.received);
+  if(!all.length) return null;
+  const overdue=open.filter(r=>r.days<0).length;
+  const c=el("div",{class:"card cps-rem rev-card"});
+  const need=open.filter(r=>r.toStu&&r.st.email&&!(r.tr.remindedAt&&Date.now()-r.tr.remindedAt<3*CPS_DAY));
+  c.append(el("div",{class:"cps-rem-h"},el("strong",{class:"ui"},"Revised proposals due"),
+    el("span",{class:"pill "+(overdue?"missed":open.length?"pending":"approved")},overdue?overdue+" overdue":open.length?open.length+" due soon":"Nothing due soon"),
+    el("span",{class:"muted ui",style:"font-size:12.5px;flex:1;min-width:220px"},
+      "Students with CMR (2 weeks) or MRR (4 weeks) whose revised proposal is overdue or due in the next "+REV_WINDOW_DAYS+" days. The email goes to the student with their supervisors copied; opening one from here notes it."),
+    need.length>1?el("button",{class:"btn sm",onclick:()=>revRemind(need,sem,redraw)},"✉ Remind all "+need.length+" (Bcc)"):""));
+  const row=r=>{
+    const ds=r.days<0?{cls:"missed",txt:apPl(-r.days,"day")+" overdue"}:r.days===0?{cls:"pending",txt:"due today"}:{cls:r.days<=3?"pending":"blue",txt:"in "+apPl(r.days,"day")};
+    const sups=[r.st.principalName||supName(r.st.principalUid),r.st.coUid?(r.st.coName||supName(r.st.coUid)):""].filter(Boolean).join(", ");
+    return el("div",{class:"cps-rrow ui rev-row"+(r.days<0?" late":"")},
+      el("div",{class:"cps-when"},el("b",{},cpsDay(r.due)),el("span",{class:"pill "+ds.cls},ds.txt)),
+      el("div",{},el("div",{style:"font-weight:650"},r.st.name||""),
+        el("div",{class:"muted",style:"font-size:12px;margin:2px 0 0"},[r.st.sid,cocPanelName({short:cocShortLabel(r.g),g:r.g})].filter(Boolean).join(" · ")),
+        sups?el("div",{class:"muted",style:"font-size:12px"},"Supervisors: "+sups):""),
+        el("div",{class:"row",style:"gap:5px;flex-wrap:wrap"},el("span",{class:"pill "+(r.code==="MRR"?"pending":"blue")},r.code==="MRR"?"MRR — major":"CMR — minor"),
+          !r.toStu?el("span",{class:"pill none",title:"The outcome hasn't been released to the student yet"},"Outcome not released to student"):"",
+          r.tr.remindedAt?el("span",{class:"pill none",title:"Last reminder "+cocDT(r.tr.remindedAt)},"reminded "+relTime(r.tr.remindedAt)+(r.tr.remindN>1?" ("+r.tr.remindN+"×)":"")):""),
+      el("div",{class:"cps-act"},
+        el("button",{class:"btn sm"+(r.tr.remindedAt?" ghost":""),disabled:r.st.email?null:"disabled",title:r.st.email?"Email "+r.st.email+" (supervisors copied)":"No email on file",
+          onclick:()=>revRemind([r],sem,redraw)},r.tr.remindedAt?"✉ Remind again":"✉ Remind"),
+        el("button",{class:"btn xs ghost",title:"The revised proposal has arrived",onclick:async()=>{
+          await revTrackWrite(r.g,r.st.id,{receivedAt:Date.now(),receivedBy:S.userName||""}); toast("Marked as received."); redraw(); }},"✓ Received"),
+        el("button",{class:"btn xs ghost",title:"Reminded another way (Teams, phone): note it without an email",onclick:()=>revRemind([r],sem,redraw,true)},"Mark reminded")));
+  };
+  if(open.length) open.forEach(r=>c.append(row(r)));
+  else c.append(el("div",{class:"muted ui",style:"padding:12px 16px;font-size:13px"},"No revised proposal is overdue or due in the next "+REV_WINDOW_DAYS+" days."));
+  const tail=[];
+  if(later.length) tail.push(apPl(later.length,"more")+" due later ("+later.map(r=>r.st.name+" "+cpsShort(r.due)).join(", ")+")");
+  if(got.length) tail.push(apPl(got.length,"revised proposal")+" received");
+  if(tail.length){
+    const det=el("details",{class:"rev-more",style:"padding:8px 16px 12px"},el("summary",{class:"muted ui"},tail.join(" · ")));
+    got.forEach(r=>det.append(el("div",{class:"row ui",style:"gap:8px;font-size:13px;margin:6px 0 0;align-items:center"},
+      el("span",{class:"pill approved"},"✓"),el("span",{style:"flex:1"},r.st.name+" — "+r.code+", due "+longDate(r.due)+(r.tr.receivedAt?", received "+cocDay(r.tr.receivedAt):"")),
+      r.tr.receivedAt?el("button",{class:"btn xs ghost",onclick:async()=>{ await revTrackWrite(r.g,r.st.id,{receivedAt:0,receivedBy:""}); redraw(); }},"Undo"):"")));
+    c.append(det);
+  }
+  return c;
 }
 
 /* ============================================================
