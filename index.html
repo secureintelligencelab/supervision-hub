@@ -1351,6 +1351,23 @@
   .ap-slink a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ap-code{font-size:16px;letter-spacing:1.5px;font-weight:700}
   .ap-head{margin-bottom:10px}
+
+  /* after the CoC tracker (Panel summary) */
+  .rev-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .rev-seg{margin:0;flex-wrap:wrap}
+  .rev-seg button{white-space:nowrap}
+  .rev-steps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--ink-soft)}
+  .rev-steps li{display:inline-flex;align-items:center;gap:5px}
+  .rev-steps li i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-style:normal;font-size:9px;font-weight:800}
+  .rev-steps li.d{color:var(--ink)}
+  .rev-steps li.d i{background:var(--green-ink);border-color:var(--green-ink);color:#fff}
+  .rev-next{font-size:13px;margin-top:6px;line-height:1.4;color:var(--ink-soft)}
+  .rev-next.act{color:var(--ink);font-weight:600}
+  .rev-row.rev-done{opacity:.8}
+  .rev-smalls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+  .rev-undo{all:unset;cursor:pointer;font-size:11.5px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:2px}
+  .rev-undo:hover{color:var(--accent)}
+  .rev-card .cps-rrow{grid-template-columns:minmax(130px,160px) minmax(150px,220px) minmax(0,1fr) auto}
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -3128,6 +3145,8 @@ function seedDemo(){
       proposalTitle:"Lightweight intrusion detection for IoT gateways using federated anomaly scoring",unitIds:["u1"],principalUid:"supA",coUid:"supC",principalName:"Dr Smith",coName:"Dr Patel"});
     mk("st6",{semesterId:"s2-2026",sid:"45006",name:"Liam O'Brien",email:"liam@stu.edu",mobile:"",campus:"NSW",area:"IT",
       proposalTitle:"Trust signals in open-source package ecosystems",unitIds:["u1"],principalUid:"supA",coUid:"",principalName:"Dr Smith",coName:""});
+    mk("st8",{semesterId:"s2-2026",sid:"45008",name:"Noah Kim",email:"noah@stu.edu",mobile:"",campus:"NSW",area:"IT",
+      proposalTitle:"Graph neural networks for phishing-site detection",unitIds:["u1"],principalUid:"supB",coUid:"",principalName:"Dr Jones",coName:""});
     mk("st7",{semesterId:"s2-2026",sid:"45007",name:"Priya Nair",email:"priya@stu.edu",mobile:"",campus:"ACT",area:"IT",
       proposalTitle:"Carbon-aware scheduling for university HPC clusters",unitIds:["u1"],principalUid:"supD",coUid:"supC",principalName:"Dr Novak",coName:"Dr Patel"});
     const sem=ymdIn(-12);
@@ -3142,13 +3161,14 @@ function seedDemo(){
         {concerns:"The research questions are not answerable with the proposed data; the methodology chapter does not justify the sampling of IoT devices.",
          improvements:"A substantially revised proposal would be required."}),
       st6:note("st6","45006","Liam O'Brien",mem.students.st6.proposalTitle,"CMR","Confirmed subject to minor Revisions",ymdIn(3),"Tighten RQ2 and add a data management plan.",{}),
-      st7:note("st7","45007","Priya Nair",mem.students.st7.proposalTitle,"MRR","Major Revisions & Re-submission",ymdIn(-2),"Re-scope the evaluation and add an ethics section.",{})};
+      st7:note("st7","45007","Priya Nair",mem.students.st7.proposalTitle,"MRR","Major Revisions & Re-submission",ymdIn(-2),"Re-scope the evaluation and add an ethics section.",{}),
+      st8:note("st8","45008","Noah Kim",mem.students.st8.proposalTitle,"C","Candidature Confirmed","","",{})};
     mem.panelGroups["pg3"]={semesterId:"s2-2026",label:"Dr Novak Panel",updatedAt:dayAgo(3),members:M,chairKey:"u_supD",
-      meetingLink:"https://teams.microsoft.com/l/meetup/coc-panel-c",studentIds:["st5","st6","st7"],
+      meetingLink:"https://teams.microsoft.com/l/meetup/coc-panel-c",studentIds:["st5","st6","st7","st8"],
       sessions:[{id:"se7",date:sem,start:"09:00",end:"12:30",direct:true}],availability:{},chosenSessionId:"se7",
       slotMins:20,presMins:10,qaMins:10,delibMins:60,
       slots:[{start:"09:00",qaStart:"09:10",end:"09:20",studentDocId:"st5"},{start:"09:20",qaStart:"09:30",end:"09:40",studentDocId:"st6"},
-             {start:"09:40",qaStart:"09:50",end:"10:00",studentDocId:"st7"}],
+             {start:"09:40",qaStart:"09:50",end:"10:00",studentDocId:"st7"},{start:"10:00",qaStart:"10:10",end:"10:20",studentDocId:"st8"}],
       finalized:true,finalizedAt:dayAgo(20),assessorsReleased:true,assessorsReleasedAt:dayAgo(20),studentsReleased:true,outcomesOut:out};
     const rel=a=>({at:dayAgo(3),by:"Admin Office",note:"",assessors:false,supervisors:true,students:true,portal:true,
       supervisorsAt:dayAgo(4),studentsAt:dayAgo(3),emailedAt:dayAgo(3),outcome:a});
@@ -3156,8 +3176,8 @@ function seedDemo(){
       memberUids:["supD","panA"],memberKeys:["u_supD","u_panA","e_p_raman_uow_edu_au"],window:{opensAt:dayAgo(12),closesAt:dayAgo(5)},
       partA:{},status:"approved",approvedAt:dayAgo(4),chairSign:{name:"Dr Novak",img:cocDemoSig("D. Novak"),at:dayAgo(4)},
       cand:{st5:{present:"Y",det:{outcome:"NC",finalMark:"7"}},st6:{present:"Y",det:{outcome:"CMR",finalMark:"14",dueBy:ymdIn(3)}},
-            st7:{present:"Y",det:{outcome:"MRR",finalMark:"11",dueBy:ymdIn(-2)}}},
-      release:{st5:rel("NC"),st6:rel("CMR"),st7:rel("MRR")},history:[],updatedAt:dayAgo(3)};
+            st7:{present:"Y",det:{outcome:"MRR",finalMark:"11",dueBy:ymdIn(-2)}},st8:{present:"Y",det:{outcome:"C",finalMark:"17"}}},
+      release:{st5:rel("NC"),st6:rel("CMR"),st7:rel("MRR"),st8:rel("C")},history:[],updatedAt:dayAgo(3)};
     mem.staffKeys["cocout:st5"]=out.st5; mem.staffKeys["cocout:st6"]=out.st6; mem.staffKeys["cocout:st7"]=out.st7;
     mem.staffKeys["config:appeals"]={kind:"config",officeEmail:"research.office@cihe.edu.au",at:dayAgo(30),officers:{
       cc:{uid:"supE",name:"Dr Wong",email:"e.wong@uni.edu"},hos:{uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu"},
@@ -22738,7 +22758,8 @@ async function viewCocSummary(v){
   if(M.soonRows.length||M.marksRows.length) v.append(cpsRemindCard(M,sem,redraw));
   else v.append(noticeBar("green",M.nextDay?"No one needs a reminder right now. The next CoC is "+cpsNextLine(M)+".":"No one needs a reminder right now — no CoC is coming up and no marks are outstanding."));
   /* students whose revised proposal is overdue or due soon */
-  { const rc=revDueCard(groups,reps,students,sem,redraw); if(rc) v.append(rc); }
+  { let aps=[]; try{ aps=await DB.list("appeals",{semesterId:S.activeSem}); }catch(e){}
+    const rc=revDueCard(groups,reps,students,sem,redraw,aps); if(rc) v.append(rc); }
 
   /* Assessment form links: the online form is the Supervision Hub; the
      Word Form Link is kept on the semester, and a panel can have its own. */
@@ -25043,62 +25064,155 @@ function apDownload(pt,rec,sem){
 }
 
 /* ============================================================
-   17D. REVISED PROPOSALS DUE (Panel summary)
-   Students with Confirmed subject to minor Revisions (2 weeks) or Major
-   Revisions & Re-submission (4 weeks) owe a revised proposal by the date
-   on their outcome. The card lists everyone whose date has passed or falls
-   in the next 14 days, so the office can remind them by email (the
-   student, with their supervisors copied) and tick off what has arrived.
-   Kept on the panel record: panelGroups/{id}.revTrack[studentDocId] =
-     {remindedAt, remindN, receivedAt, receivedBy}
-   — admin-only writes to a collection the office already writes, so no
-   rules change.
+   17D. AFTER THE CoC — proposals and resubmissions (Panel summary)
+   Every candidate with an approved outcome of C, CMR or MRR, with where
+   they are and what the office does next:
+
+     C    Confirmed            final proposal submitted → done
+     CMR  minor revisions      due → submitted → Course Coordinator checks
+                               → revisions accepted → student told → done
+     MRR  major revisions      due → submitted → sent to the panel
+                               (the existing re-assessment: the report is
+                               reopened for the Chair or every member) →
+                               the panel decides (C / CMR / MRR / NC) →
+                               outcome released → then C is done, CMR and
+                               MRR start again, NC goes to appeals.
+
+   The panel's decision is read from the re-approved report itself, so
+   nothing has to be typed twice. The office's own marks are kept on the
+   panel record, one set per round of assessment:
+     panelGroups/{id}.revTrack[studentDocId] = {
+       submittedAt, submittedBy, remindedAt, remindN, ccAskedAt,
+       acceptedAt, acceptedBy, toldAt, chairRemindedAt,
+       r2:{...same, for the round after a resubmission}, r3:{...} }
+   (receivedAt, from the first version of this card, still counts as
+   submitted.) Admin-only writes to a collection the office already
+   writes, so no rules change.
    ============================================================ */
 const REV_WINDOW_DAYS=14;
-function revDueRows(groups,reps,students){
+const REV_KIND={C:"Confirmed",CMR:"Minor revisions",MRR:"Major revisions",NC:"Not confirmed"};
+
+function revTrackOf(g,id,round){
+  const t=g.revTrack?.[id]||{};
+  const r=round>1?(t["r"+round]||{}):t;
+  return {...r,submittedAt:r.submittedAt||r.receivedAt||0};
+}
+async function revTrackWrite(g,stId,patch,round){
+  const cur=JSON.parse(JSON.stringify(g.revTrack||{}));
+  const base=cur[stId]||{};
+  if(round>1) base["r"+round]={...(base["r"+round]||{}),...patch};
+  else Object.assign(base,patch);
+  cur[stId]=base;
+  await DB.update("panelGroups",g.id,{revTrack:cur});
+  g.revTrack=cur;
+}
+const revChairOf=g=>groupMembers(g).find(m=>isChair(g,m))||null;
+
+/* One row per candidate, with its state worked out. */
+function revRows(groups,reps,students,appeals){
   const rows=[], seen=new Set();
   (groups||[]).forEach(g=>{
     const rep=(reps||[]).find(r=>r.id===g.id)||null;
     const locked=!!rep&&(rep.status==="approved"||rep.status==="received");
     const ids=new Set([...groupStudents(g),...Object.keys(g.outcomesOut||{})]);
     ids.forEach(id=>{
+      if(seen.has(id)) return;
       const st=(students||[]).find(s=>s.id===id); if(!st) return;
       const cand=rep?.cand?.[id]||{}, det=cand.det||{}, notice=g.outcomesOut?.[id]||null;
-      const code=(locked?det.outcome:"")||notice?.outcome?.code||"";
-      if(code!=="CMR"&&code!=="MRR") return;
-      const due=(locked?det.dueBy:"")||notice?.dueBy||""; if(!due) return;
-      const key=id+"|"+due; if(seen.has(key)) return; seen.add(key);
-      const tr=g.revTrack?.[id]||{};
+      if(cand.present==="N"||notice?.deferred) return;
+      const resub=cand.resub&&(cand.resub.round||1)>1?cand.resub:null;
+      const round=resub?resub.round:1;
       const rel=rep?.release?.[id]||null;
-      const toStu=cocRelStu(rel)||notice?.audience==="students";
-      rows.push({g,rep,st,code,due,tr,toStu,days:apDaysTo(due),received:!!tr.receivedAt||!!cand.resub&&code==="MRR"&&(cand.resub.round||1)>1});
+      const relAt=cocRelStu(rel)?(rel.studentsAt||rel.at||0):0;
+      const approvedAt=Math.max(rep?.approvedAt||0,rep?.amendedAt||0);
+      /* the outcome now in force */
+      const code=locked?(det.outcome||notice?.outcome?.code||""):(resub?"":notice?.outcome?.code||"");
+      if(!resub&&!["C","CMR","MRR"].includes(code)) return;
+      seen.add(id);
+      const tr=revTrackOf(g,id,round);
+      const r={g,rep,st,id,round,resub,code,locked,rel,tr,
+        released:!!relAt&&(!resub||relAt>=approvedAt),
+        due:(locked?det.dueBy:"")||(!resub?notice?.dueBy:"")||"",
+        chair:revChairOf(g),appeal:(appeals||[]).find(a=>a.studentDocId===id&&a.stage!=="withdrawn")||null};
+      r.days=r.due?apDaysTo(r.due):null;
+      revState(r);
+      rows.push(r);
     });
   });
-  return rows.sort((a,b)=>String(a.due).localeCompare(String(b.due))||String(a.st.name||"").localeCompare(String(b.st.name||"")));
+  const pri={action:0,panel:1,waiting:2,done:3};
+  return rows.sort((a,b)=>pri[a.bucket]-pri[b.bucket]||String(a.due||"9999").localeCompare(String(b.due||"9999"))||String(a.st.name||"").localeCompare(String(b.st.name||"")));
 }
+/* What stage the candidate is at, the next action, and which bucket. */
+function revState(r){
+  const t=r.tr, sub=!!t.submittedAt, soon=r.days!=null&&r.days<=REV_WINDOW_DAYS;
+  const kind=r.resub?"MRR":r.code;
+  r.kind=kind;
+  if(r.resub&&!r.locked){
+    const cl=r.resub.closesAt;
+    r.steps=[["Resubmitted",1],["Sent to the panel",1],["Panel decision",0],["Outcome released",0]];
+    r.next=(r.resub.mode==="chair"?"The Chair is re-assessing":"The panel is re-assessing")+" the revised proposal"+(cl?" — closes "+cocDT(cl):"")+". The Chair then re-approves the report.";
+    r.bucket="panel"; r.act=["chair"]; return;
+  }
+  if(r.resub&&r.locked&&!r.released){
+    const o=r.code;
+    r.steps=[["Resubmitted",1],["Sent to the panel",1],["Panel decision",1],["Outcome released",0]];
+    r.decision=o;
+    r.next="The panel decided "+(o==="C"?"Confirmed":o==="CMR"?"Confirmed subject to minor revisions":o==="NC"?"Not confirmed":o==="MRR"?"major revisions again":o||"—")+
+      ". Release the outcome to the student and supervisors on the CoC reports screen.";
+    r.bucket="action"; r.act=["release"]; return;
+  }
+  if(r.code==="NC"){
+    r.steps=[["Resubmitted",1],["Panel decision",1],["Outcome released",1],["Appeal window",r.appeal?1:0]];
+    r.next=r.appeal?"Appeal: "+((AP_STAGES[r.appeal.stage]||{}).label||r.appeal.stage)+".":"Not confirmed after resubmission. The student may appeal within 10 working days — issue an appeal code on CoC appeals.";
+    r.bucket=r.appeal?"done":"action"; r.act=r.appeal?["appeals"]:["appeals"]; return;
+  }
+  if(r.code==="C"){
+    if(r.resub){ r.steps=[["Resubmitted",1],["Panel decision",1],["Confirmed & released",1]]; r.next="Confirmed after resubmission."; r.bucket="done"; r.act=[]; return; }
+    r.steps=[["Confirmed",1],["Final proposal submitted",sub?1:0]];
+    r.next=sub?"Confirmed — final proposal received "+cocDay(t.submittedAt)+".":"Confirmed. Mark the final proposal submitted when it arrives.";
+    r.bucket=sub?"done":"waiting"; r.act=sub?["undoSub"]:["submit","remind"]; return;
+  }
+  if(!r.released&&!sub){
+    r.steps=[[kind==="MRR"?"Resubmission due":"Revisions due",0],["Submitted",0]];
+    r.next="The outcome hasn’t been released to the student yet — release it on CoC reports so they know the due date.";
+    r.bucket="action"; r.act=["release","submit"]; return;
+  }
+  if(r.code==="CMR"){
+    const acc=!!t.acceptedAt, told=!!t.toldAt;
+    r.steps=[["Revisions due",1],["Submitted",sub?1:0],["Course Coordinator check",acc?1:0],["Student told",told?1:0]];
+    if(!sub){ r.next="Waiting for the revised proposal"+(r.due?" — due "+longDate(r.due):"")+"."; r.bucket=soon?"action":"waiting"; r.act=["remind","submit"]; }
+    else if(!acc){ r.next="Revised proposal received "+cocDay(t.submittedAt)+". The Course Coordinator checks the revisions were made"+(t.ccAskedAt?" (asked "+relTime(t.ccAskedAt)+")":"")+", then mark them accepted."; r.bucket="action"; r.act=["askcc","accept","undoSub"]; }
+    else if(!told){ r.next="Revisions accepted "+cocDay(t.acceptedAt)+". Tell the student their candidature is confirmed."; r.bucket="action"; r.act=["tell","undoAcc"]; }
+    else{ r.next="Confirmed — revisions accepted "+cocDay(t.acceptedAt)+", student told "+cocDay(t.toldAt)+"."; r.bucket="done"; r.act=["undoAcc"]; }
+    return;
+  }
+  /* MRR, before it goes to the panel */
+  r.steps=[["Resubmission due",1],["Submitted",sub?1:0],["Sent to the panel",0],["Panel decision",0]];
+  if(!sub){ r.next="Waiting for the revised proposal"+(r.due?" — due "+longDate(r.due):"")+"."; r.bucket=soon?"action":"waiting"; r.act=["remind","submit"]; }
+  else{ r.next="Revised proposal received "+cocDay(t.submittedAt)+". Send it to the panel to be re-assessed (the Chair alone, or every member)."; r.bucket="action"; r.act=["panel","undoSub"]; }
+}
+
+/* ---- emails ---- */
 function revEmails(st){
   const to=String(st.email||"").trim();
   const cc=[st.principalUid,st.coUid].filter(Boolean).map(uid=>staffById(uid)).filter(Boolean).flatMap(emailsOf);
   return {to,cc:[...new Set(cc)].join(",")};
 }
+const revFirst=st=>String(st.name||"").trim().split(/\s+/)[0]||st.name||"";
 function revReminderText(r,sem){
+  if(r.code==="C") return {subject:"Reminder: please submit your final CoC proposal",
+    body:"Dear "+revFirst(r.st)+",\n\nCongratulations again on your confirmed candidature. Please submit your final proposal through the RES915/RES916 Moodle unit, under the Submission of Assignment section, using: POST COC REVISED FINAL PROPOSAL ("+cocRevisedLink(sem)+").\n\nKind regards,\n"+(S.userName||"MRes Coordination")};
   const o=cocOutcome(r.code), late=r.days!=null&&r.days<0;
-  const first=String(r.st.name||"").trim().split(/\s+/)[0]||"";
-  return {subject:(late?"Overdue: ":"Reminder: ")+"your revised CoC proposal "+(late?"was due ":"is due ")+longDate(r.due),
-    body:"Dear "+(first||r.st.name||"")+",\n\n"+
-      (late?"Our records show that your revised Confirmation of Candidature proposal was due on "+dueLong(r.due)+" and has not been received yet."
-        :"A reminder that your revised Confirmation of Candidature proposal is due on "+dueLong(r.due)+(r.days===0?" (today).":r.days===1?" (tomorrow).":" (in "+r.days+" days)."))+"\n\n"+
+  return {subject:(late?"Overdue: ":"Reminder: ")+"your revised CoC proposal "+(r.due?(late?"was due ":"is due ")+longDate(r.due):""),
+    body:"Dear "+revFirst(r.st)+",\n\n"+
+      (r.due?(late?"Our records show that your revised Confirmation of Candidature proposal was due on "+dueLong(r.due)+" and has not been received yet."
+        :"A reminder that your revised Confirmation of Candidature proposal is due on "+dueLong(r.due)+(r.days===0?" (today).":r.days===1?" (tomorrow).":" (in "+r.days+" days).")):
+        "A reminder that your revised Confirmation of Candidature proposal is due.")+"\n\n"+
       "Your CoC outcome was "+(o?o.long:r.code)+". "+(o?.meaning||"")+"\n\n"+
       "Please submit the revised proposal through the RES915/RES916 Moodle unit, under the Submission of Assignment section, using: POST COC REVISED FINAL PROPOSAL ("+cocRevisedLink(sem)+").\n\n"+
       "Share the panel's feedback with your supervision team and work through the revisions with them. The conditions and the panel's feedback are in the student portal of the MRes Supervision Hub (My CoC): "+CPS_HUB_URL+"\n\n"+
       (late?"If something has prevented you from submitting, please reply to this email as soon as possible.\n\n":"")+
       "Kind regards,\n"+(S.userName||"MRes Coordination")};
-}
-async function revTrackWrite(g,stId,patch,what){
-  const cur=JSON.parse(JSON.stringify(g.revTrack||{}));
-  cur[stId]={...(cur[stId]||{}),...patch};
-  await DB.update("panelGroups",g.id,{revTrack:cur});
-  g.revTrack=cur;
 }
 async function revRemind(rows,sem,redraw,noMail){
   const ok=rows.filter(r=>r.st.email);
@@ -25106,65 +25220,117 @@ async function revRemind(rows,sem,redraw,noMail){
     if(!ok.length){ toast("No student email on file.",true); return; }
     if(ok.length===1){ const {subject,body}=revReminderText(ok[0],sem), m=revEmails(ok[0].st); openEmail(m.to,subject,body,m.cc); }
     else{
-      const bcc=ok.map(r=>r.st.email).join(",");
       openEmail("","Reminder: your revised CoC proposal",
         "Dear students,\n\nA reminder that your revised Confirmation of Candidature proposal is due, or overdue, on the date in your CoC outcome (your outcome notice and the student portal of the MRes Supervision Hub, My CoC, show the date and the conditions).\n\n"+
         "Please submit it through the RES915/RES916 Moodle unit, under the Submission of Assignment section, using: POST COC REVISED FINAL PROPOSAL ("+cocRevisedLink(sem)+").\n\n"+
-        "Work through the panel's feedback with your supervisors. If something is stopping you from submitting on time, please reply to this email.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),"",bcc);
+        "Work through the panel's feedback with your supervisors. If something is stopping you from submitting on time, please reply to this email.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),"",ok.map(r=>r.st.email).join(","));
     }
   }
   const who=noMail?rows:ok, now=Date.now();
   try{
-    for(const r of who) await revTrackWrite(r.g,r.st.id,{remindedAt:now,remindN:(r.tr.remindN||0)+1,remindedBy:S.userName||""});
+    for(const r of who) await revTrackWrite(r.g,r.st.id,{remindedAt:now,remindN:(r.tr.remindN||0)+1,remindedBy:S.userName||""},r.round);
     toast((noMail?"Noted as reminded: ":"Reminder noted for ")+apPl(who.length,"student")+".");
   }catch(e){ toast("The email opened, but the reminder couldn't be noted: "+(e?.message||e),true); }
   redraw&&redraw();
 }
-function revDueCard(groups,reps,students,sem,redraw){
-  const all=revDueRows(groups,reps,students);
-  const open=all.filter(r=>!r.received&&r.days!=null&&r.days<=REV_WINDOW_DAYS);
-  const later=all.filter(r=>!r.received&&r.days!=null&&r.days>REV_WINDOW_DAYS);
-  const got=all.filter(r=>r.received);
+function revAskCC(r,sem,redraw){
+  const cc=apHolder("cc");
+  const det=r.rep?.cand?.[r.id]?.det||{};
+  openEmail(cc?.email||"","CMR revisions to check — "+(r.st.name||"")+" ("+(r.st.sid||"")+")",
+    "Dear "+(cc?.name||"Course Coordinator")+",\n\n"+(r.st.name||"The candidate")+" ("+(r.st.sid||"")+") was Confirmed subject to minor Revisions by the "+(r.g.label||"CoC panel")+
+    " and has submitted the revised proposal"+(r.tr.submittedAt?" on "+longDate(apDayOf(r.tr.submittedAt)):"")+".\n\n"+
+    (apT(det.conditions)?"Required revisions:\n"+apT(det.conditions)+"\n\n":"")+
+    "The revised proposal is in the RES915/RES916 Moodle unit (POST COC REVISED FINAL PROPOSAL: "+cocRevisedLink(sem)+").\n\n"+
+    "Could you please check that the revisions have been made to your satisfaction and let me know? Once you confirm, I will record them as accepted in the MRes Supervision Hub and tell the student their candidature is confirmed.\n\nThank you,\n"+(S.userName||"MRes Coordination"),
+    "");
+  if(!cc?.email) toast("No Course Coordinator email on file — name one under CoC appeals → Appeal officers, or add the address in your mail app.",true);
+  revTrackWrite(r.g,r.id,{ccAskedAt:Date.now()},r.round).then(()=>redraw()).catch(()=>{});
+}
+function revTell(r,sem,redraw){
+  const m=revEmails(r.st);
+  openEmail(m.to,"Your Confirmation of Candidature is confirmed",
+    "Dear "+revFirst(r.st)+",\n\nThank you for submitting your revised proposal. The Course Coordinator has checked the revisions required by the CoC panel and they have been accepted.\n\n"+
+    "Your candidature is now confirmed. Please keep working with your supervisors on the next stage of your research.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),m.cc);
+  revTrackWrite(r.g,r.id,{toldAt:Date.now()},r.round).then(()=>{ toast("Noted as told."); redraw(); }).catch(e=>toast(e?.message||"Couldn't note it.",true));
+}
+function revRemindChair(r,redraw){
+  const ch=r.chair, mode=r.resub?.mode;
+  const to=mode==="panel"?cocCoded(r.g).flatMap(cd=>memberEmails(cd.m)):ch?memberEmails(ch):[];
+  if(!to.length){ toast("No email on file for the Chair.",true); return; }
+  openEmail([...new Set(to)].join(","),"Reminder: CoC re-assessment — "+(r.st.name||"")+"'s revised proposal",
+    "Dear "+(mode==="panel"?"panel members":(ch?.name||"Chair"))+",\n\nA reminder that "+(r.st.name||"the candidate")+"'s revised proposal (after Major Revisions) is waiting to be re-assessed in the MRes Supervision Hub (“CoC assessment”): "+CPS_HUB_URL+
+    (r.resub?.closesAt?"\n\nThe re-assessment window closes "+cocDT(r.resub.closesAt)+".":"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
+  revTrackWrite(r.g,r.id,{chairRemindedAt:Date.now()},r.round).then(()=>redraw()).catch(()=>{});
+}
+async function revSendToPanel(r,sem,redraw){
+  if(!r.rep||!r.locked){ toast("The panel's report has to be approved before the revised proposal can be re-assessed.",true); return; }
+  try{ const marks=await cocGetMarks(r.g); cocResubDialog(r.g,r.rep,r.st,marks,sem,redraw); }
+  catch(e){ toast("Couldn't open the re-assessment: "+(e?.message||e),true); }
+}
+
+/* ---- the card ---- */
+function revDueCard(groups,reps,students,sem,redraw,appeals){
+  const all=revRows(groups,reps,students,appeals);
   if(!all.length) return null;
-  const overdue=open.filter(r=>r.days<0).length;
+  const n=b=>all.filter(r=>r.bucket===b).length;
+  const F=S.revFil=S.revFil??(n("action")?"action":"all");
+  const shown=F==="all"?all:all.filter(r=>r.bucket===F);
+  const overdue=all.filter(r=>r.days!=null&&r.days<0&&!r.tr.submittedAt&&["CMR","MRR"].includes(r.code)&&!r.resub).length;
   const c=el("div",{class:"card cps-rem rev-card"});
-  const need=open.filter(r=>r.toStu&&r.st.email&&!(r.tr.remindedAt&&Date.now()-r.tr.remindedAt<3*CPS_DAY));
-  c.append(el("div",{class:"cps-rem-h"},el("strong",{class:"ui"},"Revised proposals due"),
-    el("span",{class:"pill "+(overdue?"missed":open.length?"pending":"approved")},overdue?overdue+" overdue":open.length?open.length+" due soon":"Nothing due soon"),
-    el("span",{class:"muted ui",style:"font-size:12.5px;flex:1;min-width:220px"},
-      "Students with CMR (2 weeks) or MRR (4 weeks) whose revised proposal is overdue or due in the next "+REV_WINDOW_DAYS+" days. The email goes to the student with their supervisors copied; opening one from here notes it."),
-    need.length>1?el("button",{class:"btn sm",onclick:()=>revRemind(need,sem,redraw)},"✉ Remind all "+need.length+" (Bcc)"):""));
-  const row=r=>{
-    const ds=r.days<0?{cls:"missed",txt:apPl(-r.days,"day")+" overdue"}:r.days===0?{cls:"pending",txt:"due today"}:{cls:r.days<=3?"pending":"blue",txt:"in "+apPl(r.days,"day")};
-    const sups=[r.st.principalName||supName(r.st.principalUid),r.st.coUid?(r.st.coName||supName(r.st.coUid)):""].filter(Boolean).join(", ");
-    return el("div",{class:"cps-rrow ui rev-row"+(r.days<0?" late":"")},
-      el("div",{class:"cps-when"},el("b",{},cpsDay(r.due)),el("span",{class:"pill "+ds.cls},ds.txt)),
-      el("div",{},el("div",{style:"font-weight:650"},r.st.name||""),
-        el("div",{class:"muted",style:"font-size:12px;margin:2px 0 0"},[r.st.sid,cocPanelName({short:cocShortLabel(r.g),g:r.g})].filter(Boolean).join(" · ")),
-        sups?el("div",{class:"muted",style:"font-size:12px"},"Supervisors: "+sups):""),
-        el("div",{class:"row",style:"gap:5px;flex-wrap:wrap"},el("span",{class:"pill "+(r.code==="MRR"?"pending":"blue")},r.code==="MRR"?"MRR — major":"CMR — minor"),
-          !r.toStu?el("span",{class:"pill none",title:"The outcome hasn't been released to the student yet"},"Outcome not released to student"):"",
-          r.tr.remindedAt?el("span",{class:"pill none",title:"Last reminder "+cocDT(r.tr.remindedAt)},"reminded "+relTime(r.tr.remindedAt)+(r.tr.remindN>1?" ("+r.tr.remindN+"×)":"")):""),
-      el("div",{class:"cps-act"},
-        el("button",{class:"btn sm"+(r.tr.remindedAt?" ghost":""),disabled:r.st.email?null:"disabled",title:r.st.email?"Email "+r.st.email+" (supervisors copied)":"No email on file",
-          onclick:()=>revRemind([r],sem,redraw)},r.tr.remindedAt?"✉ Remind again":"✉ Remind"),
-        el("button",{class:"btn xs ghost",title:"The revised proposal has arrived",onclick:async()=>{
-          await revTrackWrite(r.g,r.st.id,{receivedAt:Date.now(),receivedBy:S.userName||""}); toast("Marked as received."); redraw(); }},"✓ Received"),
-        el("button",{class:"btn xs ghost",title:"Reminded another way (Teams, phone): note it without an email",onclick:()=>revRemind([r],sem,redraw,true)},"Mark reminded")));
-  };
-  if(open.length) open.forEach(r=>c.append(row(r)));
-  else c.append(el("div",{class:"muted ui",style:"padding:12px 16px;font-size:13px"},"No revised proposal is overdue or due in the next "+REV_WINDOW_DAYS+" days."));
-  const tail=[];
-  if(later.length) tail.push(apPl(later.length,"more")+" due later ("+later.map(r=>r.st.name+" "+cpsShort(r.due)).join(", ")+")");
-  if(got.length) tail.push(apPl(got.length,"revised proposal")+" received");
-  if(tail.length){
-    const det=el("details",{class:"rev-more",style:"padding:8px 16px 12px"},el("summary",{class:"muted ui"},tail.join(" · ")));
-    got.forEach(r=>det.append(el("div",{class:"row ui",style:"gap:8px;font-size:13px;margin:6px 0 0;align-items:center"},
-      el("span",{class:"pill approved"},"✓"),el("span",{style:"flex:1"},r.st.name+" — "+r.code+", due "+longDate(r.due)+(r.tr.receivedAt?", received "+cocDay(r.tr.receivedAt):"")),
-      r.tr.receivedAt?el("button",{class:"btn xs ghost",onclick:async()=>{ await revTrackWrite(r.g,r.st.id,{receivedAt:0,receivedBy:""}); redraw(); }},"Undo"):"")));
-    c.append(det);
-  }
+  const remindable=shown.filter(r=>r.act.includes("remind")&&r.code!=="C"&&r.released&&r.st.email&&!(r.tr.remindedAt&&Date.now()-r.tr.remindedAt<3*CPS_DAY));
+  c.append(el("div",{class:"cps-rem-h"},el("strong",{class:"ui"},"After the CoC — proposals and resubmissions"),
+    n("action")?el("span",{class:"pill pending"},n("action")+" need"+(n("action")===1?"s":"")+" you"):el("span",{class:"pill approved"},"Nothing needs you"),
+    overdue?el("span",{class:"pill missed"},overdue+" overdue"):"",
+    el("span",{style:"flex:1"}),
+    remindable.length>1?el("button",{class:"btn sm",onclick:()=>revRemind(remindable,sem,redraw)},"✉ Remind "+remindable.length+" (Bcc)"):""));
+  const tab=(k,label)=>el("button",{type:"button",class:F===k?"active":"",onclick:()=>{ S.revFil=k; redraw(); }},label+" ("+(k==="all"?all.length:n(k))+")");
+  c.append(el("div",{class:"rev-bar ui"},el("div",{class:"seg rev-seg"},tab("action","Needs action"),tab("waiting","Waiting"),tab("panel","With panel"),tab("done","Done"),tab("all","All")),
+    el("span",{class:"muted",style:"font-size:12.5px;flex:1;min-width:220px"},"C, CMR and MRR candidates. Mark what arrives; the hub shows who to email next. MRR decisions are read from the re-approved report.")));
+  if(!shown.length) c.append(el("div",{class:"muted ui",style:"padding:14px 16px;font-size:13px"},"Nobody here."));
+  shown.forEach(r=>c.append(revRow(r,sem,redraw)));
   return c;
+}
+function revRow(r,sem,redraw){
+  const t=r.tr;
+  const sups=[r.st.principalName||supName(r.st.principalUid),r.st.coUid?(r.st.coName||supName(r.st.coUid)):""].filter(Boolean).join(", ");
+  const showDue=r.due&&!t.submittedAt&&["CMR","MRR"].includes(r.code)&&!(r.resub&&!r.locked);
+  const ds=!showDue?null:r.days<0?{cls:"missed",txt:apPl(-r.days,"day")+" overdue"}:r.days===0?{cls:"pending",txt:"due today"}:{cls:r.days<=3?"pending":r.days<=REV_WINDOW_DAYS?"blue":"none",txt:"in "+apPl(r.days,"day")};
+  const tag=r.resub?(r.resub&&!r.locked?"MRR — with the panel":"MRR → "+(r.code||"?")):(r.code==="C"?"C — confirmed":r.code==="CMR"?"CMR — minor":"MRR — major");
+  const tagCls=r.code==="C"&&!r.resub?"approved":r.code==="NC"?"missed":r.code==="CMR"?"blue":"pending";
+  const B=(cls,label,on,title)=>el("button",{class:cls,title:title||"",onclick:on},label);
+  const acts=[];
+  const undo=(patch,msg)=>async()=>{ if(!window.confirm(msg)) return; await revTrackWrite(r.g,r.id,patch,r.round); redraw(); };
+  const markSub=async()=>{ await revTrackWrite(r.g,r.id,{submittedAt:Date.now(),submittedBy:S.userName||""},r.round); toast("Marked as submitted."); redraw(); };
+  r.act.forEach(a=>{
+    if(a==="submit") acts.push(B("btn sm"+(r.act[0]==="submit"?"":" ghost"),"✓ Mark submitted",markSub,"The proposal has arrived in Moodle"));
+    if(a==="remind") acts.push(B("btn sm"+(r.code==="C"||t.remindedAt||r.act[0]!=="remind"?" ghost":""),t.remindedAt?"✉ Remind again":"✉ Remind",()=>revRemind([r],sem,redraw),r.st.email?"Email "+r.st.email+" (supervisors copied)":"No email on file"));
+    if(a==="askcc") acts.push(B("btn sm"+(t.ccAskedAt?" ghost":""),"✉ Ask Course Coordinator to check",()=>revAskCC(r,sem,redraw)));
+    if(a==="accept") acts.push(B("btn sm"+(t.ccAskedAt?"":" ghost"),"✓ Revisions accepted",async()=>{ await revTrackWrite(r.g,r.id,{acceptedAt:Date.now(),acceptedBy:S.userName||""},r.round); toast("Marked as accepted."); redraw(); }));
+    if(a==="tell") acts.push(B("btn sm","✉ Tell the student: confirmed",()=>revTell(r,sem,redraw),"Email the student, supervisors copied"),
+      B("btn xs ghost","Mark told",async()=>{ await revTrackWrite(r.g,r.id,{toldAt:Date.now()},r.round); redraw(); },"Told another way"));
+    if(a==="panel") acts.push(B("btn sm","↻ Send to the panel…",()=>revSendToPanel(r,sem,redraw),"Reopen the report so the revised proposal is re-assessed"));
+    if(a==="chair") acts.push(B("btn sm ghost","✉ Remind "+(r.resub?.mode==="panel"?"the panel":"the Chair"),()=>revRemindChair(r,redraw)));
+    if(a==="release") acts.push(B("btn sm","Release on CoC reports →",()=>goTab("cocreports")));
+    if(a==="appeals") acts.push(B("btn sm"+(r.appeal?" ghost":""),r.appeal?"Open the appeal →":"Issue an appeal code →",()=>{ if(r.appeal) S.apOpen=r.appeal.id; goTab("appeals"); }));
+  });
+  const small=[];
+  if(r.act.includes("undoSub")) small.push(el("button",{class:"rev-undo",onclick:undo({submittedAt:0,receivedAt:0},"Undo “submitted” for "+(r.st.name||"")+"?")},"undo submitted"));
+  if(r.act.includes("undoAcc")) small.push(el("button",{class:"rev-undo",onclick:undo({acceptedAt:0,toldAt:0},"Undo “accepted” for "+(r.st.name||"")+"?")},"undo accepted"));
+  if(r.act.includes("remind")) small.push(el("button",{class:"rev-undo",title:"Reminded another way (Teams, phone)",onclick:()=>revRemind([r],sem,redraw,true)},"mark reminded"));
+  const meta=[t.remindedAt?"reminded "+relTime(t.remindedAt)+(t.remindN>1?" ("+t.remindN+"×)":""):"",t.chairRemindedAt?"Chair reminded "+relTime(t.chairRemindedAt):""].filter(Boolean).join(" · ");
+  return el("div",{class:"cps-rrow ui rev-row rev-"+r.bucket+(ds&&r.days<0?" late":"")},
+    el("div",{class:"cps-when"},
+      showDue?el("b",{},"Due "+cpsDay(r.due)):el("b",{class:"muted",style:"font-weight:600"},r.resub&&!r.locked&&r.resub.closesAt?"Panel closes "+cpsShort(apDayOf(r.resub.closesAt)):r.code==="C"?"No due date":r.due?"Was due "+cpsShort(r.due):"—"),
+      ds?el("span",{class:"pill "+ds.cls},ds.txt):""),
+    el("div",{},el("div",{style:"font-weight:650"},r.st.name||""),
+      el("div",{class:"muted",style:"font-size:12px;margin:2px 0 0"},[r.st.sid,cocPanelName({short:cocShortLabel(r.g),g:r.g})].filter(Boolean).join(" · ")),
+      sups?el("div",{class:"muted",style:"font-size:12px"},"Supervisors: "+sups):""),
+    el("div",{style:"min-width:0"},
+      el("div",{class:"row",style:"gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"pill "+tagCls},tag),r.round>1?el("span",{class:"pill none"},"round "+r.round):""),
+      el("ol",{class:"rev-steps"},...r.steps.map(([s,d])=>el("li",{class:d?"d":""},el("i",{"aria-hidden":"true"},d?"✓":""),s))),
+      el("div",{class:"rev-next"+(r.bucket==="action"?" act":"")},r.next),
+      meta?el("div",{class:"muted",style:"font-size:11.5px;margin-top:3px"},meta):""),
+    el("div",{class:"cps-act"},...acts,small.length?el("div",{class:"rev-smalls"},...small):""));
 }
 
 /* ============================================================
