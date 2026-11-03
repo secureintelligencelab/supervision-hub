@@ -1368,6 +1368,48 @@
   .rev-undo{all:unset;cursor:pointer;font-size:11.5px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:2px}
   .rev-undo:hover{color:var(--accent)}
   .rev-card .cps-rrow{grid-template-columns:minmax(130px,160px) minmax(150px,220px) minmax(0,1fr) auto}
+
+  /* reconsideration panel */
+  .ap-builderwrap{margin:10px 0 0 24px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--sunken)}
+  @media (max-width:640px){ .ap-builderwrap{margin-left:0} }
+  .ap-h5{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px}
+  .ap-joinopt{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:flex-start;width:100%;padding:10px 12px;margin:0 0 6px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);cursor:pointer}
+  .ap-joinopt.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--ring)}
+  .ap-joinopt.bad{opacity:.65;cursor:not-allowed}
+  .ap-joinopt .r{font-size:16px;color:var(--accent);line-height:1.2}
+  .ap-joinopt .b{display:flex;flex-direction:column;gap:2px;font-size:13px;min-width:0}
+  .ap-joinopt .b > span{color:var(--ink-soft)}
+  .ap-joinopt .c{color:var(--clay-ink)!important;font-weight:600}
+  .ap-joinopt .g{color:var(--green-ink)!important;font-weight:600}
+  .ap-cands{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+  .ap-cand{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);margin:0;font-weight:400;cursor:pointer}
+  .ap-cand:last-child{border-bottom:0}
+  .ap-cand.on{background:var(--accent-tint)}
+  .ap-cand.bad{cursor:not-allowed;opacity:.7}
+  .ap-cand .n{display:flex;flex-direction:column;min-width:0}
+  .ap-cand .n .r{font-size:12px;color:var(--ink-soft)}
+  .ap-cand .a{display:flex;gap:4px}
+  .ap-cand .l{font-size:12px;color:var(--ink-soft);white-space:nowrap}
+  .ap-cand .c{grid-column:2 / -1;font-size:12px;color:var(--clay-ink);font-weight:600}
+  @media (max-width:560px){ .ap-cand{grid-template-columns:auto minmax(0,1fr)} .ap-cand .a,.ap-cand .l{grid-column:2} }
+  .ap-addnew{margin:8px 0 0;font-size:13px}
+  .ap-addnew summary{cursor:pointer;color:var(--accent);font-weight:600}
+  .ap-addnew .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ap-addnew input,.ap-addnew select{margin:0}
+  .ap-selbox{margin-top:12px;padding:10px 12px;border:1px dashed var(--line-strong);border-radius:10px;background:var(--paper-2)}
+  .ap-selrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)}
+  .ap-selrow:first-of-type{border-top:0}
+  .ap-when{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px}
+  .ap-when .field{margin:0}
+  @media (max-width:560px){ .ap-when{grid-template-columns:1fr} }
+  .ap-psum{font-size:13.5px}
+  .ap-pmem{display:flex;gap:6px;flex-wrap:wrap}
+  .ap-pchip2{display:inline-flex;flex-direction:column;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper-2);min-width:0}
+  .ap-pchip2.chair{border-color:var(--accent)}
+  .ap-pchip2 .t{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+  .ap-pchip2 .o{font-size:12px;color:var(--ink-soft)}
+  .ap-pwhen{margin-top:8px;font-weight:600}
+  .ap-panelbox{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--sunken);margin:0 0 14px}
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -3178,6 +3220,7 @@ function seedDemo(){
       cand:{st5:{present:"Y",det:{outcome:"NC",finalMark:"7"}},st6:{present:"Y",det:{outcome:"CMR",finalMark:"14",dueBy:ymdIn(3)}},
             st7:{present:"Y",det:{outcome:"MRR",finalMark:"11",dueBy:ymdIn(-2)}},st8:{present:"Y",det:{outcome:"C",finalMark:"17"}}},
       release:{st5:rel("NC"),st6:rel("CMR"),st7:rel("MRR"),st8:rel("C")},history:[],updatedAt:dayAgo(3)};
+    mem.cocReports["pg3"].snap=cocSnapOf(mem.panelGroups["pg3"]);
     mem.staffKeys["cocout:st5"]=out.st5; mem.staffKeys["cocout:st6"]=out.st6; mem.staffKeys["cocout:st7"]=out.st7;
     mem.staffKeys["config:appeals"]={kind:"config",officeEmail:"research.office@cihe.edu.au",at:dayAgo(30),officers:{
       cc:{uid:"supE",name:"Dr Wong",email:"e.wong@uni.edu"},hos:{uid:"supB",name:"Dr Jones",email:"b.jones@uni.edu"},
@@ -11003,12 +11046,14 @@ async function afterLogin(){
       return list;
     }),
     reloadStaffCaches(),
-    apLoadCfg()
+    apLoadCfg(true),
+    /* staff other than the office: any appeals sent to them? Asked in the
+       same round trip as everything else, so sign-in waits no longer. */
+    S.role==="admin"?Promise.resolve(null):DB.list("appeals",{officerUids:{$contains:S.uid}}).then(r=>{ S.apMineN=r.length; },()=>{ S.apMineN=0; })
   ]);
   /* "CoC appeals" in the menu: the office always; anyone else who holds an
      appeal office, or has an appeal sent to them (a past holder). */
-  S.apShow=S.role==="admin"||apHoldsOffice(S.uid);
-  if(!S.apShow){ try{ S.apShow=(await DB.list("appeals",{officerUids:{$contains:S.uid}})).length>0; }catch(e){ S.apShow=false; } }
+  S.apShow=S.role==="admin"||apHoldsOffice(S.uid)||(S.apMineN||0)>0;
   S.apOpen=null;
   S.semesters=sems;
   S.semesters.sort((a,b)=>(a.label>b.label?-1:1));
@@ -11033,12 +11078,13 @@ async function studentLookup(sid,remember){
     if(remember!==undefined){
       try{ if(remember) window.localStorage.setItem("sh-sid",canonical); else window.localStorage.removeItem("sh-sid"); }catch(e){}
     }
-    const sems=await DB.list("semesters");
+    /* the appeal offices (for the office's address on an NC outcome) come
+       in the same round trip as the semesters */
+    const [sems]=await Promise.all([DB.list("semesters"),apLoadCfg()]);
     /* The portal never signs in, so this cache is empty here. The switches
        that live on a semester document are read through it, so fill it
        before drawing anything that consults one. */
     S.semesters=sems;
-    await apLoadCfg();
     document.body.innerHTML="";
     await renderStudentView(canonical,matches,sems);
   }catch(e){
@@ -11092,7 +11138,7 @@ function syncNav(){
   if(g) g.textContent=info?info.group:"";
   document.body.classList.remove("nav-open");
 }
-function goTab(id){ S.tab=id; if(id!=="appeals") S.apOpen=null; drawMain(); try{ window.scrollTo({top:0}); }catch(e){} }
+function goTab(id,keep){ S.tab=id; if(!keep) S.apOpen=null; drawMain(); try{ window.scrollTo({top:0}); }catch(e){} }
 
 /* ---- CoC panel sub-menu (staff) ----
    The items mirror the sections on the CoC panel screen, in the same
@@ -22714,6 +22760,7 @@ async function viewCocSummary(v){
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(redraw)); v.append(bar);
   if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
   const cocP=prefetch(Promise.all([DB.list("cocReports",{semesterId:S.activeSem}),DB.list("cocMarks",{semesterId:S.activeSem})]));
+  const apsP=DB.list("appeals",{semesterId:S.activeSem}).catch(()=>[]);
   let students,groups,reps=[],allMarks=[],cocErr=null;
   try{ [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]); }
   catch(err){ v.append(panelRuleHelp(err)); return; }
@@ -22758,8 +22805,7 @@ async function viewCocSummary(v){
   if(M.soonRows.length||M.marksRows.length) v.append(cpsRemindCard(M,sem,redraw));
   else v.append(noticeBar("green",M.nextDay?"No one needs a reminder right now. The next CoC is "+cpsNextLine(M)+".":"No one needs a reminder right now — no CoC is coming up and no marks are outstanding."));
   /* students whose revised proposal is overdue or due soon */
-  { let aps=[]; try{ aps=await DB.list("appeals",{semesterId:S.activeSem}); }catch(e){}
-    const rc=revDueCard(groups,reps,students,sem,redraw,aps); if(rc) v.append(rc); }
+  { const aps=await apsP; const rc=revDueCard(groups,reps,students,sem,redraw,aps); if(rc) v.append(rc); }
 
   /* Assessment form links: the online form is the Supervision Hub; the
      Word Form Link is kept on the semester, and a panel can have its own. */
@@ -23107,16 +23153,17 @@ const apHist=(rec,what)=>[...(rec?.history||[]),{at:Date.now(),by:S.userName||S.
 const apPl=(n,w)=>n+" "+w+(n===1?"":"s");
 
 /* ---- the offices ------------------------------------------------------ */
-async function apLoadCfg(){
+async function apLoadCfg(force){
+  if(!force&&S.apCfg&&S.apCfgAt&&Date.now()-S.apCfgAt<60000) return S.apCfg;
   try{ const d=await DB.getStaffKey("config:appeals"); S.apCfg=d&&d.kind==="config"?d:{officers:{}}; }
   catch(e){ console.warn("appeal offices unavailable",e); S.apCfg=S.apCfg||{officers:{}}; }
-  S.apCfg.officers=S.apCfg.officers||{};
+  S.apCfg.officers=S.apCfg.officers||{}; S.apCfgAt=Date.now();
   return S.apCfg;
 }
 async function apSaveCfg(officers,extra={}){
   const data={kind:"config",officers,officeEmail:apT(extra.officeEmail),at:Date.now(),by:S.userName||""};
   await DB.batchWrite([{type:"set",coll:"staffKeys",id:"config:appeals",merge:false,data}]);
-  S.apCfg=data;
+  S.apCfg=data; S.apCfgAt=Date.now();
 }
 const apAllStaff=()=>[...(S.admins||[]),...(S.supervisors||[]),...(S.panellists||[])];
 const apStaff=uid=>uid?apAllStaff().find(u=>u.id===uid)||null:null;
@@ -23308,6 +23355,7 @@ async function apOpen(code,sid){
     toast("Too many attempts. Try again in "+Math.max(1,Math.ceil((g.until-Date.now())/60000))+" minutes.",true); return; }
   if(DEMO) seedDemo();
   let pt=null;
+  const semsP=DB.list("semesters").catch(()=>null);   // in parallel with the appeal
   try{ pt=await apGetPortal(c); }
   catch(e){ console.warn("appeal unreadable",e); toast("Appeals aren't switched on for this site yet — please contact the MRes office.",true); return; }
   if(!pt||pt.kind!=="appeal"||normSid(pt.sid)!==normSid(s)){
@@ -23318,7 +23366,7 @@ async function apOpen(code,sid){
   }
   apGateSave({});
   S.studentSid=pt.sid; S.studentName=pt.name||"";
-  try{ const sems=await DB.list("semesters"); S.semesters=sems; }catch(e){}
+  { const sems=await semsP; if(sems) S.semesters=sems; }
   document.body.innerHTML="";
   renderAppealStudent(pt);
 }
@@ -23760,7 +23808,8 @@ function apReadOnly(pt,opts={}){
   w.append(h("3","Statement"));
   AP_STMT.forEach(q=>w.append(el("div",{class:"ap-stmt"},el("div",{class:"t"},q.t),el("div",{class:"ap-pre"},apT(f.stmt?.[q.k])?cocLinkify(f.stmt[q.k]):el("span",{class:"muted"},"—")))));
   w.append(h("4","Supporting evidence"));
-  w.append(kv([["Outcome notice","On file in the hub"],["Panel feedback","On file in the hub"],
+  const onFile=opts.noticeShown?"On file in the hub \u2014 shown above":"On file in the hub";
+  w.append(kv([["Outcome notice",onFile],["Panel feedback",onFile],
     ["Revised proposal (tracked changes)",f.revisedNA?"Not applicable (no revised proposal submitted)":link(f.revisedLink)],
     ["Resubmission correspondence",link(f.corrLink)||"—"],
     ["Presentation recording",f.attach?.recording?"Requested to be considered (PR72 3.6.2, 3.9.2)":"Not requested"]]));
@@ -23805,17 +23854,19 @@ async function viewAppeals(v){
   const admin=S.role==="admin";
   v.append(el("div",{class:"section-title"},el("div",{},
     el("div",{class:"eyebrow ui"},"Confirmation of Candidature"),el("h2",{},admin?"CoC outcome appeals":"CoC appeals sent to you"))));
-  await apLoadCfg();
-  if(!admin) return apOfficerList(v,redraw);
+  if(!admin){ await apLoadCfg(); return apOfficerList(v,redraw); }
   const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(redraw)); v.append(bar);
   if(!S.activeSem){ v.append(emptyState("No semester selected","Create a semester first.")); return; }
   const sem=activeSemester();
   let students=[],groups=[],reps=[],recs=[],pts=[],apErr=null;
-  try{ [students,groups]=await Promise.all([DB.list("students",{semesterId:S.activeSem}),DB.list("panelGroups",{semesterId:S.activeSem})]); }
-  catch(err){ v.append(panelRuleHelp(err)); return; }
-  try{ reps=await DB.list("cocReports",{semesterId:S.activeSem}); }catch(e){ console.warn("reports unavailable",e); }
-  try{ [recs,pts]=await Promise.all([DB.list("appeals",{semesterId:S.activeSem}),DB.list("appealPortal",{semesterId:S.activeSem})]); }
-  catch(err){ apErr=err; }
+  /* Every read this screen needs goes out at once: one round trip, not four. */
+  const sid=S.activeSem, ok=p=>p.then(r=>({r}),e=>({e}));
+  const [cfgR,stuR,grpR,repR,recR,ptR]=await Promise.all([ok(apLoadCfg()),ok(DB.list("students",{semesterId:sid})),ok(DB.list("panelGroups",{semesterId:sid})),
+    ok(DB.list("cocReports",{semesterId:sid})),ok(DB.list("appeals",{semesterId:sid})),ok(DB.list("appealPortal",{semesterId:sid}))]);
+  if(stuR.e||grpR.e){ v.append(panelRuleHelp(stuR.e||grpR.e)); return; }
+  students=stuR.r; groups=grpR.r;
+  if(repR.e) console.warn("reports unavailable",repR.e); else reps=repR.r;
+  if(recR.e||ptR.e) apErr=recR.e||ptR.e; else{ recs=recR.r; pts=ptR.r; }
   if(!v.isConnected) return;
 
   v.append(cocGuide("appeals","How an appeal runs here",[
@@ -24064,12 +24115,25 @@ async function apDetailView(v,code,back){
   const admin=S.role==="admin";
   const reload=()=>apDetailView(v,code,back);
   let rec,pt,st=null,groups=[];
-  try{ [rec,pt]=await Promise.all([apGetRec(code),apGetPortal(code)]); }
-  catch(err){ v.append(apRuleHelp(err)); return; }
+  /* Two round trips: the appeal itself (with the offices), then everything
+     it points to, together. */
+  try{ [rec,pt]=await Promise.all([apGetRec(code),apGetPortal(code),apLoadCfg()]); }
+  catch(err){ if(!v.isConnected) return;
+    v.append(/permission/i.test(err?.message||"")&&S.role!=="admin"?emptyState("This appeal isn\u2019t with you any more","It may have been referred to another officer."):apRuleHelp(err),
+      el("button",{class:"btn sm",onclick:back},"\u2190 Back")); return; }
   if(!rec||!pt){ v.append(emptyState("Appeal not found","It may have been deleted."),el("button",{class:"btn sm",onclick:back},"← Back")); return; }
-  try{ st=await DB.get("students",rec.studentDocId); }catch(e){}
-  try{ groups=await DB.list("panelGroups",{semesterId:rec.semesterId}); }catch(e){}
-  await apLoadCfg();
+  let keyNotice=null, semStudents=[];
+  [st,groups,keyNotice,semStudents]=await Promise.all([DB.get("students",rec.studentDocId).catch(()=>null),
+    DB.list("panelGroups",{semesterId:rec.semesterId}).catch(()=>[]),
+    DB.getStaffKey(cocOutKeyOf(rec.studentDocId)).then(k=>k?.kind==="cocout"?k:null,()=>null),
+    DB.list("students",{semesterId:rec.semesterId}).catch(()=>[])]);
+  /* The outcome notice the student received — outcome, conditions and the
+     panel's feedback, never the marks. From the panel record (readable by
+     signed-in staff), else the student's own published copy. */
+  let notice=null;
+  { const g=groups.find(x=>x.id===rec.groupId&&x.outcomesOut?.[rec.studentDocId])
+      ||groups.filter(x=>x.outcomesOut?.[rec.studentDocId]).sort((a,b)=>(b.outcomesOut[rec.studentDocId].releasedAt||0)-(a.outcomesOut[rec.studentDocId].releasedAt||0))[0];
+    notice=g?.outcomesOut?.[rec.studentDocId]||keyNotice||null; }
   if(!v.isConnected) return;
   refreshApBadge();
   const sem=semOf(rec.semesterId)||activeSemester();
@@ -24100,25 +24164,32 @@ async function apDetailView(v,code,back){
       el("div",{class:"row",style:"gap:6px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap"},
         admin?el("button",{class:"btn sm ghost",title:"Send this appeal back to the start, e.g. to test it again",
           onclick:()=>apResetDialog({rec,pt,sem,reload})},"↺ Reset"):"",
-        el("button",{class:"btn sm",onclick:()=>apDownload(pt,rec,sem)},"⤓ Word form")))));
+        el("button",{class:"btn sm",onclick:()=>apDownload(pt,rec,sem,notice)},"⤓ Word form")))));
 
   /* where it has got to, then the work on the left and the facts on the right */
   v.append(apTracker(rec,pt));
   const mainCol=el("div",{class:"ap-maincol"}), sideCol=el("aside",{class:"ap-side","aria-label":"Appeal facts"});
   v.append(el("div",{class:"ap-layout"},mainCol,sideCol));
-  sideCol.append(...apSidePanel({rec,pt,admin}));
+  sideCol.append(...apSidePanel({rec,pt,admin,notice}));
 
   /* the next step, for whoever is looking */
-  const next=apNextCard({rec,pt,st,groups,sem,admin,isCC,isDM,saveRec,savePortal,reload});
+  const next=apNextCard({rec,pt,st,groups,students:semStudents,sem,admin,isCC,isDM,saveRec,savePortal,reload});
   if(next) mainCol.append(next);
 
   /* the student's appeal */
   const relNew=pt.relodgedAt&&pt.relodgedAt>(rec.seenRelodge||0)&&rec.stage!=="open";
   if(relNew&&admin){ mainCol.append(noticeBar("blue","The student re-lodged on "+cocDT(pt.relodgedAt)+" after your request.",
     el("button",{class:"btn xs",onclick:async()=>{ await saveRec({seenRelodge:pt.relodgedAt},"re-lodged form noted"); if(pt.status==="lodged"&&rec.stage!=="lodged"&&rec.stage!=="open") await savePortal({status:"review"}); reload(); }},"Mark as seen"))); }
+  mainCol.append(apFold("notice","The outcome and panel feedback the student received",
+    notice?[(notice.outcome?.code||"")+" \u2014 "+(notice.outcome?.label||""),notice.panel,notice.releasedAt?"released "+cocDay(notice.releasedAt):""].filter(Boolean).join(" \u00B7 "):"Not on file in the hub",
+    notice?el("div",{},cocOutcomeView(notice),
+      el("p",{class:"muted",style:"margin:10px 0 0;font-size:12.5px"},"Exactly what the student was sent: the outcome, conditions and the panel\u2019s consolidated feedback"+((notice.assessors||[]).length?", with each assessor\u2019s comments (anonymised)":"")+". Marks are not included."+
+        (admin?" For the full examination report, download it from CoC reports and add it under \u201CEvidence added by the office\u201D.":" The MRes office can add the full examination report as an evidence link if you need it."))):
+      el("p",{class:"muted",style:"margin:0"},"The hub has no released outcome notice for this student (for example, an outcome notified on paper). "+(admin?"Add the notice and the panel feedback as links under \u201CEvidence added by the office\u201D.":"Ask the MRes office to add it as an evidence link.")),
+    !admin));
   mainCol.append(apFold("student","The student’s appeal (Sections 1–6)",
     pt.lodgedAt?"Lodged "+cocDT(pt.lodgedAt)+(pt.relodgedAt?" · re-lodged "+cocDT(pt.relodgedAt):""):"Not lodged yet — "+({issued:"not started",draft:"draft saved "+(pt.savedAt?relTime(pt.savedAt):""),returned:"with the student"}[pt.status]||pt.status),
-    apReadOnly(pt,{noOffice:true}),true));
+    apReadOnly(pt,{noOffice:true,noticeShown:!!notice}),true));
 
   /* evidence added by the office, and requests to the student */
   mainCol.append(apFold("evidence","Evidence added by the office, and requests to the student",
@@ -24168,7 +24239,8 @@ function apNextCard(ctx){
     if(isDM) return box("Your decision as "+apOfficeLabel(rec.dmRole)+" (7D)",rec.cc?.det==="substantiated"?"The Course Coordinator found the grounds substantiated and referred the appeal to you.":"The appeal was referred to you as decision maker"+(rec.coi?.cc?.conflicted?" because the Course Coordinator is conflicted":"")+".",apDMForm(ctx));
     if(admin) return box("With the "+apOfficeLabel(rec.dmRole),"Sent to "+(rec.officers[rec.dmRole]?.name||"the decision maker")+".",apChaseBtn(ctx,"dm"));
   }
-  if(rec.stage==="decided"&&admin) return box("Notify the student and close (7E)",(AP_RESULTS[rec.result]||{}).label||"",apNotifyForm(ctx));
+  if(rec.stage==="decided"&&admin) return box(rec.result==="newpanel"&&!rec.panelGid?"Set up the reconsideration panel, then notify the student (7E)":"Notify the student and close (7E)",(AP_RESULTS[rec.result]||{}).label||"",
+    rec.result==="newpanel"?apPanelOfficeBox(ctx):"",apNotifyForm(ctx));
   if(["closed","notaccepted","withdrawn"].includes(rec.stage)) return el("div",{class:"card ap-next done"},el("div",{class:"ap-nexth"},apStagePill(rec.stage),
     el("strong",{},(AP_RESULTS[rec.result]||{}).label||"")),rec.e7?.notifiedOn?el("p",{class:"muted",style:"margin:6px 0 0;font-size:13.5px"},"Student notified "+apLong(rec.e7.notifiedOn)+(rec.e7.notifiedBy?" by "+rec.e7.notifiedBy:"")+"."):"");
   return null;
@@ -24345,31 +24417,40 @@ function apDMForm(ctx){
   if(d.decision==="upheld") up.checked=true; if(d.decision==="newpanel") np.checked=true;
   const ind=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); ind.checked=!!d.independent;
   const indRow=el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:6px 0 0 24px"},ind,el("span",{},"Members of the new panel meet QA72 5.3.1 (independent, no conflict of interest, not supervisors) and none sat on the original panel."));
-  const paint=()=>{ indRow.style.display=np.checked?"":"none"; }; up.onchange=paint; np.onchange=paint; paint();
+  const builder=ctx.st?apPanelBuilder({rec,st:ctx.st,groups:ctx.groups||[],students:ctx.students||[],init:d.panel||null,
+    othersP:DB.list("appeals",S.role==="admin"?{semesterId:rec.semesterId}:{officerUids:{$contains:S.uid}}).catch(()=>[])}):null;
+  const builderBox=el("div",{class:"ap-builderwrap"},builder?builder.node:el("p",{class:"muted"},"The student record couldn\u2019t be loaded, so the panel can\u2019t be formed here \u2014 the MRes office will set it up."));
+  const paint=()=>{ indRow.style.display=np.checked?"":"none"; builderBox.style.display=np.checked?"":"none"; }; up.onchange=paint; np.onchange=paint; paint();
   const reasons=el("textarea",{rows:"8",placeholder:"State the reasons for the decision and any arrangements for the new panel, including timing."}); reasons.value=d.reasons||"";
   W.append(el("div",{class:"ap-subh"},"Decision maker"),el("div",{class:"ap-box"},apBox(true),el("span",{},rec.dmRole==="adr"?"Associate Dean Research (Head of School conflicted)":"Head of School ("+(rec.cc?.det==="substantiated"?"grounds substantiated":"Course Coordinator conflicted")+")")),
     el("div",{class:"ap-subh"},"Decision"),
     el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 6px"},up,el("span",{},el("b",{},"Original Not Confirmed outcome upheld."))),
     el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex"},np,el("span",{},el("b",{},"Newly constituted CoC Panel convened"),", to reconsider the candidature.")),
-    indRow,
+    indRow,builderBox,
     el("div",{class:"field",style:"margin-top:10px"},el("label",{},"Reasons and directions"),reasons),
     el("div",{class:"row",style:"gap:8px;margin-top:14px;flex-wrap:wrap"},
       el("button",{class:"btn",onclick:async()=>{
         const decision=up.checked?"upheld":np.checked?"newpanel":"";
         if(!decision){ toast("Choose a decision.",true); return; }
+        if(decision==="newpanel"&&builder){ const pr=builder.problems(); if(pr.length){ toast("Reconsideration panel: "+pr[0],true); builderBox.scrollIntoView({behavior:"smooth",block:"center"}); return; } }
         if(decision==="newpanel"&&!ind.checked){ toast("Confirm the new panel meets QA72 5.3.1.",true); return; }
         if(!apT(reasons.value)){ toast("State the reasons for the decision.",true); return; }
         const sig=await cocSignDialog({title:"Sign the decision",name:S.userName||"",
           intro:"Your decision is final (PR72 3.10.4). The office notifies the student.",
           declaration:"I have considered the appeal, the evidence"+(rec.cc?.sign?" and the Course Coordinator’s findings":"")+", and I have no conflict of interest in this appeal.",saveLabel:"Sign decision"});
         if(!sig) return;
-        await saveRec({dm:{role:rec.dmRole,decision,independent:decision==="newpanel"?ind.checked:false,reasons:apT(reasons.value),sign:sig,at:Date.now(),by:S.userName||""},
+        await saveRec({dm:{role:rec.dmRole,decision,independent:decision==="newpanel"?ind.checked:false,reasons:apT(reasons.value),sign:sig,at:Date.now(),by:S.userName||"",
+            panel:decision==="newpanel"&&builder?builder.get():null},
           stage:"decided",result:decision},apOfficeLabel(rec.dmRole)+" signed the decision: "+(AP_RESULTS[decision]||{}).short);
         toast("Decision signed.");
-        apMailOffice(rec,"The "+apOfficeLabel(rec.dmRole)+" has decided: "+(AP_RESULTS[decision]||{}).label+". Please notify the student and close it (7E).");
+        apMailOffice(rec,"The "+apOfficeLabel(rec.dmRole)+" has decided: "+(AP_RESULTS[decision]||{}).label+"."+
+          (decision==="newpanel"&&builder?"\n\nProposed reconsideration panel: "+(builder.get().mode==="join"?"join "+(builder.get().joinLabel||"an existing panel")+". ":"")+
+            (builder.get().members||[]).map(m=>(m.name||m.email)+(availKey(m)===builder.get().chairKey?" (Chair)":"")).join(", ")+" \u2014 "+apWhen(builder.get())+
+            ".\nPlease set the panel up in the hub (one click on the appeal), then notify the student (7E).":" Please notify the student and close it (7E)."));
         reload();
       }},"Sign decision"),
-      el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({dm:{...d,role:rec.dmRole,decision:up.checked?"upheld":np.checked?"newpanel":"",independent:ind.checked,reasons:apT(reasons.value)}},"decision draft saved"); toast("Draft saved."); }},"Save draft"),
+      el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({dm:{...d,role:rec.dmRole,decision:up.checked?"upheld":np.checked?"newpanel":"",independent:ind.checked,reasons:apT(reasons.value),
+        panel:builder?builder.get():(d.panel||null)}},"decision draft saved"); toast("Draft saved."); }},"Save draft"),
       el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"Ask the student for more…")));
   return W;
 }
@@ -24404,7 +24485,9 @@ function apNotifyForm(ctx){
   const res=AP_RESULTS[rec.result]||{label:rec.result,text:""};
   const reasons=rec.result==="dismissed"?rec.cc?.findings:rec.result==="notaccepted"?rec.notAccepted?.text:rec.dm?.reasons;
   const txt=el("textarea",{rows:"8"}); txt.value=e.studentText||(res.text+(apT(reasons)?"\n\nReasons:\n"+apT(reasons):"")+
-    (rec.result==="newpanel"?"\n\nThe MRes office will contact you with the arrangements for the new panel.":"")+
+    (rec.result==="newpanel"?(()=>{ const g=(ctx.groups||[]).find(x=>x.id===rec.panelGid); const ss=g?groupSessions(g).find(x=>x.id===g.chosenSessionId):null;
+      const w=ss?.date?apWhen(ss):rec.dm?.panel?.date?apWhen(rec.dm.panel):"";
+      return "\n\nYour candidature will be reconsidered by a newly constituted CoC Panel"+(w?", scheduled for "+w:"")+". The MRes office will confirm the arrangements, and your presentation time will appear in the student portal."; })():"")+
     "\n\nThe decision reached through this process is final (PR72 3.10.4).");
   const by=el("input",{value:e.notifiedBy||S.userName||""});
   const on=el("input",{type:"date",value:e.notifiedOn||apToday()});
@@ -24524,6 +24607,8 @@ function apRecordRO7D(rec){
   return el("div",{},el("div",{},"Decision maker: "+(rec.dmRole==="adr"?"Associate Dean Research (Head of School conflicted)":"Head of School")),
     el("div",{class:"ap-subh"},"Decision"),el("div",{},d.decision?(AP_RESULTS[d.decision]||{}).label+(d.decision==="newpanel"&&d.independent?" — members meet QA72 5.3.1 and none sat on the original panel":""):el("span",{class:"muted"},"—")),
     el("div",{class:"ap-subh"},"Reasons and directions"),el("div",{class:"ap-pre ap-quote"},d.reasons||el("span",{class:"muted"},"—")),
+    d.decision==="newpanel"||d.panel?el("div",{},el("div",{class:"ap-subh"},"Reconsideration panel"+(rec.panelGid?" \u2014 set up":d.panel?" \u2014 proposed":"")),
+      apPanelSummary(d.panel,{created:rec.panelGid?"Set up by the office as \u201C"+(rec.panelLabel||"Reconsideration panel")+"\u201D.":""})):"",
     el("div",{class:"ap-subh"},"Signature"),d.sign?cocSigView(d.sign):el("span",{class:"muted"},"Not signed"));
 }
 function apRecordRO7E(rec){
@@ -24744,7 +24829,7 @@ function apTracker(rec,pt){
 }
 
 /* ---- the side panel on one appeal ---- */
-function apSidePanel({rec,pt,admin}){
+function apSidePanel({rec,pt,admin,notice}){
   const pre=pt.pre||{}, a7=rec.a7||{}, out=[];
   const card=(t,...kids)=>el("section",{class:"card ap-sidecard"},el("h4",{},t),...kids);
   const row=(k,v)=>el("div",{class:"ap-srow"},el("span",{class:"k"},k),el("span",{class:"v"},v||el("span",{class:"muted"},"—")));
@@ -24768,7 +24853,9 @@ function apSidePanel({rec,pt,admin}){
   const lk=(id,label,url)=>el("div",{class:"ap-slink"},el("span",{class:"id"},id),
     apLinkOk(url)?el("a",{href:url,target:"_blank",rel:"noopener",title:url},label||url):el("span",{class:"muted"},(label||"")+(url?" (bad link)":"")));
   const evs=[...(pt.evidence||[]),...(pt.officeEvidence||[])];
+  const jump=()=>{ const d=document.querySelector("details.ap-fold"); if(d){ d.open=true; d.scrollIntoView({behavior:"smooth",block:"start"}); } };
   out.push(card("Evidence",
+    el("div",{class:"ap-slink"},el("span",{class:"id"},"PF"),notice?el("a",{href:"#",onclick:e=>{ e.preventDefault(); jump(); }},"Outcome notice & panel feedback"):el("span",{class:"muted"},"Outcome notice not on file")),
     f.revisedNA?el("div",{class:"ap-slink"},el("span",{class:"id"},"RP"),el("span",{class:"muted"},"No revised proposal (not applicable)")):
       f.revisedLink?lk("RP","Revised proposal (tracked changes)",f.revisedLink):el("div",{class:"muted",style:"font-size:13px"},"No revised proposal link yet"),
     f.corrLink?lk("RC","Resubmission correspondence",f.corrLink):"",
@@ -24785,6 +24872,280 @@ function apSidePanel({rec,pt,admin}){
 }
 
 /* ============================================================
+   17F. RECONSIDERATION PANEL after a successful appeal (QA72 5.3.1, 5.6.3)
+   When the Head of School or Associate Dean Research convenes a newly
+   constituted CoC Panel, they form it as part of the decision:
+     · assessors from the people who already assess (staff, and externals
+       who have sat on a panel), the student's discipline first;
+     · anyone with a conflict is shown but can't be picked: the student's
+       supervisors, anyone who sat on their original panel, and the
+       officers on the appeal itself;
+     · people not on the list can be added (name, email, organisation);
+     · a Chair, a date and a time.
+   Successful appeals share a panel where they can: an existing
+   reconsideration panel (or another appeal's proposal) whose members have
+   no conflict with this student is offered first.
+   The proposal is kept on the decision (appeals/{code}.dm.panel). The
+   office then creates it — or adds the student to the shared panel — in one
+   click; it is an ordinary panel from then on (panelGroups, flagged
+   reconsider:true), finalised, released and marked on the same screens and
+   the same examination report form as every other panel.
+   ============================================================ */
+const AP_PANEL_USUAL=3;
+/* Everyone who could sit: staff who assess, and externals already on a panel. */
+function apPanelPool(groups,students){
+  const pool=new Map();
+  assessorStaff().forEach(u=>{
+    const m={kind:"internal",uid:u.id,name:u.name||u.email||"",email:u.email||"",mobile:u.mobile||"",org:"Internal"};
+    pool.set(availKey(m),{m,areas:new Set([u.area].filter(Boolean)),panels:0,role:staffRoleLabel(u)+(u.pendingLogin?" · no login yet":"")});
+  });
+  (groups||[]).forEach(g=>{
+    const ga=cocPanelArea(g,students||[]);
+    groupMembers(g).forEach(m=>{
+      const k=availKey(m); let c=pool.get(k);
+      if(!c){ if(m.kind!=="external") return; c={m:cleanMember(m),areas:new Set(),panels:0,role:"External"+(m.org&&m.org!=="External"?" · "+m.org:"")}; pool.set(k,c); }
+      c.panels++; if(m.kind==="external"&&ga&&ga!=="Mixed") c.areas.add(ga);
+    });
+  });
+  return [...pool.values()];
+}
+/* Why this person can't sit for this student (empty = free to). */
+function apMemberConflicts(m,st,groups,rec){
+  const k=availKey(m), why=[];
+  if(m.kind==="internal"&&m.uid){
+    if(st.principalUid===m.uid) why.push("principal supervisor");
+    if(st.coUid===m.uid) why.push("co-supervisor");
+    if(rec&&[rec.ccUid,rec.dmUid,...(rec.officerUids||[])].includes(m.uid)) why.push("an officer on this appeal");
+  }
+  (groups||[]).filter(g=>!g.reconsider&&(groupStudents(g).includes(st.id)||g.outcomesOut?.[st.id]))
+    .forEach(g=>{ if(groupMembers(g).some(x=>availKey(x)===k)) why.push("sat on the original panel ("+(g.label||"Panel")+")"); });
+  return [...new Set(why)];
+}
+/* Panels this student could join: reconsideration panels already set up,
+   and other appeals' proposals not yet created, still to sit. */
+function apJoinOptions(rec,st,groups,otherRecs){
+  const today=apToday(), out=[];
+  (groups||[]).filter(g=>g.reconsider&&!groupStudents(g).includes(st.id)).forEach(g=>{
+    const s=groupSessions(g).find(x=>x.id===g.chosenSessionId)||groupSessions(g)[0]||{};
+    if(s.date&&s.date<today) return;
+    const ms=groupMembers(g);
+    out.push({type:"group",id:g.id,label:g.label||"Reconsideration panel",members:ms,chairKey:g.chairKey,date:s.date||"",start:s.start||"",end:s.end||"",
+      n:groupStudents(g).length,conf:ms.flatMap(m=>apMemberConflicts(m,st,groups,rec).map(w=>(m.name||"")+": "+w))});
+  });
+  (otherRecs||[]).filter(r=>r.id!==rec.id&&r.dm?.panel&&r.dm.panel.mode==="new"&&!r.panelGid&&["dm","decided","closed"].includes(r.stage)&&(r.result||r.dm.decision)==="newpanel")
+    .forEach(r=>{ const p=r.dm.panel; if(p.date&&p.date<today) return;
+      out.push({type:"proposal",id:r.id,label:"Proposed for "+(r.name||"another appeal"),members:p.members||[],chairKey:p.chairKey,date:p.date,start:p.start,end:p.end,n:1,
+        conf:(p.members||[]).flatMap(m=>apMemberConflicts(m,st,groups,rec).map(w=>(m.name||"")+": "+w))}); });
+  return out.sort((a,b)=>(a.conf.length?1:0)-(b.conf.length?1:0)||String(a.date).localeCompare(String(b.date)));
+}
+const apWhen=p=>p?.date?[weekdayOf(p.date),longDate(p.date)+(p.start?", "+clockRange(p.start,p.end):"")].filter(Boolean).join(" "):"date to be set";
+const apChairOf=p=>(p?.members||[]).find(m=>availKey(m)===p.chairKey)||null;
+function apPanelSummary(p,opts={}){
+  if(!p) return el("span",{class:"muted"},"No panel proposed.");
+  const ch=apChairOf(p);
+  return el("div",{class:"ap-psum"},
+    p.mode==="join"?el("div",{class:"ap-flag soft",style:"margin:0 0 8px"},el("b",{},"Join: "),p.joinLabel||"an existing reconsideration panel"):"",
+    el("div",{class:"ap-pmem"},...(p.members||[]).map(m=>el("span",{class:"ap-pchip2"+(availKey(m)===p.chairKey?" chair":"")},
+      el("b",{},m.name||m.email||""),availKey(m)===p.chairKey?el("span",{class:"t"},"Chair"):"",
+      el("span",{class:"o"},m.kind==="external"?(m.org||"External")+(m.email?" · "+m.email:""):"Internal")))),
+    el("div",{class:"ap-pwhen"},"📅 ",apWhen(p),p.link?el("span",{}," · ",el("a",{href:linkHref(p.link),target:"_blank",rel:"noopener"},"meeting link")):""),
+    opts.created?el("div",{class:"muted",style:"font-size:12.5px;margin-top:4px"},opts.created):"");
+}
+
+/* ---- the builder, inside the decision form ---- */
+function apPanelBuilder({rec,st,groups,students,init,othersP,onChange}){
+  const p=JSON.parse(JSON.stringify(init||{}));
+  p.mode=p.mode||"new"; p.members=Array.isArray(p.members)?p.members:[]; p.area=p.area??(st?.area||"");
+  const pool=apPanelPool(groups,students);
+  let others=[], loading=true, q="";
+  const W=el("div",{class:"ap-builder"});
+  const changed=()=>{ onChange&&onChange(p); };
+  function draw(){
+    W.replaceChildren();
+    W.append(el("div",{class:"ap-subh",style:"margin-top:0"},"Form the reconsideration panel"),
+      el("p",{class:"muted",style:"margin:0 0 10px;font-size:13px"},"QA72 5.3.1: every member independent, with no conflict of interest, not a supervisor, and nobody who sat on the original panel. Three assessors is usual; one of them chairs. "+
+        "The MRes office sets the panel up from this and releases it to the assessors; it then appears under CoC panels and CoC assessment like any other panel."));
+    /* 1. join a panel other successful appeals share */
+    const opts=apJoinOptions(rec,st,groups,others);
+    const ok=opts.filter(o=>!o.conf.length);
+    if(loading) W.append(el("div",{class:"muted",style:"font-size:12.5px;margin-bottom:8px"},"Checking for a reconsideration panel other appeals could share…"));
+    if(opts.length){
+      W.append(el("div",{class:"ap-h5"},ok.length?"Recommended — share a panel with other successful appeals":"Other reconsideration panels (not suitable for this student)"));
+      opts.forEach(o=>{
+        const on=p.mode==="join"&&p.join?.id===o.id;
+        W.append(el("button",{type:"button",class:"ap-joinopt"+(on?" on":"")+(o.conf.length?" bad":""),disabled:o.conf.length?"disabled":null,
+          onclick:()=>{ if(o.conf.length) return; Object.assign(p,{mode:"join",join:{type:o.type,id:o.id},joinLabel:o.label,
+            members:o.members.map(m=>({...cleanMember(m)})),chairKey:o.chairKey,date:o.date,start:o.start,end:o.end}); changed(); draw(); }},
+          el("span",{class:"r","aria-hidden":"true"},on?"◉":"○"),
+          el("span",{class:"b"},el("b",{},o.label),el("span",{},o.members.map(m=>m.name).join(", ")+" · "+apWhen(o)+" · "+apPl(o.n,"student")+" so far"),
+            o.conf.length?el("span",{class:"c"},"Conflict: "+o.conf.join("; ")):el("span",{class:"g"},"✓ No conflict with "+(st.name||"this student")))));
+      });
+      W.append(el("button",{type:"button",class:"ap-joinopt"+(p.mode==="new"?" on":""),onclick:()=>{ if(p.mode!=="new"){ Object.assign(p,{mode:"new",join:null,joinLabel:"",members:[],chairKey:"",date:"",start:"",end:""}); changed(); draw(); } }},
+        el("span",{class:"r","aria-hidden":"true"},p.mode==="new"?"◉":"○"),el("span",{class:"b"},el("b",{},"Form a new panel"),el("span",{},"Choose the assessors, the Chair and the time below."))));
+    }
+    if(p.mode==="join"){ W.append(apPanelSummary(p)); return; }
+    /* 2. a new panel: candidates */
+    const areas=[...new Set(pool.flatMap(c=>[...c.areas]).concat(AREAS))].filter(Boolean);
+    const seg=el("div",{class:"seg",style:"margin:0"},...[["",
+      "All disciplines"],...areas.map(a=>[a,a+(a===st?.area?" (student)":"")])].map(([v,t])=>el("button",{type:"button",class:p.area===v?"active":"",onclick:()=>{ p.area=v; draw(); }},t)));
+    const search=el("input",{type:"search",placeholder:"Search by name",value:q,style:"max-width:220px;margin:0",oninput:e=>{ q=e.target.value; paintList(); }});
+    W.append(el("div",{class:"ap-h5"},"Assessors"),el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;margin-bottom:8px"},seg,search));
+    const list=el("div",{class:"ap-cands"});
+    const sel=k=>p.members.some(m=>availKey(m)===k);
+    function paintList(){
+      const t=q.trim().toLowerCase();
+      const rows=pool.map(c=>({...c,k:availKey(c.m),conf:apMemberConflicts(c.m,st,groups,rec)}))
+        .filter(c=>(!p.area||c.areas.has(p.area)||sel(c.k))&&(!t||String(c.m.name).toLowerCase().includes(t)||sel(c.k)))
+        .sort((a,b)=>(sel(b.k)?1:0)-(sel(a.k)?1:0)||(a.conf.length?1:0)-(b.conf.length?1:0)||a.panels-b.panels||String(a.m.name).localeCompare(String(b.m.name)));
+      list.replaceChildren(...rows.map(c=>{
+        const cb=el("input",{type:"checkbox",style:"width:auto;margin:2px 0 0",...(sel(c.k)?{checked:"checked"}:{}),...(c.conf.length&&!sel(c.k)?{disabled:"disabled"}:{})});
+        cb.onchange=()=>{ if(cb.checked){ p.members.push(cleanMember(c.m)); if(!p.chairKey) p.chairKey=c.k; }
+          else{ p.members=p.members.filter(m=>availKey(m)!==c.k); if(p.chairKey===c.k) p.chairKey=p.members[0]?availKey(p.members[0]):""; }
+          changed(); paintSel(); paintList(); };
+        return el("label",{class:"ap-cand"+(c.conf.length?" bad":"")+(sel(c.k)?" on":"")},cb,
+          el("span",{class:"n"},el("b",{},c.m.name||c.m.email),el("span",{class:"r"},c.role)),
+          el("span",{class:"a"},...[...c.areas].map(a=>el("span",{class:"pill none"},a))),
+          el("span",{class:"l",title:"Panels this semester"},apPl(c.panels,"panel")),
+          c.conf.length?el("span",{class:"c"},"Conflict: "+c.conf.join("; ")):"");
+      }));
+      if(!rows.length) list.append(el("div",{class:"muted",style:"padding:10px;font-size:13px"},"Nobody matches. Try “All disciplines”, or add someone below."));
+    }
+    paintList(); W.append(list);
+    /* someone new */
+    const nm=el("input",{placeholder:"Full name"}), em=el("input",{type:"email",placeholder:"Email"}), org=el("input",{placeholder:"Organisation, e.g. University of Wollongong"});
+    const ar=el("select",{},el("option",{value:""},"Discipline…"),...AREAS.map(a=>el("option",{value:a,...(a===st?.area?{selected:"selected"}:{})},a)));
+    const addBox=el("details",{class:"ap-addnew"},el("summary",{},"+ Add someone who isn’t on the list"),
+      el("div",{class:"grid two",style:"margin-top:8px"},nm,em,org,ar),
+      el("button",{type:"button",class:"btn xs",style:"margin-top:8px",onclick:()=>{
+        const n=apT(nm.value), e=apT(em.value);
+        if(!n||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ toast("Give their name and a valid email.",true); return; }
+        const m=cleanMember({kind:"external",name:n,email:e,org:apT(org.value)||"External"});
+        if(pool.some(c=>availKey(c.m)===availKey(m))||p.members.some(x=>availKey(x)===availKey(m))){ toast("They are already on the list — tick them above.",true); return; }
+        pool.push({m,areas:new Set([ar.value].filter(Boolean)),panels:0,role:"External · new"+(m.org&&m.org!=="External"?" · "+m.org:"")});
+        p.members.push(m); if(!p.chairKey) p.chairKey=availKey(m); changed(); nm.value=em.value=org.value=""; paintSel(); paintList(); }},"Add to the panel"));
+    W.append(addBox);
+    /* the chosen panel and its Chair */
+    const selBox=el("div",{class:"ap-selbox"});
+    function paintSel(){
+      selBox.replaceChildren(el("div",{class:"ap-h5",style:"margin-top:0"},"The panel ("+p.members.length+(p.members.length===AP_PANEL_USUAL?")":" — "+AP_PANEL_USUAL+" is usual)")));
+      if(!p.members.length){ selBox.append(el("div",{class:"muted",style:"font-size:13px"},"Tick the assessors above.")); return; }
+      p.members.forEach(m=>{ const k=availKey(m);
+        const r=el("input",{type:"radio",name:"apchair_"+rec.id,style:"width:auto;margin:0",...(p.chairKey===k?{checked:"checked"}:{})});
+        r.onchange=()=>{ p.chairKey=k; changed(); paintSel(); };
+        selBox.append(el("div",{class:"ap-selrow"},el("label",{class:"coc-chk"},r,el("span",{},"Chair")),el("b",{},m.name||m.email),
+          el("span",{class:"muted",style:"font-size:12px"},m.kind==="external"?(m.org||"External")+" · "+m.email:"Internal"),
+          el("button",{type:"button",class:"btn xs ghost",onclick:()=>{ p.members=p.members.filter(x=>availKey(x)!==k); if(p.chairKey===k) p.chairKey=p.members[0]?availKey(p.members[0]):""; changed(); paintSel(); paintList(); }},"Remove")));
+      });
+      /* The Chair approves and signs the examination report in the hub. */
+      const ch=apChairOf(p), chu=ch?.kind==="internal"&&ch.uid?staffById(ch.uid):null;
+      if(ch&&(ch.kind==="external"||!chu||chu.pendingLogin)) selBox.append(el("div",{class:"ap-flag",style:"margin:8px 0 0"},
+        el("b",{},"The Chair needs a hub login. "),(ch.name||"This person")+" has none, but the Chair approves and signs the examination report in the hub. "+
+        (p.members.some(m=>m.kind==="internal"&&m.uid&&!staffById(m.uid)?.pendingLogin)?"Choose a CIHE member with a login as Chair, or the MRes office will need to give them an account.":"The MRes office will need to give them an account.")));
+    }
+    paintSel(); W.append(selBox);
+    /* when */
+    const d=el("input",{type:"date",value:p.date||"",min:apToday()}), s=el("input",{type:"time",value:p.start||"",step:"300"}), e=el("input",{type:"time",value:p.end||"",step:"300"});
+    const lk=el("input",{type:"url",value:p.link||"",placeholder:"Teams meeting link (optional — the office can add it)"});
+    const upd=()=>{ p.date=d.value; p.start=s.value; p.end=e.value; p.link=apT(lk.value); changed(); };
+    [d,s,e,lk].forEach(x=>x.addEventListener("input",upd));
+    W.append(el("div",{class:"ap-h5"},"Date and time"),el("div",{class:"ap-when"},
+      el("div",{class:"field"},el("label",{},"Date"),d),el("div",{class:"field"},el("label",{},"Starts"),s),el("div",{class:"field"},el("label",{},"Ends"),e)),
+      el("div",{class:"field",style:"margin-top:6px"},el("label",{},"Meeting link"),lk),
+      el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},"Allow presentation, questions and the panel’s deliberation — about 1½ hours for one student. More students can be added to the same panel later."));
+  }
+  draw();
+  (othersP||Promise.resolve([])).then(r=>{ others=r||[]; loading=false; draw(); },()=>{ loading=false; draw(); });
+  return {node:W,get:()=>p,problems:()=>{
+    const out=[];
+    if(p.mode==="join") return p.join?out:["Choose a panel to join, or form a new one."];
+    if(p.members.length<2) out.push("Choose at least two assessors ("+AP_PANEL_USUAL+" is usual).");
+    if(!p.chairKey||!p.members.some(m=>availKey(m)===p.chairKey)) out.push("Choose the Chair.");
+    const bad=p.members.map(m=>({m,c:apMemberConflicts(m,st,groups,rec)})).filter(x=>x.c.length);
+    if(bad.length) out.push("Remove "+bad.map(x=>x.m.name).join(", ")+" — conflict of interest.");
+    if(!p.date) out.push("Set the date.");
+    if(!p.start||!p.end||minsOf(p.end)<=minsOf(p.start)) out.push("Set a start and end time (the end after the start).");
+    if(p.link&&!/^https?:\/\//i.test(linkHref(p.link))) out.push("The meeting link should start with https://");
+    return out; }};
+}
+
+/* ---- the office: create the panel, or add the student to the shared one ---- */
+async function apCreateReconPanel(ctx,p){
+  const {rec,st,groups}=ctx;
+  const orig=groups.find(g=>g.id===rec.groupId)||null;
+  const prevSem=S.activeSem; S.activeSem=rec.semesterId;
+  try{
+    let gid="", label="";
+    const target=p.mode==="join"?(p.join.type==="group"?groups.find(g=>g.id===p.join.id):null):null;
+    const viaProposal=p.mode==="join"&&p.join.type==="proposal"?(await apGetRec(p.join.id).catch(()=>null)):null;
+    const shared=target||(viaProposal?.panelGid?groups.find(g=>g.id===viaProposal.panelGid)||await DB.get("panelGroups",viaProposal.panelGid):null);
+    if(shared){
+      const ids=[...new Set([...groupStudents(shared),st.id])];
+      const sess=groupSessions(shared).find(x=>x.id===shared.chosenSessionId)||groupSessions(shared)[0];
+      const g2={...shared,studentIds:ids};
+      if(sess) g2.slots=layOutPanel(g2,sess,g2).slots;
+      gid=await saveGroup(g2); label=shared.label||"Reconsideration panel";
+      const ro=shared.reconsiderOf||{};
+      await DB.update("panelGroups",gid,{reconsider:true,reconsiderOf:{appeals:[...new Set([...(ro.appeals||[]),rec.id])],
+        from:[...(ro.from||[]),{gid:rec.groupId||"",label:orig?.label||"",student:st.id}]}});
+    }else{
+      const ch=apChairOf(p);
+      label="Reconsideration Panel"+(ch?.name?" — "+ch.name:"");
+      const sess={id:nomId(),date:p.date||"",start:p.start||"",end:p.end||"",direct:true};
+      const g0={label,members:(p.members||[]).map(cleanMember),chairKey:p.chairKey||"",meetingLink:p.link||"",reportLink:"",reportDue:"",
+        studentIds:[st.id],sessions:p.date?[sess]:[],availability:{},chosenSessionId:p.date?sess.id:"",
+        presMins:orig?.presMins,qaMins:orig?.qaMins,delibMins:orig?.delibMins,slots:[],finalized:false,assessorsReleased:false,studentsReleased:false};
+      if(p.date&&p.start&&p.end) g0.slots=layOutPanel(g0,sess,g0).slots;
+      gid=await saveGroup(g0);
+      await DB.update("panelGroups",gid,{reconsider:true,reconsiderOf:{appeals:[rec.id],from:[{gid:rec.groupId||"",label:orig?.label||"",student:st.id}]}});
+      /* the other appeal whose proposal this was can point at it too */
+    }
+    /* Off the original panel, as a follow-up panel does: that panel's
+       approved report keeps its own snapshot (and the outcome stays on its
+       record), so nothing there changes; the student just isn't counted
+       twice in this semester's panels and timetables. */
+    if(orig&&orig.id!==gid&&groupStudents(orig).includes(st.id)){
+      const rep0=await DB.get("cocReports",orig.id).catch(()=>null);
+      if(rep0&&(rep0.status==="approved"||rep0.status==="received")&&rep0.snap)
+        await saveGroup({...orig,studentIds:groupStudents(orig).filter(x=>x!==st.id),slots:(orig.slots||[]).filter(x=>x.studentDocId!==st.id)});
+    }
+    await ctx.saveRec({panelGid:gid,panelLabel:label},(p.mode==="join"?"added to ":"created ")+"the reconsideration panel “"+label+"”");
+    toast((p.mode==="join"?"Added to ":"Created ")+label+". Finalise and release it on CoC panels.");
+    return gid;
+  }finally{ S.activeSem=prevSem; }
+}
+function apPanelOfficeBox(ctx){
+  const {rec,groups}=ctx, p=rec.dm?.panel||null;
+  const box=el("div",{class:"ap-panelbox"});
+  const g=rec.panelGid?groups.find(x=>x.id===rec.panelGid):null;
+  if(rec.panelGid){
+    const sess=g?groupSessions(g).find(x=>x.id===g.chosenSessionId):null;
+    box.append(el("div",{class:"ap-subh",style:"margin-top:0"},"Reconsideration panel"),
+      el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;align-items:center"},el("span",{class:"pill "+(g?.finalized?"approved":"pending")},g?.finalized?"Finalised":"Draft — to finalise"),
+        el("b",{},rec.panelLabel||g?.label||"Panel"),el("span",{class:"muted"},sess?apWhen(sess):""),
+        el("button",{class:"btn xs",onclick:()=>{ S.panelOpen=S.panelOpen||{}; S.panelOpen[rec.panelGid]=true; goTab("panels"); }},"Open on CoC panels →")),
+      el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},"On CoC panels: check it, finalise, release it to the assessors (and the time to the student). Open marking on CoC reports as usual — the panel uses the same examination report form."));
+    return box;
+  }
+  box.append(el("div",{class:"ap-subh",style:"margin-top:0"},"Reconsideration panel — set it up"));
+  if(p){ box.append(el("p",{class:"muted",style:"margin:0 0 8px;font-size:13px"},"Proposed by the "+apOfficeLabel(rec.dmRole)+" with the decision:"),apPanelSummary(p)); }
+  else box.append(el("p",{class:"muted",style:"margin:0 0 8px;font-size:13px"},"No panel was proposed with the decision. Form it here."));
+  const acts=el("div",{class:"row",style:"gap:8px;margin-top:10px;flex-wrap:wrap"});
+  if(p) acts.append(el("button",{class:"btn sm",onclick:async e=>{ e.target.disabled=true; try{ await apCreateReconPanel(ctx,p); ctx.reload(); }catch(err){ e.target.disabled=false; toast(err?.message||"Couldn't set it up.",true); } }},
+    p.mode==="join"?"Add "+(rec.name||"the student")+" to that panel":"Create the panel as proposed"));
+  acts.append(el("button",{class:"btn sm ghost",onclick:()=>apPanelEditDialog(ctx)},p?"Change it first…":"Form the panel…"));
+  box.append(acts);
+  return box;
+}
+function apPanelEditDialog(ctx){
+  const {rec,st,groups,students}=ctx;
+  const b=apPanelBuilder({rec,st,groups,students,init:rec.dm?.panel||null,othersP:DB.list("appeals",{semesterId:rec.semesterId}).catch(()=>[])});
+  modal("Reconsideration panel — "+(rec.name||""),b.node,async()=>{
+    const pr=b.problems(); if(pr.length){ toast(pr[0],true); return false; }
+    await apCreateReconPanel(ctx,b.get()); ctx.reload(); return true; },"Set up the panel");
+  apWide();
+}
+
+/* ============================================================
    17C. APPEALS — the Word form
    The CIHE "CoC Outcome Appeal Form", filled in: Sections 1–6 from the
    student's online form with their e-signature, and the office record
@@ -24792,7 +25153,7 @@ function apSidePanel({rec,pt,admin}){
    e-signatures. Evidence is listed with clickable links. Built with the
    same store-only zip as the other Word files.
    ============================================================ */
-function apDocx(pt,rec,sem){
+function apDocx(pt,rec,sem,notice){
   const X=xmlEsc, W=COC_PAGE_W, NAVY=COC_NAVY, LBL=COC_LABEL;
   const media=[], links=[]; let picId=10;
   const img=(bytes,wIn,hIn)=>{
@@ -24996,6 +25357,16 @@ function apDocx(pt,rec,sem){
     {cells:[{span:4,fill:LBL,c:p(r("Reasons and directions",{b:true,sz:17}))+p(r("State the reasons for the decision and any arrangements for the new panel, including timing.",{i:true,sz:15,color:"595959"}))}]},
     {cells:[{c:p(rl(dm.reasons||"",{sz:18})),span:4,padV:100}]},
     {cells:[L("Name and role"),V(dm.sign?(dm.sign.name+", "+apOfficeLabel(dmRole)):""),L("Signature and date"),{c:dm.sign?p(sigImg(dm.sign,1.4,0.4))+p(r(cocDay(dm.sign.at),{sz:16})):p(""),v:"center"}]}]);
+  if(dm.decision==="newpanel"&&dm.panel){
+    const pn=dm.panel, ch=apChairOf(pn);
+    body+=gap(60);
+    body+=tbl([1900,W-1900],[
+      {cells:[{span:2,fill:LBL,c:p(r("Newly constituted CoC Panel",{b:true,sz:17}))+p(r("Members chosen with no conflict of interest with the candidate, none supervisors and none on the original panel (QA72 5.3.1).",{i:true,sz:15,color:"595959"}))}]},
+      {cells:[L("Panel"),V((R.panelLabel?R.panelLabel+(pn.mode==="join"?" (shared with other reconsiderations)":""):pn.mode==="join"?(pn.joinLabel||"Shared reconsideration panel"):"To be set up by the MRes office"))]},
+      {cells:[L("Chair"),V(ch?(ch.name||ch.email)+(ch.kind==="external"?" ("+(ch.org||"External")+")":""):"")]},
+      {cells:[L("Members"),V((pn.members||[]).map(m=>(m.name||m.email)+(m.kind==="external"?" \u2014 "+(m.org||"External"):" \u2014 CIHE")).join("\n"))]},
+      {cells:[L("Date and time"),V(apWhen(pn))]}]);
+  }
   body+=subh("7E Notification and records");
   body+=tbl(c4,[
     {cells:[L("Candidate notified by"),V(e7.notifiedBy||""),L("Date notified"),V(D(e7.notifiedOn))]},
@@ -25004,6 +25375,27 @@ function apDocx(pt,rec,sem){
   if(R.result==="notaccepted"&&R.notAccepted?.text){ body+=gap(60); body+=tbl([1900,W-1900],[{cells:[L("Not accepted — reason"),V(R.notAccepted.text)]}]); }
   body+=note("Retain the appeal, evidence, conflict assessment, findings, decision and notification on the candidate file in line with the QA30 Records Management Policy (PR72 3.9.1). The decision reached through this process is final (PR72 3.10.4).");
   body+=note("Policy basis: QA72 HDR Candidate CoC and Thesis Examination Policy, clauses 5.5 and 5.6; PR72 HDR Candidate CoC and Thesis Examination Procedures, clauses 3.7 to 3.10 and section 5. See also QA23 Student Grievance Handling Policy and QA24 Student Progression and Exclusion Policy.");
+  /* Attachment: the outcome notice and panel feedback, as the student received them */
+  if(notice&&notice.outcome){
+    body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    body+=tbl([W],[{cells:[{c:p(r("ATTACHMENT A",{b:true,color:"FFFFFF",sz:18}))+p(r("Formal outcome notice and panel feedback",{b:true,color:"FFFFFF",sz:26}))+
+      p(r("As released to the candidate through the MRes Supervision Hub (PR72 3.7.3, 3.7.4). Marks are not included.",{i:true,color:"FFFFFF",sz:16})),fill:NAVY,padV:110}]}]);
+    body+=gap(100);
+    body+=tbl([2600,W-2600],[
+      {cells:[L("Candidate"),V((notice.name||pre.fullName||"")+" \u00B7 "+(notice.sid||pre.sid||""))]},
+      {cells:[L("Panel"),V([notice.panel,notice.chair?"Chair: "+notice.chair:""].filter(Boolean).join(" \u2014 "))]},
+      {cells:[L("Seminar date"),V(D(notice.seminarDate))]},
+      {cells:[L("Released"),V(notice.releasedAt?cocDay(notice.releasedAt):"")]},
+      {cells:[L("Outcome"),V((notice.outcome.code?notice.outcome.code+" \u2014 ":"")+(notice.outcome.label||""),{run:{b:true}})]},
+      ...(cocMeaning(notice.outcome)?[{cells:[L("What it means"),V(cocMeaning(notice.outcome))]}]:[]),
+      ...(apT(notice.conditions)?[{cells:[L("Conditions / revisions required"),VL(notice.conditions)]}]:[]),
+      ...(notice.dueBy?[{cells:[L("Due by"),V(D(notice.dueBy))]}]:[])]);
+    const fbl=COC_FB.filter(([k])=>apT(notice.feedback?.[k]));
+    if(fbl.length){ body+=subh("Panel feedback"); body+=tbl([2600,W-2600],fbl.map(([k,lab])=>({cells:[L(lab),VL(notice.feedback[k])]}))); }
+    if((notice.assessors||[]).length){ body+=subh("Comments from each assessor (anonymised)");
+      body+=tbl([1500,W-1500],notice.assessors.map(a=>({cells:[L(a.label),{c:[["Strengths",a.strengths],["Concerns",a.concerns],["Improvements",a.improvements]].filter(x=>apT(x[1])).map(([l,t])=>p(r(l+": ",{b:true,sz:17})+rl(t,{sz:17}),{after:40})).join("")||p("")}]}))); }
+    if(apT(notice.note)){ body+=subh("From the MRes office"); body+=tbl([W],[{cells:[VL(notice.note)]}]); }
+  }
   if(R.history?.length){
     body+=subh("Hub record");
     body+=tbl([2600,W-2600],R.history.map(h=>({cells:[V(cocDT(h.at),{run:{sz:15}}),V(h.what+(h.by?" — "+h.by:""),{run:{sz:15}})]})));
@@ -25055,9 +25447,9 @@ function apDocx(pt,rec,sem){
     {name:"word/styles.xml",data:U(styles)},{name:"word/settings.xml",data:U(settings)},{name:"word/footer1.xml",data:U(footer)},
     ...media.map(m=>({name:"word/media/"+m.name,data:m.bytes}))],"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 }
-function apDownload(pt,rec,sem){
+function apDownload(pt,rec,sem,notice){
   try{
-    const blob=apDocx(pt,rec,sem);
+    const blob=apDocx(pt,rec,sem,notice);
     const nm=("CoC_Appeal_"+(pt?.name||rec?.name||"")+"_"+(pt?.sid||rec?.sid||"")+(rec?"":"_student_copy")).replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").replace(/_$/,"")+".docx";
     saveBlob(blob,nm); toast("Word form downloaded.");
   }catch(e){ console.error(e); toast("Couldn't build the Word form: "+(e?.message||e),true); }
@@ -25111,7 +25503,8 @@ const revChairOf=g=>groupMembers(g).find(m=>isChair(g,m))||null;
 /* One row per candidate, with its state worked out. */
 function revRows(groups,reps,students,appeals){
   const rows=[], seen=new Set();
-  (groups||[]).forEach(g=>{
+  /* a reconsideration panel speaks for its students before the original one */
+  [...(groups||[])].sort((a,b)=>(b.reconsider?1:0)-(a.reconsider?1:0)).forEach(g=>{
     const rep=(reps||[]).find(r=>r.id===g.id)||null;
     const locked=!!rep&&(rep.status==="approved"||rep.status==="received");
     const ids=new Set([...groupStudents(g),...Object.keys(g.outcomesOut||{})]);
@@ -25120,6 +25513,22 @@ function revRows(groups,reps,students,appeals){
       const st=(students||[]).find(s=>s.id===id); if(!st) return;
       const cand=rep?.cand?.[id]||{}, det=cand.det||{}, notice=g.outcomesOut?.[id]||null;
       if(cand.present==="N"||notice?.deferred) return;
+      if(g.reconsider&&!locked&&!notice){
+        seen.add(id);
+        const ss=groupSessions(g).find(x=>x.id===g.chosenSessionId)||null;
+        rows.push({g,rep,st,id,round:1,code:"",kind:"recon",tr:{},due:"",days:null,released:false,act:[],bucket:"panel",
+          whenLabel:ss?.date?cpsDay(ss.date):"Date to be set",
+          steps:[["Appeal upheld",1],["Reconsideration panel set up",1],["Panel finalised",g.finalized?1:0],["Reassessed",0]],
+          next:"Being reconsidered by "+(g.label||"the reconsideration panel")+(ss?.date?" \u2014 "+apWhen(ss):"")+"."+(g.finalized?"":" Finalise and release the panel on CoC panels.")});
+        return;
+      }
+      if(g.reconsider&&locked&&(det.outcome||notice?.outcome?.code)==="NC"){
+        seen.add(id);
+        rows.push({g,rep,st,id,round:1,code:"NC",kind:"recon",tr:{},due:"",days:null,released:true,act:[],bucket:"done",
+          steps:[["Appeal upheld",1],["Reassessed",1],["Not confirmed",1]],
+          next:"Not confirmed by the reconsideration panel. The appeal decision was final (PR72 3.10.4); no further appeal."});
+        return;
+      }
       const resub=cand.resub&&(cand.resub.round||1)>1?cand.resub:null;
       const round=resub?resub.round:1;
       const rel=rep?.release?.[id]||null;
@@ -25295,8 +25704,8 @@ function revRow(r,sem,redraw){
   const sups=[r.st.principalName||supName(r.st.principalUid),r.st.coUid?(r.st.coName||supName(r.st.coUid)):""].filter(Boolean).join(", ");
   const showDue=r.due&&!t.submittedAt&&["CMR","MRR"].includes(r.code)&&!(r.resub&&!r.locked);
   const ds=!showDue?null:r.days<0?{cls:"missed",txt:apPl(-r.days,"day")+" overdue"}:r.days===0?{cls:"pending",txt:"due today"}:{cls:r.days<=3?"pending":r.days<=REV_WINDOW_DAYS?"blue":"none",txt:"in "+apPl(r.days,"day")};
-  const tag=r.resub?(r.resub&&!r.locked?"MRR — with the panel":"MRR → "+(r.code||"?")):(r.code==="C"?"C — confirmed":r.code==="CMR"?"CMR — minor":"MRR — major");
-  const tagCls=r.code==="C"&&!r.resub?"approved":r.code==="NC"?"missed":r.code==="CMR"?"blue":"pending";
+  const tag=r.kind==="recon"?"Reconsideration (appeal)":r.resub?(r.resub&&!r.locked?"MRR — with the panel":"MRR → "+(r.code||"?")):(r.code==="C"?"C — confirmed":r.code==="CMR"?"CMR — minor":"MRR — major");
+  const tagCls=r.kind==="recon"?(r.code==="NC"?"missed":"blue"):r.code==="C"&&!r.resub?"approved":r.code==="NC"?"missed":r.code==="CMR"?"blue":"pending";
   const B=(cls,label,on,title)=>el("button",{class:cls,title:title||"",onclick:on},label);
   const acts=[];
   const undo=(patch,msg)=>async()=>{ if(!window.confirm(msg)) return; await revTrackWrite(r.g,r.id,patch,r.round); redraw(); };
@@ -25311,7 +25720,7 @@ function revRow(r,sem,redraw){
     if(a==="panel") acts.push(B("btn sm","↻ Send to the panel…",()=>revSendToPanel(r,sem,redraw),"Reopen the report so the revised proposal is re-assessed"));
     if(a==="chair") acts.push(B("btn sm ghost","✉ Remind "+(r.resub?.mode==="panel"?"the panel":"the Chair"),()=>revRemindChair(r,redraw)));
     if(a==="release") acts.push(B("btn sm","Release on CoC reports →",()=>goTab("cocreports")));
-    if(a==="appeals") acts.push(B("btn sm"+(r.appeal?" ghost":""),r.appeal?"Open the appeal →":"Issue an appeal code →",()=>{ if(r.appeal) S.apOpen=r.appeal.id; goTab("appeals"); }));
+    if(a==="appeals") acts.push(B("btn sm"+(r.appeal?" ghost":""),r.appeal?"Open the appeal →":"Issue an appeal code →",()=>{ if(r.appeal) S.apOpen=r.appeal.id; goTab("appeals",true); }));
   });
   const small=[];
   if(r.act.includes("undoSub")) small.push(el("button",{class:"rev-undo",onclick:undo({submittedAt:0,receivedAt:0},"Undo “submitted” for "+(r.st.name||"")+"?")},"undo submitted"));
@@ -25320,7 +25729,7 @@ function revRow(r,sem,redraw){
   const meta=[t.remindedAt?"reminded "+relTime(t.remindedAt)+(t.remindN>1?" ("+t.remindN+"×)":""):"",t.chairRemindedAt?"Chair reminded "+relTime(t.chairRemindedAt):""].filter(Boolean).join(" · ");
   return el("div",{class:"cps-rrow ui rev-row rev-"+r.bucket+(ds&&r.days<0?" late":"")},
     el("div",{class:"cps-when"},
-      showDue?el("b",{},"Due "+cpsDay(r.due)):el("b",{class:"muted",style:"font-weight:600"},r.resub&&!r.locked&&r.resub.closesAt?"Panel closes "+cpsShort(apDayOf(r.resub.closesAt)):r.code==="C"?"No due date":r.due?"Was due "+cpsShort(r.due):"—"),
+      r.whenLabel?el("b",{},r.whenLabel):showDue?el("b",{},"Due "+cpsDay(r.due)):el("b",{class:"muted",style:"font-weight:600"},r.resub&&!r.locked&&r.resub.closesAt?"Panel closes "+cpsShort(apDayOf(r.resub.closesAt)):r.code==="C"?"No due date":r.due?"Was due "+cpsShort(r.due):"—"),
       ds?el("span",{class:"pill "+ds.cls},ds.txt):""),
     el("div",{},el("div",{style:"font-weight:650"},r.st.name||""),
       el("div",{class:"muted",style:"font-size:12px;margin:2px 0 0"},[r.st.sid,cocPanelName({short:cocShortLabel(r.g),g:r.g})].filter(Boolean).join(" · ")),
