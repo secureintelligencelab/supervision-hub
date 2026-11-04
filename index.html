@@ -1447,6 +1447,15 @@
   .rev-tpl:focus-visible{outline:2px solid var(--ring)}
   .rev-recips{display:grid;gap:6px;max-height:170px;overflow:auto;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
   .rev-gm textarea{font-size:13.5px}
+
+  /* help assistant */
+  .help-slot:empty{display:none}
+  .help-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+  .help-btn .hi{display:inline-grid;place-items:center}
+  .sp-top .help-btn .hide-sm{display:inline}
+  @media (max-width:640px){ .sp-top .help-btn .hide-sm,.topbar .help-btn .hide-sm{display:none} }
+  .auth-foot .help-line a{color:#fff;font-weight:650;text-decoration:underline}
+  .auth-foot .help-line .muted{color:#ffffffb0}
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -10796,7 +10805,7 @@ function renderLogin(opts){
       el("h2",{},"Every student, supervisor and panel in one register."),
       el("p",{},"Allocation, weekly consultations, attendance, messages and Confirmation of Candidature — from the first week of semester to the last panel."),
       waysList),
-    el("div",{class:"auth-foot"},"CRICOS Provider No. 03744B"));
+    el("div",{class:"auth-foot"},helpLine("any"),el("div",{style:"margin-top:6px"},"CRICOS Provider No. 03744B")));
   function drawWays(){
     waysList.replaceChildren(...WAYS.map(([id,title,ic,sub])=>{
       const b=el("button",{type:"button",class:"auth-way"+(mode===id?" on":""),onclick:()=>{mode=id;draw();}},
@@ -11305,6 +11314,7 @@ function renderApp(){
          timetable?" is not asked from any particular one. */
       S.role==="admin"?el("span",{}):myCalendarButton("+ My calendar","btn ghost sm hide-sm"),
       S.role==="admin"?el("span",{}):myTimetableButton("⤓ My timetable","btn ghost sm hide-sm"),
+      helpButton(S.role==="admin"?"admin":"staff","btn ghost sm",{short:true}),
       themeButton("btn ghost sm iconbtn")));
 
   const main=el("main",{},el("div",{id:"view"}));
@@ -11709,6 +11719,8 @@ async function viewSettings(v){
     }
   }
   drawEmployment();
+
+  v.append(helpSettingsCard());
 
   // ---- What is deliberately NOT here ----
   v.append(el("div",{class:"card"},
@@ -17479,6 +17491,7 @@ async function renderStudentView(sid,enrolments,sems){
       el("div",{class:"ttl"},"Student portal"),
       el("div",{class:"sub"},"MRes Supervision Hub")),
     el("div",{class:"acts"},
+      helpButton("students","btn ghost sm",{short:true}),
       themeButton("btn ghost sm"),
       el("button",{class:"btn ghost sm",title:"Leave the portal",
         onclick:()=>{ S.studentSid=null; S.studentName=""; renderLogin(); }},
@@ -18325,6 +18338,7 @@ function renderStaffPinView(who,blocks,opts={}){
           if(n) toast(n+" calendar entr"+(n===1?"y":"ies")+" downloaded — open the file to add them to your calendar."); }},
         spIcon("plus",16),el("span",{class:"hide-xs"},"Calendar")),
       el("button",{class:"btn ghost sm hide-xs",title:"Print this page",onclick:()=>window.print()},"⎙ Print"),
+      helpButton("staff","btn ghost sm",{short:true}),
       themeButton("btn ghost sm"),
       el("button",{class:"btn ghost sm",title:"Leave this view",onclick:()=>renderLogin()},
         spIcon("out",16),el("span",{class:"hide-xs"},"Sign out"))));
@@ -23388,6 +23402,7 @@ function renderAppealGate(code,opts={}){
     el("p",{class:"muted",style:"margin-top:14px;font-size:12.5px"},
       "Your code is personal: anyone holding it with your ID can see and edit your appeal until you lodge it. "+
       "No code yet? Only a final Not Confirmed outcome can be appealed — contact the MRes office."),
+    el("p",{style:"margin-top:8px;font-size:13px"},helpLine("students")),
     el("p",{style:"margin-top:10px"},el("a",{href:"#",onclick:e=>{ e.preventDefault(); renderLogin({mode:"student"}); }},"← Back to sign in")));
   document.body.append(el("div",{class:"auth-wrap"},card),toastNode());
   setTimeout(()=>{ try{ (codeIn.value?sidIn:codeIn).focus(); }catch(e){} },60);
@@ -23432,7 +23447,7 @@ function renderAppealStudent(pt0){
   const saveLine=el("span",{class:"ap-save muted ui"},"");
   const top=el("header",{class:"sp-top"},brandMark("mark"),
     el("div",{style:"min-width:0"},el("div",{class:"ttl"},"CoC outcome appeal"),el("div",{class:"sub"},"MRes Supervision Hub")),
-    el("div",{class:"acts"},saveLine,themeButton("btn ghost sm"),
+    el("div",{class:"acts"},saveLine,helpButton("students","btn ghost sm",{short:true}),themeButton("btn ghost sm"),
       el("button",{class:"btn ghost sm",title:"Leave",onclick:async()=>{ if(editable()) await saveNow(true); S.studentSid=null; renderLogin({mode:"student"}); }},
         spIcon("out",16),el("span",{class:"hide-xs"},"Leave"))));
   const main=el("main",{class:"sp-main ap-main"});
@@ -26088,6 +26103,95 @@ function revGroupEmailDialog(rows,sem,redraw){
     redraw&&redraw(); return true;
   },"\u2709 Open the email");
   const m=[...document.querySelectorAll(".modal")].pop(); m?.classList.add("wide","rev-gmodal");
+}
+
+/* ============================================================
+   18. MRes STUDENT HELP — the Copilot agent, one click from every screen
+   The agent is a Microsoft 365 Copilot agent (Agent Builder). Those run
+   inside Microsoft 365 Copilot, behind a CIHE Microsoft sign-in, and can't
+   be drawn inside another web page — so the hub opens it in a window of
+   its own beside the hub (or a new tab if pop-ups are blocked). Students,
+   supervisors, panel members and the office each get the button where they
+   work; who sees it, its label and the link are set by the office in
+   Settings, kept in staffKeys/config:help (readable by the signed-out
+   student portal, written by the office — no rules change).
+   ============================================================ */
+const HELP_DEFAULT={url:"https://m365.cloud.microsoft/chat/?titleId=T_37e3605f-ab09-fd94-5f38-e48efddbbbcc&source=embedded-builder",
+  label:"MRes Student Help",students:true,staff:true,admin:true,mode:"window"};
+const helpCfg=()=>({...HELP_DEFAULT,...(S.helpCfg||{})});
+let helpP=null;
+function helpLoad(force){
+  if(helpP&&!force) return helpP;
+  helpP=DB.getStaffKey("config:help").then(d=>{ if(d&&d.kind==="config") S.helpCfg=d; return helpCfg(); },()=>helpCfg());
+  return helpP;
+}
+const helpOk=u=>/^https:\/\/[^\s]+$/i.test(String(u||"").trim());
+function helpOpen(e){
+  const c=helpCfg(); if(!helpOk(c.url)) return;
+  if(c.mode==="tab") return;                          // the link's own target="_blank" does it
+  e?.preventDefault?.();
+  const w=Math.min(520,Math.max(380,Math.round(window.screen.availWidth*0.3))), h=Math.min(900,window.screen.availHeight-60);
+  const left=Math.max(0,window.screen.availWidth-w-20);
+  const win=window.open(c.url,"mres_help","popup=yes,width="+w+",height="+h+",left="+left+",top=20");
+  if(win){ try{ win.opener=null; win.focus(); }catch(err){} }
+  else window.open(c.url,"_blank","noopener");      // pop-ups blocked: a tab instead
+}
+const HELP_ICON='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9.5 8.5a2.5 2.5 0 1 1 3.3 2.4c-.5.2-.8.6-.8 1.1v.5M12 15h.01"/></svg>';
+/* who: "students" | "staff" (supervisors, panel members, PIN view) | "admin" */
+function helpButton(who,cls,opts={}){
+  const slot=el("span",{class:"help-slot"});
+  const paint=()=>{
+    const c=helpCfg(); slot.replaceChildren();
+    if(!c[who]||!helpOk(c.url)) return;
+    slot.append(el("a",{class:(cls||"btn ghost sm")+" help-btn",href:c.url,target:"_blank",rel:"noopener",
+      title:(c.label||"Help")+" — opens in Microsoft 365 Copilot; sign in with your CIHE Microsoft account",onclick:helpOpen},
+      el("span",{class:"hi",html:HELP_ICON}),el("span",{class:opts.short?"hide-sm":""},opts.text||c.label||"Help")));
+  };
+  paint(); helpLoad().then(paint);
+  return slot;
+}
+/* a sentence with the link in it, for the sign-in screen */
+function helpLine(who,lead){
+  const slot=el("span",{class:"help-line"});
+  const paint=()=>{ const c=helpCfg(); slot.replaceChildren();
+    if(!(who==="any"?(c.students||c.staff||c.admin):c[who])||!helpOk(c.url)) return;
+    slot.append(lead||"Questions? ",el("a",{href:c.url,target:"_blank",rel:"noopener",onclick:helpOpen},"Ask "+(c.label||"MRes Student Help")),
+      el("span",{class:"muted"}," (CIHE Microsoft sign-in)")); };
+  paint(); helpLoad().then(paint);
+  return slot;
+}
+/* ---- Settings card (office) ---- */
+function helpSettingsCard(){
+  const c=helpCfg();
+  const url=el("input",{type:"url",value:c.url||"",spellcheck:"false",placeholder:"https://m365.cloud.microsoft/chat/?titleId=…"});
+  const label=el("input",{value:c.label||"",placeholder:"MRes Student Help"});
+  const cb=(on)=>{ const x=el("input",{type:"checkbox",style:"width:auto;margin:0"}); x.checked=!!on; return x; };
+  const stu=cb(c.students), stf=cb(c.staff), adm=cb(c.admin);
+  const mode=el("select",{style:"width:auto"},el("option",{value:"window",...(c.mode!=="tab"?{selected:"selected"}:{})},"A window beside the hub"),
+    el("option",{value:"tab",...(c.mode==="tab"?{selected:"selected"}:{})},"A new browser tab"));
+  return el("div",{class:"card",style:"margin-bottom:14px"},
+    el("h3",{style:"margin:0 0 4px"},"Help assistant"),
+    el("p",{class:"muted",style:"margin:0 0 12px;font-size:13.5px"},"A button on every screen that opens your Microsoft 365 Copilot agent. It opens beside the hub (it can’t be shown inside it), and people sign in with their CIHE Microsoft account."),
+    el("div",{class:"grid",style:"gap:10px"},
+      el("div",{class:"field"},el("label",{},"Agent link"),url,
+        el("div",{class:"coc-tip"},"In Agent Builder, open the agent → Share → share it with everyone at CIHE who should use it (students included) → Copy link, and paste that link here.")),
+      el("div",{class:"field"},el("label",{},"Button label"),label),
+      el("div",{},el("label",{},"Show it to"),el("div",{class:"row",style:"gap:16px;flex-wrap:wrap;margin-top:4px"},
+        el("label",{class:"coc-chk"},stu,"Students (portal and appeal form)"),
+        el("label",{class:"coc-chk"},stf,"Supervisors and panel members"),
+        el("label",{class:"coc-chk"},adm,"The office"))),
+      el("div",{class:"field"},el("label",{},"Opens in"),mode)),
+    el("div",{class:"row",style:"gap:8px;margin-top:12px;flex-wrap:wrap"},
+      el("button",{class:"btn sm",onclick:async()=>{
+        const u=url.value.trim();
+        if(u&&!helpOk(u)){ toast("The link should start with https://",true); return; }
+        const data={kind:"config",url:u,label:label.value.trim()||"MRes Student Help",students:stu.checked,staff:stf.checked,admin:adm.checked,mode:mode.value,at:Date.now(),by:S.userName||""};
+        try{ await DB.batchWrite([{type:"set",coll:"staffKeys",id:"config:help",merge:false,data}]); S.helpCfg=data; helpP=Promise.resolve(helpCfg());
+          toast("Help assistant saved — it shows on the next screen you open."); }
+        catch(e){ toast("Couldn’t save: "+(e?.message||e),true); } }},"Save"),
+      el("a",{class:"btn sm ghost",href:"#",onclick:e=>{ e.preventDefault(); if(!helpOk(url.value)){ toast("Paste the link first.",true); return; }
+        if(mode.value==="tab"){ window.open(url.value.trim(),"_blank","noopener"); return; }
+        const prev=S.helpCfg; S.helpCfg={...helpCfg(),url:url.value.trim(),mode:"window"}; helpOpen(null); S.helpCfg=prev; }},"Try the link")));
 }
 
 /* ============================================================
