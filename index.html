@@ -1431,6 +1431,22 @@
   .coc-prog .phist{margin-top:8px;font-size:12.5px;color:var(--ink-soft)}
   .coc-prog .pu{margin-top:6px;font-size:11.5px;color:var(--ink-soft)}
   .rev-supline{font-size:11.5px;font-weight:650;margin-top:3px;color:var(--ink)}
+
+  /* group emails */
+  .modal.rev-gmodal{max-width:920px}
+  .rev-gm{display:grid;grid-template-columns:240px minmax(0,1fr);gap:14px}
+  @media (max-width:700px){ .rev-gm{grid-template-columns:1fr} }
+  .rev-tpls{display:flex;flex-direction:column;gap:4px}
+  @media (max-width:700px){ .rev-tpls{flex-direction:row;flex-wrap:wrap} }
+  .rev-tpls .rev-tpl{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 10px!important;margin:0!important;min-height:0!important;border-radius:8px;border:1px solid transparent;font-size:13.5px;line-height:1.3}
+  .rev-tpl:hover{background:var(--sunken)}
+  .rev-tpl.on{background:var(--accent-tint);border-color:var(--accent);font-weight:650}
+  .rev-tpl.empty{color:var(--ink-soft)}
+  .rev-tpl .n{font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 6px;border-radius:999px;background:var(--sunken);white-space:nowrap}
+  .rev-tpl.on .n{background:var(--paper-2)}
+  .rev-tpl:focus-visible{outline:2px solid var(--ring)}
+  .rev-recips{display:grid;gap:6px;max-height:170px;overflow:auto;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+  .rev-gm textarea{font-size:13.5px}
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -25727,8 +25743,8 @@ function revDueCard(groups,reps,students,sem,redraw,appeals){
     n("action")?el("span",{class:"pill pending"},n("action")+" need"+(n("action")===1?"s":"")+" you"):el("span",{class:"pill approved"},"Nothing needs you"),
     overdue?el("span",{class:"pill missed"},overdue+" overdue"):"",
     el("span",{style:"flex:1"}),
-    remindable.length>1?el("button",{class:"btn sm",onclick:()=>revRemind(remindable,sem,redraw)},"✉ Remind "+remindable.length+" (Bcc)"):"",
-    (()=>{ const u=revUpdated(all); return u.length?el("button",{class:"btn sm",onclick:()=>revHubDialog(all,redraw)},"✉ Ask "+apPl(u.length,"student")+" to check the hub"):""; })()));
+    (()=>{ const g=revGroups(all,sem), due=g.filter(x=>x.fresh>0); 
+      return el("button",{class:"btn sm",onclick:()=>revGroupEmailDialog(all,sem,redraw)},"\u2709 Group email"+(due.length?" ("+due.reduce((n,x)=>n+x.fresh,0)+" to tell)":"")); })()));
   const tab=(k,label)=>el("button",{type:"button",class:F===k?"active":"",onclick:()=>{ S.revFil=k; redraw(); }},label+" ("+(k==="all"?all.length:n(k))+")");
   c.append(el("div",{class:"rev-bar ui"},el("div",{class:"seg rev-seg"},tab("action","Needs action"),tab("waiting","Waiting"),tab("panel","With panel"),tab("done","Done"),tab("all","All")),
     el("span",{class:"muted",style:"font-size:12.5px;flex:1;min-width:220px"},"C, CMR and MRR candidates. Mark what arrives; the hub shows who to email next. MRR decisions are read from the re-approved report.")));
@@ -25765,7 +25781,8 @@ function revRow(r,sem,redraw){
   if(r.act.includes("undoAcc")) small.push(el("button",{class:"rev-undo",onclick:undo({acceptedAt:0,toldAt:0},"Undo “accepted” for "+(r.st.name||"")+"?")},"undo accepted"));
   if(r.act.includes("remind")) small.push(el("button",{class:"rev-undo",title:"Reminded another way (Teams, phone)",onclick:()=>revRemind([r],sem,redraw,true)},"mark reminded"));
   const prg=r.g.outcomesOut?.[r.id]?.progress;
-  const meta=[prg?.at?"page updated "+relTime(prg.at)+(t.hubToldAt&&t.hubToldAt>=prg.at?" \u00B7 told to check the hub":""):"",t.remindedAt?"reminded "+relTime(t.remindedAt)+(t.remindN>1?" ("+t.remindN+"×)":""):"",t.chairRemindedAt?"Chair reminded "+relTime(t.chairRemindedAt):""].filter(Boolean).join(" · ");
+  const lastMail=Object.entries(t.mailLog||{}).sort((a,b)=>b[1]-a[1])[0];
+  const meta=[lastMail?"emailed \u201C"+((REV_TPL_NAMES[lastMail[0]])||lastMail[0])+"\u201D "+relTime(lastMail[1]):"",prg?.at?"page updated "+relTime(prg.at)+(t.hubToldAt&&t.hubToldAt>=prg.at?" \u00B7 told to check the hub":""):"",t.remindedAt?"reminded "+relTime(t.remindedAt)+(t.remindN>1?" ("+t.remindN+"×)":""):"",t.chairRemindedAt?"Chair reminded "+relTime(t.chairRemindedAt):""].filter(Boolean).join(" · ");
   return el("div",{class:"cps-rrow ui rev-row rev-"+r.bucket+(ds&&r.days<0?" late":"")},
     el("div",{class:"cps-when"},
       r.whenLabel?el("b",{},r.whenLabel):showDue?el("b",{},"Due "+cpsDay(r.due)):el("b",{class:"muted",style:"font-weight:600"},r.resub&&!r.locked&&r.resub.closesAt?"Panel closes "+cpsShort(apDayOf(r.resub.closesAt)):r.code==="C"?"No due date":r.due?"Was due "+cpsShort(r.due):"—"),
@@ -25926,6 +25943,151 @@ function revHubDialog(rows,redraw){
     for(const r of sel){ const pt={hubToldAt:now}; if(r.code==="CMR"&&r.tr.acceptedAt&&!r.tr.toldAt) pt.toldAt=now; await revTrackWrite(r.g,r.id,pt,r.round); }
     toast("Noted for "+apPl(sel.length,"student")+"."); redraw&&redraw(); return true; },"\u2709 Open the email");
   apWide();
+}
+
+/* ============================================================
+   17H. GROUP EMAILS from the after-the-CoC tracker
+   One email to several students at once, all in Bcc (they never see each
+   other's addresses), with their supervisors optionally in Bcc too. Each
+   kind of email picks its own students from where they are:
+     due soon · overdue · received · further changes · with the panel ·
+     confirmed · final proposal · "check the hub"
+   The wording is general — each student's own dates and notes are on their
+   CoC page — and editable before the email opens. Sending is noted on each
+   student (mailLog), so the same news isn't sent twice: someone already
+   emailed about their current step starts unticked.
+   A "Not confirmed" result is deliberately not offered: that news goes to
+   each student individually, with their appeal rights.
+   ============================================================ */
+const REV_TPL_NAMES={hub:"check the hub",dueSoon:"due soon",overdue:"overdue",received:"received",more:"further changes",panel:"with the panel",confirmed:"confirmed",final:"final proposal"};
+function revGroups(rows,sem){
+  const hub=CPS_HUB_URL, moodle=cocRevisedLink(sem), sign="\n\nKind regards,\n"+(S.userName||"MRes Coordination");
+  const live=r=>r.st.email&&r.kind!=="recon";
+  const sub=r=>!!r.tr.submittedAt;
+  const pAt=r=>r.g.outcomesOut?.[r.id]?.progress?.at||0;
+  const T=[
+    {k:"dueSoon",label:"Revised proposal due soon",desc:"CMR / MRR, not yet submitted, due in the next "+REV_WINDOW_DAYS+" days",
+      pick:r=>live(r)&&r.released&&["CMR","MRR"].includes(r.code)&&!(r.resub&&!r.locked)&&!sub(r)&&r.days!=null&&r.days>=0&&r.days<=REV_WINDOW_DAYS,
+      since:r=>r.tr.remindedAt&&Date.now()-r.tr.remindedAt<3*CPS_DAY?r.tr.remindedAt:0,
+      subject:"Reminder: your revised CoC proposal is due soon",
+      body:"Dear students,\n\nA reminder that your revised Confirmation of Candidature proposal is due within the next two weeks. Your exact due date and the revisions required are on your CoC page in the MRes Supervision Hub (student portal \u2192 My CoC): "+hub+"\n\n"+
+        "Please submit it through the RES915/RES916 Moodle unit, under the Submission of Assignment section, using: POST COC REVISED FINAL PROPOSAL ("+moodle+").\n\nWork through the panel\u2019s feedback with your supervisors. If something is stopping you from submitting on time, please reply to this email."+sign,
+      sent:{remind:true}},
+    {k:"overdue",label:"Revised proposal overdue",desc:"CMR / MRR past the due date and not received",
+      pick:r=>live(r)&&r.released&&["CMR","MRR"].includes(r.code)&&!(r.resub&&!r.locked)&&!sub(r)&&r.days!=null&&r.days<0,
+      since:r=>r.tr.remindedAt&&Date.now()-r.tr.remindedAt<3*CPS_DAY?r.tr.remindedAt:0,
+      subject:"Overdue: your revised CoC proposal",
+      body:"Dear students,\n\nOur records show that your revised Confirmation of Candidature proposal has passed its due date and has not been received yet. Your due date and the revisions required are on your CoC page in the MRes Supervision Hub (My CoC): "+hub+"\n\n"+
+        "Please submit it as soon as possible through the RES915/RES916 Moodle unit: POST COC REVISED FINAL PROPOSAL ("+moodle+").\n\nIf something has prevented you from submitting, please reply to this email so we can talk about it."+sign,
+      sent:{remind:true}},
+    {k:"received",label:"Revised proposal received",desc:"Submitted; being checked by the Course Coordinator (CMR) or waiting to go to the panel (MRR)",
+      pick:r=>live(r)&&sub(r)&&((r.code==="CMR"&&!r.tr.acceptedAt)||(r.code==="MRR"&&!r.resub)),
+      since:r=>(r.tr.mailLog?.received||0)>=r.tr.submittedAt?r.tr.mailLog.received:0,
+      subject:"We have received your revised CoC proposal",
+      body:"Dear students,\n\nThank you \u2014 we have received your revised Confirmation of Candidature proposal.\n\n"+
+        "For minor revisions (CMR), the Course Coordinator now checks that the required revisions have been made. For major revisions (MRR), the CoC Panel (or its Chair on the panel\u2019s behalf) re-assesses it.\n\n"+
+        "You can follow its progress on your CoC page in the MRes Supervision Hub (My CoC): "+hub+sign,
+      sent:{hub:true}},
+    {k:"more",label:"Further changes requested",desc:"CMR sent back by the Course Coordinator, new date set",
+      pick:r=>live(r)&&r.code==="CMR"&&!!r.tr.moreAt&&!sub(r)&&!r.tr.acceptedAt,
+      since:r=>(r.tr.mailLog?.more||0)>=r.tr.moreAt?r.tr.mailLog.more:0,
+      subject:"Further changes needed to your revised CoC proposal",
+      body:"Dear students,\n\nThe Course Coordinator has reviewed your revised Confirmation of Candidature proposal and has asked for some further changes before your candidature can be confirmed.\n\n"+
+        "What still needs to change, and your new due date, are on your CoC page in the MRes Supervision Hub (My CoC): "+hub+"\n\n"+
+        "Please submit the updated proposal through Moodle: POST COC REVISED FINAL PROPOSAL ("+moodle+"), and talk the changes through with your supervisors."+sign,
+      sent:{hub:true}},
+    {k:"panel",label:"With the panel for re-assessment",desc:"MRR sent to the panel / Chair",
+      pick:r=>live(r)&&!!r.resub&&!r.locked,
+      since:r=>(r.tr.mailLog?.panel||0)>=(r.resub?.at||0)?r.tr.mailLog.panel:0,
+      subject:"Your revised CoC proposal is with the panel",
+      body:"Dear students,\n\nYour revised Confirmation of Candidature proposal has been sent to the CoC Panel to be re-assessed (by the panel, or by its Chair on the panel\u2019s behalf).\n\n"+
+        "The outcome will be released to you in the MRes Supervision Hub, and your CoC page (My CoC) shows where it is: "+hub+sign,
+      sent:{hub:true}},
+    {k:"confirmed",label:"Confirmed",desc:"CMR revisions accepted, or confirmed after an MRR resubmission",
+      pick:r=>live(r)&&((r.code==="CMR"&&!!r.tr.acceptedAt)||(!!r.resub&&r.locked&&r.released&&r.code==="C")),
+      since:r=>{ const at=r.code==="CMR"?r.tr.acceptedAt:pAt(r); const m=r.tr.mailLog?.confirmed||0; return m>=at?m:(r.code==="CMR"&&r.tr.toldAt>=r.tr.acceptedAt?r.tr.toldAt:0); },
+      subject:"Your Confirmation of Candidature is confirmed",
+      body:"Dear students,\n\nCongratulations \u2014 your Confirmation of Candidature is now confirmed. Your revised proposal has been checked and accepted (or, after major revisions, re-assessed by the panel).\n\n"+
+        "The details are on your CoC page in the MRes Supervision Hub (My CoC): "+hub+"\n\nPlease keep working with your supervisors on the next stage of your research."+sign,
+      sent:{hub:true,told:true}},
+    {k:"final",label:"Final proposal not yet submitted",desc:"Confirmed (C) at the CoC, final proposal not marked received",
+      pick:r=>live(r)&&r.code==="C"&&!r.resub&&r.released&&!sub(r),
+      since:r=>r.tr.mailLog?.final&&Date.now()-r.tr.mailLog.final<7*CPS_DAY?r.tr.mailLog.final:0,
+      subject:"Please submit your final CoC proposal",
+      body:"Dear students,\n\nCongratulations again on your confirmed candidature. If you have not done so yet, please submit your final proposal through the RES915/RES916 Moodle unit, under the Submission of Assignment section: POST COC REVISED FINAL PROPOSAL ("+moodle+")."+sign,
+      sent:{}},
+    {k:"hub",label:"Check the hub (any update)",desc:"Anyone whose CoC page changed since they were last told",
+      pick:r=>revUpdated([r]).length>0||(live(r)&&!!r.g.outcomesOut?.[r.id]?.progress),
+      since:r=>{ const p=pAt(r); return r.tr.hubToldAt&&r.tr.hubToldAt>=p?r.tr.hubToldAt:0; },
+      subject:"Update on your Confirmation of Candidature",
+      body:"Dear students,\n\nThere is an update on your Confirmation of Candidature (CoC) in the MRes Supervision Hub \u2014 for example, your revised proposal has been received, checked, or re-assessed.\n\n"+
+        "Please open the student portal and look at \u201CMy CoC\u201D: "+hub+"\nSign in with your student ID.\n\nIf anything there is unclear, please reply to this email or speak with your supervisors."+sign,
+      sent:{hub:true}}];
+  return T.map(t=>{ const rows2=(rows||[]).filter(t.pick); return {...t,rows:rows2,fresh:rows2.filter(r=>!t.since(r)).length}; });
+}
+function revGroupEmailDialog(rows,sem,redraw){
+  const G=revGroups(rows,sem);
+  let cur=(G.find(x=>x.fresh)||G.find(x=>x.rows.length)||G[0]).k;
+  const picks={};                                    // template -> Set of student ids
+  G.forEach(t=>{ picks[t.k]=new Set(t.rows.filter(r=>!t.since(r)).map(r=>r.id)); });
+  const edits={};                                    // template -> {subject, body} once changed
+  const sups=el("input",{type:"checkbox",style:"width:auto;margin:0"});
+  const left=el("div",{class:"rev-tpls",role:"group","aria-label":"Kind of email"});
+  const right=el("div",{class:"rev-tplbody"});
+  function draw(){
+    left.replaceChildren(...G.map(t=>el("button",{type:"button",class:"rev-tpl"+(t.k===cur?" on":"")+(t.rows.length?"":" empty"),"aria-pressed":t.k===cur?"true":"false",
+      onclick:()=>{ cur=t.k; draw(); }},el("span",{class:"t"},t.label),el("span",{class:"n"},t.fresh?t.fresh+" new":t.rows.length?String(t.rows.length):"\u2014"))));
+    const t=G.find(x=>x.k===cur), set=picks[cur], ed=edits[cur]||{subject:t.subject,body:t.body};
+    right.replaceChildren();
+    right.append(el("div",{class:"muted",style:"font-size:12.5px;margin:0 0 8px"},t.desc+"."));
+    if(!t.rows.length){ right.append(el("div",{class:"muted",style:"padding:16px 0"},"Nobody is at this stage at the moment.")); return; }
+    const all=el("input",{type:"checkbox",style:"width:auto;margin:0"}); all.checked=t.rows.every(r=>set.has(r.id));
+    all.onchange=()=>{ t.rows.forEach(r=>all.checked?set.add(r.id):set.delete(r.id)); draw(); };
+    right.append(el("label",{class:"coc-chk",style:"margin:0 0 6px;font-weight:600"},all,el("span",{},"Everyone at this stage ("+t.rows.length+")")));
+    const list=el("div",{class:"rev-recips"});
+    t.rows.forEach(r=>{ const was=t.since(r);
+      const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); cb.checked=set.has(r.id);
+      cb.onchange=()=>{ cb.checked?set.add(r.id):set.delete(r.id); all.checked=t.rows.every(x=>set.has(x.id)); };
+      list.append(el("label",{class:"coc-chk",style:"display:flex;align-items:flex-start;margin:0"},cb,el("span",{},el("b",{},r.st.name||""),
+        el("span",{class:"muted"}," \u00B7 "+(r.st.sid||"")+(r.due&&["dueSoon","overdue","more"].includes(cur)?" \u00B7 due "+cpsShort(r.due):"")),
+        was?el("span",{class:"pill none",style:"margin-left:6px"},"already emailed "+relTime(was)):""))); });
+    right.append(list);
+    const subj=el("input",{value:ed.subject}), body=el("textarea",{rows:"9"}); body.value=ed.body;
+    const keep=()=>{ edits[cur]={subject:subj.value,body:body.value}; };
+    subj.addEventListener("input",keep); body.addEventListener("input",keep);
+    right.append(el("div",{class:"field",style:"margin-top:10px"},el("label",{},"Subject"),subj),
+      el("div",{class:"field"},el("label",{},"Message"),body),
+      el("div",{class:"row",style:"gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap"},
+        el("label",{class:"coc-chk"},sups,el("span",{},"Bcc their supervisors too")),
+        el("span",{style:"flex:1"}),
+        el("button",{type:"button",class:"btn xs ghost",onclick:()=>{ const em=recips(); copyText(em.join(", ")).then(ok=>toast(ok?apPl(em.length,"address")+" copied \u2014 paste them into Bcc.":"Couldn't copy.",!ok)); }},"\u29C9 Copy addresses")));
+  }
+  function recips(){
+    const t=G.find(x=>x.k===cur), sel=t.rows.filter(r=>picks[cur].has(r.id));
+    return [...new Set(sel.flatMap(r=>[r.st.email,...(sups.checked?revEmails(r.st).cc.split(",").filter(Boolean):[])]).filter(Boolean))];
+  }
+  const body=el("div",{class:"rev-gm"},left,right);
+  draw();
+  modal("Group email \u2014 students after the CoC",body,async()=>{
+    const t=G.find(x=>x.k===cur), sel=t.rows.filter(r=>picks[cur].has(r.id));
+    if(!sel.length){ toast("Tick at least one student.",true); return false; }
+    const ed=edits[cur]||{subject:t.subject,body:t.body};
+    const bcc=recips();
+    /* Every address goes in Bcc, so nobody sees anyone else's. */
+    openEmail("",ed.subject,ed.body,"",bcc.join(","));
+    if(bcc.join(",").length>1800) toast("That\u2019s a long list \u2014 if your mail app drops addresses, use \u201CCopy addresses\u201D and paste them into Bcc.",true);
+    const now=Date.now();
+    for(const r of sel){
+      const patch={mailLog:{...(r.tr.mailLog||{}),[t.k]:now}};
+      if(t.sent.remind){ patch.remindedAt=now; patch.remindN=(r.tr.remindN||0)+1; patch.remindedBy=S.userName||""; }
+      if(t.sent.hub) patch.hubToldAt=now;
+      if(t.sent.told&&r.code==="CMR"&&r.tr.acceptedAt) patch.toldAt=now;
+      try{ await revTrackWrite(r.g,r.id,patch,r.round); }catch(e){ console.warn("not noted",e); }
+    }
+    toast("Noted for "+apPl(sel.length,"student")+".");
+    redraw&&redraw(); return true;
+  },"\u2709 Open the email");
+  const m=[...document.querySelectorAll(".modal")].pop(); m?.classList.add("wide","rev-gmodal");
 }
 
 /* ============================================================
