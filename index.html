@@ -1410,6 +1410,27 @@
   .ap-pchip2 .o{font-size:12px;color:var(--ink-soft)}
   .ap-pwhen{margin-top:8px;font-weight:600}
   .ap-panelbox{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--sunken);margin:0 0 14px}
+
+  /* "after your CoC" inside the outcome notice */
+  .coc-prog{margin:10px 0 12px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);border-left:4px solid var(--blue-ink);background:var(--blue-soft)}
+  .coc-prog.green{border-left-color:var(--green-ink);background:var(--green-soft)}
+  .coc-prog.amber{border-left-color:var(--amber-ink);background:var(--amber-soft)}
+  .coc-prog.clay{border-left-color:var(--clay-ink);background:var(--clay-soft)}
+  .coc-prog .ph{display:flex;flex-direction:column;gap:2px}
+  .coc-prog .lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  .coc-prog .ph b{font-size:15px;color:var(--ink)}
+  .coc-prog .pt{margin:6px 0 0;font-size:13.5px;color:var(--ink)}
+  .coc-prog .pn{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:var(--paper-2);font-size:13.5px}
+  .coc-prog .pd{margin-top:6px;font-weight:650;font-size:13.5px}
+  .coc-prog .ps{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink-soft)}
+  .coc-prog .ps li{display:inline-flex;align-items:center;gap:5px}
+  .coc-prog .ps li i{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-style:normal;font-size:9px;font-weight:800;background:var(--paper-2)}
+  .coc-prog .ps li.d{color:var(--ink)}
+  .coc-prog .ps li.d i{background:var(--green-ink);border-color:var(--green-ink);color:#fff}
+  .coc-prog .pa{color:var(--ink-soft)}
+  .coc-prog .phist{margin-top:8px;font-size:12.5px;color:var(--ink-soft)}
+  .coc-prog .pu{margin-top:6px;font-size:11.5px;color:var(--ink-soft)}
+  .rev-supline{font-size:11.5px;font-weight:650;margin-top:3px;color:var(--ink)}
 </style>
 <style id="refresh-2026">
   /* ============================================================
@@ -6041,7 +6062,8 @@ async function viewPanels(v){
             (outcomes[s.id].deferred?"Deferred":outcomes[s.id].outcome.code||"Outcome")+" · view feedback")
           :el("span",{class:"muted ui",style:"font-size:12.5px"},"Not released"),
           outcomes[s.id]?el("div",{class:"muted ui",style:"font-size:11.5px;margin-top:3px"},
-            outcomes[s.id].audience==="supervisors"?"Not yet released to "+(s.name||"the student"):"The student can see it too"):"")));
+            outcomes[s.id].audience==="supervisors"?"Not yet released to "+(s.name||"the student"):"The student can see it too"):"",
+          outcomes[s.id]?.progress?.headline?el("div",{class:"rev-supline"},outcomes[s.id].progress.short||outcomes[s.id].progress.headline):"")));
     });
     t.append(tb); c.append(t); host.append(c);
   }
@@ -17634,6 +17656,7 @@ async function renderStudentView(sid,enrolments,sems){
       t.append(el("div",{class:"sp-big",style:"margin-top:8px"},"Outcome released"),
         el("div",{class:"sp-tags"},el("span",{class:"pill "+(code==="C"?"approved":code==="NC"?"missed":"pending")},code),
           el("span",{class:"sp-small"},oc.outcome.label||"")),
+        oc.progress?.headline?el("div",{class:"sp-small",style:"margin-top:8px;font-weight:650;color:var(--ink)"},oc.progress.headline):"",
         el("div",{class:"foot"},el("button",{class:"btn ghost sm",onclick:()=>go("coc")},"Read the outcome & feedback")));
       return t;
     }
@@ -18546,6 +18569,7 @@ function renderStaffPinView(who,blocks,opts={}){
             const box=el("div",{style:"max-height:65vh;overflow:auto"},cocOutcomeView(o));
             modal("CoC outcome and feedback — "+(s.name||""),box,async()=>true,"Close");
             const m=[...document.querySelectorAll(".modal")].pop(); if(m){ m.classList.add("wide"); const cb=m.querySelector(".modal-foot .btn.ghost"); if(cb) cb.remove(); } }},"View feedback")),
+        o.progress?.headline?el("div",{class:"sp-small",style:"margin-top:6px;font-weight:650"},o.progress.short||o.progress.headline):"",
         el("div",{class:"sp-small",style:"margin-top:6px"},o.audience==="supervisors"
           ?"Released to you first — "+(s.name||"the student")+" can't see it yet."
           :"Released "+(o.releasedAt?cocDay(o.releasedAt):"")+" — "+(s.name||"the student")+" can see it too.")));
@@ -21739,11 +21763,13 @@ function cocOutcomeView(o){
     el("span",{class:"pill "+cls,style:"font-size:13px"},o.deferred?"Deferred":o.outcome.code||"—"),
     el("div",{},el("div",{class:"t"},o.outcome.label||"Outcome"),
       el("div",{class:"s"},[o.panel,o.seminarDate?"seminar "+longDate(o.seminarDate):"",o.releasedAt?"released "+cocDay(o.releasedAt):""].filter(Boolean).join(" · ")))));
+  /* what has happened since (revisions received, checked, re-assessed) */
+  if(o.progress) w.append(revProgressView(o.progress));
   if(cocMeaning(o.outcome)) w.append(el("p",{class:"m"},cocMeaning(o.outcome)));
   const blk=(h,t)=>el("div",{class:"b"},el("div",{class:"h"},h),el("div",{class:"x"},cocLinkify(t)));
   if(o.conditions) w.append(blk("Conditions / revisions required",o.conditions));
   if(o.dueBy||o.represent) w.append(el("div",{class:"row",style:"gap:8px;margin:8px 0"},
-    o.dueBy?el("span",{class:"pill pending"},"Due by "+longDate(o.dueBy)):"",
+    o.dueBy&&!(o.progress&&o.progress.status&&o.progress.status!=="waiting")?el("span",{class:"pill pending"},"Due by "+longDate(o.dueBy)):"",
     o.represent==="Y"?el("span",{class:"pill blue"},"Re-presentation required"):""));
   COC_FB.forEach(([k,lab])=>{ if(o.feedback?.[k]) w.append(blk(lab,o.feedback[k])); });
   if((o.assessors||[]).length){
@@ -21825,6 +21851,11 @@ async function cocWriteRelease(picks,aud,opts={}){
     if(!byP.has(gid)) byP.set(gid,{pg,out:{...(pg.g0.outcomesOut||{})},release:{...(pg.rep.release||{})},names:[]});
     const b=byP.get(gid), prev=row.rel||{}, id=row.st.id;
     const notice={...o,groupId:gid,audience:toStu?"students":"supervisors"};
+    /* a decision on a resubmission carries the story so far; any other
+       re-release keeps what the office has recorded since */
+    { const pv=(pg.g0.outcomesOut||{})[id], rs=pg.rep?.cand?.[id]?.resub;
+      if(rs&&(rs.round||1)>1&&!o.deferred) notice.progress=revAfterPanel(pv,notice,rs);
+      else if(pv?.progress&&pv.outcome?.code===notice.outcome?.code) notice.progress=pv.progress; }
     b.out[id]=notice;
     b.release[id]={at:now,by:S.userName||"",note:o.note||"",assessors:!!opts.assessors,
       supervisors:true,students:toStu,portal:toStu,
@@ -25541,9 +25572,9 @@ function revRows(groups,reps,students,appeals){
       const tr=revTrackOf(g,id,round);
       const r={g,rep,st,id,round,resub,code,locked,rel,tr,
         released:!!relAt&&(!resub||relAt>=approvedAt),
-        due:(locked?det.dueBy:"")||(!resub?notice?.dueBy:"")||"",
+        due0:(locked?det.dueBy:"")||(!resub?notice?.dueBy:"")||"",
         chair:revChairOf(g),appeal:(appeals||[]).find(a=>a.studentDocId===id&&a.stage!=="withdrawn")||null};
-      r.days=r.due?apDaysTo(r.due):null;
+      r.due=tr.dueBy||r.due0; r.days=r.due?apDaysTo(r.due):null;
       revState(r);
       rows.push(r);
     });
@@ -25589,8 +25620,8 @@ function revState(r){
   if(r.code==="CMR"){
     const acc=!!t.acceptedAt, told=!!t.toldAt;
     r.steps=[["Revisions due",1],["Submitted",sub?1:0],["Course Coordinator check",acc?1:0],["Student told",told?1:0]];
-    if(!sub){ r.next="Waiting for the revised proposal"+(r.due?" — due "+longDate(r.due):"")+"."; r.bucket=soon?"action":"waiting"; r.act=["remind","submit"]; }
-    else if(!acc){ r.next="Revised proposal received "+cocDay(t.submittedAt)+". The Course Coordinator checks the revisions were made"+(t.ccAskedAt?" (asked "+relTime(t.ccAskedAt)+")":"")+", then mark them accepted."; r.bucket="action"; r.act=["askcc","accept","undoSub"]; }
+    if(!sub){ r.next=(t.moreAt?"Further changes requested "+cocDay(t.moreAt)+". ":"")+"Waiting for the revised proposal"+(r.due?" — due "+longDate(r.due):"")+"."; r.bucket=soon?"action":"waiting"; r.act=["remind","submit"]; }
+    else if(!acc){ r.next="Revised proposal received "+cocDay(t.submittedAt)+". The Course Coordinator checks the revisions were made"+(t.ccAskedAt?" (asked "+relTime(t.ccAskedAt)+")":"")+", then mark them accepted \u2014 or ask for further changes."; r.bucket="action"; r.act=["askcc","accept","more","undoSub"]; }
     else if(!told){ r.next="Revisions accepted "+cocDay(t.acceptedAt)+". Tell the student their candidature is confirmed."; r.bucket="action"; r.act=["tell","undoAcc"]; }
     else{ r.next="Confirmed — revisions accepted "+cocDay(t.acceptedAt)+", student told "+cocDay(t.toldAt)+"."; r.bucket="done"; r.act=["undoAcc"]; }
     return;
@@ -25673,7 +25704,12 @@ function revRemindChair(r,redraw){
 }
 async function revSendToPanel(r,sem,redraw){
   if(!r.rep||!r.locked){ toast("The panel's report has to be approved before the revised proposal can be re-assessed.",true); return; }
-  try{ const marks=await cocGetMarks(r.g); cocResubDialog(r.g,r.rep,r.st,marks,sem,redraw); }
+  try{ const marks=await cocGetMarks(r.g);
+    cocResubDialog(r.g,r.rep,r.st,marks,sem,async()=>{
+      /* the student's and supervisors' page: "with the panel" */
+      try{ const rep2=await DB.get("cocReports",r.g.id,{raw:true}); const rs=rep2?.cand?.[r.id]?.resub;
+        if(rs){ r.rep=rep2; r.resub=rs; r.locked=false; revState(r); await revPublish(r); } }catch(e){ console.warn("progress not published",e); }
+      redraw&&redraw(); }); }
   catch(e){ toast("Couldn't open the re-assessment: "+(e?.message||e),true); }
 }
 
@@ -25691,7 +25727,8 @@ function revDueCard(groups,reps,students,sem,redraw,appeals){
     n("action")?el("span",{class:"pill pending"},n("action")+" need"+(n("action")===1?"s":"")+" you"):el("span",{class:"pill approved"},"Nothing needs you"),
     overdue?el("span",{class:"pill missed"},overdue+" overdue"):"",
     el("span",{style:"flex:1"}),
-    remindable.length>1?el("button",{class:"btn sm",onclick:()=>revRemind(remindable,sem,redraw)},"✉ Remind "+remindable.length+" (Bcc)"):""));
+    remindable.length>1?el("button",{class:"btn sm",onclick:()=>revRemind(remindable,sem,redraw)},"✉ Remind "+remindable.length+" (Bcc)"):"",
+    (()=>{ const u=revUpdated(all); return u.length?el("button",{class:"btn sm",onclick:()=>revHubDialog(all,redraw)},"✉ Ask "+apPl(u.length,"student")+" to check the hub"):""; })()));
   const tab=(k,label)=>el("button",{type:"button",class:F===k?"active":"",onclick:()=>{ S.revFil=k; redraw(); }},label+" ("+(k==="all"?all.length:n(k))+")");
   c.append(el("div",{class:"rev-bar ui"},el("div",{class:"seg rev-seg"},tab("action","Needs action"),tab("waiting","Waiting"),tab("panel","With panel"),tab("done","Done"),tab("all","All")),
     el("span",{class:"muted",style:"font-size:12.5px;flex:1;min-width:220px"},"C, CMR and MRR candidates. Mark what arrives; the hub shows who to email next. MRR decisions are read from the re-approved report.")));
@@ -25708,15 +25745,16 @@ function revRow(r,sem,redraw){
   const tagCls=r.kind==="recon"?(r.code==="NC"?"missed":"blue"):r.code==="C"&&!r.resub?"approved":r.code==="NC"?"missed":r.code==="CMR"?"blue":"pending";
   const B=(cls,label,on,title)=>el("button",{class:cls,title:title||"",onclick:on},label);
   const acts=[];
-  const undo=(patch,msg)=>async()=>{ if(!window.confirm(msg)) return; await revTrackWrite(r.g,r.id,patch,r.round); redraw(); };
-  const markSub=async()=>{ await revTrackWrite(r.g,r.id,{submittedAt:Date.now(),submittedBy:S.userName||""},r.round); toast("Marked as submitted."); redraw(); };
+  const undo=(patch,msg)=>async()=>{ if(!window.confirm(msg)) return; await revAct(r,patch,redraw); };
+  const markSub=()=>revAct(r,{submittedAt:Date.now(),submittedBy:S.userName||""},redraw,"Marked as submitted \u2014 the student\u2019s and supervisors\u2019 page updated.");
   r.act.forEach(a=>{
     if(a==="submit") acts.push(B("btn sm"+(r.act[0]==="submit"?"":" ghost"),"✓ Mark submitted",markSub,"The proposal has arrived in Moodle"));
     if(a==="remind") acts.push(B("btn sm"+(r.code==="C"||t.remindedAt||r.act[0]!=="remind"?" ghost":""),t.remindedAt?"✉ Remind again":"✉ Remind",()=>revRemind([r],sem,redraw),r.st.email?"Email "+r.st.email+" (supervisors copied)":"No email on file"));
     if(a==="askcc") acts.push(B("btn sm"+(t.ccAskedAt?" ghost":""),"✉ Ask Course Coordinator to check",()=>revAskCC(r,sem,redraw)));
-    if(a==="accept") acts.push(B("btn sm"+(t.ccAskedAt?"":" ghost"),"✓ Revisions accepted",async()=>{ await revTrackWrite(r.g,r.id,{acceptedAt:Date.now(),acceptedBy:S.userName||""},r.round); toast("Marked as accepted."); redraw(); }));
+    if(a==="accept") acts.push(B("btn sm"+(t.ccAskedAt?"":" ghost"),"✓ Revisions accepted",()=>revAct(r,{acceptedAt:Date.now(),acceptedBy:S.userName||""},redraw,"Accepted \u2014 the student\u2019s page now shows the candidature is confirmed."),"The Course Coordinator is satisfied"));
+    if(a==="more") acts.push(B("btn xs ghost","Ask for further changes\u2026",()=>revMoreDialog(r,redraw),"The Course Coordinator wants more changes"));
     if(a==="tell") acts.push(B("btn sm","✉ Tell the student: confirmed",()=>revTell(r,sem,redraw),"Email the student, supervisors copied"),
-      B("btn xs ghost","Mark told",async()=>{ await revTrackWrite(r.g,r.id,{toldAt:Date.now()},r.round); redraw(); },"Told another way"));
+      B("btn xs ghost","Mark told",()=>revAct(r,{toldAt:Date.now()},redraw),"Told another way"));
     if(a==="panel") acts.push(B("btn sm","↻ Send to the panel…",()=>revSendToPanel(r,sem,redraw),"Reopen the report so the revised proposal is re-assessed"));
     if(a==="chair") acts.push(B("btn sm ghost","✉ Remind "+(r.resub?.mode==="panel"?"the panel":"the Chair"),()=>revRemindChair(r,redraw)));
     if(a==="release") acts.push(B("btn sm","Release on CoC reports →",()=>goTab("cocreports")));
@@ -25726,7 +25764,8 @@ function revRow(r,sem,redraw){
   if(r.act.includes("undoSub")) small.push(el("button",{class:"rev-undo",onclick:undo({submittedAt:0,receivedAt:0},"Undo “submitted” for "+(r.st.name||"")+"?")},"undo submitted"));
   if(r.act.includes("undoAcc")) small.push(el("button",{class:"rev-undo",onclick:undo({acceptedAt:0,toldAt:0},"Undo “accepted” for "+(r.st.name||"")+"?")},"undo accepted"));
   if(r.act.includes("remind")) small.push(el("button",{class:"rev-undo",title:"Reminded another way (Teams, phone)",onclick:()=>revRemind([r],sem,redraw,true)},"mark reminded"));
-  const meta=[t.remindedAt?"reminded "+relTime(t.remindedAt)+(t.remindN>1?" ("+t.remindN+"×)":""):"",t.chairRemindedAt?"Chair reminded "+relTime(t.chairRemindedAt):""].filter(Boolean).join(" · ");
+  const prg=r.g.outcomesOut?.[r.id]?.progress;
+  const meta=[prg?.at?"page updated "+relTime(prg.at)+(t.hubToldAt&&t.hubToldAt>=prg.at?" \u00B7 told to check the hub":""):"",t.remindedAt?"reminded "+relTime(t.remindedAt)+(t.remindN>1?" ("+t.remindN+"×)":""):"",t.chairRemindedAt?"Chair reminded "+relTime(t.chairRemindedAt):""].filter(Boolean).join(" · ");
   return el("div",{class:"cps-rrow ui rev-row rev-"+r.bucket+(ds&&r.days<0?" late":"")},
     el("div",{class:"cps-when"},
       r.whenLabel?el("b",{},r.whenLabel):showDue?el("b",{},"Due "+cpsDay(r.due)):el("b",{class:"muted",style:"font-weight:600"},r.resub&&!r.locked&&r.resub.closesAt?"Panel closes "+cpsShort(apDayOf(r.resub.closesAt)):r.code==="C"?"No due date":r.due?"Was due "+cpsShort(r.due):"—"),
@@ -25740,6 +25779,153 @@ function revRow(r,sem,redraw){
       el("div",{class:"rev-next"+(r.bucket==="action"?" act":"")},r.next),
       meta?el("div",{class:"muted",style:"font-size:11.5px;margin-top:3px"},meta):""),
     el("div",{class:"cps-act"},...acts,small.length?el("div",{class:"rev-smalls"},...small):""));
+}
+
+/* ============================================================
+   17G. WHAT HAPPENED AFTER THE CoC — on the student's and supervisors' page
+   Each step the office records here is published into the outcome notice
+   itself, as `progress`: the supervisors' copy on the panel record
+   (panelGroups.outcomesOut) and, once the outcome has gone to the student,
+   their copy (staffKeys/cocout:<id>). Every screen that shows the notice —
+   the student portal, the supervisors' CoC table, their PIN page — draws it
+   with cocOutcomeView, so they all show the same thing. One email ("please
+   check the hub") then does for everyone.
+     CMR  received → checked by the Course Coordinator → accepted: confirmed
+          (or further changes requested, with a new due date)
+     MRR  received → with the panel → the panel's decision, which arrives as
+          the re-released outcome itself, marked "after resubmission"
+     C    final proposal received
+   Nothing about a re-assessment is shown before the office releases it.
+   ============================================================ */
+async function revAct(r,patch,redraw,msg){
+  await revTrackWrite(r.g,r.id,patch,r.round);
+  r.tr=revTrackOf(r.g,r.id,r.round); r.due=r.tr.dueBy||r.due0; r.days=r.due?apDaysTo(r.due):null;
+  revState(r);
+  try{ await revPublish(r); }
+  catch(e){ console.warn("progress not published",e); toast("Saved, but the student\u2019s page couldn\u2019t be updated: "+(e?.message||e),true); redraw&&redraw(); return; }
+  if(msg) toast(msg);
+  redraw&&redraw();
+}
+function revProgress(r){
+  if(r.kind==="recon") return null;
+  if(r.resub&&r.locked&&(!r.released||["C","NC"].includes(r.code))) return null;   // the release itself says it
+  const t=r.tr, now=Date.now();
+  const P={kind:r.code,round:r.round||1,status:"",tone:"blue",headline:"",text:"",due:"",note:"",steps:[],at:now};
+  const relAt=r.rel?.studentsAt||r.rel?.at||0;
+  const step=(t1,done,at)=>({t:t1,done:!!done,at:at||0});
+  if(r.resub&&!r.locked) return {...P,kind:"MRR",status:"panel",tone:"blue",headline:"With the panel for re-assessment",
+    text:"Your revised proposal is being re-assessed by the "+(r.resub.mode==="chair"?"CoC Panel Chair, on behalf of the panel":"CoC Panel")+". The outcome will appear here once it has been released.",
+    steps:[step("Outcome released",1,relAt),step("Revised proposal received",1,t.submittedAt||r.resub.at),step("Sent to the panel",1,r.resub.at),step("Panel\u2019s decision",0,0)]};
+  const sub=!!t.submittedAt, late=r.days!=null&&r.days<0;
+  const dueTxt=r.due?(late?"was due ":"due ")+longDate(r.due):"";
+  if(r.code==="C") return {...P,status:sub?"final":"waiting",tone:"green",headline:sub?"Confirmed \u2014 final proposal received":"Confirmed \u2014 please submit your final proposal",
+    text:sub?"Your final proposal was received on "+cocDay(t.submittedAt)+".":"Submit your final proposal through the RES915/RES916 Moodle unit (POST COC REVISED FINAL PROPOSAL).",
+    steps:[step("Candidature confirmed",1,relAt),step("Final proposal received",sub,t.submittedAt)]};
+  if(r.code==="CMR"){
+    const acc=!!t.acceptedAt;
+    const steps=[step("Outcome released",1,relAt),step("Revised proposal received",sub||acc,t.submittedAt),step("Checked by the Course Coordinator",acc,t.acceptedAt),step("Candidature confirmed",acc,t.acceptedAt)];
+    if(acc) return {...P,status:"accepted",tone:"green",headline:"Revisions accepted \u2014 your candidature is confirmed",
+      text:"The Course Coordinator checked your revised proposal and is satisfied that the required revisions have been made ("+cocDay(t.acceptedAt)+").",steps};
+    if(sub) return {...P,status:"checking",tone:"blue",headline:"Revised proposal received \u2014 being checked by the Course Coordinator",
+      text:"Received "+cocDay(t.submittedAt)+". The Course Coordinator checks that the required revisions have been made; the result will appear here.",steps};
+    if(t.moreAt) return {...P,status:"more",tone:"amber",headline:"Further changes requested",due:r.due,note:t.moreNote||"",
+      text:"The Course Coordinator has asked for further changes before your candidature can be confirmed. Please submit the updated proposal through Moodle"+(dueTxt?" \u2014 "+dueTxt:"")+".",steps};
+    return {...P,status:"waiting",tone:late?"clay":"amber",headline:"Revised proposal "+(dueTxt||"due"),due:r.due,
+      text:"Submit your revised proposal through the RES915/RES916 Moodle unit (POST COC REVISED FINAL PROPOSAL).",steps};
+  }
+  if(r.code==="MRR"){
+    const steps=[step("Outcome released",1,relAt),step("Revised proposal received",sub,t.submittedAt),step("Re-assessed by the panel",0,0),step("Panel\u2019s decision",0,0)];
+    if(sub) return {...P,status:"received",tone:"blue",headline:"Revised proposal received \u2014 to be re-assessed by the panel",
+      text:"Received "+cocDay(t.submittedAt)+". The CoC Panel (or its Chair on the panel\u2019s behalf) re-assesses it; the outcome will appear here once released.",steps};
+    return {...P,status:"waiting",tone:late?"clay":"amber",headline:"Revised proposal "+(dueTxt||"due"),due:r.due,
+      text:"Submit your revised proposal through the RES915/RES916 Moodle unit (POST COC REVISED FINAL PROPOSAL).",steps};
+  }
+  return null;
+}
+async function revPublish(r){
+  const P=revProgress(r); if(!P) return;
+  const g=r.g, cur=(g.outcomesOut||{})[r.id];
+  if(!cur) return;                                    // nothing released to anyone yet
+  P.history=cur.progress?.history||[]; P.short=revShort(P.headline);
+  const out={...(g.outcomesOut||{}),[r.id]:{...cur,progress:P}};
+  const ops=[{type:"update",coll:"panelGroups",id:g.id,data:{outcomesOut:out}}];
+  /* the student's copy only once the outcome has been released to them */
+  if(cur.audience==="students"||cocRelStu(r.rel)) ops.push({type:"set",coll:"staffKeys",id:cocOutKeyOf(r.id),data:{progress:P}});
+  await DB.batchWrite(ops);
+  g.outcomesOut=out;
+  cocRefreshPins();
+}
+/* When the panel's decision on a resubmission is released (cocWriteRelease),
+   the new notice carries the story so far. */
+function revAfterPanel(prev,notice,rs){
+  const hist=(prev?.progress?.history||[]).filter(h=>h.round!==rs.round);
+  const code=notice?.outcome?.code||"";
+  hist.push({round:rs.round,at:Date.now(),
+    text:"Revised proposal re-assessed by the "+(rs.mode==="chair"?"Panel Chair on the panel\u2019s behalf":"CoC Panel")+" after "+
+      ({MRR:"Major Revisions",CMR:"minor revisions"}[rs.prev?.outcome]||"revisions")+" \u2014 new outcome "+code+(notice?.outcome?.label?" ("+notice.outcome.label+")":"")+"."});
+  return {kind:"after",round:rs.round,status:"decided",tone:code==="C"?"green":code==="NC"?"clay":"amber",
+    headline:code==="C"?"Confirmed after your resubmission":code==="NC"?"Not confirmed after your resubmission":"Re-assessed after your resubmission",
+    text:"The panel has re-assessed your revised proposal. The outcome below replaces your earlier one.",due:"",note:"",
+    steps:[{t:"Revised proposal received",done:true,at:rs.at||0},{t:"Re-assessed by the panel",done:true,at:rs.at||0},{t:"New outcome released",done:true,at:Date.now()}],
+    history:hist,at:Date.now(),short:code==="C"?"Confirmed after resubmission":code==="NC"?"Not confirmed after resubmission":"Re-assessed after resubmission"};
+}
+/* The same news in the third person, for the supervisors' lists. */
+const revShort=h=>String(h||"").replace(/your candidature/i,"candidature").replace(/please submit your final proposal/i,"final proposal not yet received").replace(/ after your resubmission/i," after resubmission");
+/* The block inside the outcome notice. */
+function revProgressView(p){
+  if(!p||!p.headline) return "";
+  const D=ms=>ms?cocDay(ms):"";
+  return el("div",{class:"coc-prog "+(p.tone||"blue")},
+    el("div",{class:"ph"},el("span",{class:"lab"},"After your CoC"),el("b",{},p.headline)),
+    p.text?el("p",{class:"pt"},p.text):"",
+    p.note?el("div",{class:"pn"},el("b",{},"From the Course Coordinator: "),cocLinkify(p.note)):"",
+    p.due&&p.status!=="accepted"?el("div",{class:"pd"},"Due "+dueLong(p.due)):"",
+    (p.steps||[]).length?el("ol",{class:"ps"},...p.steps.map(s=>el("li",{class:s.done?"d":""},el("i",{"aria-hidden":"true"},s.done?"\u2713":""),
+      el("span",{},s.t),s.done&&s.at?el("span",{class:"pa"},D(s.at)):""))):"",
+    (p.history||[]).length?el("div",{class:"phist"},...p.history.map(h=>el("div",{},"\u2022 "+h.text+(h.at?" ("+D(h.at)+")":"")))):"",
+    p.at?el("div",{class:"pu"},"Updated "+D(p.at)):"");
+}
+/* ---- "Further changes" (CMR) ---- */
+function revMoreDialog(r,redraw){
+  const note=el("textarea",{rows:"4",placeholder:"What still needs to change \u2014 the student sees this on their CoC page."});
+  const due=el("input",{type:"date",value:cocAddDays(apToday(),7),min:apToday()});
+  modal("Further changes \u2014 "+(r.st.name||""),el("div",{class:"grid",style:"gap:10px"},
+    el("p",{class:"muted",style:"margin:0;font-size:13.5px"},"The Course Coordinator isn\u2019t yet satisfied with the revisions. This sends the CMR back to the student with a note and a new due date; their CoC page and their supervisors\u2019 view show it."),
+    el("div",{class:"field"},el("label",{},"What still needs to change"),note),
+    el("div",{class:"field"},el("label",{},"New due date"),due)),async()=>{
+      const t=apT(note.value); if(!t){ toast("Say what still needs to change.",true); return false; }
+      if(!due.value){ toast("Set a new due date.",true); return false; }
+      const hist=[...(r.tr.more||[]),{at:Date.now(),note:t,dueBy:due.value,submittedAt:r.tr.submittedAt||0}];
+      await revAct(r,{moreAt:Date.now(),moreNote:t,dueBy:due.value,more:hist,submittedAt:0,receivedAt:0,ccAskedAt:0},redraw,"Sent back for further changes \u2014 the student\u2019s page shows the note and new date.");
+      return true; },"Send back");
+}
+/* ---- one email: "please check the hub" ---- */
+function revUpdated(rows){
+  return (rows||[]).filter(r=>{ const n=r.g.outcomesOut?.[r.id]; const p=n?.progress;
+    return p?.at&&(n.audience==="students"||cocRelStu(r.rel))&&r.st.email&&!(r.tr.hubToldAt&&r.tr.hubToldAt>=p.at); });
+}
+function revHubDialog(rows,redraw){
+  const list=revUpdated(rows);
+  const picks=new Set(list.map(r=>r.id));
+  const sups=el("input",{type:"checkbox",style:"width:auto;margin:0"}); sups.checked=true;
+  const body=el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"Opens one email, with these students in Bcc, asking them to sign in to the student portal and read their CoC page. Each one\u2019s page already shows their own update."),
+    ...list.map(r=>{ const cb=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0",checked:"checked"});
+      cb.onchange=()=>{ cb.checked?picks.add(r.id):picks.delete(r.id); };
+      return el("label",{class:"coc-chk",style:"display:flex;align-items:flex-start;margin:0 0 8px"},cb,
+        el("span",{},el("b",{},r.st.name||""),el("span",{class:"muted"}," \u2014 "+(r.g.outcomesOut[r.id].progress.headline||"")))); }),
+    el("label",{class:"coc-chk",style:"margin-top:6px"},sups,el("span",{},"Bcc their supervisors too")));
+  modal("Ask students to check the hub",body,async()=>{
+    const sel=list.filter(r=>picks.has(r.id)); if(!sel.length){ toast("Tick at least one student.",true); return false; }
+    const bcc=[...new Set(sel.flatMap(r=>[r.st.email,...(sups.checked?revEmails(r.st).cc.split(",").filter(Boolean):[])]).filter(Boolean))];
+    openEmail("","Update on your Confirmation of Candidature",
+      "Dear students,\n\nThere is an update on your Confirmation of Candidature (CoC) in the MRes Supervision Hub \u2014 for example, your revised proposal has been received, checked, or re-assessed.\n\n"+
+      "Please open the student portal and look at \u201CMy CoC\u201D: "+CPS_HUB_URL+"\nSign in with your student ID.\n\n"+
+      "If anything there is unclear, please reply to this email or speak with your supervisors.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),"",bcc.join(","));
+    const now=Date.now();
+    for(const r of sel){ const pt={hubToldAt:now}; if(r.code==="CMR"&&r.tr.acceptedAt&&!r.tr.toldAt) pt.toldAt=now; await revTrackWrite(r.g,r.id,pt,r.round); }
+    toast("Noted for "+apPl(sel.length,"student")+"."); redraw&&redraw(); return true; },"\u2709 Open the email");
+  apWide();
 }
 
 /* ============================================================
