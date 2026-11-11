@@ -1623,6 +1623,62 @@
   }
   @media print{ #view > div{animation:none} }
 </style>
+<style id="sempick-css">
+  /* ---- under-construction screen (thesis examination) ---- */
+  .uc-card{padding:34px 28px 28px;text-align:center;border-top:4px solid var(--amber-ink);
+    background-image:repeating-linear-gradient(135deg,transparent 0 22px,rgba(127,127,127,.035) 22px 44px)}
+  .uc-ico{width:56px;height:56px;border-radius:16px;margin:0 auto 12px;display:grid;place-items:center;background:var(--amber-soft);color:var(--amber-ink)}
+  .uc-ico svg{width:28px;height:28px}
+  .uc-card h3{font-size:20px;margin:10px 0 6px;letter-spacing:-.015em}
+  .uc-card > p{max-width:640px;margin:0 auto 20px;line-height:1.55}
+  .uc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;text-align:left}
+  @media (max-width:900px){ .uc-grid{grid-template-columns:1fr} }
+  .uc-box{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2)}
+  .uc-box b{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  .uc-box ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6}
+  .ap-banner{margin-bottom:12px}
+  /* ---- semester picker ------------------------------------------------ */
+  .sempick-field{min-width:0}
+  .sempick{position:relative;display:inline-block;max-width:100%}
+  .sempick-btn{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:11px;cursor:pointer;max-width:100%;min-width:290px;
+    padding:8px 12px 8px 10px;border-radius:12px;background:var(--paper-2);border:1px solid var(--line-strong);box-shadow:var(--shadow);
+    transition:border-color .15s,box-shadow .15s}
+  .sempick-btn:hover{border-color:var(--accent)}
+  .sempick-btn:focus-visible,.sempick-btn[aria-expanded="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  .sempick-btn[disabled]{cursor:default;opacity:.6}
+  .sempick-ico{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--accent-tint);color:var(--accent)}
+  .sempick-ico svg{width:18px;height:18px}
+  .sempick-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left}
+  .sempick-main b{font-size:14.5px;font-weight:650;line-height:1.3;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .sempick-sub{font-size:12.5px;line-height:1.35;color:var(--ink-soft);overflow-wrap:anywhere}
+  .sempick-st.now{color:var(--green-ink);font-weight:650}
+  .sempick-st.upcoming{color:var(--blue-ink);font-weight:650}
+  .sempick-chev{flex:0 0 auto;color:var(--ink-soft);font-size:12px;transition:transform .15s}
+  .sempick-btn[aria-expanded="true"] .sempick-chev{transform:rotate(180deg)}
+  .sempick-tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:999px;background:var(--accent-tint);color:var(--accent)}
+  .sempick-pop{position:absolute;z-index:70;top:calc(100% + 6px);left:0;width:min(460px,calc(100vw - 32px));
+    background:var(--paper-2);border:1px solid var(--line-strong);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden}
+  .sempick-pop.right{left:auto;right:0}
+  .sempick-qrow{padding:10px 10px 6px}
+  .sempick-q{width:100%!important;margin:0}
+  .sempick-list{max-height:min(420px,60vh);overflow:auto;padding:4px 6px 8px}
+  .sempick-grp{padding:10px 10px 4px;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+  .sempick-opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;padding:9px 10px;border-radius:10px;border:1px solid transparent}
+  .sempick-opt:hover{background:var(--sunken)}
+  .sempick-opt:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--sunken)}
+  .sempick-opt.on{background:var(--accent-tint);border-color:var(--accent)}
+  .sempick-tick{flex:0 0 auto;width:18px;text-align:center;font-weight:800;color:var(--accent)}
+  .sempick-pill{flex:0 0 auto;font-size:11.5px;white-space:nowrap}
+  .sempick-none{padding:16px 12px;font-size:13.5px;color:var(--ink-soft)}
+  .sempick-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line);background:var(--sunken);font-size:12.5px}
+  @media (max-width:640px){
+    .sempick,.sempick-btn{display:flex;width:100%;min-width:0}
+    .sempick-pop{width:100%}
+    .sempick-opt{flex-wrap:wrap}
+    .sempick-pill{margin-left:28px}
+  }
+  @media print{ .sempick-chev,.sempick-ico{display:none} .sempick-btn{border:0;box-shadow:none;padding:0} }
+</style>
 <style id="ap-polish">
   /* ============================================================
      CoC APPEALS — presentation layer (student, office, officers).
@@ -11239,6 +11295,7 @@ async function afterLogin(){
   let defaultSem=S.semesters[0]?.id||null;
   const best=S.semesters.filter(s=>counts[s.id]).sort((a,b)=>counts[b.id]-counts[a.id])[0];
   if(best) defaultSem=best.id;
+  { const saved=semRemembered(); if(saved&&S.semesters.some(x=>x.id===saved)) defaultSem=saved; }
   S.activeSem=defaultSem;
   if(S.nextTab){ S.tab=S.nextTab; S.nextTab=null; }
   renderApp();
@@ -11384,8 +11441,18 @@ function renderApp(){
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
        ["Confirmation of Candidature",[["panels","CoC panel","award"],["cocreports","CoC assessment","clipboard"],...(S.apShow?[["appeals","CoC appeals","scale"]]:[])]]];
   /* A thesis semester has no classes, so the class screens go. */
-  if(isThesisSem(activeSemester())) GROUPS.forEach(g=>{ g[1]=g[1].filter(t=>t[0]!=="timetables"&&t[0]!=="export")
-    .map(t=>t[0]==="consultations"?[t[0],coOnly?"View meeting time":S.role==="admin"?"Supervision meeting times":"Set meeting time",t[2]]:t); });
+  if(isThesisSem(activeSemester())){
+    GROUPS.forEach(g=>{ g[1]=g[1].filter(t=>t[0]!=="timetables"&&t[0]!=="export")
+      .map(t=>t[0]==="consultations"?[t[0],coOnly?"View meeting time":S.role==="admin"?"Supervision meeting times":"Set meeting time",t[2]]:t); });
+    /* ...and no Confirmation of Candidature: RES906 ends in a thesis
+       examination. CoC panels, reports and appeals belong to the semester
+       the CoC was held in, so they are reached by choosing that semester.
+       A panel member (whose only screens are CoC) keeps them. */
+    if(S.role!=="panellist"){
+      const i=GROUPS.findIndex(g=>g[0]==="Confirmation of Candidature");
+      if(i>=0) GROUPS[i]=["Thesis examination",[["thesisexam","Thesis examination","award"]]];
+    }
+  }
   const TABS=GROUPS.flatMap(g=>g[1]);
   S.navIndex={};
   GROUPS.forEach(([gl,items])=>items.forEach(([id,label])=>{ S.navIndex[id]={label,group:gl}; }));
@@ -11461,6 +11528,7 @@ function renderApp(){
   refreshApBadge();
   apStaffLinkNotice();
   showInboxBanner();
+  showAppealBanner();
 }
 
 /* Unread count on the Messages tab, refreshed after any note action. */
@@ -11509,17 +11577,188 @@ async function showInboxBanner(){
     if(main&&view) main.insertBefore(bar,view);
   }catch(e){ console.warn("messages banner unavailable:",e?.message||e); }
 }
+/* CoC appeals are kept with the semester the CoC was held in. So that an
+   appeal is never missed while someone is working in another semester
+   (a new intake, or RES906 where there is no CoC menu at all), anything
+   waiting for THIS person in a different semester is announced above the
+   screen, with one click to go there. */
+async function showAppealBanner(){
+  document.querySelectorAll(".ap-banner").forEach(n=>n.remove());
+  if(S.role!=="admin"&&!S.apShow) return;
+  const here=S.activeSem;
+  try{
+    let waiting=[];
+    if(S.role==="admin"){
+      const [recs,pts]=await Promise.all([DB.list("appeals"),DB.list("appealPortal")]);
+      waiting=recs.filter(r=>{ const p=pts.find(x=>x.id===r.id);
+        return (r.stage==="open"&&p?.status==="lodged")||r.stage==="lodged"||r.stage==="decided"||(p?.relodgedAt&&p.relodgedAt>(r.seenRelodge||0)&&r.stage!=="open"); });
+    }else{
+      waiting=(await DB.list("appeals",{officerUids:{$contains:S.uid}})).filter(apMyTurn);
+    }
+    if(here!==S.activeSem) return;                       // they moved on while this loaded
+    waiting=waiting.filter(r=>r.semesterId!==here&&semOf(r.semesterId));
+    if(!waiting.length) return;
+    const bySem=new Map(); waiting.forEach(r=>bySem.set(r.semesterId,[...(bySem.get(r.semesterId)||[]),r]));
+    const bar=el("div",{class:"notice ui amber ap-banner",role:"status"});
+    const row=el("div",{class:"row",style:"flex-wrap:wrap;gap:8px"},
+      el("span",{class:"pill pending"},"CoC appeals"),
+      el("span",{class:"ui",style:"font-size:13.5px;flex:1;min-width:200px"},
+        waiting.length+" appeal"+(waiting.length===1?" is":"s are")+" waiting for "+(S.role==="admin"?"the office":"you")+" in "+
+        (bySem.size===1?"another semester":"other semesters")+": "+waiting.slice(0,3).map(r=>r.name||"").join(", ")+(waiting.length>3?" +"+(waiting.length-3)+" more":"")+"."));
+    bySem.forEach((list,semId)=>row.append(el("button",{class:"btn sm",onclick:()=>{
+      S.activeSem=semId; semRemember(semId); S.tab="appeals"; S.apOpen=list.length===1?list[0].id:null; renderApp(); }},
+      "Open "+(semOf(semId)?.label||"semester")+(bySem.size>1?" ("+list.length+")":""))));
+    row.append(el("button",{class:"btn ghost sm",onclick:()=>bar.remove()},"Dismiss"));
+    bar.append(row);
+    const main=document.querySelector("main"), view=$("#view");
+    if(main&&view) main.insertBefore(bar,view);
+  }catch(e){ console.warn("appeal notice unavailable:",e?.message||e); }
+}
+
+/* ---- Thesis examination (RES906) — not built yet ------------------------
+   A thesis semester has no Confirmation of Candidature; it ends in the
+   examination of the thesis. The examination form has not been designed,
+   so this screen says so plainly instead of showing empty CoC pages. */
+async function viewThesisExam(v){
+  v.innerHTML="";
+  const sem=activeSemester();
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},semUnitCodes(sem)+" · "+(sem?.label||"")),el("h2",{},"Thesis examination"))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(()=>viewThesisExam(v))); v.append(bar);
+  const admin=S.role==="admin";
+  v.append(el("div",{class:"card uc-card"},
+    el("div",{class:"uc-ico","aria-hidden":"true"},navIcon("award")),
+    el("span",{class:"pill pending uc-pill"},"Under construction"),
+    el("h3",{},"The thesis examination is being designed"),
+    el("p",{class:"muted"},"This semester is supervision only and ends with the examination of the thesis, not a Confirmation of Candidature. "+
+      "The examination form and its workflow have not been built yet, so there is nothing to complete on this page for now."),
+    el("div",{class:"uc-grid"},
+      el("div",{class:"uc-box"},el("b",{},"Available now"),
+        el("ul",{},el("li",{},"Weekly supervision meetings and attendance"),el("li",{},"Progress, notes and to-do for each meeting"),
+          el("li",{},"Meeting times"+(messagesOn()?" and messages":"")),admin?el("li",{},"Students, supervisors and settings for this semester"):"")),
+      el("div",{class:"uc-box"},el("b",{},"Still to be designed"),
+        el("ul",{},el("li",{},"The thesis examination form"),el("li",{},"Who completes each part, and in what order"),el("li",{},"How the outcome reaches the student"))),
+      el("div",{class:"uc-box"},el("b",{},"Looking for the CoC?"),
+        el("p",{class:"muted",style:"margin:6px 0 0;font-size:13px"},"CoC panels, reports and appeals stay with the semester the CoC was held in. Choose that semester above to open them. "+
+          "An appeal waiting for "+(admin?"the office":"you")+" in another semester is announced at the top of every screen.")))));
+}
+
 function logout(){ if(DEMO){ S.user=null; renderLogin(); return; } signOut(auth); }
 
+/* Where a semester sits in time: running now (with the week), still to
+   start, finished, or undated. Drives the picker's grouping and pills. */
+function semState(sem){
+  const today=ymdOf(new Date()), wks=sem?.weeks||12;
+  if(!sem?.start) return {k:"nodate",txt:"No dates set",cls:"none",order:3};
+  let end=sem.end||"";
+  if(!end){ const b=semWeekBounds(sem,wks); end=b?ymdOf(b.sun):""; }
+  if(today<sem.start) return {k:"upcoming",txt:"Starts "+longDate(sem.start),cls:"blue",order:1};
+  if(end&&today>end) return {k:"past",txt:"Finished",cls:"none",order:2};
+  const w=currentWeekOf(sem);
+  return {k:"now",txt:w?"Week "+w+" of "+wks:"In progress",cls:"approved",order:0};
+}
+function semDatesLine(sem){
+  const wks=(sem?.weeks||12)+" weeks";
+  if(!sem?.start) return wks;
+  const y=d=>String(d).slice(0,4);
+  const a=longDate(sem.start), e=sem.end?longDate(sem.end):"";
+  return (e?(y(sem.start)===y(sem.end)?a.replace(/ \d{4}$/,""):a)+" – "+e:"From "+a)+" · "+wks;
+}
+/* The semester the person last worked in, so sign-in returns to it. */
+function semRemember(id){ try{ if(S.uid&&id) window.localStorage.setItem("sh-sem:"+S.uid,id); }catch(e){} }
+function semRemembered(){ try{ return S.uid?window.localStorage.getItem("sh-sem:"+S.uid):null; }catch(e){ return null; } }
+
+/* The semester picker. One button showing where you are (label, units,
+   week), opening a list of every semester grouped by In progress /
+   Upcoming / Finished, each with its units, dates and type. Arrow keys,
+   Enter and Esc work; typing filters when the list is long. */
 function semesterPicker(onChange){
-  const sel=el("select",{style:"width:auto;min-width:170px",onchange:e=>{ const was=isThesisSem(activeSemester()); S.activeSem=e.target.value;
+  const pick=id=>{
+    if(id===S.activeSem) return;
+    const was=isThesisSem(activeSemester()); S.activeSem=id; semRemember(id);
     /* the menu differs between a taught and a thesis semester */
     if(was!==isThesisSem(activeSemester())) renderApp(); else onChange();
-    refreshUnreadBadge();refreshCocBadge();}});
-  if(!S.semesters.length){ sel.append(el("option",{},"No semesters yet")); sel.disabled=true; }
-  S.semesters.forEach(s=>sel.append(el("option",{value:s.id,...(s.id===S.activeSem?{selected:"selected"}:{})},
-    s.label+" · "+semUnitCodes(s))));
-  return el("div",{class:"field"},el("label",{},"Semester"),sel);
+    refreshUnreadBadge();refreshCocBadge();
+  };
+  const cur=activeSemester();
+  const wrap=el("div",{class:"sempick"});
+  const typeTag=sem=>isThesisSem(sem)?el("span",{class:"sempick-tag thesis"},"Thesis"):"";
+  if(!S.semesters.length){
+    wrap.append(el("button",{class:"sempick-btn",type:"button",disabled:"disabled"},el("span",{class:"sempick-main"},el("b",{},"No semesters yet"))));
+    return el("div",{class:"field sempick-field"},el("label",{},"Semester"),wrap);
+  }
+  const st=cur?semState(cur):null;
+  const btn=el("button",{class:"sempick-btn",type:"button","aria-haspopup":"listbox","aria-expanded":"false",
+    "aria-label":"Semester: "+(cur?.label||"none selected")+". Change semester"},
+    el("span",{class:"sempick-ico","aria-hidden":"true"},navIcon?navIcon("calendar"):""),
+    el("span",{class:"sempick-main"},
+      el("b",{},cur?.label||"Choose a semester",cur?typeTag(cur):""),
+      cur?el("span",{class:"sempick-sub"},semUnitCodes(cur)," · ",el("span",{class:"sempick-st "+st.k},st.txt)):""),
+    el("span",{class:"sempick-chev","aria-hidden":"true"},"▾"));
+  wrap.append(btn);
+  let pop=null;
+  function close(focus){
+    if(!pop) return;
+    pop.remove(); pop=null; btn.setAttribute("aria-expanded","false");
+    document.removeEventListener("mousedown",outside,true); document.removeEventListener("keydown",onKey,true);
+    if(focus) btn.focus();
+  }
+  function outside(e){ if(!wrap.contains(e.target)) close(false); }
+  const opts=()=>pop?[...pop.querySelectorAll(".sempick-opt")]:[];
+  function onKey(e){
+    if(!pop) return;
+    const list=opts(), i=list.indexOf(document.activeElement);
+    if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); close(true); }
+    else if(e.key==="ArrowDown"){ e.preventDefault(); (list[i+1]||list[0])?.focus(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); (i<=0?(pop.querySelector(".sempick-q")||list[list.length-1]):list[i-1])?.focus(); }
+    else if(e.key==="Home"&&i>=0){ e.preventDefault(); list[0]?.focus(); }
+    else if(e.key==="End"&&i>=0){ e.preventDefault(); list[list.length-1]?.focus(); }
+    else if(e.key==="Tab"){ close(false); }
+  }
+  function open(){
+    if(pop){ close(true); return; }
+    pop=el("div",{class:"sempick-pop",role:"dialog","aria-label":"Choose a semester"});
+    const listBox=el("div",{class:"sempick-list",role:"listbox","aria-label":"Semesters"});
+    const q=el("input",{class:"sempick-q",type:"search",placeholder:"Find a semester or unit…","aria-label":"Find a semester"});
+    const draw=()=>{
+      listBox.innerHTML="";
+      const term=q.value.trim().toLowerCase();
+      const rows=S.semesters.map(x=>({x,st:semState(x)}))
+        .filter(r=>!term||[r.x.label,semUnitCodes(r.x),unitsOf(r.x).map(u=>u.name).join(" "),isThesisSem(r.x)?"thesis supervision":"taught"].join(" ").toLowerCase().includes(term))
+        .sort((a,b)=>a.st.order-b.st.order||String(b.x.start||"").localeCompare(String(a.x.start||""))||String(b.x.label).localeCompare(String(a.x.label)));
+      const heads={now:"In progress",upcoming:"Upcoming",past:"Finished",nodate:"No dates set"};
+      let last=null;
+      rows.forEach(({x,st})=>{
+        if(st.k!==last){ last=st.k; listBox.append(el("div",{class:"sempick-grp"},heads[st.k])); }
+        const on=x.id===S.activeSem;
+        listBox.append(el("button",{class:"sempick-opt"+(on?" on":""),type:"button",role:"option","aria-selected":on?"true":"false",
+          onclick:()=>{ close(true); pick(x.id); }},
+          el("span",{class:"sempick-tick","aria-hidden":"true"},on?"✓":""),
+          el("span",{class:"sempick-main"},
+            el("b",{},x.label||"Untitled semester",typeTag(x)),
+            el("span",{class:"sempick-sub"},semUnitCodes(x)+" · "+semDatesLine(x))),
+          el("span",{class:"pill "+st.cls+" sempick-pill"},st.txt)));
+      });
+      if(!rows.length) listBox.append(el("div",{class:"sempick-none"},"No semester matches “"+q.value.trim()+"”."));
+    };
+    q.addEventListener("input",draw);
+    q.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); const o=opts(); if(o.length===1) o[0].click(); else o[0]?.focus(); } });
+    if(S.semesters.length>6) pop.append(el("div",{class:"sempick-qrow"},q));
+    pop.append(listBox);
+    if(S.role==="admin") pop.append(el("div",{class:"sempick-foot"},
+      el("span",{class:"muted"},S.semesters.length+" semester"+(S.semesters.length===1?"":"s")),
+      el("button",{class:"btn xs ghost",type:"button",onclick:()=>{ close(false); goTab("people"); }},"Manage semesters →")));
+    draw();
+    wrap.append(pop); btn.setAttribute("aria-expanded","true");
+    /* keep the panel on screen when the button sits near the right edge */
+    const r=pop.getBoundingClientRect(); if(r.right>window.innerWidth-8) pop.classList.add("right");
+    document.addEventListener("mousedown",outside,true); document.addEventListener("keydown",onKey,true);
+    (S.semesters.length>6?q:(pop.querySelector(".sempick-opt.on")||opts()[0]))?.focus();
+    pop.querySelector(".sempick-opt.on")?.scrollIntoView({block:"nearest"});
+  }
+  btn.addEventListener("click",open);
+  btn.addEventListener("keydown",e=>{ if((e.key==="ArrowDown"||e.key==="ArrowUp")&&!pop){ e.preventDefault(); open(); } });
+  return el("div",{class:"field sempick-field"},el("label",{},"Semester"),wrap);
 }
 
 async function drawMain(){
@@ -11541,7 +11780,7 @@ async function drawMain(){
     contacts:viewContacts, people:viewPeople, settings:viewSettings,
     cocreports:S.role==="admin"?viewCocAdmin:viewCocAssess,
     cocsummary:S.role==="admin"?viewCocSummary:null,
-    appeals:viewAppeals};
+    appeals:viewAppeals, thesisexam:viewThesisExam};
   const fn=views[S.tab]; if(!fn) return;
   try{ return await fn(v); }
   catch(err){
@@ -17747,7 +17986,9 @@ async function renderStudentView(sid,enrolments,sems){
 
   function drawTabs(){
     const d=data[st.i], unread=unreadOf(d);
-    const T=[["home","Overview","home"],["meet","Meetings","cal"],["coc","My CoC","award"],["msg","Messages","msg"]];
+    const thesis=isThesisSem(d.sem);
+    if(thesis&&st.tab==="coc") st.tab="exam"; else if(!thesis&&st.tab==="exam") st.tab="coc";
+    const T=[["home","Overview","home"],["meet","Meetings","cal"],thesis?["exam","Thesis examination","award"]:["coc","My CoC","award"],["msg","Messages","msg"]];
     tabsNode.replaceChildren(...T.map(([k,lbl,ic])=>{
       const b=el("button",{class:st.tab===k?"on":"",role:"tab","aria-selected":String(st.tab===k),onclick:()=>go(k)},
         spIcon(ic,16),lbl);
@@ -17759,8 +18000,10 @@ async function renderStudentView(sid,enrolments,sems){
   function drawPanel(){
     const d=data[st.i];
     panelNode.replaceChildren();
+    if(isThesisSem(d.sem)&&st.tab==="coc") st.tab="exam"; else if(!isThesisSem(d.sem)&&st.tab==="exam") st.tab="coc";
     if(st.tab==="home") homePanel(d);
     else if(st.tab==="meet") meetPanel(d);
+    else if(st.tab==="exam") examPanel(d);
     else if(st.tab==="coc") cocPanel(d);
     else msgPanel(d);
   }
@@ -17821,7 +18064,7 @@ async function renderStudentView(sid,enrolments,sems){
       el("button",{class:"btn sm",onclick:()=>go("msg")},"Read now")));
 
     const grid=el("div",{class:"sp-grid"});
-    grid.append(nextConsultTile(d), isThesisSem(d.sem)?"":nextClassTile(d), cocTile(d));
+    grid.append(nextConsultTile(d), isThesisSem(d.sem)?"":nextClassTile(d), isThesisSem(d.sem)?examTile(d):cocTile(d));
     panelNode.append(el("div",{},el("div",{class:"sp-label"},"Coming up"),grid));
 
     // at a glance
@@ -17898,6 +18141,21 @@ async function renderStudentView(sid,enrolments,sems){
     return t;
   }
 
+  /* RES906: the thesis examination is not in the hub yet */
+  function examTile(d){
+    return el("section",{class:"sp-card sp-tile"},el("div",{class:"sp-label",style:"margin:0"},spIcon("award",14),"Thesis examination"),
+      el("div",{class:"sp-big",style:"margin-top:8px"},"Coming soon"),
+      el("div",{class:"sp-empty",style:"margin-top:8px"},"Examination details will appear here once the process opens."),
+      el("div",{class:"foot"},el("button",{class:"btn ghost sm",onclick:()=>go("exam")},"More")));
+  }
+  function examPanel(d){
+    const c=el("section",{class:"sp-card"});
+    c.append(cardHead("award","amber","Thesis examination",d.units.length?d.units.map(u=>u.code+(u.name?" "+u.name:"")).join(" \u00B7 "):""));
+    c.append(el("div",{style:"margin:4px 0 10px"},el("span",{class:"pill pending"},"Under construction")),
+      el("p",{style:"margin:0 0 8px"},"This part of the hub is still being built. Your thesis submission, examination and outcome will be shown here once the examination process opens."),
+      el("p",{class:"sp-note",style:"margin:0"},"Until then, keep meeting your supervisors each week \u2014 your meetings, attendance and agreed to-do items are under Meetings. Your supervisors and the MRes office will tell you about submission dates."));
+    panelNode.append(c);
+  }
   function cocTile(d){
     const t=el("section",{class:"sp-card sp-tile"},el("div",{class:"sp-label",style:"margin:0"},spIcon("award",14),"Confirmation of Candidature"));
     const {state,snap}=d.coc;
@@ -24375,8 +24633,19 @@ async function apOfficerList(v,redraw){
   try{ recs=await DB.list("appeals",{officerUids:{$contains:S.uid}}); }
   catch(err){ v.append(apRuleHelp(err)); return; }
   if(!v.isConnected) return;
-  if(!recs.length){ v.append(emptyState("No appeals for you","When the office routes a CoC outcome appeal to you, it appears here and you get an email.")); return; }
-  const card=cardShell("Your appeals",el("span",{}));
+  { const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(redraw)); v.append(bar); }
+  /* one semester at a time, as on the office's list; appeals from other
+     semesters are one click away and never hidden without saying so */
+  const others=new Map();
+  recs.filter(r=>r.semesterId!==S.activeSem&&semOf(r.semesterId)).forEach(r=>others.set(r.semesterId,(others.get(r.semesterId)||0)+1));
+  if(others.size){
+    const nb=noticeBar("blue","You also have appeals in "+(others.size===1?"another semester":"other semesters")+":");
+    others.forEach((n,semId)=>nb.querySelector(".row").append(el("button",{class:"btn xs",onclick:()=>{ S.activeSem=semId; semRemember(semId); renderApp(); }},(semOf(semId)?.label||"Semester")+" ("+n+")")));
+    v.append(nb);
+  }
+  recs=recs.filter(r=>r.semesterId===S.activeSem||!semOf(r.semesterId));
+  if(!recs.length){ v.append(emptyState("No appeals for you in "+(activeSemester()?.label||"this semester"),"When the office routes a CoC outcome appeal to you, it appears here and you get an email.")); return; }
+  const card=cardShell("Your appeals \u2014 "+(activeSemester()?.label||""),el("span",{class:"muted ui",style:"font-size:12.5px"},apPl(recs.length,"appeal")));
   const t=el("table",{class:"ap-table"});
   t.append(el("thead",{},el("tr",{},...["Student","Reference","You act as","Stage","Determination due",""].map(h=>el("th",{},h)))));
   const tb=el("tbody",{});
