@@ -1162,6 +1162,9 @@
   .ap-due.late{background:var(--clay-soft);color:var(--clay-ink)}
   .ap-ask{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--clay-soft);color:var(--ink);font-size:14px;border-left:4px solid var(--clay-ink)}
   .ap-ask b{display:block;font-size:12.5px;color:var(--clay-ink);margin-bottom:4px}
+  .ap-ask div,.ap-req1 div,.ap-retq{white-space:pre-wrap;overflow-wrap:anywhere}
+  .ap-retd{margin:0 0 12px}
+  .ap-retq{margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(127,127,127,.12);font-size:13px}
   .ap-warn{padding:12px 14px;border-radius:10px;background:var(--amber-soft);color:var(--ink);font-size:14px;line-height:1.5}
   .ap-sech{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
   .ap-sech h2{font-size:17px;font-weight:650;margin:2px 0 2px;letter-spacing:-.015em}
@@ -1616,6 +1619,116 @@
   }
   @media print{ #view > div{animation:none} }
 </style>
+<style id="ap-polish">
+  /* ============================================================
+     CoC APPEALS — presentation layer (student, office, officers).
+     Looks only: no behaviour lives here. Remove the block to go back.
+     ============================================================ */
+  .ap-head,.ap-statuscard,.ap-trackcard,.ap-next,.ap-sidecard,.ap-sec{font-variant-numeric:tabular-nums}
+
+  /* -- record header (office + officers) and the student's status card -- */
+  .ap-head,.ap-statuscard{position:relative;overflow:hidden}
+  .ap-head::before,.ap-statuscard::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,#1F1F5C,var(--accent))}
+  .ap-head{padding:22px 22px 18px;gap:20px;align-items:center}
+  .ap-head .eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+  .ap-head h2{font-size:25px;line-height:1.2;letter-spacing:-.02em;margin:4px 0 6px!important}
+  .ap-headr{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .ap-headr > .pill{font-size:12.5px;padding:4px 11px}
+  .ap-statuscard{padding-top:22px}
+  .ap-statuscard .sp-label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+  .ap-h1{font-size:25px;line-height:1.2}
+
+  /* -- progress tracker -- */
+  .ap-trackcard{padding:18px 22px}
+  .ap-track .tx b{font-size:13.5px;letter-spacing:-.005em}
+  .ap-track li.on .tx b{color:var(--accent)}
+  .ap-steps li{padding:12px;border-radius:12px}
+  .ap-steps li.on{box-shadow:0 0 0 3px var(--ring)}
+
+  /* -- the "next step" card: a titled panel, not a loose form -- */
+  .ap-next{padding:0 22px 20px;border-left-width:0;overflow:hidden;box-shadow:var(--shadow-md,var(--shadow))}
+  .ap-next > .ap-nexth{margin:0 -22px;padding:14px 22px;background:var(--sunken);border-bottom:1px solid var(--line);box-shadow:inset 4px 0 0 var(--amber-ink)}
+  .ap-next.done > .ap-nexth{box-shadow:inset 4px 0 0 var(--green-ink)}
+  .ap-next > .ap-nexth:last-child{border-bottom:0;margin-bottom:-20px}
+  .ap-next > .ap-nexth + *{margin-top:14px!important}
+  .ap-nexth strong{font-size:16.5px;letter-spacing:-.01em}
+
+  /* -- section headings inside forms and records -- */
+  .ap-subh{margin:22px 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line);
+    font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  .ap-form > .ap-subh:first-child,.cfold-body .card > div > .ap-subh:first-child{margin-top:4px}
+  .ap-h4{font-size:11.5px;letter-spacing:.08em;color:var(--ink-soft);margin:22px 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+  .ap-form .field > label,.ap-form .ap-fld > label{font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+  .ap-form textarea{line-height:1.5}
+  .ap-form > .row:last-child,.ap-form > div.row{row-gap:8px}
+
+  /* -- label / value tables -- */
+  .ap-kv{border-radius:12px;font-size:14px}
+  .ap-kv .k,.ap-kv .v{padding:9px 14px}
+  .ap-form .ap-kv{margin:12px 0}
+  .ap-statuscard{margin-bottom:14px}
+  .ap-kv .k{font-size:12.5px;font-weight:600;letter-spacing:.005em}
+
+  /* -- conflict rows and routing line -- */
+  .ap-coi{padding:12px 14px;border-radius:12px;align-items:center;background:var(--paper-2)}
+  .ap-route{padding:12px 14px;border-radius:12px;border:1px solid transparent;border-left:4px solid var(--green-ink)}
+  .ap-flag{padding:11px 14px;border-radius:10px;border-left:4px solid var(--amber-ink)}
+  .ap-flag.soft{border-left-color:var(--blue-ink)}
+
+  /* -- the appeal as lodged (read-only) -- */
+  .ap-ro h4.ap-roh{font-size:15px;font-weight:650;letter-spacing:-.01em;margin:26px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+  .ap-ro h4.ap-roh:first-child{padding-top:0;border-top:0}
+  .ap-secn.sm{width:24px;height:24px;border-radius:7px;margin-right:10px}
+  .ap-stmt{margin:0 0 14px}
+  .ap-stmt .t{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px}
+  .ap-stmt .ap-pre{padding:10px 14px;border-radius:8px;background:var(--sunken);border-left:3px solid var(--line-strong);line-height:1.6}
+  .ap-ro .ap-box{margin:8px 0}
+  .ap-evt{border:1px solid var(--line);border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden;margin-top:12px}
+  .ap-evt th,.ap-table th{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:9px 12px}
+  .ap-evt td{padding:10px 12px}
+  .ap-evt tr:last-child td{border-bottom:0}
+
+  /* -- folds and side panel -- */
+  .ap-fold{margin-bottom:10px}
+  .ap-fold .csection h3{font-size:15.5px;letter-spacing:-.01em}
+  .ap-fold .cfold-body > .card{border:0;box-shadow:none;padding:6px 8px 14px!important;background:transparent}
+  .ap-sidecard{padding:16px 18px}
+  .ap-sidecard h4{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .ap-table td{padding:11px 12px}
+  .ap-tile{padding:14px 16px}
+  .ap-tile .n{font-size:28px}
+  .ap-hist li{padding:7px 0}
+
+  /* -- the student's form -- */
+  .ap-sec{padding-top:20px}
+  .ap-sech{padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--line);align-items:center}
+  .ap-sech h2{font-size:18px}
+  .ap-secn{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#1F1F5C,#34349a);box-shadow:0 1px 2px rgba(16,24,40,.18)}
+  .ap-fld{margin-top:16px}
+  .ap-fld > label{font-size:14px}
+  .ap-sec textarea{line-height:1.55}
+  .ap-ground{padding:14px 16px;border-radius:12px;transition:border-color .15s,background .15s}
+  .ap-ground:hover{border-color:var(--line-strong)}
+  .ap-ground.on{box-shadow:0 0 0 3px var(--ring)}
+  .ap-always,.ap-ev{border-radius:12px;padding:14px 16px}
+  .ap-help{padding:12px 16px;border-left:4px solid var(--blue-ink)}
+  .ap-warn{border-left:4px solid var(--amber-ink);padding:14px 16px}
+  .ap-due{padding:11px 14px;font-weight:550}
+  .ap-ask{padding:14px 16px;border-radius:12px}
+  .ap-ask b{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase}
+  .ap-decl{line-height:1.65}
+  .ap-bar{padding:12px 16px;background:color-mix(in srgb,var(--paper-2) 88%,transparent);
+    -webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px);box-shadow:0 -8px 24px rgba(16,24,40,.10)}
+  .ap-retd{padding:14px 16px;border-radius:12px;border-left:4px solid var(--clay-ink);background:var(--clay-soft)}
+  .ap-retq{background:var(--paper-2);border:1px solid var(--line)}
+  @media (max-width:640px){
+    .ap-head{padding:18px 16px 14px} .ap-headr{align-items:flex-start;text-align:left}
+    .ap-next{padding:0 14px 16px} .ap-next > .ap-nexth{margin:0 -14px;padding:12px 14px} .ap-next > .ap-nexth:last-child{margin-bottom:-16px}
+    .ap-h1,.ap-head h2{font-size:21px}
+  }
+  @media print{ .ap-head::before,.ap-statuscard::before{display:none} .ap-next{box-shadow:none} }
+</style>
+
 <style id="coc-report">
   /* ---- CoC examination report (13E) ---- */
   .coc-band{background:#1F1F5C;color:#fff;border-radius:var(--r,14px);padding:14px 16px;display:flex;gap:14px;align-items:center;margin:0 0 14px;flex-wrap:wrap}
@@ -23489,7 +23602,7 @@ function renderAppealStudent(pt0){
     const d=apDaysTo(pre.lodgeBy);
     const c=el("section",{class:"sp-card ap-statuscard"});
     const st=pt.status;
-    const label={issued:"Not started",draft:"Draft — not lodged yet",returned:"The office has asked you for more",
+    const label={issued:"Not started",draft:"Draft — not lodged yet",returned:"Returned to you \u2014 changes needed",
       lodged:"Lodged \u2014 under consideration",review:"Under consideration",decided:"Under consideration",closed:"Outcome issued",withdrawn:"Withdrawn"}[st]||st;
     const cls={issued:"none",draft:"pending",returned:"missed",lodged:"blue",review:"blue",decided:"blue",closed:"approved",withdrawn:"none"}[st]||"none";
     c.append(el("div",{class:"ap-shead"},
@@ -23511,7 +23624,7 @@ function renderAppealStudent(pt0){
         el("span",{},late?"Your lodgement deadline was "+apLong(pre.lodgeBy)+". You can still lodge, but explain why it is late (Section 6).":
           "Lodge by "+apLong(pre.lodgeBy)+" — "+(d===0?"today":apPl(d,"day")+" left")+" (10 working days from your outcome notice of "+apLong(pre.noticeDate)+").")));
     }
-    if(st==="returned"&&pt.request?.text) c.append(el("div",{class:"ap-ask"},el("b",{},"From the MRes office \u00B7 "+cocDay(pt.request.at)),
+    if(st==="returned"&&pt.request?.text) c.append(el("div",{class:"ap-ask"},el("b",{},"Returned by the MRes office \u00B7 "+cocDay(pt.request.at)),
       el("div",{},cocLinkify(pt.request.text)),el("div",{class:"muted",style:"font-size:12.5px;margin-top:6px"},"Make the changes below, then sign and lodge again.")));
     if(!editable()){
       const acts=el("div",{class:"row",style:"gap:8px;margin-top:12px;flex-wrap:wrap"},
@@ -24221,12 +24334,20 @@ async function apDetailView(v,code,back){
       el("h2",{style:"margin:2px 0 4px"},rec.name||""),
       el("div",{class:"muted ui",style:"font-size:13px"},[rec.sid,pt.pre?.unit,pt.pre?.title].filter(Boolean).join(" · ")),
       ""),
-    el("div",{class:"ap-headr"},apStagePill(rec.stage),
+    el("div",{class:"ap-headr"},pt.status==="returned"&&pt.lodgedAt?el("span",{class:"pill missed"},"Returned to the student"):apStagePill(rec.stage==="open"&&pt.status==="lodged"?"lodged":rec.stage),
       due?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:6px"},"Determination due "+apLong(due)+" ",ds.txt&&!["closed","withdrawn","notaccepted"].includes(rec.stage)?el("span",{class:"pill "+ds.cls},ds.txt):""):"",
       el("div",{class:"row",style:"gap:6px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap"},
         admin?el("button",{class:"btn sm ghost",title:"Send this appeal back to the start, e.g. to test it again",
           onclick:()=>apResetDialog({rec,pt,sem,reload})},"↺ Reset"):"",
+        apCanReturn(rec,pt,admin,isCC,isDM)?el("button",{class:"btn sm ghost",title:"Incomplete, or a link can\u2019t be opened? Send it back for the student to fix and lodge again",
+          onclick:()=>apAskDialog({rec,pt,savePortal,saveRec,reload})},"↩ Return to student"):"",
         el("button",{class:"btn sm",onclick:()=>apDownload(pt,rec,sem,notice)},"⤓ Word form")))));
+  if(pt.status==="returned"&&pt.lodgedAt&&(admin||isCC||isDM)) v.append(el("div",{class:"ap-flag ap-retd"},
+    el("b",{},"Returned to the student"+(pt.request?.at?" on "+cocDT(pt.request.at):"")+(pt.request?.by?" by "+pt.request.by:"")+". "),
+    "Their form is open; it comes back here when they sign and lodge again.",
+    pt.request?.text?el("div",{class:"ap-retq"},cocLinkify(pt.request.text)):"",
+    admin?el("div",{class:"row",style:"gap:8px;margin-top:8px"},el("button",{class:"btn xs ghost",onclick:()=>openEmail(pt.pre?.email||"","Reminder: your CoC appeal has been returned to you \u2014 action needed",
+      "Dear "+(rec.name||"")+",\n\n"+(pt.request?.text||"")+"\n\nYour appeal form is open: "+apLink(rec.id)+"\nSign in with your appeal code and student ID, make the changes, then sign and lodge again.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),apOfficeEmail())},"✉ Email the student again")):""));
 
   /* where it has got to, then the work on the left and the facts on the right */
   v.append(apTracker(rec,pt));
@@ -24285,7 +24406,7 @@ function apNextCard(ctx){
   if(rec.stage==="open"){
     if(!admin) return null;
     if(pt.status==="lodged") return box("Receive the appeal and route it (7A, 7B)","Lodged "+cocDT(pt.lodgedAt)+". Check the details the hub has worked out, confirm any conflicts, and send it on.",apReceiveForm(ctx));
-    return box("Waiting for the student to lodge",
+    return box(pt.status==="returned"&&pt.lodgedAt?"Returned to the student \u2014 waiting for them to lodge again":"Waiting for the student to lodge",
       "Code "+apFmt(rec.id)+" issued "+cocDay(pt.issuedAt)+". Student’s form: "+({issued:"not opened yet",draft:"draft saved "+relTime(pt.savedAt),returned:"returned to them for more"}[pt.status]||pt.status)+". Lodge by "+apLong(pt.pre?.lodgeBy)+".",
       el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
         el("button",{class:"btn sm",onclick:()=>apMailCode(pt)},"✉ Email the code again"),
@@ -24403,6 +24524,7 @@ function apReceiveForm(ctx){
         reload();
       }},"Confirm receipt and send"),
       el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({a7:collect(),stage:rec.stage==="open"?"lodged":rec.stage},"receipt details saved"); toast("Saved."); reload(); }},"Save without sending"),
+      el("button",{class:"btn ghost",title:"Incomplete, or a link can\u2019t be opened? Send it back for the student to fix and lodge again",onclick:()=>apAskDialog(ctx)},"↩ Return to the student…"),
       el("button",{class:"btn ghost",onclick:()=>apNotAcceptDialog(ctx,collect())},"Not accepted…")));
   return W;
 }
@@ -24461,7 +24583,7 @@ function apCCForm(ctx){
       reload();
     }},"Sign and submit"),
     el("button",{class:"btn ghost",onclick:async()=>{ await save(); toast("Draft saved."); }},"Save draft"),
-    el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"Ask the student for more…")));
+    el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"↩ Return to the student…")));
   return W;
 }
 /* 7D — Head of School or Associate Dean Research */
@@ -24513,7 +24635,7 @@ function apDMForm(ctx){
       }},"Sign decision"),
       el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({dm:{...d,role:rec.dmRole,decision:up.checked?"upheld":np.checked?"newpanel":"",independent:ind.checked,reasons:apT(reasons.value),
         panel:builder?builder.get():(d.panel||null)}},"decision draft saved"); toast("Draft saved."); }},"Save draft"),
-      el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"Ask the student for more…")));
+      el("button",{class:"btn ghost",onclick:()=>apAskDialog(ctx)},"↩ Return to the student…")));
   return W;
 }
 /* An officer declares a conflict: the appeal moves to the next officer. */
@@ -24598,8 +24720,8 @@ function apOfficeEvidence(ctx){
   const reqs=pt.requests||[];
   if(!reqs.length) W.append(el("div",{class:"muted",style:"font-size:13px"},"None."));
   reqs.forEach(r=>W.append(el("div",{class:"ap-req1"},el("b",{},cocDT(r.at)+" · "+(r.by||"")),el("div",{},r.text))));
-  if((admin||isCC||isDM)&&!["closed","withdrawn","notaccepted"].includes(ctx.rec.stage))
-    W.append(el("button",{class:"btn sm ghost",style:"margin-top:10px",onclick:()=>apAskDialog(ctx)},"Ask the student for more…"));
+  if(apCanReturn(ctx.rec,pt,admin,isCC,isDM))
+    W.append(el("button",{class:"btn sm ghost",style:"margin-top:10px",onclick:()=>apAskDialog(ctx)},"↩ Return to the student…"));
   return W;
 }
 function apOfficeEvDialog(ctx,list,i){
@@ -24618,30 +24740,71 @@ function apOfficeEvDialog(ctx,list,i){
       if(i>=0) list[i]=item; else list.push(item);
       await savePortal({officeEvidence:list}); toast("Saved."); reload(); return true; },"Save");
 }
+/* Return the appeal to the student: the form is incomplete, or a link they
+   gave can't be opened. Unlocks their form with the reasons shown at the
+   top; they fix it, sign and lodge again. The original lodgement date
+   stands, so a return never makes an on-time appeal late. */
 function apAskDialog(ctx){
   const {rec,pt,savePortal,saveRec,reload}=ctx;
   /* An officer's request reaches the student as coming from the MRes office:
      the student learns nothing of who is reviewing the appeal. The officer
      emails the office, which passes it on. */
   const viaOffice=S.role!=="admin";
-  const txt=el("textarea",{rows:"5",placeholder:"e.g. Please add a link to the email from the panel Chair you mention in Section 3B, and check that link E2 opens — it asks for a sign-in."});
+  const who=rec.name||"the student";
+  const chk=()=>el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"});
+  const inc=chk(), bad=chk();
+  /* every link the student gave */
+  const links=[];
+  const f=pt.student||{};
+  if(apT(f.revisedLink)) links.push({id:"Revised proposal",label:"",url:f.revisedLink});
+  if(apT(f.corrLink)) links.push({id:"Resubmission correspondence",label:"",url:f.corrLink});
+  (pt.evidence||[]).forEach(x=>{ if(apT(x.url)||apT(x.label)) links.push({id:x.id,label:apT(x.label),url:x.url}); });
+  links.forEach(l=>{ l.cb=chk(); l.cb.addEventListener("change",()=>{ if(l.cb.checked) bad.checked=true; }); });
+  const linkBox=el("div",{style:"margin:2px 0 10px 26px"},
+    links.length?el("div",{class:"muted",style:"font-size:12.5px;margin-bottom:4px"},"Tick each link that doesn’t open:"):
+      el("div",{class:"muted",style:"font-size:12.5px"},"The student gave no links — say what you need below."),
+    ...links.map(l=>el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 4px"},l.cb,
+      el("span",{style:"font-size:13.5px"},el("b",{},l.id),l.label?" — "+l.label:""," ",
+        apLinkOk(l.url)?el("a",{href:l.url,target:"_blank",rel:"noopener",style:"font-size:12.5px"},"open ↗"):el("span",{class:"pill missed"},"bad link")))));
+  const txt=el("textarea",{rows:"4",placeholder:"e.g. Section 3B is blank. Link E2 asks for a sign-in — share it so anyone with the link can view."});
   const mail=el("input",{type:"checkbox",style:"width:auto;margin:0"}); mail.checked=true;
-  modal("Ask "+(rec.name||"the student")+" for more",el("div",{},
-    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"Reopens the student’s form so they can add evidence or change their statement, then sign and lodge again. The review stays where it is."),
-    el("div",{class:"field"},el("label",{},"Your request"),txt),
-    viaOffice?el("p",{class:"muted",style:"margin:8px 0 0;font-size:12.5px"},"The student sees it as a request from the MRes office \u2014 not who asked."):"",
+  modal("Return the appeal to "+who,el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 12px;font-size:13.5px"},"Unlocks the student’s form and shows them your reasons at the top. They make the changes, then sign and lodge again. "+
+      (rec.stage==="open"||rec.stage==="lodged"?"The original lodgement date is kept, so the appeal does not become late.":"The review stays where it is, and the original lodgement date is kept.")),
+    el("div",{class:"field"},el("label",{},"Why are you returning it?")),
+    el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 8px"},inc,
+      el("span",{},el("strong",{},"The application is incomplete"),el("div",{class:"muted",style:"font-size:13px;font-weight:400"},"A section, a ground, the statement or a required document is missing or unclear."))),
+    el("label",{class:"coc-chk",style:"align-items:flex-start;display:flex;margin:0 0 4px"},bad,
+      el("span",{},el("strong",{},"A link cannot be opened"),el("div",{class:"muted",style:"font-size:13px;font-weight:400"},"It asks for a sign-in, is broken, or points to the wrong file."))),
+    linkBox,
+    el("div",{class:"field"},el("label",{},"What the student needs to do"),txt),
+    viaOffice?el("p",{class:"muted",style:"margin:8px 0 0;font-size:12.5px"},"The student sees it as returned by the MRes office — not who asked."):"",
     el("label",{class:"coc-chk",style:"margin-top:8px"},mail,el("span",{},viaOffice?"Email the MRes office so they can let the student know":"Email it to "+(pt.pre?.email||"the student")))),async()=>{
-      const t=apT(txt.value); if(!t){ toast("Write what you need.",true); return false; }
-      const r={text:t,at:Date.now(),by:S.userName||""};
+      const note=apT(txt.value), picked=links.filter(l=>l.cb.checked);
+      if(!inc.checked&&!bad.checked&&!note){ toast("Tick a reason or write what you need.",true); return false; }
+      if(inc.checked&&!note){ toast("Say what is missing, so the student knows what to add.",true); return false; }
+      if(bad.checked&&!picked.length&&!note){ toast("Tick the link that doesn’t open, or describe it.",true); return false; }
+      const lines=[];
+      if(inc.checked) lines.push("• The application is incomplete.");
+      if(bad.checked) lines.push("• "+(picked.length?(picked.length===1?"This link":"These links")+" could not be opened: "+picked.map(l=>l.id+(l.label?" ("+l.label+")":"")).join("; ")+".":"A link you gave could not be opened.")+
+        " Share "+(picked.length===1?"it":"each one")+" so that anyone with the link can view, then press Test to check it opens.");
+      const t=(lines.length?"Your appeal has been returned to you because:\n"+lines.join("\n")+(note?"\n\n":""):"")+note;
+      const reasons=[inc.checked?"incomplete":"",bad.checked?"link":""].filter(Boolean);
+      const r={text:t,at:Date.now(),by:S.userName||"",reasons,links:picked.map(l=>l.id)};
       await savePortal({status:"returned",request:r,requests:[...(pt.requests||[]),r]});
-      await saveRec({},"asked the student for more");
+      await saveRec({},"returned to the student"+(reasons.length?" ("+reasons.map(x=>x==="link"?"link can’t be opened":x).join("; ")+")":""));
       if(mail.checked&&viaOffice){ const to=apOfficeEmail();
-        if(to) openEmail(to,"CoC appeal "+apRefOf(rec)+" \u2014 more information needed from "+(rec.name||"the student"),
-          "Hello,\n\nWhile reviewing "+(rec.name||"the student")+"\u2019s appeal I need more from the student:\n\n"+t+"\n\nTheir form is open again in the hub. Please let them know (their link: "+apLink(rec.id)+").\n\nThank you,\n"+(S.userName||""));
-        else toast("No MRes office address is set \u2014 the request is on the student\u2019s form, but tell the office yourself.",true); }
-      else if(mail.checked) openEmail(pt.pre?.email||"","Your CoC appeal — more information needed",
-        "Dear "+(rec.name||"")+",\n\n"+t+"\n\nYour appeal form is open again: "+apLink(rec.id)+"\nSign in with your appeal code and student ID, make the changes, then sign and lodge again.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),apOfficeEmail());
-      toast("Request sent — the student’s form is open again."); reload(); return true; },"Send request");
+        if(to) openEmail(to,"CoC appeal "+apRefOf(rec)+" — returned to "+who,
+          "Hello,\n\nWhile reviewing "+who+"’s appeal I have returned it to the student:\n\n"+t+"\n\nTheir form is open again in the hub. Please let them know (their link: "+apLink(rec.id)+").\n\nThank you,\n"+(S.userName||""));
+        else toast("No MRes office address is set — the reasons are on the student’s form, but tell the office yourself.",true); }
+      else if(mail.checked) openEmail(pt.pre?.email||"","Your CoC appeal has been returned to you — action needed",
+        "Dear "+(rec.name||"")+",\n\n"+t+"\n\nYour appeal form is open again: "+apLink(rec.id)+"\nSign in with your appeal code and student ID, make the changes, then sign and lodge again. Your original lodgement date is kept.\n\nKind regards,\n"+(S.userName||"MRes Coordination"),apOfficeEmail());
+      toast("Returned — the student’s form is open again."); reload(); return true; },"Return to the student");
+}
+/* Who may return it, and when: the office or the officer holding it, once
+   the student has lodged and while it is not already back with them. */
+function apCanReturn(rec,pt,admin,isCC,isDM){
+  return (admin||isCC||isDM)&&!!pt.lodgedAt&&pt.status!=="returned"&&!["closed","withdrawn","notaccepted","decided"].includes(rec.stage);
 }
 
 /* ---- read-only office record --------------------------------------------- */
