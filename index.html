@@ -24011,7 +24011,7 @@ function renderAppealStudent(pt0){
     const o=pt.decisionOut, r=AP_RESULTS[o.result]||{label:o.result};
     return el("section",{class:"sp-card ap-decision"},
       el("div",{class:"sp-head"},el("div",{class:"sp-ico "+(o.result==="newpanel"?"green":"amber")},spIcon("award",18)),
-        el("div",{class:"grow"},el("h2",{},r.label),el("div",{class:"s"},(o.by?o.by+" · ":"")+cocDay(o.at)))),
+        el("div",{class:"grow"},el("h2",{},r.label),el("div",{class:"s"},(o.by?o.by+" · ":"")+cocDay(o.at)+(o.editedAt?" · updated "+cocDay(o.editedAt):"")))),
       el("div",{class:"ap-pre"},cocLinkify(o.text||r.text||"")),
       el("p",{class:"sp-note",style:"margin-top:10px"},"The decision reached through this process is final; no further appeal can be made under PR72 (3.10.4). See also QA23 Student Grievance Handling Policy."));
   }
@@ -24807,7 +24807,8 @@ function apNextCard(ctx){
   if(rec.stage==="decided"&&admin) return box(rec.result==="newpanel"&&!rec.panelGid?"Set up the reconsideration panel, then notify the student":"Notify the student and close",(AP_RESULTS[rec.result]||{}).label||"",
     rec.result==="newpanel"?apPanelOfficeBox(ctx):"",apNotifyForm(ctx));
   if(["closed","notaccepted","withdrawn"].includes(rec.stage)) return el("div",{class:"card ap-next done"},el("div",{class:"ap-nexth"},apStagePill(rec.stage),
-    el("strong",{},(AP_RESULTS[rec.result]||{}).label||"")),rec.e7?.notifiedOn?el("p",{class:"muted",style:"margin:6px 0 0;font-size:13.5px"},"Student notified "+apLong(rec.e7.notifiedOn)+(rec.e7.notifiedBy?" by "+rec.e7.notifiedBy:"")+"."):"");
+    el("strong",{},(AP_RESULTS[rec.result]||{}).label||"")),rec.e7?.notifiedOn?el("p",{class:"muted",style:"margin:6px 0 0;font-size:13.5px"},"Student notified "+apLong(rec.e7.notifiedOn)+(rec.e7.notifiedBy?" by "+rec.e7.notifiedBy:"")+"."):"",
+    admin&&rec.stage==="closed"&&pt.decisionOut?apReleasedBox(ctx):"");
   return null;
 }
 function apChaseBtn(ctx,who){
@@ -25062,25 +25063,86 @@ function apNotifyForm(ctx){
   ((e.timeframe||(withinAuto?"within":"varied"))==="varied"?tv:tw).checked=true;
   const varied=el("input",{type:"date",value:e.variedOn||""});
   const loc=el("input",{value:e.record||"",placeholder:"File reference and any follow-up action"});
-  W.append(el("div",{class:"field"},el("label",{},"What the student is told (on their appeal page and in the email)"),txt),
+  if(e.withdrawnAt) W.append(el("div",{class:"ap-ask",style:"margin:0 0 12px"},el("b",{},"Earlier notification withdrawn \u00B7 "+cocDT(e.withdrawnAt)+(e.withdrawnBy?" \u00B7 "+e.withdrawnBy:"")),
+    el("div",{},(e.withdrawnWhy?e.withdrawnWhy+" ":"")+"The student\u2019s page shows \u201CUnder consideration\u201D with no outcome until you approve and release again.")));
+  W.append(el("div",{class:"field"},el("label",{},"What the student is told (on their appeal page and in the email)"),txt,
+      el("div",{class:"muted",style:"font-size:12.5px;margin-top:4px"},"The student sees only this text, and only once you approve and release it. The officers\u2019 findings, reasons and drafts stay in the office record unless you include them here. Edit it freely.")),
     el("div",{class:"grid two"},el("div",{class:"field"},el("label",{},"Candidate notified by"),by),el("div",{class:"field"},el("label",{},"Date notified"),on)),
     el("div",{class:"row",style:"gap:16px;margin:6px 0;flex-wrap:wrap"},el("b",{class:"ui",style:"font-size:13px"},"Timeframe"),
       el("label",{class:"coc-chk"},tw,"Determined within 20 working days of receipt"),el("label",{class:"coc-chk"},tv,"Varied")),
     el("div",{class:"grid two"},el("div",{class:"field"},el("label",{},"If varied: candidate and staff advised on"),varied),
       el("div",{class:"field"},el("label",{},"Record location"),loc)));
-  const collect=()=>({studentText:apT(txt.value),notifiedBy:apT(by.value),notifiedOn:on.value,timeframe:tv.checked?"varied":"within",variedOn:varied.value,record:apT(loc.value)});
+  const collect=()=>({...e,studentText:apT(txt.value),notifiedBy:apT(by.value),notifiedOn:on.value,timeframe:tv.checked?"varied":"within",variedOn:varied.value,record:apT(loc.value)});
   W.append(el("div",{class:"row",style:"gap:8px;margin-top:12px;flex-wrap:wrap"},
     el("button",{class:"btn",onclick:async()=>{
       const e7=collect(); if(!e7.notifiedOn){ toast("Set the date notified.",true); return; }
-      await saveRec({e7,stage:"closed"},"student notified; appeal closed ("+(res.short||rec.result)+")");
-      await savePortal({status:"closed",decisionOut:{result:rec.result,text:e7.studentText,by:e7.notifiedBy,at:Date.now()}});
+      if(!e7.studentText){ toast("Write what the student is told.",true); return; }
+      /* The office approves the exact wording before anything reaches the student. */
+      modal("Approve the notification to "+(rec.name||"the student"),el("div",{},
+        el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"This is exactly what the student will see on their appeal page and in the email, under the heading \u201C"+(res.label||"")+"\u201D. Nothing else from the office record is shown to them."),
+        el("div",{class:"ap-pre ap-quote",style:"max-height:46vh;overflow:auto"},cocLinkify(e7.studentText))),async()=>{
+      const now=Date.now(), again=!!e7.withdrawnAt;
+      e7.approvedBy=S.userName||""; e7.approvedAt=now; delete e7.withdrawnAt; delete e7.withdrawnBy; delete e7.withdrawnWhy;
+      await saveRec({e7,stage:"closed"},(again?"corrected notification approved and released":"notification approved; student notified")+"; appeal closed ("+(res.short||rec.result)+")");
+      await savePortal({status:"closed",decisionOut:{result:rec.result,text:e7.studentText,by:e7.notifiedBy,at:now}});
       openEmail(pt.pre?.email||"","Outcome of your CoC appeal — "+apRefOf(rec),
         "Dear "+(rec.name||"")+",\n\n"+e7.studentText+"\n\nYou can also read this on your appeal page in the MRes Supervision Hub: "+apLink(rec.id)+"\n\nKind regards,\n"+(e7.notifiedBy||"MRes Coordination"),apOfficeEmail());
       toast("Released to the student and closed. Download the Word form for the candidate file.");
       reload();
-    }},"✉ Email the student, release and close"),
-    el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({e7:collect()},"notification details saved"); toast("Saved."); }},"Save without releasing")));
+      return true; },"Approve and release");
+    }},"✉ Approve, email the student and close"),
+    el("button",{class:"btn ghost",onclick:async()=>{ await saveRec({e7:collect()},"notification draft saved"); toast("Draft saved \u2014 the student can\u2019t see it."); }},"Save draft (not shown to the student)")));
   return W;
+}
+/* After release: what the student sees now, with the office's two ways to
+   change it. Edit corrects the wording in place. Withdraw takes it off the
+   student's page altogether and reopens the notification step, for when the
+   notification needs more than a correction. */
+function apReleasedBox(ctx){
+  const {rec,pt}=ctx, o=pt.decisionOut;
+  return el("div",{style:"margin-top:12px"},
+    el("div",{class:"ap-subh",style:"margin-top:0"},"What the student sees"),
+    el("div",{class:"ap-pre ap-quote"},cocLinkify(o.text||"")),
+    el("div",{class:"muted",style:"font-size:12.5px;margin-top:6px"},"Released "+cocDT(o.at)+(rec.e7?.approvedBy?" \u00B7 approved by "+rec.e7.approvedBy:"")+(o.editedAt?" \u00B7 edited "+cocDT(o.editedAt)+(o.editedBy?" by "+o.editedBy:""):"")),
+    el("div",{class:"row",style:"gap:8px;margin-top:10px;flex-wrap:wrap"},
+      el("button",{class:"btn sm",onclick:()=>apEditNoticeDialog(ctx)},"\u270E Edit the notification\u2026"),
+      el("button",{class:"btn sm ghost",onclick:()=>apWithdrawNoticeDialog(ctx)},"\u21A9 Withdraw the notification\u2026")));
+}
+function apEditNoticeDialog(ctx){
+  const {rec,pt,saveRec,savePortal,reload}=ctx, o=pt.decisionOut||{};
+  const txt=el("textarea",{rows:"10"}); txt.value=o.text||"";
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0"}); mail.checked=true;
+  modal("Edit the notification to "+(rec.name||"the student"),el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"Saving replaces the text on the student\u2019s appeal page straight away. They see only this approved version, never the earlier wording. The outcome itself ("+((AP_RESULTS[rec.result]||{}).short||rec.result)+") does not change."),
+    el("div",{class:"field"},el("label",{},"What the student is told"),txt),
+    el("label",{class:"coc-chk",style:"margin-top:8px"},mail,el("span",{},"Email the corrected notification to "+(pt.pre?.email||"the student")))),async()=>{
+      const t=apT(txt.value);
+      if(!t){ toast("Write what the student is told.",true); return false; }
+      if(t===apT(o.text)){ toast("Nothing changed."); return true; }
+      const now=Date.now(), by=S.userName||"";
+      await savePortal({decisionOut:{...o,text:t,editedAt:now,editedBy:by}});
+      await saveRec({e7:{...(rec.e7||{}),studentText:t,editedAt:now,editedBy:by,approvedAt:now,approvedBy:by}},"notification to the student edited and re-approved");
+      if(mail.checked) openEmail(pt.pre?.email||"","Corrected outcome of your CoC appeal \u2014 "+apRefOf(rec),
+        "Dear "+(rec.name||"")+",\n\nThis replaces the outcome notification sent to you on "+cocDay(o.at)+". Please disregard the earlier version.\n\n"+t+"\n\nYou can also read this on your appeal page in the MRes Supervision Hub: "+apLink(rec.id)+"\n\nKind regards,\n"+(rec.e7?.notifiedBy||by||"MRes Coordination"),apOfficeEmail());
+      toast("Updated \u2014 the student now sees the corrected notification."); reload(); return true; },"Approve and update");
+}
+function apWithdrawNoticeDialog(ctx){
+  const {rec,pt,saveRec,savePortal,reload}=ctx, o=pt.decisionOut||{};
+  const why=el("textarea",{rows:"3",placeholder:"e.g. The reasons quoted the wrong ground; the panel date has changed."});
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0"}); mail.checked=true;
+  modal("Withdraw the notification to "+(rec.name||"the student"),el("div",{},
+    el("p",{class:"muted",style:"margin:0 0 10px;font-size:13.5px"},"Takes the outcome off the student\u2019s appeal page \u2014 it goes back to \u201CUnder consideration\u201D \u2014 and reopens the notification step. Your text is kept as a draft to change. The student sees nothing further until you approve and release again. The signed decision is not affected."),
+    el("div",{class:"field"},el("label",{},"What needs changing (office record only \u2014 not shown to the student)"),why),
+    el("label",{class:"coc-chk",style:"margin-top:8px"},mail,el("span",{},"Email "+(pt.pre?.email||"the student")+" to disregard the earlier notification"))),async()=>{
+      const w=apT(why.value);
+      if(!w){ toast("Say briefly what needs changing.",true); return false; }
+      const now=Date.now(), by=S.userName||"";
+      await savePortal({status:"review",decisionOut:null});
+      await saveRec({stage:"decided",e7:{...(rec.e7||{}),studentText:o.text||rec.e7?.studentText||"",notifiedOn:"",withdrawnAt:now,withdrawnBy:by,withdrawnWhy:w,
+        withdrawals:[...(rec.e7?.withdrawals||[]),{at:now,by,why:w,releasedAt:o.at||0}]}},"notification withdrawn from the student: "+w);
+      if(mail.checked) openEmail(pt.pre?.email||"","Your CoC appeal \u2014 outcome notification withdrawn \u2014 "+apRefOf(rec),
+        "Dear "+(rec.name||"")+",\n\nThe outcome notification for your CoC appeal sent to you on "+cocDay(o.at)+" has been withdrawn because it needs to be corrected. Please disregard it.\n\nA corrected notification will be sent to you and will appear on your appeal page: "+apLink(rec.id)+"\n\nWe apologise for the inconvenience.\n\nKind regards,\n"+(by||"MRes Coordination"),apOfficeEmail());
+      toast("Withdrawn \u2014 the student no longer sees it. Change it and release again."); reload(); return true; },"Withdraw the notification");
 }
 
 /* ---- evidence the office adds; asking the student for more -------------- */
@@ -25223,7 +25285,10 @@ function apRecordRO7E(rec){
   const k=el("div",{class:"ap-kv"});
   [["Candidate notified by",e.notifiedBy],["Date notified",apLong(e.notifiedOn)],
    ["Timeframe",e.timeframe==="varied"?"Varied — advised "+apLong(e.variedOn)+"":e.timeframe?"Determined within 20 working days of receipt":""],
-   ["Record location",e.record]].forEach(([x,y])=>k.append(el("div",{class:"k"},x),el("div",{class:"v"},y||el("span",{class:"muted"},"—"))));
+   ["Record location",e.record],
+   ...(e.approvedAt?[["Notification approved",cocDT(e.approvedAt)+(e.approvedBy?" by "+e.approvedBy:"")]]:[]),
+   ...(e.editedAt?[["Notification last edited",cocDT(e.editedAt)+(e.editedBy?" by "+e.editedBy:"")]]:[]),
+   ...(e.withdrawals||[]).map(w=>["Notification withdrawn",cocDT(w.at)+(w.by?" by "+w.by:"")+(w.why?" \u2014 "+w.why:"")])].forEach(([x,y])=>k.append(el("div",{class:"k"},x),el("div",{class:"v"},y||el("span",{class:"muted"},"—"))));
   return k;
 }
 
@@ -25237,8 +25302,11 @@ function apAdminTools(ctx){
   if(live) btns.append(el("button",{class:"btn sm ghost",onclick:async()=>{
     if(!window.confirm("Record that "+(rec.name||"the student")+" has withdrawn this appeal?")) return;
     await saveRec({stage:"withdrawn",result:"",officerUids:[]},"withdrawn"); await savePortal({status:"withdrawn"}); reload(); }},"Withdrawn by the student"));
-  if(rec.stage==="closed") btns.append(el("button",{class:"btn sm ghost",onclick:async()=>{
-    if(!window.confirm("Reopen the notification step? The student's page keeps the released decision until you release again.")) return;
+  if(rec.stage==="closed"&&pt.decisionOut){
+    btns.append(el("button",{class:"btn sm ghost",onclick:()=>apEditNoticeDialog(ctx)},"\u270E Edit the notification\u2026"));
+    btns.append(el("button",{class:"btn sm ghost",onclick:()=>apWithdrawNoticeDialog(ctx)},"\u21A9 Withdraw the notification\u2026")); }
+  else if(rec.stage==="closed") btns.append(el("button",{class:"btn sm ghost",onclick:async()=>{
+    if(!window.confirm("Reopen the notification step?")) return;
     await saveRec({stage:"decided"},"notification step reopened"); reload(); }},"Reopen notification"));
   btns.append(el("button",{class:"btn sm ghost",onclick:()=>apResetDialog(ctx)},"↺ Reset this appeal…"));
   btns.append(el("button",{class:"btn sm ghost",onclick:()=>{
