@@ -12615,7 +12615,8 @@ async function viewStudents(v){
   }
   if(S.role==="admin"){
     bar.append(el("div",{style:"flex:1"}));
-    bar.append(el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Import students (CSV / paste)"),
+    bar.append(el("button",{class:"btn ghost",title:"Add students who are already in the hub — e.g. moving on to RES906 — to this semester",onclick:()=>addExistingStudentsDialog(sem,()=>viewStudents(v))},"Add existing students"),
+               el("button",{class:"btn ghost",onclick:()=>importCSV(()=>viewStudents(v))},"Import students (CSV / paste)"),
                // Allocation list out to the faculty office: supervisor-wise, or
                // all IT / all Business, as Excel, CSV or PDF.
                el("button",{class:"btn ghost",onclick:()=>allocationExportDialog(students)},"\u2913 Export allocations"),
@@ -16070,7 +16071,8 @@ async function viewPeople(v){
         el("td",{},(s.weeks||12)+" wks"),
         el("td",{},el("div",{class:"row"},
           el("button",{class:"btn ghost sm",onclick:()=>semesterForm(s,()=>viewPeople(v))},"Edit units"),
-          el("button",{class:"btn ghost sm",onclick:()=>copyForward(s,()=>viewPeople(v))},"Carry students forward"))),
+          el("button",{class:"btn ghost sm",onclick:()=>copyForward(s,()=>viewPeople(v))},"Carry students forward"),
+          el("button",{class:"btn ghost sm",title:"Add students who are already in the hub (another semester) to this semester",onclick:()=>addExistingStudentsDialog(s,()=>viewPeople(v))},"Add students…"))),
         el("td",{},el("button",{class:"btn danger sm",onclick:()=>confirmDelete("semesters",s.id,s.label,async()=>{S.semesters=await DB.list("semesters");S.semesters.sort((a,b)=>(a.label>b.label?-1:1));S.activeSem=S.semesters[0]?.id||null;viewPeople(v);})},"Delete"))));
     });
     t.append(tb); semCard.append(t);
@@ -17368,6 +17370,157 @@ function staffForm(existing,done){
   refreshAllocCounts().then(sync).catch(()=>{});
 }
 
+/* ============================================================
+   ENROLLING STUDENTS WHO ARE ALREADY IN THE HUB
+   ------------------------------------------------------------
+   Students are kept per semester: each semester has its own copy of a
+   student's record (supervisors, units, meeting time), so attendance and
+   notes never mix between semesters. Moving students on — to the next
+   RES915/916 semester, or into RES906 Research Thesis, whichever intake
+   they start in — is copying the chosen students into that semester.
+
+   One picker serves three places: "Carry students forward" (into a new
+   semester), "Add students…" on a semester row, and "Add existing
+   students" on the Students screen. A student already in the target
+   semester (same student ID) is never added twice. The source records
+   are never changed.
+   ============================================================ */
+function enrolPickList(list,opts={}){
+  const taken=opts.taken||new Map();           // id -> why it can't be picked
+  const unitCodes=opts.unitCodes||(()=>"");
+  const pick=new Set(opts.preselect?list.filter(s=>!taken.has(s.id)).map(s=>s.id):[]);
+  const q=el("input",{placeholder:"Search name, ID, supervisor…",style:"flex:1;min-width:180px"});
+  const count=el("span",{class:"muted ui",style:"font-size:12.5px;white-space:nowrap"});
+  const tb=el("tbody",{});
+  const shown=()=>{ const t=q.value.trim().toLowerCase();
+    return list.filter(s=>!t||[s.name,s.sid,s.email,s.principalName||supName(s.principalUid),s.coName,s.campus,s.area,s._from]
+      .some(x=>String(x||"").toLowerCase().includes(t))); };
+  const paintCount=()=>{ count.textContent=pick.size+" of "+list.filter(s=>!taken.has(s.id)).length+" selected"; opts.onChange&&opts.onChange(pick.size); };
+  function draw(){
+    tb.replaceChildren();
+    const rows=shown();
+    if(!rows.length) tb.append(el("tr",{},el("td",{colspan:"5",class:"muted",style:"padding:12px"},list.length?"Nobody matches.":"No students to choose from.")));
+    rows.forEach(s=>{
+      const why=taken.get(s.id);
+      const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",...(pick.has(s.id)?{checked:"checked"}:{}),...(why?{disabled:"disabled"}:{})});
+      cb.addEventListener("change",()=>{ if(cb.checked) pick.add(s.id); else pick.delete(s.id); paintCount(); });
+      tb.append(el("tr",{style:why?"opacity:.55":"cursor:pointer",onclick:e=>{ if(why||e.target===cb) return; cb.checked=!cb.checked; cb.dispatchEvent(new Event("change")); }},
+        el("td",{style:"width:28px"},cb),
+        el("td",{},el("strong",{},s.name||""),el("div",{class:"muted",style:"font-size:12px"},[s.sid,s.campus,s._from].filter(Boolean).join(" · "))),
+        el("td",{style:"font-size:13px"},s.principalName||supName(s.principalUid)||el("span",{class:"muted"},"—"),
+          s.coUid||s.coName?el("div",{class:"muted",style:"font-size:12px"},"co: "+(s.coName||supName(s.coUid)||"")):""),
+        el("td",{style:"font-size:12.5px"},unitCodes(s)||el("span",{class:"muted"},"—")),
+        el("td",{style:"font-size:12px"},why?el("span",{class:"pill none"},why):"")));
+    });
+    paintCount();
+  }
+  q.addEventListener("input",draw);
+  const node=el("div",{},
+    el("div",{class:"row",style:"gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"},q,
+      el("button",{class:"btn xs ghost",type:"button",onclick:()=>{ shown().forEach(s=>{ if(!taken.has(s.id)) pick.add(s.id); }); draw(); }},"Select all shown"),
+      el("button",{class:"btn xs ghost",type:"button",onclick:()=>{ shown().forEach(s=>pick.delete(s.id)); draw(); }},"Clear"),count),
+    el("div",{style:"max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:10px"},
+      el("table",{style:"margin:0"},el("thead",{},el("tr",{},...["","Student","Supervisors","Units now",""].map(h=>el("th",{style:"position:sticky;top:0;z-index:1"},h)))),tb)));
+  draw();
+  return {node,selected:()=>list.filter(s=>pick.has(s.id))};
+}
+/* The units a copied student is enrolled in, in the target semester:
+   "keep" matches their current units by code (falls back to all of the
+   target's units when none match, e.g. RES915 → RES906); "set" uses the
+   ticked units for everyone. */
+function enrolUnitIds(st,srcSem,toUnits,mode,setIds){
+  if(mode==="set") return setIds.slice();
+  const codes=new Set((st.unitIds||[]).map(id=>unitsOf(srcSem).find(u=>u.id===id)?.code).filter(Boolean).map(c=>c.toUpperCase()));
+  const m=toUnits.filter(u=>codes.has(String(u.code||"").toUpperCase())).map(u=>u.id);
+  return m.length?m:toUnits.map(u=>u.id);
+}
+/* Copy the chosen students into toSemId. Returns {added, times}. */
+async function enrolCopies(chosen,toSemId,toUnits,mode,setIds,keepTimes){
+  const semOf=id=>S.semesters.find(x=>x.id===id)||null;
+  const srcSems=[...new Set(chosen.map(s=>s.semesterId))];
+  const oldCons=keepTimes?(await Promise.all(srcSems.map(id=>DB.list("consultations",{semesterId:id}).catch(()=>[])))).flat():[];
+  const idMap={};
+  await Promise.all(chosen.map(async st=>{ const {id,_from,...rest}=st;
+    idMap[id]=await DB.add("students",{...rest,semesterId:toSemId,unitIds:enrolUnitIds(st,semOf(st.semesterId),toUnits,mode,setIds)}); }));
+  let times=0;
+  await Promise.all(oldCons.map(c=>{ const st=chosen.find(x=>x.id===c.studentDocId);
+    if(!st||!idMap[c.studentDocId]||c.supervisorUid!==st.principalUid||!c.day) return null;
+    times++;
+    return DB.add("consultations",{semesterId:toSemId,studentDocId:idMap[c.studentDocId],supervisorUid:c.supervisorUid,
+      coUid:st.coUid||"",coName:st.coName||"",principalName:st.principalName||c.principalName||"",
+      day:c.day||"",start:c.start||"",end:c.end||"",mode:c.mode||"",meetingLink:c.meetingLink||"",weeks:{}}); }));
+  return {added:chosen.length,times};
+}
+/* The units box for a target semester: keep current units, or enrol in the ticked ones. */
+function enrolUnitsBox(toSem,defMode){
+  const units=unitsOf(toSem);
+  let mode=units.length?defMode:"set";
+  const boxes=units.map(u=>{ const cb=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"}); cb.dataset.unit=u.id;
+    return el("label",{class:"coc-chk",style:"margin:0 14px 4px 0;display:inline-flex"},cb,el("span",{},(u.code||"")+(u.name?" "+u.name:""))); });
+  const boxWrap=el("div",{style:"margin:4px 0 0 24px;display:"+(mode==="set"?"block":"none")},...boxes);
+  const radio=(val,txt,sub)=>{ const r=el("input",{type:"radio",name:"enrolU"+toSem.id,style:"width:auto;margin:3px 0 0",...(mode===val?{checked:"checked"}:{})});
+    r.addEventListener("change",()=>{ if(r.checked){ mode=val; boxWrap.style.display=val==="set"?"block":"none"; } });
+    return el("label",{class:"coc-chk",style:"display:flex;width:100%;align-items:flex-start;margin:0 0 6px;cursor:pointer"},r,el("span",{},el("strong",{},txt),sub?el("div",{class:"muted",style:"font-size:12.5px;font-weight:400"},sub):"")); };
+  const node=units.length?el("div",{},el("label",{},"Units in “"+toSem.label+"”"),
+      radio("keep","Keep each student’s current units","Matched by unit code; anyone whose units don’t run here is enrolled in all of this semester’s units."),
+      radio("set","Enrol everyone selected in:"),boxWrap)
+    :el("p",{class:"muted",style:"margin:0;font-size:13px"},"“"+toSem.label+"” has no units yet — the students are added without units. Add units under Semesters & staff → Edit units.");
+  return {node,units,mode:()=>mode,setIds:()=>boxes.map(b=>b.querySelector("input")).filter(i=>i.checked).map(i=>i.dataset.unit)};
+}
+/* Students already in toSem, by student ID. */
+async function enrolTaken(toSemId){
+  const there=await DB.list("students",{semesterId:toSemId});
+  return new Set(there.map(s=>normSid(s.sid)).filter(Boolean));
+}
+/* "Add existing students" into a semester that already exists. */
+async function addExistingStudentsDialog(toSem,done,fromSemId){
+  if(!toSem){ toast("Choose a semester first.",true); return; }
+  const others=S.semesters.filter(x=>x.id!==toSem.id);
+  if(!others.length){ toast("There is no other semester to take students from yet — use “+ Add student” or Import instead.",true); return; }
+  const takenSids=await enrolTaken(toSem.id);
+  const from=el("select",{},el("option",{value:"*"},"Every semester (each student once, latest record)"),
+    ...others.map(x=>el("option",{value:x.id},x.label+(isThesisSem(x)?" — supervision only":""))));
+  from.value=fromSemId&&others.some(x=>x.id===fromSemId)?fromSemId:others[0].id;
+  const host=el("div",{}), ub=enrolUnitsBox(toSem,isThesisSem(toSem)?"set":"keep");
+  const keepTimes=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0",checked:"checked"});
+  let picker=null;
+  async function load(){
+    host.replaceChildren(el("p",{class:"muted"},"Loading students…"));
+    let list;
+    if(from.value==="*"){
+      const all=await DB.list("students");
+      const rank=id=>{ const i=S.semesters.findIndex(x=>x.id===id); return i<0?1e9:i; }; // S.semesters is newest first
+      const best=new Map();
+      all.filter(st=>st.semesterId!==toSem.id).forEach(st=>{ const k=normSid(st.sid)||st.id, cur=best.get(k);
+        if(!cur||rank(st.semesterId)<rank(cur.semesterId)) best.set(k,st); });
+      list=[...best.values()].map(st=>({...st,_from:S.semesters.find(x=>x.id===st.semesterId)?.label||""}));
+    }else list=await DB.list("students",{semesterId:from.value});
+    list.sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+    const taken=new Map(list.filter(st=>takenSids.has(normSid(st.sid))).map(st=>[st.id,"already in this semester"]));
+    picker=enrolPickList(list,{taken,preselect:false,
+      unitCodes:st=>(st.unitIds||[]).map(id=>unitsOf(S.semesters.find(x=>x.id===st.semesterId)).find(u=>u.id===id)?.code).filter(Boolean).join(", ")});
+    host.replaceChildren(picker.node);
+  }
+  from.addEventListener("change",load);
+  modal("Add existing students to “"+toSem.label+"”",
+    el("div",{class:"grid",style:"gap:12px"},
+      el("p",{class:"muted",style:"margin:0"},"Choose students who are already in the hub — for example the RES915 students starting RES906 in this intake. Each one is copied into “"+toSem.label+"” with the same principal and co-supervisor. Their earlier semester is not changed, and anyone already here is skipped."),
+      el("div",{},el("label",{},"Take students from"),from),
+      host, ub.node,
+      el("label",{style:"display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer"},keepTimes,
+        el("span",{},"Keep each student’s weekly meeting day, time and Teams link",el("div",{class:"muted ui",style:"font-size:12.5px"},"Supervisors can change them afterwards.")))),
+    async()=>{
+      const chosen=picker?picker.selected():[];
+      if(!chosen.length){ toast("Tick at least one student.",true); return false; }
+      if(ub.units.length&&ub.mode()==="set"&&!ub.setIds().length){ toast("Tick at least one unit, or keep their current units.",true); return false; }
+      const r=await enrolCopies(chosen,toSem.id,ub.units,ub.mode(),ub.setIds(),keepTimes.checked);
+      toast("Added "+r.added+" student"+(r.added===1?"":"s")+" to “"+toSem.label+"”"+(r.times?", with "+r.times+" meeting time"+(r.times===1?"":"s"):"")+".");
+      done&&done(); return true;
+    },"Add selected students");
+  { const md=[...document.querySelectorAll(".modal")].pop(); if(md) md.style.maxWidth="min(860px,94vw)"; }
+  await load();
+}
+
 async function copyForward(fromSem,done){
   const us=unitsOf(fromSem);
   const wasThesis=isThesisSem(fromSem);
@@ -17388,9 +17541,12 @@ async function copyForward(fromSem,done){
   const unitsBox=el("div",{},el("label",{},"Units carried over"),unitsLine);
   into.onchange=()=>{ const t=into.value==="thesis"; tBox.style.display=t?"grid":"none"; unitsBox.style.display=t?"none":""; if(t) weeks.value="15"; };
   const keepTimes=el("input",{type:"checkbox",style:"width:auto;margin:3px 0 0"}); keepTimes.checked=true;
+  const srcStudents=(await DB.list("students",{semesterId:fromSem.id})).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const picker=enrolPickList(srcStudents,{preselect:true,
+    unitCodes:st=>(st.unitIds||[]).map(id=>us.find(u=>u.id===id)?.code).filter(Boolean).join(", ")});
   modal("Carry students forward",
     el("div",{class:"grid"},
-      el("p",{class:"muted",style:"margin:0"},"Copies every student, with the same principal and co-supervisor, from “"+fromSem.label+"” into a new semester. Attendance and meeting notes start fresh. “"+fromSem.label+"” itself is not changed."),
+      el("p",{class:"muted",style:"margin:0"},"Copies the students you tick, with the same principal and co-supervisor, from “"+fromSem.label+"” into a new semester. Attendance and meeting notes start fresh. “"+fromSem.label+"” itself is not changed. Students starting in a later intake can be added to that intake’s semester later with “Add students…”."),
       el("div",{},el("label",{},"New semester label"),label),
       el("div",{},el("label",{},"Students continue in"),into),
       tBox,
@@ -17400,6 +17556,7 @@ async function copyForward(fromSem,done){
         el("div",{},el("label",{},"End date"),cfEnd)),
       el("p",{class:"muted",style:"margin:-4px 0 0;font-size:12.5px"},"Dates are optional. With both set, the number of weeks is worked out from them."),
       unitsBox,
+      el("div",{},el("label",{},"Students to carry forward"),picker.node),
       el("label",{style:"display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer"},keepTimes,
         el("span",{},"Keep each student’s weekly meeting day, time and Teams link",
           el("div",{class:"muted ui",style:"font-size:12.5px"},"Supervisors can change them afterwards. Untick to start with no meeting times.")))),
@@ -17407,6 +17564,8 @@ async function copyForward(fromSem,done){
       if(!label.value.trim()){ toast("Enter a label.",true); return false; }
       const toThesis=into.value==="thesis";
       if(toThesis&&!tCode.value.trim()){ toast("Enter the unit code.",true); return false; }
+      const chosen=picker.selected();
+      if(!chosen.length&&!window.confirm("No students are ticked. Create “"+label.value.trim()+"” empty? You can add students to it later with “Add students…”.")) return false;
       const units=toThesis?[{id:uid(),code:tCode.value.trim(),name:tName.value.trim()}]:us.map(u=>({id:u.id,code:u.code,name:u.name}));
       let cfWk=parseInt(weeks.value);
       if(start.value&&cfEnd.value){
@@ -17421,7 +17580,7 @@ async function copyForward(fromSem,done){
         start:start.value||"",end:cfEnd.value||"",
         backWeeks:(fromSem.backWeeks===undefined||fromSem.backWeeks===null)?2:fromSem.backWeeks,
         thesis:toThesis||wasThesis,coSelfAttend:coSelfAttend(fromSem),messagesOff:messagesOff(fromSem)});
-      const [students,oldCons]=await Promise.all([DB.list("students",{semesterId:fromSem.id}),
+      const [students,oldCons]=await Promise.all([Promise.resolve(chosen),
         keepTimes.checked?DB.list("consultations",{semesterId:fromSem.id}).catch(()=>[]):[]]);
       // all copies sent together rather than one round trip per student
       const idMap={};
@@ -17439,6 +17598,8 @@ async function copyForward(fromSem,done){
       toast("Carried "+students.length+" student"+(students.length===1?"":"s")+" forward"+(toThesis?" into "+units[0].code:"")+(nTimes?", with "+nTimes+" meeting time"+(nTimes===1?"":"s"):"")+".");
       renderApp(); return true;
     },"Carry forward");
+  /* The dialog is wide enough for the student list. */
+  const md=[...document.querySelectorAll(".modal")].pop(); if(md) md.style.maxWidth="min(820px,94vw)";
 }
 
 /* ============================================================
