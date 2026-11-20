@@ -19204,6 +19204,17 @@ const cocOutcome=c=>COC_OUTCOMES.find(o=>o.c===c)||null;
    and fully editable. The Moodle link is a semester setting (CoC reports
    → Report settings), with this one as the default. */
 const COC_REVISED_LINK_DEFAULT="https://lms.cihe.edu.au/mod/turnitintooltwo/view.php?id=61594";
+/* A shareable link to the student's revised proposal (OneDrive, SharePoint,
+   Teams, Google Drive…), so the Chair, a delegated member or the panel can
+   open the file itself. Returns a safe href, or "". */
+function cocPropHref(t){
+  const h=linkHref(String(t||"").trim());
+  return h&&/^https?:\/\/[^\s\/]+\.[^\s]+$/i.test(h)?h:"";
+}
+function cocPropLink(rs,label){
+  const h=cocPropHref(rs?.link);
+  return h?el("a",{class:"linkpill",href:h,target:"_blank",rel:"noopener"},label||"\uD83D\uDCC4 Open the revised proposal"):"";
+}
 function cocRevisedLink(sem){
   const t=String(sem?.cocRevisedLink||"").trim();
   return t&&/^https?:\/\/[^\s\/]+\.[^\s]+$/i.test(linkHref(t))?linkHref(t):COC_REVISED_LINK_DEFAULT;
@@ -19883,12 +19894,14 @@ function cocDocxBuild(ctx){
       const rs=c._resub, pv=rs.prev||{}, m=rs.marks||{};
       const rsRows=[
         {cells:[titleCell("C1.3a Resubmission after Major Revisions \u2014 round "+(rs.round||2),
-          rs.mode==="chair"?"Re-assessed by the Panel Chair on behalf of the panel.":"Re-assessed by every panel member; their updated marks are in C1.3 above.",{span:2})]},
+          rs.mode==="chair"?(m.by?"Re-assessed by "+(m.by.code?m.by.code+" ":"")+(m.by.name||"a panel member")+" at the Panel Chair’s request; reviewed, signed and approved by the Panel Chair on behalf of the panel."
+            :"Re-assessed by the Panel Chair on behalf of the panel."):"Re-assessed by every panel member; their updated marks are in C1.3 above.",{span:2})]},
         {cells:[L("Previous outcome"),V((pv.outcome||"MRR")+(pv.final!=null&&pv.final!==""?" \u00B7 final mark "+cocFmt(cocNum(pv.final))+"/20":"")+(pv.approvedAt?" \u00B7 approved "+cocDay(pv.approvedAt):""))]},
         {cells:[L("Re-assessment opened"),V(cocDay(rs.at)+(rs.by?" by "+rs.by:""))]}];
+      if(cocPropHref(rs.link)) rsRows.push({cells:[L("Revised proposal"),V(cocPropHref(rs.link))]});
       if(rs.mode==="chair") rsRows.push(
         {cells:[L("Marks on the revised proposal"),V("Research quality "+cocFmt(cocNum(m.rq))+"/10 \u00B7 Feasibility "+cocFmt(cocNum(m.fe))+"/5 \u00B7 Presentation "+cocFmt(cocNum(m.pr))+"/5 \u00B7 Total "+cocFmt(c._base)+"/20"+(m.rec?" \u00B7 recommends "+m.rec:""))]},
-        {cells:[L("Chair's comments on the revised proposal"),V(cocT(m.comments),{padV:90})]});
+        {cells:[L(m.by?"Comments on the revised proposal ("+(m.by.code||"delegated member")+")":"Chair's comments on the revised proposal"),V(cocT(m.comments),{padV:90})]});
       if(pv.agg) rsRows.push({cells:[L("Original seminar panel average"),V(cocFmt(cocNum(pv.agg))+"/20")]});
       rsRows.push({cells:[L("Mark cap"),V(c._capOn?"Confirmed after a Major Revision re-submission: the final mark is capped at 10/20.":"The 10/20 cap applies if the candidate is confirmed (C or CMR).")]});
       body+=tbl([3000,W-3000],rsRows);
@@ -21123,8 +21136,31 @@ function cocReportEditor(host,o){
           (pv.approvedAt?" \u00B7 approved "+cocDay(pv.approvedAt):"")+" \u00B7 reopened "+cocDay(rs.at)+(rs.by?" by "+rs.by:""))));
       if(cocT(rs.note)) rb.append(el("div",{class:"coc-quote"},el("strong",{},"From the MRes office: "),rs.note));
       if(cocT(pv.conditions)) rb.append(el("div",{class:"coc-quote"},el("strong",{},"The revisions that were required: "),pv.conditions));
+      { /* The revised proposal itself: open it, or add / change the link. */
+        const lrow=el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px"});
+        const paintL=(editing)=>{
+          lrow.replaceChildren();
+          if(editing&&!R){
+            const inp=el("input",{type:"url",value:cocT(rs.link),placeholder:"https://… share link to the revised proposal",style:"flex:1;min-width:260px"});
+            const ok=()=>{ const t=cocT(inp.value);
+              if(t&&!cocPropHref(t)){ toast("That doesn’t look like a web link — paste the full share link (starting https://).",true); return; }
+              rs.link=cocPropHref(t); save(); paintL(false); };
+            inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); ok(); } });
+            lrow.append(inp,el("button",{class:"btn sm",type:"button",onclick:ok},"Save link"),
+              el("button",{class:"btn xs ghost",type:"button",onclick:()=>paintL(false)},"Cancel"));
+            setTimeout(()=>{ try{ inp.focus(); }catch(e){} },20);
+            return;
+          }
+          lrow.append(cocPropHref(rs.link)?cocPropLink(rs)
+            :el("span",{class:"muted ui",style:"font-size:13px"},"No link to the revised proposal yet"+(R?".":" — add one so you (and anyone you delegate to) can open it.")));
+          if(!R) lrow.append(el("button",{class:"btn xs ghost",type:"button",onclick:()=>paintL(true)},cocPropHref(rs.link)?"Change link":"+ Add link"));
+        };
+        paintL(false); rb.append(lrow);
+      }
       if(rs.mode==="chair"){
-        rb.append(cocTip("Mark the revised proposal on behalf of the panel. These marks, not the original seminar marks above, are the basis for the final mark in C1.6. If you confirm the candidate, the mark is capped at 10/20."));
+        rb.append(cocDelegateBox(rs,{R,coded,marks,st,g,save,redraw,refresh:async()=>{ await refreshMarks(); redraw(); }}));
+        if(rs.marks.by) rb.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin:0 0 6px"},"Re-assessed by "+(rs.marks.by.code?rs.marks.by.code+" ":"")+(rs.marks.by.name||"a panel member")+" on your behalf (sent "+cocDT(rs.marks.by.at)+"). You can still adjust anything below before you sign."));
+        rb.append(cocTip("Mark the revised proposal on behalf of the panel"+(cocDelOf(rs)?" — or bring in the delegated member’s re-assessment above":"")+". These marks, not the original seminar marks above, are the basis for the final mark in C1.6. If you confirm the candidate, the mark is capped at 10/20."));
         const tot=el("div",{class:"coc-total"});
         const paintT=()=>{ const t=[rs.marks.rq,rs.marks.fe,rs.marks.pr].map(cocNum); const v=t.every(x=>x!=null)?t.reduce((a,b)=>a+b,0):null;
           tot.replaceChildren(el("div",{class:"v"},v==null?"\u2014":cocFmt(v),el("small",{}," / 20")),el("div",{class:"l"},v==null?"Total":cocBand(v))); };
@@ -21448,6 +21484,7 @@ async function viewCocAssess(v){
         else { next="Waiting for "+(st.of-st.sub)+" member sheet"+(st.of-st.sub===1?"":"s"); mode="chair"; } }
       else if(me.isChair&&approved){ next="Approved \u2014 download the Word form"; nextCls="approved"; mode="chair"; }
       else { next="Done \u2014 the Chair has your marks"; nextCls="approved"; }
+      if(!approved&&cocDelPending(rp,me,md).length){ next="Re-assess a revised proposal for the Chair"; nextCls="pending"; }
       if(nextCls==="pending") todo.push(g);
       const go=el("button",{class:"btn xs"+(S.cocPanel===g.id?"":" ghost"),onclick:()=>{ S.cocPanel=g.id; S.cocModeBy=S.cocModeBy||{};
           if(mode) S.cocModeBy[g.id]=mode; else delete S.cocModeBy[g.id]; viewCocAssess(v); }},
@@ -21586,6 +21623,15 @@ async function viewCocAssess(v){
       return;
     }
   }
+  /* Re-assessments the Chair has delegated to me (Major Revisions). */
+  cocDelegatedCards(g,rep,me,students,()=>refreshCocBadge()).forEach(n=>v.append(n));
+  /* Every member re-marking a revised proposal: a link to open it. */
+  if(rep&&!(rep.status==="approved"||rep.status==="received")) Object.keys(rep.cand||{}).forEach(id=>{
+    const rs=rep.cand[id]?.resub; if(!rs||rs.mode!=="panel") return;
+    const st=students.find(s=>s.id===id); if(!st) return;
+    v.append(noticeBar("blue","Re-assess "+(st.name||"the candidate")+"’s revised proposal (round "+(rs.round||2)+")"+(cocPropHref(rs.link)?".":" — no link to the file yet; ask the MRes office."),
+      cocPropHref(rs.link)?cocPropLink(rs):""));
+  });
   const host=el("div",{}); v.append(host);
   const chairCd=cocCoded(g).find(c=>c.isChair);
   const toChair=!me.isChair&&chairCd?{chairEmails:memberEmails(chairCd.m),chairName:chairCd.m.name||""}:{};
@@ -21637,6 +21683,7 @@ async function refreshCocBadge(){
       if(!rep||rep.status==="approved"||rep.status==="received") return;
       const me=cocMe(g); if(!me) return;
       let own=null; try{ own=await DB.get("cocMarks",cocMarkId(g.id,me.key)); }catch(e){}
+      if(cocDelPending(rep,me,own).length) why.push((g.label||"Panel")+": re-assess a revised proposal for the Chair");
       if(!own?.submitted){ if(cocOpen(rep)) why.push((g.label||"Panel")+": submit your marks"); return; }
       if(me.isChair){
         const mk=await cocGetMarks(g).catch(()=>({}));
@@ -22135,6 +22182,7 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
   };
   const closes=el("input",{type:"datetime-local",value:cocAddDays(ymdOf(new Date()),28)+"T17:00"});
   const note=el("textarea",{rows:"2",placeholder:"e.g. The revised proposal is in the panel folder (“Revised — "+(st.name||"")+"”)."});
+  const link=el("input",{type:"url",placeholder:"https://… (OneDrive, SharePoint, Teams or Google Drive share link)",value:cocT(rep?.cand?.[st.id]?.resub?.link)});
   const mail=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
   modal("Re-assess the revised proposal — "+(st.name||""),
     el("div",{class:"grid",style:"gap:12px"},
@@ -22145,6 +22193,8 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
           "The Chair enters marks, a recommendation and comments on the revised proposal in the report. Members' signed sheets stay as they are."),
         opt("panel","Every panel member re-marks",
           "Each member's sheet is returned to them with your note; they update their marks for "+(st.name||"this candidate")+" and sign again.")),
+      el("div",{},el("label",{},"Link to the revised proposal"),link,
+        cocTip("Download the file from Moodle, put it somewhere the panel can open (e.g. the panel’s documents folder) and paste the share link here. The Chair, a member the Chair delegates to, or every member if they all re-mark, get an “Open the revised proposal” button and the link in their email. The Chair can add or change it later.")),
       el("div",{},el("label",{},"Re-assessment window closes"),closes,
         cocTip("4 weeks from today by default — change it if the Research Office has set a different date. The Chair can finish and re-approve the report after it closes.")),
       el("div",{},el("label",{},"Note to the "+(chair?"Chair":"panel")+" (optional)"),note),
@@ -22152,10 +22202,13 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
     async()=>{
       const now=Date.now(), cl=cocLocalOut(closes.value);
       if(!cl||cl<=now){ toast("Choose when the window closes — it must be in the future.",true); return false; }
+      const lk=cocT(link.value);
+      if(lk&&!cocPropHref(lk)){ toast("That doesn’t look like a web link — paste the full share link (starting https://).",true); return false; }
+      if(!lk&&!window.confirm("No link to the revised proposal — the panel won’t be able to open it from the hub. Continue anyway? (The Chair can add it later.)")) return false;
       const cand=JSON.parse(JSON.stringify(rep.cand||{}));
       const c0=cand[st.id]=cand[st.id]||{}; c0.det=c0.det||{};
       const prevRound=c0.resub?.round||1;
-      c0.resub={round:prevRound+1,mode,at:now,by:S.userName||"",closesAt:cl,note:cocT(note.value),
+      c0.resub={round:prevRound+1,mode,at:now,by:S.userName||"",closesAt:cl,note:cocT(note.value),link:cocPropHref(lk)||"",
         prev:{outcome:cv._outcome||"MRR",final:cv._final==null?"":cv._final,agg:cv._agg.avg.total==null?"":cv._agg.avg.total,
           approvedAt:rep.approvedAt||0,conditions:cocT(c0.det.conditions),dueBy:c0.det.dueBy||""},
         marks:{}};
@@ -22166,7 +22219,7 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
         history:cocHist(rep,"reopened to re-assess "+(st.name||"")+"'s revised proposal (round "+(prevRound+1)+", "+(mode==="chair"?"Chair on behalf of the panel":"all members")+")")}}];
       if(mode==="panel") coded.forEach(cd=>{ if(!marks[cd.key]) return;
         ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g0.id,cd.key),data:{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:now,
-          returnNote:{text:"Please re-assess "+(st.name||"the candidate")+"'s revised proposal (after Major Revisions) and update your marks and comments for them."+(cocT(note.value)?" "+cocT(note.value):""),by:S.userName||"the MRes office",at:now}}}); });
+          returnNote:{text:"Please re-assess "+(st.name||"the candidate")+"'s revised proposal (after Major Revisions) and update your marks and comments for them."+(cocPropHref(lk)?" Revised proposal: "+cocPropHref(lk):"")+(cocT(note.value)?" "+cocT(note.value):""),by:S.userName||"the MRes office",at:now}}}); });
       await DB.batchWrite(ops);
       toast("Report reopened for re-assessment until "+cocDT(cl)+".");
       if(mail.checked){
@@ -22176,10 +22229,212 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
           "The "+(g0.label||"panel")+" report has been reopened in the MRes Supervision Hub so it can be re-assessed"+
           (mode==="chair"?" by the Chair on behalf of the panel. Please open “CoC assessment” → Panel report (Chair), enter your marks, recommendation and comments on the revised proposal for "+(st.name||"the candidate")+", complete C1.6 and approve and sign the report again."
             :" by every panel member. Please open “CoC assessment”, update your marks and comments for "+(st.name||"the candidate")+" and sign and submit again; the Chair then re-approves the report.")+
+          (cocPropHref(lk)?"\n\nThe revised proposal: "+cocPropHref(lk):"")+
           "\n\nPlease complete this by "+cocDT(cl)+". If the candidate is confirmed, the final mark is capped at 10/20."+(cocT(note.value)?"\n\n"+cocT(note.value):"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
       }
       done(); return true;
     },"Reopen for re-assessment");
+}
+
+/* ---- Major Revisions: the Chair delegates the re-assessment ----
+   When the Chair re-marks on behalf of the panel, they may ask another
+   panel member to do the re-assessment for them. The member's marks,
+   recommendation and comments are kept on that member's OWN mark sheet
+   (cocMarks/{gid}__{key} .cand[studentId].rsDel) — the one place the
+   database rules already let a member write while the report is open —
+   so no rule change is needed. The Chair then brings them into C1.3a,
+   completes C1.6 and signs and approves the report exactly as before,
+   which sends it to the MRes office. Nothing changes when the Chair
+   doesn't delegate. */
+const cocDelOf=rs=>rs&&rs.mode==="chair"&&rs.delegate&&rs.delegate.key?rs.delegate:null;
+function cocDelWork(marks,rs,stId){
+  const d=cocDelOf(rs); if(!d) return null;
+  const w=marks?.[d.key]?.cand?.[stId]?.rsDel;
+  return w&&(w.round||2)===(rs.round||2)?w:null;
+}
+/* Candidates the Chair handed to me that I haven't sent back yet. */
+function cocDelPending(rep,me,own){
+  if(!rep||!me||me.isChair||rep.status==="approved"||rep.status==="received") return [];
+  return Object.keys(rep.cand||{}).filter(id=>{ const rs=rep.cand[id]?.resub, d=cocDelOf(rs);
+    if(!d||d.key!==me.key) return false;
+    const w=own?.cand?.[id]?.rsDel; return !(w&&w.submittedAt&&(w.round||2)===(rs.round||2)); });
+}
+const cocDelTotal=w=>{ const a=[w?.rq,w?.fe,w?.pr].map(cocNum); return a.every(x=>x!=null)?a.reduce((t,x)=>t+x,0):null; };
+function cocDelMissing(w){
+  const out=[];
+  COC_DOMAINS.forEach(d=>{ const n=cocNum(w?.[d.k]); if(n==null||n<0||n>d.max) out.push(d.short+" (0–"+d.max+")"); });
+  if(!w?.rec) out.push("recommended outcome");
+  if(!cocT(w?.comments)) out.push("comments on the revised proposal");
+  return out;
+}
+function cocDelSummary(w){
+  return el("div",{},
+    el("div",{class:"ui",style:"font-size:13.5px"},COC_DOMAINS.map(d=>d.short+" "+cocFmt(cocNum(w[d.k]))+"/"+d.max).join(" · ")+
+      " · Total "+cocFmt(cocDelTotal(w))+"/20"+(w.rec?" · recommends "+w.rec:"")),
+    cocT(w.comments)?el("div",{class:"coc-quote",style:"margin-top:6px"},w.comments):"");
+}
+
+/* The Chair's side, inside C1.3a. o: {R, coded, marks, st, g, save, redraw, refresh} */
+function cocDelegateBox(rs,o){
+  const {R,coded,marks,st,g}=o;
+  const d=cocDelOf(rs);
+  const chairCd=coded.find(x=>x.isChair);
+  const box=el("div",{class:"coc-quote",style:"margin:0 0 12px;border-left-color:var(--blue,#2c5bd8)"});
+  if(!d){
+    if(R) return "";
+    const can=coded.filter(cd=>!cd.isChair&&cd.uid);
+    box.append(el("div",{class:"row",style:"gap:10px;align-items:center;flex-wrap:wrap"},
+      el("span",{style:"flex:1;min-width:240px;font-size:13.5px"},el("strong",{},"Delegate the decision? "),
+        can.length?"You can ask another panel member to re-assess the revised proposal. Their marks, recommendation and comments come back to you here; you then complete C1.6, sign and approve the report, which sends it to the MRes office."
+          :"No other member of this panel has a hub login, so the re-assessment can't be delegated here."),
+      can.length?el("button",{class:"btn sm ghost",type:"button",onclick:()=>cocDelegateDialog(rs,o,can,chairCd)},"↪ Delegate to a panel member…"):""));
+    return box;
+  }
+  const w=cocDelWork(marks,rs,st.id), sub=!!w?.submittedAt;
+  const used=!!rs.marks?.by&&rs.marks.by.key===d.key&&rs.marks.by.at===w?.submittedAt;
+  const head=el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"},
+    el("strong",{},"Delegated to "+(d.code?d.code+" ":"")+(d.name||"a panel member")),
+    el("span",{class:"pill "+(used?"approved":sub?"pending":"blue")},used?"✓ In the report":sub?"Re-assessment received":w?"In progress":"Waiting"),
+    el("span",{class:"muted ui",style:"font-size:12.5px"},"asked "+cocDay(d.at)+(d.by?" by "+d.by:"")+(sub?" · sent to you "+cocDT(w.submittedAt):"")));
+  box.append(head);
+  if(cocT(d.note)) box.append(el("div",{class:"muted",style:"font-size:13px;margin-bottom:6px"},"Your note: "+d.note));
+  if(sub) box.append(cocDelSummary(w));
+  else box.append(el("div",{style:"font-size:13.5px"},(d.name||"The member")+" hasn’t sent the re-assessment yet. When they do, it appears here for you to bring into the report."));
+  const btns=el("div",{class:"row",style:"gap:6px;margin-top:8px;flex-wrap:wrap"});
+  if(sub&&!R) btns.append(el("button",{class:"btn sm"+(used?" ghost":""),type:"button",onclick:()=>{
+      if(cocDelTotal(rs.marks)!=null&&!used&&!window.confirm("Replace the marks, recommendation and comments in C1.3a with "+(d.name||"the member")+"’s?")) return;
+      rs.marks={rq:w.rq,fe:w.fe,pr:w.pr,rec:w.rec,comments:w.comments,by:{key:d.key,code:d.code||"",name:d.name||"",at:w.submittedAt}};
+      o.save(); o.redraw(); toast("Brought into the report. Check C1.6, then sign and approve as usual."); }},
+    used?"↻ Bring in again":"↓ Use this re-assessment in the report"));
+  btns.append(el("button",{class:"btn sm ghost",type:"button",onclick:async()=>{ try{ await o.refresh(); }catch(e){ toast("Couldn't check: "+(e?.message||e),true); } }},"↻ Check again"));
+  if(!sub&&!R){
+    const dcd=coded.find(cd=>cd.key===d.key);
+    btns.append(el("button",{class:"btn sm ghost",type:"button",onclick:()=>cocDelegateEmail(g,st,rs,d,dcd,true)},"✉ Remind"));
+  }
+  if(!R) btns.append(el("button",{class:"btn xs ghost",type:"button",onclick:()=>{
+      if(!window.confirm("Take the re-assessment back from "+(d.name||"the member")+"? You can then re-mark it yourself or delegate it to someone else."+(sub?" What they sent stays on their sheet but is no longer used.":""))) return;
+      delete rs.delegate; o.save(); o.redraw(); }},"Take it back"));
+  box.append(btns);
+  return box;
+}
+function cocDelegateDialog(rs,o,can,chairCd){
+  let pick=can[0].key;
+  const list=el("div",{});
+  can.forEach(cd=>{
+    const r=el("input",{type:"radio",name:"cocdel",style:"width:auto;margin:3px 0 0",...(cd.key===pick?{checked:"checked"}:{})});
+    r.addEventListener("change",()=>{ if(r.checked) pick=cd.key; });
+    list.append(el("label",{class:"coc-chk",style:"align-items:flex-start;margin:0 0 8px;cursor:pointer"},r,
+      el("span",{},el("strong",{},cd.code+" "+(cd.m.name||"")),el("div",{class:"muted",style:"font-size:12.5px;font-weight:400"},memberEmails(cd.m)[0]||"no email on file"))));
+  });
+  const note=el("textarea",{rows:"2",placeholder:"e.g. Please focus on whether the methods section now addresses the panel’s concerns."});
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+  modal("Delegate the re-assessment — "+(o.st.name||""),
+    el("div",{class:"grid",style:"gap:12px"},
+      el("p",{class:"muted",style:"margin:0"},"The member you choose re-assesses the revised proposal in the hub (“CoC assessment”) and sends you their marks, recommended outcome and comments. You stay responsible for the decision: you bring their re-assessment into C1.3a, complete C1.6, then sign and approve the report, which sends it to the MRes office."),
+      el("div",{},el("label",{},"Panel member"),list),
+      el("div",{},el("label",{},"Note to the member (optional)"),note),
+      el("label",{class:"coc-chk"},mail,el("span",{},"Then email them"))),
+    async()=>{
+      const cd=can.find(x=>x.key===pick); if(!cd) return false;
+      rs.delegate={key:cd.key,code:cd.code,name:cd.m.name||"",uid:cd.uid,at:Date.now(),by:S.userName||"",note:cocT(note.value)};
+      o.save(); o.redraw();
+      toast("Delegated to "+(cd.m.name||cd.code)+".");
+      if(mail.checked) cocDelegateEmail(o.g,o.st,rs,rs.delegate,cd,false,chairCd);
+      return true;
+    },"Delegate");
+}
+function cocDelegateEmail(g,st,rs,d,cd,remind,chairCd){
+  const to=cd?memberEmails(cd.m):[];
+  if(!to.length){ toast("No email on file for "+(d.name||"the member")+".",true); return; }
+  const chair=chairCd||cocCoded(g).find(x=>x.isChair);
+  openEmail([...new Set(to)].join(","),(remind?"Reminder: ":"")+"CoC re-assessment for the Chair — "+(st.name||"")+"'s revised proposal",
+    "Dear "+(d.name||"colleague")+",\n\n"+(remind?"A reminder that I":"I")+" have asked you to re-assess "+(st.name||"the candidate")+"'s revised proposal (after Major Revisions) on my behalf for the "+(g.label||"CoC panel")+".\n\n"+
+    (cocPropHref(rs.link)?"The revised proposal: "+cocPropHref(rs.link)+"\n\n":"")+
+    "Please open the MRes Supervision Hub → “CoC assessment”: "+CPS_HUB_URL+"\nEnter your marks, recommended outcome and comments on the revised proposal and press “Send to the Chair”. I will then complete the panel report, sign it and send it to the MRes office."+
+    (rs.closesAt?"\n\nPlease complete this by "+cocDT(rs.closesAt)+".":"")+(cocT(d.note)?"\n\n"+d.note:"")+
+    "\n\nThank you,\n"+(chair?.m?.name||S.userName||""),
+    chair?memberEmails(chair.m).join(","):"");
+}
+
+/* The delegated member's side: one card per candidate the Chair handed to
+   them, above their own mark sheet. Saves onto their own sheet only. */
+function cocDelegatedCards(g,rep,me,students,onChange){
+  if(!rep||!me||me.isChair) return [];
+  const locked=rep.status==="approved"||rep.status==="received";
+  const ids=Object.keys(rep.cand||{}).filter(id=>{ const d=cocDelOf(rep.cand[id]?.resub); return d&&d.key===me.key; });
+  return ids.map(id=>{
+    const st=students.find(s=>s.id===id); if(!st) return null;
+    const rs=rep.cand[id].resub, d=rs.delegate, pv=rs.prev||{};
+    const sheetId=cocMarkId(g.id,me.key);
+    let w=null;
+    const c=cardShell("Re-assess for the Chair — "+(st.name||""),el("span",{class:"pill blue"},"Round "+(rs.round||2)),"");
+    const body=el("div",{style:"padding:14px 16px"}); c.append(body);
+    const ss=cocSaveState();
+    async function write(){
+      const fresh=await DB.get("cocMarks",sheetId,{raw:true});
+      const cand={...(fresh?.cand||{})};
+      cand[id]={...(cand[id]||{}),rsDel:{...w}};
+      await DB.set("cocMarks",sheetId,{cand,updatedAt:Date.now()});
+    }
+    const saveSoon=cocDebounce(async()=>{ ss.set("Saving…");
+      try{ await write(); ss.set("✓ Saved"); }catch(e){ console.error(e); ss.set("Not saved — "+(e?.message||"check your connection"),true); } },800);
+    function draw(){
+      body.replaceChildren();
+      const sub=!!w.submittedAt, open=cocOpen(rep), ro=sub||locked||!open;
+      body.append(el("p",{style:"margin:0 0 10px;font-size:14px"},(d.by||"The Chair")+" has asked you to re-assess "+(st.name||"the candidate")+"’s revised proposal on their behalf (asked "+cocDay(d.at)+"). "+
+        "Your marks, recommendation and comments go to the Chair, who completes the panel report, signs it and sends it to the MRes office."+
+        (rs.closesAt?" Please finish by "+cocDT(rs.closesAt)+".":"")));
+      if(cocT(d.note)) body.append(el("div",{class:"coc-quote"},el("strong",{},"From the Chair: "),d.note));
+      if(cocT(rs.note)) body.append(el("div",{class:"coc-quote"},el("strong",{},"From the MRes office: "),rs.note));
+      if(cocT(pv.conditions)) body.append(el("div",{class:"coc-quote"},el("strong",{},"The revisions that were required: "),pv.conditions));
+      body.append(el("div",{class:"row",style:"margin:4px 0 10px;gap:8px;flex-wrap:wrap"},
+        cocPropHref(rs.link)?cocPropLink(rs):el("span",{class:"muted ui",style:"font-size:13px"},"No link to the revised proposal yet — ask the Chair or the MRes office for it."),
+        docsLinkOf(g)?joinLink(docsLinkOf(g),DOCS_OPEN):""));
+      if(locked) body.append(noticeBar("green","The Chair has approved the report — nothing more is needed from you."));
+      else if(!open&&!sub) body.append(noticeBar("amber","The re-assessment window has closed. Ask the MRes office to reopen it, or let the Chair know."));
+      const tot=el("div",{class:"coc-total"});
+      const paintT=()=>{ const v=cocDelTotal(w);
+        tot.replaceChildren(el("div",{class:"v"},v==null?"—":cocFmt(v),el("small",{}," / 20")),el("div",{class:"l"},v==null?"Total":cocBand(v))); };
+      const grid=el("div",{class:"coc-marks"});
+      COC_DOMAINS.forEach(dm=>{
+        const inp=cocInput(w[dm.k]??"",v=>{ w[dm.k]=v===""?"":cocNum(v); paintT(); saveSoon(); },
+          {type:"number",ro,attrs:{min:"0",max:String(dm.max),step:"0.5",inputmode:"decimal"}});
+        grid.append(el("div",{class:"coc-mk",title:dm.what},el("label",{},dm.short+" /"+dm.max),inp));
+      });
+      paintT(); grid.append(tot);
+      const rec=el("select",{...(ro?{disabled:"disabled"}:{})});
+      rec.append(el("option",{value:""},"Recommended outcome…"));
+      COC_OUTCOMES.forEach(x=>rec.append(el("option",{value:x.c,...(w.rec===x.c?{selected:"selected"}:{})},x.c+" — "+x.label)));
+      rec.addEventListener("change",()=>{ w.rec=rec.value; saveSoon(); });
+      body.append(cocTip("Mark the revised proposal. If the candidate is confirmed (C or CMR), the final mark is capped at 10/20."),
+        grid,el("div",{style:"margin-top:10px;max-width:520px"},el("label",{},"Recommended outcome on the revised proposal"),rec),
+        el("div",{style:"margin-top:10px"},el("label",{},"Comments on the revised proposal (how the required revisions were addressed)"),
+          cocArea(w.comments,v=>{ w.comments=v; saveSoon(); },{ro,rows:4})));
+      const act=el("div",{class:"row",style:"gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"});
+      if(sub){
+        act.append(el("span",{class:"pill approved"},"✓ Sent to the Chair "+cocDT(w.submittedAt)));
+        if(!locked&&open) act.append(el("button",{class:"btn xs ghost",type:"button",onclick:async()=>{
+          if(!window.confirm("Take it back to make changes? The Chair will see it as not sent until you send it again.")) return;
+          w.submittedAt=0;
+          try{ await write(); draw(); onChange&&onChange(); }catch(e){ toast("Couldn't take it back: "+(e?.message||e),true); } }},"Take back to edit"));
+      }else if(!locked&&open){
+        act.append(el("button",{class:"btn",type:"button",onclick:async()=>{
+          const miss=cocDelMissing(w);
+          if(miss.length){ toast("Still needed: "+miss.join(", ")+".",true); return; }
+          if(!window.confirm("Send your re-assessment of "+(st.name||"the candidate")+" to the Chair?")) return;
+          w.submittedAt=Date.now(); w.by=S.userName||me.m.name||"";
+          try{ await write(); toast("Sent to the Chair."); draw(); onChange&&onChange(); }
+          catch(e){ w.submittedAt=0; toast("Couldn't send: "+(e?.message||e),true); } }},"Send to the Chair →"),ss.node);
+      }
+      body.append(act);
+    }
+    DB.get("cocMarks",sheetId,{raw:true}).then(md=>{
+      const cur=md?.cand?.[id]?.rsDel;
+      w=cur&&(cur.round||2)===(rs.round||2)?{...cur}:{round:rs.round||2,rq:"",fe:"",pr:"",rec:"",comments:"",submittedAt:0};
+      draw();
+    }).catch(e=>{ body.append(noticeBar("amber","Couldn't open your sheet: "+(e?.message||e))); });
+    return c;
+  }).filter(Boolean);
 }
 
 
@@ -26208,6 +26463,11 @@ function revRows(groups,reps,students,appeals){
       const round=resub?resub.round:1;
       const rel=rep?.release?.[id]||null;
       const relAt=cocRelStu(rel)?(rel.studentsAt||rel.at||0):0;
+      /* studentsAt keeps the FIRST time the student saw an outcome, so a
+         round-2 release still carries the round-1 date. Whether the new
+         decision is out is judged by the latest release (rel.at), the same
+         test the CoC reports screen uses (cocRelStale). */
+      const relLast=cocRelStu(rel)?(rel.at||rel.studentsAt||0):0;
       const approvedAt=Math.max(rep?.approvedAt||0,rep?.amendedAt||0);
       /* the outcome now in force */
       const code=locked?(det.outcome||notice?.outcome?.code||""):(resub?"":notice?.outcome?.code||"");
@@ -26215,7 +26475,7 @@ function revRows(groups,reps,students,appeals){
       seen.add(id);
       const tr=revTrackOf(g,id,round);
       const r={g,rep,st,id,round,resub,code,locked,rel,tr,
-        released:!!relAt&&(!resub||relAt>=approvedAt),
+        released:!!relAt&&(!resub||relLast>=approvedAt),
         due0:(locked?det.dueBy:"")||(!resub?notice?.dueBy:"")||"",
         chair:revChairOf(g),appeal:(appeals||[]).find(a=>a.studentDocId===id&&a.stage!=="withdrawn")||null};
       r.due=tr.dueBy||r.due0; r.days=r.due?apDaysTo(r.due):null;
@@ -26234,15 +26494,19 @@ function revState(r){
   if(r.resub&&!r.locked){
     const cl=r.resub.closesAt;
     r.steps=[["Resubmitted",1],["Sent to the panel",1],["Panel decision",0],["Outcome released",0]];
-    r.next=(r.resub.mode==="chair"?"The Chair is re-assessing":"The panel is re-assessing")+" the revised proposal"+(cl?" — closes "+cocDT(cl):"")+". The Chair then re-approves the report.";
+    const dl=cocDelOf(r.resub);
+    r.next=dl?(dl.name||dl.code||"A panel member")+" is re-assessing the revised proposal for the Chair"+(cl?" — closes "+cocDT(cl):"")+". The Chair then reviews it, signs and re-approves the report."
+      :(r.resub.mode==="chair"?"The Chair is re-assessing":"The panel is re-assessing")+" the revised proposal"+(cl?" — closes "+cocDT(cl):"")+". The Chair then re-approves the report.";
     r.bucket="panel"; r.act=["chair"]; return;
   }
   if(r.resub&&r.locked&&!r.released){
     const o=r.code;
     r.steps=[["Resubmitted",1],["Sent to the panel",1],["Panel decision",1],["Outcome released",0]];
     r.decision=o;
+    const supOnly=!!r.rel&&!cocRelStu(r.rel)&&cocRelSup(r.rel)&&(r.rel.at||0)>=Math.max(r.rep?.approvedAt||0,r.rep?.amendedAt||0);
     r.next="The panel decided "+(o==="C"?"Confirmed":o==="CMR"?"Confirmed subject to minor revisions":o==="NC"?"Not confirmed":o==="MRR"?"major revisions again":o||"—")+
-      ". Release the outcome to the student and supervisors on the CoC reports screen.";
+      (supOnly?". Released to the supervisors only so far — release it to the student as well on the CoC reports screen."
+        :". Release the outcome to the student and supervisors on the CoC reports screen.");
     r.bucket="action"; r.act=["release"]; return;
   }
   if(r.code==="NC"){
@@ -26339,10 +26603,12 @@ function revTell(r,sem,redraw){
 }
 function revRemindChair(r,redraw){
   const ch=r.chair, mode=r.resub?.mode;
-  const to=mode==="panel"?cocCoded(r.g).flatMap(cd=>memberEmails(cd.m)):ch?memberEmails(ch):[];
+  const dl=cocDelOf(r.resub), dcd=dl?cocCoded(r.g).find(cd=>cd.key===dl.key):null;
+  const to=mode==="panel"?cocCoded(r.g).flatMap(cd=>memberEmails(cd.m)):[...(dcd?memberEmails(dcd.m):[]),...(ch?memberEmails(ch):[])];
   if(!to.length){ toast("No email on file for the Chair.",true); return; }
   openEmail([...new Set(to)].join(","),"Reminder: CoC re-assessment — "+(r.st.name||"")+"'s revised proposal",
-    "Dear "+(mode==="panel"?"panel members":(ch?.name||"Chair"))+",\n\nA reminder that "+(r.st.name||"the candidate")+"'s revised proposal (after Major Revisions) is waiting to be re-assessed in the MRes Supervision Hub (“CoC assessment”): "+CPS_HUB_URL+
+    "Dear "+(mode==="panel"?"panel members":dcd?[dcd.m.name,ch?.name].filter(Boolean).join(" and ")||"colleagues":(ch?.name||"Chair"))+",\n\nA reminder that "+(r.st.name||"the candidate")+"'s revised proposal (after Major Revisions) is waiting to be re-assessed in the MRes Supervision Hub (“CoC assessment”): "+CPS_HUB_URL+
+    (cocPropHref(r.resub?.link)?"\n\nThe revised proposal: "+cocPropHref(r.resub.link):"")+
     (r.resub?.closesAt?"\n\nThe re-assessment window closes "+cocDT(r.resub.closesAt)+".":"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
   revTrackWrite(r.g,r.id,{chairRemindedAt:Date.now()},r.round).then(()=>redraw()).catch(()=>{});
 }
