@@ -19360,6 +19360,12 @@ const COC_OFFICE_CHK=[
   ["f","Conditions and second seminar dates diarised"]];
 const COC_MODES=["On campus","Online (Teams)","Hybrid"];
 const cocOutcome=c=>COC_OUTCOMES.find(o=>o.c===c)||null;
+/* After a Major Revision resubmission the outcome is normally Confirmed or
+   Not Confirmed. CMR or MRR can still be recorded by the Chair as an
+   exceptional case, with a reason (C1.6). Members and a delegated member
+   recommend C or NC only. */
+const COC_RESUB_OUTS=["C","NC"];
+const cocResubOuts=(cur)=>COC_OUTCOMES.filter(x=>COC_RESUB_OUTS.includes(x.c)||x.c===cur);
 /* The standard "Conditions, revisions or actions" wording for CMR and MRR.
    Filled into the Chair's C1.6 box when one of those outcomes is chosen,
    and fully editable. The Moodle link is a semester setting (CoC reports
@@ -19535,11 +19541,16 @@ function cocCand(rep,g,st,marks,sem){
   /* A resubmission after Major Revisions. Either the Chair re-marks on
      behalf of the panel (their marks, kept on the report, are the basis)
      or every member re-marks (the panel average is, as usual). Confirmed
-     after an MRR resubmission, the mark is capped at 10/20 (Part B). */
+     after an MRR resubmission (C or CMR), the mark is capped at 10/20
+     (Part B). The outcome is normally C or NC. */
   const rs=c.resub||null;
   c._resub=rs;
+  /* "ask": the office left the route to the Chair, who hasn't chosen yet —
+     nothing is proposed for the mark or outcome until they do. */
+  c._rsAsk=!!rs&&rs.mode==="ask";
   let base=avg;
-  if(rs&&rs.mode==="chair"){ const m=rs.marks||{}; const a=[m.rq,m.fe,m.pr].map(cocNum); base=a.every(x=>x!=null)?a.reduce((t,x)=>t+x,0):null; }
+  if(c._rsAsk) base=null;
+  else if(rs&&rs.mode==="chair"){ const m=rs.marks||{}; const a=[m.rq,m.fe,m.pr].map(cocNum); base=a.every(x=>x!=null)?a.reduce((t,x)=>t+x,0):null; }
   c._base=base;
   /* At approval the mark and outcome are frozen onto the report. Ones the
      Chair left at their defaults are flagged "auto": while approved they
@@ -19547,7 +19558,7 @@ function cocCand(rep,g,st,marks,sem){
      marks again, so a later change to a member's marks carries through. */
   const lockedRep=!!rep&&(rep.status==="approved"||rep.status==="received");
   const detOutcome=c.det.outcomeAuto&&!lockedRep?"":c.det.outcome;
-  c._outcome=detOutcome||(rs&&rs.mode==="chair"?(rs.marks?.rec||""):ag.majority)||"";
+  c._outcome=detOutcome||(rs&&rs.mode==="chair"?(rs.marks?.rec||""):c._rsAsk?"":ag.majority)||"";
   /* When the members don't agree on an outcome — no majority among their
      recommendations, or the Chair chooses something other than the
      majority — the Chair records why (det.outcomeReason). Not asked for a
@@ -19556,7 +19567,13 @@ function cocCand(rep,g,st,marks,sem){
   const recs=ag.counted.map(r=>r.rec).filter(Boolean);
   const split=recs.length>=2&&!ag.majority&&new Set(recs).size>1;
   const against=!!ag.majority&&!!c._outcome&&c._outcome!==ag.majority;
-  c._outcomeWhy=c._absent||(rs&&rs.mode==="chair")?"":split?"split":against?"against":"";
+  c._outcomeWhy=c._absent||(rs&&rs.mode!=="panel")?"":split?"split":against?"against":"";
+  /* Normally C or NC after a resubmission: any other outcome (e.g. an old
+     CMR recommendation) is not proposed unless the Chair records an
+     exception. Left as approved once the report is locked. */
+  if(rs&&!lockedRep&&!c.det.resubExc&&c._outcome&&!COC_RESUB_OUTS.includes(c._outcome)) c._outcome="";
+  /* An exception only counts once an outcome other than C / NC is chosen. */
+  c._resubExc=!!rs&&!!c.det.resubExc&&!!c._outcome&&!COC_RESUB_OUTS.includes(c._outcome);
   const capOn=!!c.det.resub||(!!rs&&(c._outcome==="C"||c._outcome==="CMR"));
   c._capOn=capOn;
   const capped=v=>v==null?null:(capOn?Math.min(v,10):v);
@@ -19585,6 +19602,8 @@ function cocChairMissing(c){
     if(!cocT(c.absentNote)) out.push("what happened and what happens next (absent candidate)");
     return out;
   }
+  if(c._rsAsk) out.push("resubmission route \u2014 choose whether you determine the outcome or every member re-assesses (C1.3a)");
+  if(c._resubExc&&!cocT(c.det.resubExcReason)) out.push("reason for the exceptional outcome after the resubmission (normally C or NC)");
   if(c._resub&&c._resub.mode==="chair"&&c._base==null) out.push("resubmission marks (the Chair, on behalf of the panel)");
   if(c._resub&&c._resub.mode==="chair"&&!cocT(c._resub.marks?.comments)) out.push("resubmission comments");
   if(c._agg.absentBy.length) out.push("a member recorded this candidate as absent \u2014 they need to withdraw and mark their sheet, or the office can unlock it");
@@ -20055,10 +20074,12 @@ function cocDocxBuild(ctx){
       const rs=c._resub, pv=rs.prev||{}, m=rs.marks||{};
       const rsRows=[
         {cells:[titleCell("C1.3a Resubmission after Major Revisions \u2014 round "+(rs.round||2),
-          rs.mode==="chair"?(m.by?"Re-assessed by "+(m.by.code?m.by.code+" ":"")+(m.by.name||"a panel member")+" at the Panel Chair’s request; reviewed, signed and approved by the Panel Chair on behalf of the panel."
+          rs.mode==="ask"?"Assessment route not chosen yet \u2014 the Panel Chair decides whether to determine the outcome on behalf of the panel or to send the revised proposal to every panel member."
+          :rs.mode==="chair"?(m.by?"Re-assessed by "+(m.by.code?m.by.code+" ":"")+(m.by.name||"a panel member")+" at the Panel Chair’s request; reviewed, signed and approved by the Panel Chair on behalf of the panel."
             :"Re-assessed by the Panel Chair on behalf of the panel."):"Re-assessed by every panel member; their updated marks are in C1.3 above.",{span:2})]},
         {cells:[L("Previous outcome"),V((pv.outcome||"MRR")+(pv.final!=null&&pv.final!==""?" \u00B7 final mark "+cocFmt(cocNum(pv.final))+"/20":"")+(pv.approvedAt?" \u00B7 approved "+cocDay(pv.approvedAt):""))]},
         {cells:[L("Re-assessment opened"),V(cocDay(rs.at)+(rs.by?" by "+rs.by:""))]}];
+      if(rs.mode!=="ask"&&rs.routeBy) rsRows.push({cells:[L("How the outcome is determined"),V((COC_ROUTE[rs.mode]||"")+" \u2014 "+cocRouteWho(rs).replace(/^C/,"c")+".")]});
       if(cocPropHref(rs.link)) rsRows.push({cells:[L("Revised proposal"),V(cocPropHref(rs.link))]});
       if(rs.mode==="chair") rsRows.push(
         {cells:[L("Marks on the revised proposal"),V("Research quality "+cocFmt(cocNum(m.rq))+"/10 \u00B7 Feasibility "+cocFmt(cocNum(m.fe))+"/5 \u00B7 Presentation "+cocFmt(cocNum(m.pr))+"/5 \u00B7 Total "+cocFmt(c._base)+"/20"+(m.rec?" \u00B7 recommends "+m.rec:""))]},
@@ -20079,9 +20100,10 @@ function cocDocxBuild(ctx){
     body+=gap(140);
     const det=c.det||{};
     const reasonTxt=c._differs&&cocT(det.reason)?"\nReason the final mark differs from the "+(c._resub?.mode==="chair"?"Chair's resubmission marks":"panel average")+" ("+cocFmt(c._base)+"): "+cocT(det.reason):"";
+    const excTxt=c._resubExc&&cocT(det.resubExcReason)?"\nExceptional outcome after the resubmission (normally C or NC): "+cocT(det.resubExcReason):"";
     body+=tbl([3000,W-3000],[
       {cells:[titleCell("C1.6 Panel Chair’s determination","The Chair decides the outcome having considered the marks and comments of all panel members.",{span:2})]},
-      {cells:[L("Final mark determined / 20"),V((c._final==null?"":cocFmt(c._final))+(c._capOn?"  (re-submission after MRR — capped at 10/20)":"")+reasonTxt)]},
+      {cells:[L("Final mark determined / 20"),V((c._final==null?"":cocFmt(c._final))+(c._capOn?"  (re-submission after MRR — capped at 10/20)":"")+reasonTxt+excTxt)]},
       {cells:[L("Candidature Outcome"),{c:COC_OUTCOMES.map(o=>p(box(c._outcome===o.c,o.long,{sz:17}))).join("")}]},
       ...(c._outcomeWhy?[{cells:[L("Reason for the outcome",{sub:c._outcomeWhy==="split"?"The panel members recommended different outcomes":"The outcome differs from the panel members\u2019 majority"}),
         {c:p(r(cocOutcomeWhyText(c),{i:true,sz:16,color:"595959"}))+p(r(cocT(det.outcomeReason),{sz:18}),{before:60}),padV:90}]}]:[]),
@@ -20332,7 +20354,7 @@ function cocScore(d,val,onSet,opts={}){
 /* The four outcomes as cards. `votes` (optional) is {code:count} of members' recommendations. */
 function cocOutcomeCards(cur,onPick,opts={}){
   const w=el("div",{class:"cx-outs",role:"radiogroup"});
-  COC_OUTCOMES.forEach(x=>{
+  (opts.only?COC_OUTCOMES.filter(x=>opts.only.includes(x.c)||x.c===cur):COC_OUTCOMES).forEach(x=>{
     const n=opts.votes?.[x.c]||0, of=opts.of||0;
     w.append(el("button",{type:"button",role:"radio","aria-checked":cur===x.c?"true":"false",class:"cx-out"+(cur===x.c?" on":""),
       disabled:opts.ro?"disabled":null,onclick:()=>{ if(!opts.ro) onPick(x.c); }},
@@ -20654,12 +20676,17 @@ function cocMemberSheet(host,o){
       COC_DOMAINS.forEach(dm=>grid.append(cocScore(dm,c[dm.k]??"",v=>{ c[dm.k]=v; save(); paintTot(); paintPill(st.id); },{ro})));
       grid.append(tot.node);
       const outsHost=el("div",{});
-      const drawOuts=()=>outsHost.replaceChildren(cocOutcomeCards(c.rec||"",v=>{ c.rec=v; save(); drawOuts(); paintTot(); paintPill(st.id); },{ro}));
+      const rsNow=!!rep?.cand?.[st.id]?.resub;
+      /* Re-marking a resubmission: a seminar recommendation of CMR / MRR
+         no longer applies, so the member chooses again (C or NC). */
+      if(rsNow&&!ro&&c.rec&&!COC_RESUB_OUTS.includes(c.rec)) c.rec="";
+      const drawOuts=()=>outsHost.replaceChildren(cocOutcomeCards(c.rec||"",v=>{ c.rec=v; save(); drawOuts(); paintTot(); paintPill(st.id); },{ro,only:rsNow?COC_RESUB_OUTS:null}));
       drawOuts(); paintTot();
       marksBox.append(cocTip("Mark each domain independently (half marks are fine — use − / + or type). You won't see the other members' marks. Hover a box for what it covers."),
         grid,
         el("div",{style:"margin-top:14px"},el("label",{},"Your recommended outcome (B3)",el("span",{style:"color:var(--clay);margin-left:3px"},"*")),
-          el("div",{class:"coc-tip",style:"margin:0 0 8px"},"Your own recommendation — the Chair decides having seen everyone's marks."),outsHost,warn),
+          el("div",{class:"coc-tip",style:"margin:0 0 8px"},"Your own recommendation — the Chair decides having seen everyone's marks."+
+            (rsNow?" This is a resubmission after Major Revisions, so recommend Confirmed (C) or Not Confirmed (NC). If the candidate is confirmed, the final mark is capped at 10/20.":"")),outsHost,warn),
         el("details",{class:"coc-guide"},el("summary",{},"Marking guide (Part B)"),
           el("div",{class:"cx-rubric"},...COC_DOMAINS.map(x=>el("div",{class:"r"},el("b",{},x.label+" / "+x.max),el("span",{},x.what))),
             el("div",{class:"r"},el("b",{},"Bands / "+COC_TOTAL),el("span",{},"17–20 Excellent · 13–16 Good · 10–12 Satisfactory · below 10 Not yet satisfactory. A total below 10 would not normally support confirmation without conditions.")))));
@@ -20889,7 +20916,7 @@ function cocReportEditor(host,o){
       ["You can edit everything here.","The same screen the Chair uses, plus the Research Office section (D2) at the bottom. Edits save as you type."],
       ["Missing sheets.","Use \u201C\u2709 Remind\u201D, or \u201C\u270E Enter for them\u201D to type in marks an assessor sent you; \u201CUnlock\u201D reopens a submitted sheet so its member can correct it."],
       ["Editing after approval.","\u201C\u270E Edit as the office\u201D (Part D) lets you change an approved report directly; \u201C\u270E Amend\u201D on a member's row changes their signed marks. Both are recorded as office amendments on the report and its Word form. \u201CReturn to the Chair\u201D sends it back for the Chair to change and re-sign instead."],
-      ["Major Revisions resubmission.","When the revised proposal arrives, press \u201C\u21BB Re-assess the revised proposal\u2026\u201D (Part D, or on the Outcomes tab). Choose whether the Chair re-marks on behalf of the panel or every member re-marks, and set the window (4 weeks by default). If confirmed, the mark is capped at 10/20."],
+      ["Major Revisions resubmission.","When the revised proposal arrives, press \u201C\u21BB Re-assess the revised proposal\u2026\u201D (Part D, or on the Outcomes tab). Leave the route to the Chair (they choose in C1.3a whether they determine the outcome on behalf of the panel or send it to every member, themselves included), or set it yourself, and set the window (4 weeks by default). The Chair can still change the route until they approve. The outcome is normally C or NC; if confirmed, the mark is capped at 10/20."],
       ["Approval.","The Chair normally approves. If the Chair has no hub login, use \u201CApprove on the Chair's behalf\u201D once they have confirmed the report to you \u2014 it is recorded in the history."],
       ["After approval.","Download the Word form, complete D2 (date received, checklist, second seminar date if required, notes, your signature) and press \u201CMark as received\u201D. \u201CReturn to the Chair\u201D reopens an approved report for changes."],
       ["Testing.","\u201C\u2691 Fill with test marks\u201D (only while the panel is empty) and \u201C\u21BA Reset report\u2026\u201D are in the bar at the top of the page."]],{open:false}));
@@ -21318,7 +21345,15 @@ function cocReportEditor(host,o){
         };
         paintL(false); rb.append(lrow);
       }
-      if(rs.mode==="chair"){
+      /* Who determines the outcome: the Chair alone, or every member. */
+      rb.append(cocResubRouteBox(rs,{R,role,coded,marks,st,g,closesAt:rep.window?.closesAt||rs.closesAt||0,
+        commit:async(msg,ops)=>{ await save.flush(); rep.history=cocHist(rep,msg);
+          await DB.batchWrite([...(ops||[]),{type:"set",coll:"cocReports",id:g.id,data:{cand:rep.cand,history:rep.history,updatedAt:Date.now()}}]);
+          try{ await refreshMarks(); }catch(e){} },
+        after:()=>draw()}));
+      if(rs.mode==="ask"){
+        rb.append(cocTip("Once you choose, this section shows either your marks on the revised proposal (you can also delegate the re-assessment to a member) or the members’ updated marks. The outcome is normally C or NC; if the candidate is confirmed, the mark is capped at 10/20."));
+      }else if(rs.mode==="chair"){
         rb.append(cocDelegateBox(rs,{R,coded,marks,st,g,save,redraw,refresh:async()=>{ await refreshMarks(); redraw(); }}));
         if(rs.marks.by) rb.append(el("div",{class:"muted ui",style:"font-size:12.5px;margin:0 0 6px"},"Re-assessed by "+(rs.marks.by.code?rs.marks.by.code+" ":"")+(rs.marks.by.name||"a panel member")+" on your behalf (sent "+cocDT(rs.marks.by.at)+"). You can still adjust anything below before you sign."));
         rb.append(cocTip("Mark the revised proposal on behalf of the panel"+(cocDelOf(rs)?" — or bring in the delegated member’s re-assessment above":"")+". These marks, not the original seminar marks above, are the basis for the final mark in C1.6. If you confirm the candidate, the mark is capped at 10/20."));
@@ -21334,16 +21369,16 @@ function cocReportEditor(host,o){
         paintT(); grid.append(tot);
         const rec=el("select",{...(R?{disabled:"disabled"}:{})});
         rec.append(el("option",{value:""},"Recommended outcome\u2026"));
-        COC_OUTCOMES.forEach(x=>rec.append(el("option",{value:x.c,...(rs.marks.rec===x.c?{selected:"selected"}:{})},x.c+" \u2014 "+x.label)));
+        cocResubOuts(rs.marks.rec).forEach(x=>rec.append(el("option",{value:x.c,...(rs.marks.rec===x.c?{selected:"selected"}:{})},x.c+" \u2014 "+x.label)));
         rec.addEventListener("change",()=>{ rs.marks.rec=rec.value; save(); redraw(); });
         rb.append(grid,el("div",{style:"margin-top:10px;max-width:520px"},el("label",{},"Recommended outcome on the revised proposal"),rec),
           el("div",{style:"margin-top:10px"},el("label",{},"Comments on the revised proposal (how the required revisions were addressed)"),
             cocArea(rs.marks.comments,v=>{ rs.marks.comments=v; save(); },{ro:R,rows:3})));
       }else{
-        rb.append(cocTip("Every member is re-marking this candidate: their sheets were returned to them. The C1.3 table above shows their updated marks once they submit again"+
-          (pv.agg!==""&&pv.agg!=null?"; the original seminar panel average was "+cocFmt(cocNum(pv.agg))+"/20":"")+". If you confirm the candidate, the mark is capped at 10/20."));
+        rb.append(cocTip("Every member, the Chair included, is re-marking this candidate: their sheets were returned to them. The C1.3 table above shows their updated marks once they submit again"+
+          (pv.agg!==""&&pv.agg!=null?"; the original seminar panel average was "+cocFmt(cocNum(pv.agg))+"/20":"")+". You then finalise the outcome in C1.6 from their recommendations \u2014 normally C or NC. If you confirm the candidate, the mark is capped at 10/20."));
       }
-      body.append(tag("C1.3a",cocSec("C1.3a Resubmission after Major Revisions",rs.mode==="chair"?"re-marked by the Chair on behalf of the panel":"re-marked by every member",rb)));
+      body.append(tag("C1.3a",cocSec("C1.3a Resubmission after Major Revisions",rs.mode==="ask"?"the Chair chooses how it is assessed":rs.mode==="chair"?"re-marked by the Chair on behalf of the panel":"re-marked by every member",rb)));
     }
     // C1.4
     const fb=el("div",{class:"grid",style:"gap:12px"});
@@ -21375,17 +21410,26 @@ function cocReportEditor(host,o){
     const outs=cocOutcomeCards(c._outcome,v=>{ const x=cocOutcome(v);
         det.outcome=x.c; det.outcomeAuto=false;
         if((x.c==="CMR"||x.c==="MRR")&&(!det.dueBy||det.dueAuto)){ det.dueBy=cocAddDays(ymdOf(new Date()),x.weeks*7); det.dueAuto=true; }
-        save(); redraw(); },{ro:R,votes:ag.tally,of:ag.n});
+        save(); redraw(); },{ro:R,votes:ag.tally,of:ag.n,only:c._resub&&!det.resubExc?COC_RESUB_OUTS:null});
     const needsRev=c._outcome==="CMR"||c._outcome==="MRR";
     body.append(tag("C1.6",cocSec("C1.6 Panel Chair’s determination",null,
-      cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. If the members recommend different outcomes with no majority, or you choose a different outcome from the majority, say why under the outcome \u2014 it is printed on the report. For CMR (minor revisions, due within 2 weeks) and MRR (major revisions, resubmission within 4 weeks) the conditions box is filled in with the standard wording \u2014 edit it as you need, and the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. If the candidate is confirmed after an MRR resubmission, tick the cap box: the mark is capped at 10/20."),
+      cocTip("The mark starts at the panel average and the outcome at the members' majority recommendation. If the members recommend different outcomes with no majority, or you choose a different outcome from the majority, say why under the outcome \u2014 it is printed on the report. For CMR (minor revisions, due within 2 weeks) and MRR (major revisions, resubmission within 4 weeks) the conditions box is filled in with the standard wording \u2014 edit it as you need, and the due date is suggested for you. A total below 10 would not normally support confirmation without conditions. After a Major Revision resubmission the outcome is normally C or NC. If the candidate is confirmed after an MRR resubmission, the mark is capped at 10/20 (applied automatically when the office reopened the report for the resubmission; otherwise tick the cap box)."),
       cocKV(["Final mark / 20",el("div",{},el("div",{class:"row"},fin,
           c._final!=null?el("span",{class:"pill "+(c._final>=17?"approved":c._final>=13?"blue":c._final>=10?"pending":"missed")},cocBand(c._final)):"",
           el("span",{class:"muted ui"},c._finalDefault!=null?(!finManual?"Using the ":"The ")+(c._resub?.mode==="chair"?"Chair's resubmission total ":"panel average ")+cocFmt(c._base)+(c._capOn?" (capped at 10)":""):"Waiting for the members' marks")),
           c._resub?cocTip(c._capOn?"Confirmed after an MRR resubmission \u2014 the mark is capped at 10/20 automatically.":"If this resubmission is confirmed (C or CMR), the mark is capped at 10/20 automatically."):el("div",{style:"margin-top:6px"},cocCheck(!!det.resub,"Confirmed after a Major Revision re-submission — mark capped at 10/20",v=>{ det.resub=v; save(); redraw(); },{ro:R})),
           c._differs?el("div",{style:"margin-top:8px"},el("label",{},"Reason the final mark differs from the panel average"),
             cocArea(det.reason,v=>{ det.reason=v; save(); },{ro:R,rows:2})):"")],
-        ["Candidature outcome",el("div",{},outs,!det.outcome&&ag.majority?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"Pre-selected from the panel's majority recommendation."):"",
+        ["Candidature outcome",el("div",{},
+          c._resub?cocTip("After a Major Revision resubmission the outcome is normally Confirmed (C) or Not Confirmed (NC)."):"",outs,
+          c._resub?el("div",{style:"margin-top:8px"},
+            cocCheck(!!det.resubExc,"Exceptional case \u2014 record a different outcome (CMR or MRR)",v=>{ det.resubExc=v;
+              if(!v){ if(det.outcome&&!COC_RESUB_OUTS.includes(det.outcome)){ det.outcome=""; det.outcomeAuto=false; } }
+              save(); redraw(); },{ro:R}),
+            det.resubExc?el("div",{class:"cx-why",style:"margin-top:8px"},
+              el("label",{for:"exc-"+st.id},"Why an outcome other than C or NC",el("span",{class:"req",title:"Required"}," *")),
+              (()=>{ const ta=cocArea(det.resubExcReason,v=>{ det.resubExcReason=v; save(); },{ro:R,rows:2,
+                ph:"e.g. The revised proposal addresses the major concerns; two minor items remain, so CMR."}); ta.id="exc-"+st.id; return ta; })()):""):"",!det.outcome&&ag.majority?el("div",{class:"muted ui",style:"font-size:12.5px;margin-top:4px"},"Pre-selected from the panel's majority recommendation."):"",
           c._outcomeWhy?el("div",{class:"cx-why"},
             el("div",{class:"cx-why-h ui"},"\u26A0 "+(c._outcomeWhy==="split"&&!c._outcome?cocOutcomeWhyText(c)+" Choose the outcome above, then say why."
               :cocOutcomeWhyText(c)+" Say why you chose "+c._outcome+" \u2014 this is printed on the report under C1.6.")),
@@ -21646,6 +21690,7 @@ async function viewCocAssess(v){
       else if(me.isChair&&approved){ next="Approved \u2014 download the Word form"; nextCls="approved"; mode="chair"; }
       else { next="Done \u2014 the Chair has your marks"; nextCls="approved"; }
       if(!approved&&cocDelPending(rp,me,md).length){ next="Re-assess a revised proposal for the Chair"; nextCls="pending"; }
+      if(me.isChair&&rp&&!approved&&Object.values(rp.cand||{}).some(c=>c?.resub?.mode==="ask")){ next="Choose how a revised proposal is re-assessed"; nextCls="pending"; mode="chair"; }
       if(nextCls==="pending") todo.push(g);
       const go=el("button",{class:"btn xs"+(S.cocPanel===g.id?"":" ghost"),onclick:()=>{ S.cocPanel=g.id; S.cocModeBy=S.cocModeBy||{};
           if(mode) S.cocModeBy[g.id]=mode; else delete S.cocModeBy[g.id]; viewCocAssess(v); }},
@@ -21776,6 +21821,14 @@ async function viewCocAssess(v){
       v.append(cta("amber","Your own marks aren’t submitted yet.",
         "The report can’t be approved until every member’s sheet — including yours — is in.",
         "✎ Enter my marks",()=>goMode("marks")));
+    /* Major Revisions left to the Chair: choose how each revised proposal is assessed. */
+    if(rep&&!locked) cands.filter(s=>rep.cand?.[s.id]?.resub?.mode==="ask").forEach(s=>
+      v.append(cta("amber","Choose how "+(s.name||"the candidate")+"\u2019s revised proposal is assessed.",
+        "The MRes office has left it to you: determine the outcome yourself on behalf of the panel, or send it to every panel member (you included) to re-assess.",
+        "Choose in the report \u2192",()=>{ S.cocOpenCands=S.cocOpenCands||{}; S.cocOpenCands[g.id+s.id]=true;
+          const jump=()=>setTimeout(()=>{ const d=v.querySelector('details.coc-cand[data-sid="'+s.id+'"]'); if(!d) return;
+            d.open=true; setTimeout(()=>cocGoTo(d.querySelector('[data-sec="C1.3a"]')||d),60); },120);
+          if(mode==="chair") jump(); else { S.cocModeBy[g.id]="chair"; viewCocAssess(v).then(jump); } })));
     if(mode==="chair"){
       if(!rep){ v.append(emptyState("The report opens with marking","The MRes office opens marking for the panel; the report fills in as members submit.")); refreshCocBadge(); return; }
       const host=el("div",{}); v.append(host);
@@ -21845,6 +21898,7 @@ async function refreshCocBadge(){
       const me=cocMe(g); if(!me) return;
       let own=null; try{ own=await DB.get("cocMarks",cocMarkId(g.id,me.key)); }catch(e){}
       if(cocDelPending(rep,me,own).length) why.push((g.label||"Panel")+": re-assess a revised proposal for the Chair");
+      if(me.isChair&&Object.values(rep.cand||{}).some(c=>c?.resub?.mode==="ask")) why.push((g.label||"Panel")+": choose how a revised proposal is re-assessed");
       if(!own?.submitted){ if(cocOpen(rep)) why.push((g.label||"Panel")+": submit your marks"); return; }
       if(me.isChair){
         const mk=await cocGetMarks(g).catch(()=>({}));
@@ -22327,10 +22381,10 @@ function cocFollowUpDialog(g0,rep,st,marks,done){
                update their marks for this candidate and sign again.
    The previous outcome and marks are kept on the report and printed in a
    "Resubmission after Major Revisions" block on the Word form. If the
-   candidate is then confirmed, the final mark is capped at 10/20.
+   outcome is then normally C or NC; if confirmed, the final mark is capped at 10/20.
    ============================================================ */
 function cocResubDialog(g0,rep,st,marks,sem,done){
-  let mode="chair";
+  let mode="ask";
   const g=cocGroupView(g0,rep);
   const cv=cocCand(rep,g,st,marks,sem);
   const coded=cocCoded(g0);
@@ -22350,16 +22404,20 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
       el("p",{class:"muted",style:"margin:0"},(st.name||"The candidate")+" was given Major Revisions & Re-submission"+
         (cv._final!=null?" (final mark "+cocFmt(cv._final)+"/20)":"")+". This reopens "+(g0.label||"the panel")+"'s report so the revised proposal can be assessed. Everything else in the report is kept; the Chair re-approves it at the end, and you release the new outcome as usual."),
       el("div",{},
-        opt("chair","The Chair re-marks on behalf of the panel (recommended)",
+        el("label",{},"Who determines the outcome on the revised proposal?"),
+        opt("ask","Send it to the Chair \u2014 the Chair decides (recommended)",
+          "The Chair chooses in the report whether they determine the outcome on behalf of the panel, or send the revised proposal to every panel member (themselves included) to re-assess."),
+        opt("chair","The Chair determines the outcome on behalf of the panel",
           "The Chair enters marks, a recommendation and comments on the revised proposal in the report. Members' signed sheets stay as they are."),
-        opt("panel","Every panel member re-marks",
-          "Each member's sheet is returned to them with your note; they update their marks for "+(st.name||"this candidate")+" and sign again.")),
+        opt("panel","Every panel member re-assesses it, the Chair included",
+          "Each member's sheet is returned to them with your note; they update their marks for "+(st.name||"this candidate")+" and sign again."),
+        cocTip("Whichever you choose, the Chair can change it in the report until they approve it.")),
       el("div",{},el("label",{},"Link to the revised proposal"),link,
         cocTip("Download the file from Moodle, put it somewhere the panel can open (e.g. the panel’s documents folder) and paste the share link here. The Chair, a member the Chair delegates to, or every member if they all re-mark, get an “Open the revised proposal” button and the link in their email. The Chair can add or change it later.")),
       el("div",{},el("label",{},"Re-assessment window closes"),closes,
         cocTip("4 weeks from today by default — change it if the Research Office has set a different date. The Chair can finish and re-approve the report after it closes.")),
       el("div",{},el("label",{},"Note to the "+(chair?"Chair":"panel")+" (optional)"),note),
-      el("label",{class:"coc-chk"},mail,el("span",{},"Then email "+(chair?chair.m.name:"the Chair")+" (and the members, if they re-mark)"))),
+      el("label",{class:"coc-chk"},mail,el("span",{},"Then email "+(chair?chair.m.name:"the Chair")+" (and the members, if every member re-assesses)"))),
     async()=>{
       const now=Date.now(), cl=cocLocalOut(closes.value);
       if(!cl||cl<=now){ toast("Choose when the window closes — it must be in the future.",true); return false; }
@@ -22370,6 +22428,7 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
       const c0=cand[st.id]=cand[st.id]||{}; c0.det=c0.det||{};
       const prevRound=c0.resub?.round||1;
       c0.resub={round:prevRound+1,mode,at:now,by:S.userName||"",closesAt:cl,note:cocT(note.value),link:cocPropHref(lk)||"",
+        routeBy:mode==="ask"?null:{who:"office",name:S.userName||"",at:now},
         prev:{outcome:cv._outcome||"MRR",final:cv._final==null?"":cv._final,agg:cv._agg.avg.total==null?"":cv._agg.avg.total,
           approvedAt:rep.approvedAt||0,conditions:cocT(c0.det.conditions),dueBy:c0.det.dueBy||""},
         marks:{}};
@@ -22377,7 +22436,7 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
       c0.det.outcome=""; c0.det.finalMark=""; c0.det.reason=""; c0.det.outcomeReason=""; c0.det.resub=false; c0.det.dueBy="";
       const ops=[{type:"set",coll:"cocReports",id:g0.id,data:{cand,status:"",chairSign:null,approvedAt:0,snap:null,
         window:{opensAt:now,closesAt:cl},updatedAt:now,
-        history:cocHist(rep,"reopened to re-assess "+(st.name||"")+"'s revised proposal (round "+(prevRound+1)+", "+(mode==="chair"?"Chair on behalf of the panel":"all members")+")")}}];
+        history:cocHist(rep,"reopened to re-assess "+(st.name||"")+"'s revised proposal (round "+(prevRound+1)+", "+(mode==="ask"?"route left to the Chair":mode==="chair"?"Chair on behalf of the panel":"all members")+")")}}];
       if(mode==="panel") coded.forEach(cd=>{ if(!marks[cd.key]) return;
         ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g0.id,cd.key),data:{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:now,
           returnNote:{text:"Please re-assess "+(st.name||"the candidate")+"'s revised proposal (after Major Revisions) and update your marks and comments for them."+(cocPropHref(lk)?" Revised proposal: "+cocPropHref(lk):"")+(cocT(note.value)?" "+cocT(note.value):""),by:S.userName||"the MRes office",at:now}}}); });
@@ -22388,10 +22447,11 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
         openEmail([...new Set(to)].join(","),"CoC re-assessment — "+(st.name||"")+"'s revised proposal",
           "Dear "+(mode==="panel"?"panel members":(chair?.m?.name||"Chair"))+",\n\n"+(st.name||"The candidate")+" has submitted their revised proposal after Major Revisions. "+
           "The "+(g0.label||"panel")+" report has been reopened in the MRes Supervision Hub so it can be re-assessed"+
-          (mode==="chair"?" by the Chair on behalf of the panel. Please open “CoC assessment” → Panel report (Chair), enter your marks, recommendation and comments on the revised proposal for "+(st.name||"the candidate")+", complete C1.6 and approve and sign the report again."
+          (mode==="ask"?". Please open \u201CCoC assessment\u201D \u2192 Panel report (Chair) and, in C1.3a for "+(st.name||"the candidate")+", choose how the revised proposal will be assessed: either you determine the outcome on behalf of the panel (you can also delegate the re-assessment to a panel member), or you send it to every panel member, yourself included, to re-assess. Then complete C1.6 and approve and sign the report again."
+          :mode==="chair"?" by the Chair on behalf of the panel. Please open “CoC assessment” → Panel report (Chair), enter your marks, recommendation and comments on the revised proposal for "+(st.name||"the candidate")+", complete C1.6 and approve and sign the report again."
             :" by every panel member. Please open “CoC assessment”, update your marks and comments for "+(st.name||"the candidate")+" and sign and submit again; the Chair then re-approves the report.")+
           (cocPropHref(lk)?"\n\nThe revised proposal: "+cocPropHref(lk):"")+
-          "\n\nPlease complete this by "+cocDT(cl)+". If the candidate is confirmed, the final mark is capped at 10/20."+(cocT(note.value)?"\n\n"+cocT(note.value):"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
+          "\n\nPlease complete this by "+cocDT(cl)+". The outcome is normally Confirmed or Not Confirmed; if the candidate is confirmed, the final mark is capped at 10/20."+(cocT(note.value)?"\n\n"+cocT(note.value):"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
       }
       done(); return true;
     },"Reopen for re-assessment");
@@ -22408,6 +22468,109 @@ function cocResubDialog(g0,rep,st,marks,sem,done){
    which sends it to the MRes office. Nothing changes when the Chair
    doesn't delegate. */
 const cocDelOf=rs=>rs&&rs.mode==="chair"&&rs.delegate&&rs.delegate.key?rs.delegate:null;
+
+/* ---- Major Revisions: who determines the outcome ----
+   The revised proposal is decided EITHER by the Panel Chair on behalf of
+   the panel, OR by every panel member (the Chair included) re-assessing
+   it. The MRes office can set this when it reopens the report, or leave it
+   to the Chair (mode "ask"); either way the Chair can choose or change it
+   in C1.3a until the report is approved.
+     rs.mode     "ask" | "chair" | "panel"
+     rs.routeBy  {who:"office"|"chair", name, at} — who set the current route
+   Sending it to every member returns each member's sheet (the Chair's own
+   too) with a note. The Chair may already do that under the existing
+   rules (cocChairReturnOnly, plus cand on the report), so no rule change
+   is needed. */
+const COC_ROUTE={ask:"Not chosen yet \u2014 the Chair decides",chair:"The Chair determines the outcome on behalf of the panel",
+  panel:"Every panel member, the Chair included, re-assesses it"};
+function cocRouteWho(rs){
+  const r=rs?.routeBy; if(!r) return "";
+  return (r.who==="office"?"Chosen by the MRes office":"Chosen by the Chair")+(r.name?" ("+r.name+")":"")+(r.at?" on "+cocDay(r.at):"");
+}
+function cocResubRouteBox(rs,o){
+  const {R,role}=o, office=role==="admin";
+  const ask=rs.mode==="ask";
+  const box=el("div",{class:"coc-quote",style:"margin:0 0 12px;border-left-color:"+(ask?"var(--amber,#b45309)":"var(--blue,#2c5bd8)")});
+  if(ask&&!R){
+    box.append(el("div",{style:"font-size:14px;margin-bottom:10px"},
+      el("strong",{},office?"The Chair hasn\u2019t chosen how the revised proposal is assessed yet. ":"Choose how the revised proposal is assessed. "),
+      (office?"The office left this to the Chair, but you can choose for them: ":"The MRes office has left this to you: ")+
+      "either "+(office?"the Chair determines":"you determine")+" the outcome on behalf of the panel, or "+(office?"it goes":"you send it")+" to every panel member \u2014 "+(office?"the Chair":"you")+" included \u2014 to re-assess, and the outcome then starts from the panel\u2019s marks as usual. This can be changed later, until the report is approved."));
+    box.append(el("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+      el("button",{class:"btn sm",type:"button",onclick:()=>cocResubRouteDialog(rs,o,"chair")},office?"The Chair determines it\u2026":"\u2713 I\u2019ll determine the outcome\u2026"),
+      el("button",{class:"btn sm ghost",type:"button",onclick:()=>cocResubRouteDialog(rs,o,"panel")},"\u21AA Send to every panel member\u2026")));
+    return box;
+  }
+  const who=cocRouteWho(rs), other=rs.mode==="chair"?"panel":"chair";
+  box.append(el("div",{class:"row",style:"gap:8px;align-items:center;flex-wrap:wrap"},
+    el("span",{style:"flex:1;min-width:240px;font-size:13.5px"},el("strong",{},"Who determines the outcome: "),COC_ROUTE[rs.mode]||"",
+      who?el("span",{class:"muted"}," \u00B7 "+who):""),
+    R||ask?"":el("button",{class:"btn xs ghost",type:"button",onclick:()=>cocResubRouteDialog(rs,o,other)},
+      other==="panel"?"\u21AA Send to every member instead\u2026":office?"The Chair determines it instead\u2026":"I\u2019ll determine it instead\u2026")));
+  return box;
+}
+function cocResubRouteDialog(rs,o,to){
+  const {coded,marks,st,g,role}=o, office=role==="admin";
+  const name=st.name||"the candidate";
+  const chairCd=coded.find(x=>x.isChair);
+  const from=rs.mode;
+  const sheets=coded.filter(cd=>marks[cd.key]);
+  /* Back from "every member": anyone whose sheet is still open has to sign it again. */
+  const open=from==="panel"?sheets.filter(cd=>!marks[cd.key].submitted):[];
+  if(to==="panel"&&o.closesAt&&o.closesAt<=Date.now()){
+    toast("The re-assessment window has closed, so members can\u2019t re-mark. "+(office?"Reopen the window first.":"Ask the MRes office to extend it first."),true); return; }
+  const lines=[];
+  if(to==="panel"){
+    lines.push("Every member\u2019s mark sheet \u2014 "+(office?"the Chair\u2019s":"yours")+" included \u2014 is returned to them with a note. Each member updates their marks, recommended outcome and comments for "+name+" on the revised proposal, then signs and submits again.");
+    lines.push("The mark and outcome then start from the panel\u2019s average and majority recommendation, as at the seminar. "+(office?"The Chair still completes":"You still complete")+" C1.6 and approve the report"+(rs.closesAt?"; members have until "+cocDT(o.closesAt||rs.closesAt)+".":"."));
+    if(cocDelOf(rs)) lines.push("The re-assessment delegated to "+(rs.delegate.name||"a panel member")+" is withdrawn.");
+    if(from==="chair"&&cocDelTotal(rs.marks)!=null) lines.push("The marks already entered in C1.3a on the panel\u2019s behalf are set aside (kept, but no longer used).");
+  }else{
+    lines.push((office?"The Chair marks":"You mark")+" the revised proposal on behalf of the panel in C1.3a \u2014 or delegate"+(office?"s":"")+" it to a panel member \u2014 and decide"+(office?"s":"")+" the outcome. Members\u2019 signed sheets are not changed.");
+    if(open.length) lines.push(open.map(cd=>cd.isChair&&!office?"you":cd.code+" "+(cd.m.name||"")).join(", ").replace(/^you/,"You")+(open.length===1&&!(open[0].isChair&&!office)?" has":" have")+" not re-submitted yet. "+(open.length===1?"That sheet stays":"Those sheets stay")+" open, so "+(open.length===1?"they":"each")+" must sign and submit again (no changes needed) before the report can be approved \u2014 the note on their sheet tells them.");
+  }
+  const recips=to==="panel"?coded.filter(cd=>office||!cd.isChair):[...open.filter(cd=>office||!cd.isChair),...(office&&chairCd&&!open.includes(chairCd)?[chairCd]:[])];
+  const emails=[...new Set(recips.flatMap(cd=>memberEmails(cd.m)))];
+  const note=el("textarea",{rows:"2",placeholder:to==="panel"?"e.g. Please focus on whether the methods section now addresses the panel\u2019s concerns.":"Optional"});
+  const mail=el("input",{type:"checkbox",style:"width:auto;margin:0",checked:"checked"});
+  modal(to==="panel"?"Send the revised proposal to every panel member \u2014 "+name:(office?"The Chair determines the outcome \u2014 ":"Determine the outcome yourself \u2014 ")+name,
+    el("div",{class:"grid",style:"gap:12px"},
+      ...lines.map(t=>el("p",{class:"muted",style:"margin:0"},t)),
+      to==="panel"||emails.length?el("div",{},el("label",{},to==="panel"?"Note to the members (optional)":"Note (optional)"),note):"",
+      emails.length?el("label",{class:"coc-chk"},mail,el("span",{},"Then email "+(recips.length===1?(recips[0].m.name||recips[0].code):to==="panel"?"the panel members":recips.map(cd=>cd.m.name||cd.code).join(", ")))):""),
+    async()=>{
+      const now=Date.now(), nt=cocT(note.value), by=S.userName||(office?"the MRes office":"the Chair");
+      const keep={mode:rs.mode,routeBy:rs.routeBy||null,delegate:rs.delegate||null,returnedAt:rs.returnedAt||0};
+      rs.mode=to; rs.routeBy={who:office?"office":"chair",name:S.userName||"",at:now};
+      if(to==="panel"){ rs.delegate=null; rs.returnedAt=now; }
+      const ops=[];
+      if(to==="panel") sheets.forEach(cd=>ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g.id,cd.key),data:{submitted:false,submittedAt:0,sign:null,onBehalf:null,updatedAt:now,
+        returnNote:{text:"Please re-assess "+name+"\u2019s revised proposal (after Major Revisions) and update your marks, recommended outcome and comments for them."+(cocPropHref(rs.link)?" Revised proposal: "+cocPropHref(rs.link):"")+(nt?" "+nt:""),by,at:now}}}));
+      else open.forEach(cd=>ops.push({type:"set",coll:"cocMarks",id:cocMarkId(g.id,cd.key),data:{submitted:false,updatedAt:now,
+        returnNote:{text:cd.isChair?"You (the Chair) will now determine "+name+"\u2019s outcome on the revised proposal on behalf of the panel. Please sign and submit your own sheet again (no changes needed) so the report can be approved."
+          :"The Chair will now determine "+name+"\u2019s outcome on the revised proposal on behalf of the panel, so you don\u2019t need to re-mark. Please sign and submit your sheet again (no changes needed) so the report can be approved."+(nt?" "+nt:""),by,at:now}}}));
+      const msg=name+"\u2019s revised proposal: "+(to==="panel"?"sent to every panel member to re-assess":"to be determined by the Chair on behalf of the panel")+" ("+(office?"set by the office":"Chair\u2019s choice")+")";
+      try{ await o.commit(msg,ops); }
+      catch(e){ Object.assign(rs,keep); toast(e?.message||"Couldn\u2019t save the choice.",true); return false; }
+      toast(to==="panel"?"Sent to every panel member. Their sheets are open for "+name+" again.":(office?"The Chair now determines the outcome.":"You now determine the outcome \u2014 enter your marks in C1.3a."));
+      if(emails.length&&mail.checked){
+        const sign="\n\nThank you,\n"+(S.userName||(office?"MRes Coordination":chairCd?.m?.name||""));
+        const lk=cocPropHref(rs.link)?"\n\nThe revised proposal: "+cocPropHref(rs.link):"";
+        const cl=o.closesAt||rs.closesAt;
+        if(to==="panel") openEmail(emails.join(","),"CoC re-assessment \u2014 "+name+"'s revised proposal",
+          "Dear panel members,\n\n"+name+" has submitted their revised proposal after Major Revisions. "+(office?"The panel\u2019s report has been reopened so that every member of the panel, the Chair included, can re-assess it.":"As Chair, I have asked every member of the panel to re-assess it.")+
+          " Please open the MRes Supervision Hub \u2192 \u201CCoC assessment\u201D ("+CPS_HUB_URL+"), update your marks, recommended outcome and comments for "+name+", then sign and submit again. The Chair then completes and re-approves the report."+lk+
+          (cl?"\n\nPlease complete this by "+cocDT(cl)+".":"")+" The outcome is normally Confirmed or Not Confirmed; if the candidate is confirmed, the final mark is capped at 10/20."+(nt?"\n\n"+nt:"")+sign,
+          !office&&chairCd?memberEmails(chairCd.m).join(","):"");
+        else openEmail(emails.join(","),"CoC re-assessment \u2014 "+name+"'s revised proposal",
+          "Dear "+(recips.length===1?(recips[0].m.name||"colleague"):"colleagues")+",\n\n"+(office?"The MRes office has set that the Panel Chair will determine "+name+"\u2019s outcome on the revised proposal on behalf of the panel.":"I will determine "+name+"\u2019s outcome on the revised proposal on behalf of the panel.")+
+          (open.length?" Panel members who had their sheet returned for re-marking don\u2019t need to re-mark: please open \u201CCoC assessment\u201D ("+CPS_HUB_URL+") and sign and submit your sheet again (no changes needed) so the report can be approved.":"")+
+          (office&&chairCd&&recips.includes(chairCd)?" Chair: please open \u201CCoC assessment\u201D \u2192 Panel report (Chair), enter your marks, recommendation and comments in C1.3a (or delegate the re-assessment to a panel member), complete C1.6 and approve and sign the report again.":"")+lk+(nt?"\n\n"+nt:"")+sign,
+          !office&&chairCd?memberEmails(chairCd.m).join(","):"");
+      }
+      o.after&&o.after(); return true;
+    },to==="panel"?"Send to every member":"Confirm");
+}
 function cocDelWork(marks,rs,stId){
   const d=cocDelOf(rs); if(!d) return null;
   const w=marks?.[d.key]?.cand?.[stId]?.rsDel;
@@ -22565,9 +22728,9 @@ function cocDelegatedCards(g,rep,me,students,onChange){
       paintT(); grid.append(tot);
       const rec=el("select",{...(ro?{disabled:"disabled"}:{})});
       rec.append(el("option",{value:""},"Recommended outcome…"));
-      COC_OUTCOMES.forEach(x=>rec.append(el("option",{value:x.c,...(w.rec===x.c?{selected:"selected"}:{})},x.c+" — "+x.label)));
+      cocResubOuts(w.rec).forEach(x=>rec.append(el("option",{value:x.c,...(w.rec===x.c?{selected:"selected"}:{})},x.c+" — "+x.label)));
       rec.addEventListener("change",()=>{ w.rec=rec.value; saveSoon(); });
-      body.append(cocTip("Mark the revised proposal. If the candidate is confirmed (C or CMR), the final mark is capped at 10/20."),
+      body.append(cocTip("Mark the revised proposal and recommend Confirmed (C) or Not Confirmed (NC). If the candidate is confirmed, the final mark is capped at 10/20."),
         grid,el("div",{style:"margin-top:10px;max-width:520px"},el("label",{},"Recommended outcome on the revised proposal"),rec),
         el("div",{style:"margin-top:10px"},el("label",{},"Comments on the revised proposal (how the required revisions were addressed)"),
           cocArea(w.comments,v=>{ w.comments=v; saveSoon(); },{ro,rows:4})));
@@ -26657,6 +26820,7 @@ function revState(r){
     r.steps=[["Resubmitted",1],["Sent to the panel",1],["Panel decision",0],["Outcome released",0]];
     const dl=cocDelOf(r.resub);
     r.next=dl?(dl.name||dl.code||"A panel member")+" is re-assessing the revised proposal for the Chair"+(cl?" — closes "+cocDT(cl):"")+". The Chair then reviews it, signs and re-approves the report."
+      :r.resub.mode==="ask"?"Waiting for the Chair to choose whether they determine the outcome or every panel member re-assesses it"+(cl?" — closes "+cocDT(cl):"")+". The Chair then re-approves the report."
       :(r.resub.mode==="chair"?"The Chair is re-assessing":"The panel is re-assessing")+" the revised proposal"+(cl?" — closes "+cocDT(cl):"")+". The Chair then re-approves the report.";
     r.bucket="panel"; r.act=["chair"]; return;
   }
@@ -26769,6 +26933,7 @@ function revRemindChair(r,redraw){
   if(!to.length){ toast("No email on file for the Chair.",true); return; }
   openEmail([...new Set(to)].join(","),"Reminder: CoC re-assessment — "+(r.st.name||"")+"'s revised proposal",
     "Dear "+(mode==="panel"?"panel members":dcd?[dcd.m.name,ch?.name].filter(Boolean).join(" and ")||"colleagues":(ch?.name||"Chair"))+",\n\nA reminder that "+(r.st.name||"the candidate")+"'s revised proposal (after Major Revisions) is waiting to be re-assessed in the MRes Supervision Hub (“CoC assessment”): "+CPS_HUB_URL+
+    (mode==="ask"?"\n\nIn the panel report (C1.3a), please first choose whether you determine the outcome on behalf of the panel or send it to every panel member, yourself included, to re-assess.":"")+
     (cocPropHref(r.resub?.link)?"\n\nThe revised proposal: "+cocPropHref(r.resub.link):"")+
     (r.resub?.closesAt?"\n\nThe re-assessment window closes "+cocDT(r.resub.closesAt)+".":"")+"\n\nThank you,\n"+(S.userName||"MRes Coordination"));
   revTrackWrite(r.g,r.id,{chairRemindedAt:Date.now()},r.round).then(()=>redraw()).catch(()=>{});
