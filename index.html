@@ -3094,6 +3094,96 @@
   @media (prefers-reduced-motion:reduce){ .cx-role .dot{animation:none} }
   @media print{ .cx-jobs,.cx-cta{display:none!important} }
 </style>
+<style id="hub-overview">
+  /* ---- Student overview: alerts, the dated "Coming up" list ---- */
+  .sp-alerts{display:grid;gap:10px}
+  .sp-alert{margin:0}
+  .sp-alert.blue{background:var(--blue-soft);color:var(--blue-ink)}
+  .sp-alert.amber{background:var(--amber-soft);color:var(--amber-ink)}
+  .sp-alert.amber .btn{background:var(--amber-ink);color:#fff}
+  .sp-alert.clay{background:var(--clay-soft);color:var(--clay-ink)}
+  .sp-alert.clay .btn{background:var(--clay-ink);color:#fff}
+  .sp-alert .btn{text-decoration:none}
+  .sp-tile-hl{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--shadow)}
+  .sp-ag{display:flex;flex-direction:column;gap:6px}
+  .sp-ag-day{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin:10px 0 2px}
+  .sp-ag-day:first-child{margin-top:0}
+  .sp-ag-day.today{color:var(--accent)}
+  .sp-ag-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:12px;align-items:center;
+    padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--line-strong);border-radius:10px;background:var(--paper-2)}
+  .sp-ag-row.k-consult{border-left-color:var(--blue)}
+  .sp-ag-row.k-coc{border-left-color:var(--accent);background:var(--accent-tint)}
+  .sp-ag-row.k-due{border-left-color:var(--amber);border-style:dashed;border-left-style:solid}
+  .sp-ag-t{font-variant-numeric:tabular-nums;font-weight:650;font-size:13.5px;color:var(--ink)}
+  .sp-ag-h{font-weight:600;font-size:14.5px;color:var(--ink);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sp-ag-s{font-size:12.5px;color:var(--ink-soft);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sp-ag-k{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;
+    background:var(--neutral-soft);color:var(--neutral-ink)}
+  .sp-ag-k.blue{background:var(--blue-soft);color:var(--blue-ink)}
+  .sp-ag-k.accent{background:var(--accent);color:#fff}
+  .sp-ag-k.amber{background:var(--amber-soft);color:var(--amber-ink)}
+  .sp-ag-act{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+  .sp-ag-act .btn{text-decoration:none}
+  .sp-earlier summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sp-earlier summary::-webkit-details-marker{display:none}
+  .sp-earlier summary::before{content:"\25B8";color:var(--ink-soft);transition:transform .15s}
+  .sp-earlier[open] summary::before{transform:rotate(90deg)}
+  @media (max-width:560px){
+    .sp-ag-row{grid-template-columns:68px minmax(0,1fr);gap:10px}
+    .sp-ag-t{font-size:12.5px;white-space:nowrap}
+    .sp-ag-act{grid-column:2;justify-content:flex-start}
+    .sp-agcard .sp-head{flex-wrap:wrap}
+    .sp-agcard .sp-head > .btn{flex-basis:100%;justify-content:center}
+  }
+  /* ---- Admin dashboard ---- */
+  .db-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 18px}
+  .db-kpi{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:14px 16px;
+    background:var(--paper-2);border:1px solid var(--line);border-top:3px solid var(--line-strong);border-radius:var(--r-sm);
+    box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s,transform .15s;font-family:var(--sans)}
+  .db-kpi:hover{border-color:var(--accent);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+  .db-kpi:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+  .db-kpi .l{font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+  .db-kpi .n{font-size:26px;font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+  .db-kpi .s{font-size:12.5px;color:var(--ink-soft);line-height:1.35}
+  .db-kpi.amber{border-top-color:var(--amber)} .db-kpi.amber .s{color:var(--amber-ink)}
+  .db-kpi.clay{border-top-color:var(--clay)}   .db-kpi.clay .s{color:var(--clay-ink)}
+  .db-kpi.blue{border-top-color:var(--blue)}
+  .db-cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:1100px){ .db-cols{grid-template-columns:minmax(0,1fr)} }
+  .db-todo{display:flex;flex-direction:column}
+  .db-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid var(--line)}
+  .db-row:first-child{border-top:0}
+  .db-row .dot{width:9px;height:9px;border-radius:50%;background:var(--blue)}
+  .db-row.amber .dot{background:var(--amber)} .db-row.clay .dot{background:var(--clay)}
+  .db-row .t{font-weight:600;font-size:14px;color:var(--ink)}
+  .db-row .s{font-size:12.5px;color:var(--ink-soft);margin-top:2px;line-height:1.4}
+  .db-row .btn{white-space:nowrap}
+  .db-clear{display:flex;gap:12px;align-items:center;padding:18px 16px}
+  .db-ok{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--green-soft);color:var(--green-ink);font-weight:700;flex:none}
+  .db-up{display:flex;flex-direction:column;padding:6px 10px 12px}
+  .db-day{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin:12px 6px 4px}
+  .db-day.today{color:var(--accent)}
+  .db-ev{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:118px minmax(0,1fr);gap:10px;align-items:center;
+    padding:8px 10px;border-radius:9px;border-left:3px solid var(--line-strong);font-family:var(--sans)}
+  .db-ev:hover{background:var(--sunken)}
+  .db-ev:focus-visible{box-shadow:0 0 0 3px var(--ring)}
+  .db-ev.k-coc{border-left-color:var(--accent)} .db-ev.k-recon{border-left-color:var(--clay)}
+  .db-ev.k-due{border-left-color:var(--amber)} .db-ev.k-week{border-left-color:var(--green)}
+  .db-ev .tm{font-size:12.5px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .db-ev .bd{display:flex;flex-direction:column;min-width:0}
+  .db-ev .t{font-weight:600;font-size:13.5px;color:var(--ink)}
+  .db-ev .s{font-size:12px;color:var(--ink-soft)}
+  .db-quick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 8px}
+  .db-qh{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-right:4px}
+  .db-q{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;gap:8px;align-items:center;padding:8px 13px;border-radius:999px;
+    border:1px solid var(--line-strong);background:var(--paper-2);font-size:13.5px;font-weight:600;color:var(--ink);font-family:var(--sans)}
+  .db-q:hover{border-color:var(--accent);color:var(--accent)}
+  .db-q:focus-visible{box-shadow:0 0 0 3px var(--ring)}
+  .db-q .ico{width:16px;height:16px;display:inline-flex}
+  .db-q .ico svg{width:16px;height:16px}
+  /* a dialog's Save while it waits on the network */
+  .btn.is-busy{opacity:.75;cursor:progress}
+</style>
 </head>
 <body>
   <!-- Shown the moment the page arrives, while the app below is read. -->
@@ -4859,7 +4949,17 @@ function defaultArea(members,focusUid){
 }
 
 const groupsWithStudent=(groups,sid)=>groups.filter(g=>(g.studentIds||[]).includes(sid));
-const groupOfStudent=(groups,sid)=>groupsWithStudent(groups,sid)[0]||null;
+/* A student can be on two panels: their original CoC and, after a
+   successful appeal, the newly constituted reconsideration panel. The
+   reconsideration panel is the one that speaks for them from then on, so it
+   wins; otherwise the panel with the latest sitting for this student.
+   `pred` narrows the choice first (e.g. only finalised panels). */
+function groupOfStudent(groups,sid,pred){
+  const l=groupsWithStudent(groups||[],sid).filter(g=>!pred||pred(g));
+  if(l.length<2) return l[0]||null;
+  const dayOf=g=>{ const sl=slotOfStudent(g,sid); return String((sl&&slotDate(g,sl))||""); };
+  return l.slice().sort((a,b)=>(b.reconsider?1:0)-(a.reconsider?1:0)||dayOf(b).localeCompare(dayOf(a)))[0];
+}
 const groupMembers=g=>Array.isArray(g?.members)?g.members:[];
 const groupStudents=g=>Array.isArray(g?.studentIds)?g.studentIds:[];
 const groupSessions=g=>Array.isArray(g?.sessions)?g.sessions:[];
@@ -5951,8 +6051,8 @@ async function viewPanels(v){
     const pend=asMember.filter(g=>{ const me=groupMembers(g).find(m=>m.kind==="internal"&&m.uid===S.uid);
       return groupSessions(g).some(x=>availOf(g,me,x.id)===undefined); }).length;
     const n=members.length;
-    const sch=mine.filter(x=>{ const g=groupOfStudent(groups,x.id); return g&&isFinal(g)&&isScheduled(g,x.id); }).length;
-    const finalMine=mine.some(x=>{ const g=groupOfStudent(groups,x.id); return g&&isFinal(g); });
+    const sch=mine.filter(x=>{ const g=groupOfStudent(groups,x.id,isFinal); return g&&isScheduled(g,x.id); }).length;
+    const finalMine=mine.some(x=>!!groupOfStudent(groups,x.id,isFinal));
     const memberFirst=panellistOnly||released.length>0||pend>0;
     /* Suggestions only count as a to-do for someone with students whose
        panels are not settled yet. */
@@ -6020,8 +6120,8 @@ async function viewPanels(v){
     }).length;
     // Only a finalised panel counts \u2014 a draft is invisible to supervisors.
     const scheduled=mine.filter(x=>{
-      const g=groupOfStudent(groups,x.id);
-      return g&&isFinal(g)&&isScheduled(g,x.id);
+      const g=groupOfStudent(groups,x.id,isFinal);
+      return g&&isScheduled(g,x.id);
     }).length;
     /* A tile for a switched-off step would count work nobody is asking
        for, so it goes with the step. */
@@ -6203,7 +6303,7 @@ async function viewPanels(v){
        is assessing their student, the chair, the time and the link only
        after the panel is finalised \u2014 before that, every one of those
        cells says "being arranged" and nothing more. */
-    const arranging=mine.filter(s=>{ const g=groupOfStudent(groups,s.id); return !g||!isFinal(g); }).length;
+    const arranging=mine.filter(s=>!groupOfStudent(groups,s.id,isFinal)).length;
     if(arranging) host.append(noticeBar("blue",
       arranging===mine.length
         ? "The coordinator is still arranging your students' panels. Assessors, times and the meeting link appear here once each panel is finalised."
@@ -6222,8 +6322,7 @@ async function viewPanels(v){
     t.append(el("thead",{},el("tr",{},...["Student","Proposal title","My role","Panel","Chair","CoC time","Outcome & feedback"].map(h=>el("th",{},h)))));
     const tb=el("tbody",{});
     mine.sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(s=>{
-      const g0=groupOfStudent(groups,s.id);
-      const g=(g0&&isFinal(g0))?g0:null, ms=groupMembers(g);
+      const g=groupOfStudent(groups,s.id,isFinal), ms=groupMembers(g);
       const chips=el("div",{class:"row",style:"gap:5px"});
       if(!ms.length) chips.append(el("span",{class:"pill pending"},"Being arranged"));
       else ms.forEach(m=>chips.append(seatChip(m)));
@@ -6428,6 +6527,10 @@ async function viewPanels(v){
    with no button to remember.
    ============================================================ */
 const cocKeyOf = studentDocId => "coc:"+String(studentDocId||"");
+/* Bumped when the snapshot's shape changes, so panels published under the
+   old shape are republished once. 2: reconsideration panels win over the
+   original panel and the snapshot says it is a reconsideration. */
+const COC_SNAP_VER = 2;
 
 /* What a student's own CoC block shows, as plain data. */
 function studentCocSnap(g,st){
@@ -6436,7 +6539,10 @@ function studentCocSnap(g,st){
   const chair=groupMembers(g).find(m=>isChair(g,m));
   return {
     kind:"coc", studentDocId:st.id,
-    panel:g.label||"Panel",
+    panel:g.label||"Panel", groupId:g.id||"",
+    /* A newly constituted panel reconsidering the candidature after a
+       successful appeal. The portal shows it ahead of the earlier outcome. */
+    reconsider:!!g.reconsider,
     date:day||"", start:sl?.start||"", end:sl?.end||"",
     pres:pp?{start:pp.start,qaStart:pp.qaStart,end:pp.end,presMins:pp.presMins,qaMins:pp.qaMins}:null,
     presMins:t.presMins, qaMins:t.qaMins,
@@ -6456,6 +6562,7 @@ async function syncStudentCoc(groups,students,opts={}){
      (a deleted panel leaves no stamp behind to notice it by). */
   const stale=opts.full?(groups||[]).slice():(groups||[]).filter(g=>{
     const stamp=g.studentKeysAt||0;
+    if(isStudentReleased(g)&&g.reconsider&&(g.studentKeysVer||0)<COC_SNAP_VER) return true;
     return isStudentReleased(g) ? stamp<(g.updatedAt||0)||!stamp
                                 : (Array.isArray(g.studentKeysFor)&&g.studentKeysFor.length>0);
   });
@@ -6474,7 +6581,10 @@ async function syncStudentCoc(groups,students,opts={}){
     /* Decided from ALL panels, not just the stale one, so a student moved
        from one panel to another is written by the new and not deleted by
        the old. */
-    const home=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(id));
+    /* A reconsideration panel (after a successful appeal) wins over the
+       student's original one, which still lists them until its report is
+       approved. */
+    const home=groupOfStudent(groups||[],id,isStudentReleased);
     const st=(students||[]).find(x=>x.id===id);
     if(home&&st){ ops.push({type:"set",coll:"staffKeys",id:cocKeyOf(id),merge:false,data:studentCocSnap(home,st)}); written++; }
     else { ops.push({type:"delete",coll:"staffKeys",id:cocKeyOf(id)}); removed++; }
@@ -6489,7 +6599,7 @@ async function syncStudentCoc(groups,students,opts={}){
      stamp fails the panel is simply republished next time. */
   try{
     await DB.batchWrite(stale.map(g=>({type:"update",coll:"panelGroups",id:g.id,data:{
-      studentKeysAt:Math.max(now,(g.updatedAt||0)+1),
+      studentKeysAt:Math.max(now,(g.updatedAt||0)+1),studentKeysVer:COC_SNAP_VER,
       studentKeysFor:isStudentReleased(g)?groupStudents(g).slice():[]}})));
   }catch(e){ console.warn("CoC publish stamps not saved; will retry",e); }
   return {written,removed};
@@ -7598,13 +7708,20 @@ async function viewPanelAdmin(v){
         const v=inp.value.trim();
         if(v&&!/^https?:\/\//i.test(v)){ toast("That doesn't look like a link — paste the full https:// address.",true); return false; }
         if(useOwn.checked&&!due.value){ toast("Pick the date, or untick “Use a different date”.",true); return false; }
-        const ok=await persist({...g,reportLink:v,reportDue:useOwn.checked?due.value:""},
-          v?DOCS_FOLDER+" saved for "+(g.label||"the panel")+".":(g.reportLink?DOCS_FOLDER+" removed.":"Saved."));
+        /* The dialog closes as soon as the panel is saved; the screen
+           reloads and the PIN pages follow in the background. */
+        try{ await saveGroup({...g,reportLink:v,reportDue:useOwn.checked?due.value:""}); }
+        catch(err){ toast(err?.message||"Could not save.",true); return false; }
+        toast(v?DOCS_FOLDER+" saved for "+(g.label||"the panel")+".":(g.reportLink?DOCS_FOLDER+" removed.":"Saved."));
         /* Panel members without a login reach the folder through their PIN,
            whose page is a snapshot — so it is republished now rather than
-           waiting for somebody to remember "Refresh what the PINs show". */
-        await refreshPinViews();
-        return ok;
+           waiting for somebody to remember "Refresh what the PINs show".
+           Only this panel's assessors' pages, and in the background: the
+           dialog used to stay open while the screen reloaded AND every PIN
+           page in the office was rebuilt from every semester's records,
+           which is why saving a folder link took so long. */
+        reload().then(()=>refreshPinViewsFor(g)).catch(e=>console.warn("panel reload after folder save",e));
+        return true;
       },"Save");
   }
 
@@ -7970,7 +8087,7 @@ async function viewPanelAdmin(v){
       await persist({...g,assessorsReleased:false,assessorsReleasedAt:0},
         (g.label||"Panel")+" hidden from its assessors again.");
     }
-    await refreshPinViews();
+    await refreshPinViewsFor(g);
   }
 
   /* A release switch decides WHO MAY SEE a panel, and the read-only PIN
@@ -7983,6 +8100,14 @@ async function viewPanelAdmin(v){
      the PINs show", which is cheap to press and costs nothing to defer. */
   async function refreshPinViews(){
     try{ await publishSignInKeys({quiet:true,onlyIfInUse:true}); }
+    catch(err){ console.warn("could not refresh the PIN views",err); }
+  }
+  /* Just the people on this panel (and, for the supervisors' switch, its
+     students' supervisors): fast, and it touches nobody else's page. */
+  async function refreshPinViewsFor(g,o={}){
+    const sem=activeSemester(); if(!sem||!g) return;
+    const fresh=groups.find(x=>x.id===g.id);
+    try{ await patchPinViews(sem,{students,groups,cons:cons||[]},[g,fresh],o); }
     catch(err){ console.warn("could not refresh the PIN views",err); }
   }
 
@@ -8019,12 +8144,12 @@ async function viewPanelAdmin(v){
       cl.map(c=>"  \u2022 "+(c.m.name||"?")+" \u2014 "+c.label).join("\n")+"\n\nFinalise anyway?")) return;
     await persist({...g,finalized:true,finalizedAt:Date.now()},
       (g.label||"Panel")+" released to the students' supervisors.");
-    await refreshPinViews();
+    await refreshPinViewsFor(g,{supervisors:true});
   }
   async function reopen(g){
     if(!window.confirm("Hide "+(g.label||"this panel")+" from the students' supervisors?\n\nIt disappears from their CoC tab until you release it again. The assessors' side is separate and is not affected.")) return;
     await persist({...g,finalized:false,finalizedAt:0},(g.label||"Panel")+" hidden from supervisors again.");
-    await refreshPinViews();
+    await refreshPinViewsFor(g,{supervisors:true});
   }
   async function finaliseAll(list){
     if(!window.confirm("Release "+list.length+" panel"+(list.length===1?"":"s")+" ("+
@@ -11297,6 +11422,8 @@ async function afterLogin(){
   if(best) defaultSem=best.id;
   { const saved=semRemembered(); if(saved&&S.semesters.some(x=>x.id===saved)) defaultSem=saved; }
   S.activeSem=defaultSem;
+  /* The office lands on its dashboard. */
+  if(S.role==="admin") S.tab="dashboard";
   if(S.nextTab){ S.tab=S.nextTab; S.nextTab=null; }
   renderApp();
 }
@@ -11355,6 +11482,7 @@ const NAV_ICONS={
   table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/>',
   scale:'<path d="M12 3v18M7 21h10"/><path d="M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0z"/><path d="m19 7-3 6a3 3 0 0 0 6 0z"/>',
   menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+  home:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>'
 };
 function navIcon(name){
@@ -11428,7 +11556,8 @@ function renderApp(){
      nobody, so every student-shaped tab would be empty for them — they get
      the one screen that concerns them. */
   const GROUPS = S.role==="admin"
-    ? [["Supervision",[["students","Students","users"],["schedule","Week planner","calendar"],
+    ? [["Overview",[["dashboard","Dashboard","home"]]],
+       ["Supervision",[["students","Students","users"],["schedule","Week planner","calendar"],
           ["timetables","Class timetables","clock"],["consultations","Consultation times","chat"],
           ["meetinglog","Attendance","check"],...(messagesOn()?[["notes","Messages","mail"]]:[])]],
        ["Confirmation of Candidature",[["panels","CoC panels","award"],["cocsummary","Panel summary","table"],["cocreports","CoC reports","clipboard"],["appeals","CoC appeals","scale"]]],
@@ -11774,7 +11903,7 @@ async function drawMain(){
   const v=el("div",{});
   v.innerHTML="<div class='loading ui' role='status'><span class='spin'></span>Loading…</div>";
   host.replaceChildren(v);
-  const views={students:viewStudents, schedule:viewSchedule, timetables:viewTimetables,
+  const views={dashboard:viewDashboard, students:viewStudents, schedule:viewSchedule, timetables:viewTimetables,
     consultations:viewConsultations, meetinglog:viewMeetingLog, notes:viewNotes,
     panels:S.role==="admin"?viewPanelAdmin:viewPanels, report:viewReport, export:viewExport,
     contacts:viewContacts, people:viewPeople, settings:viewSettings,
@@ -11796,6 +11925,192 @@ async function drawMain(){
           : "Check your connection and try again. ("+(err?.message||"unknown error")+")"),
       el("button",{class:"btn sm",onclick:()=>drawMain()},"Try again")));
   }
+}
+
+/* ============================================================
+   5c. DASHBOARD (admin) — the whole semester on one screen
+   What is happening, what needs the office, and what is coming up — each
+   line a button to the screen where it is dealt with. Six independent
+   reads for the chosen semester, sent together; any one failing costs its
+   own lines, never the screen. Nothing here writes anything.
+   ============================================================ */
+async function viewDashboard(v){
+  v.innerHTML="";
+  const redraw=()=>viewDashboard(v);
+  const sem=activeSemester();
+  const cw=currentWeekOf(sem);
+  const h=new Date().getHours();
+  const first=String(S.userName||"").replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i,"").split(/\s+/)[0];
+  v.append(el("div",{class:"section-title"},el("div",{},
+    el("div",{class:"eyebrow ui"},(sem?.label||"No semester")+(cw?" · Week "+cw+" of "+(sem.weeks||12):"")),
+    el("h2",{},(h<12?"Good morning":h<17?"Good afternoon":"Good evening")+(first?", "+first:"")))));
+  const bar=el("div",{class:"toolbar"}); bar.append(semesterPicker(redraw));
+  bar.append(el("button",{class:"btn ghost sm",style:"align-self:flex-end",title:"Read everything again",onclick:()=>{ forgetAllReads(); redraw(); }},"↻ Refresh"));
+  v.append(bar);
+  if(!S.activeSem){ v.append(emptyState("No semester selected","Add a semester on Semesters & staff to get started.")); return; }
+
+  const sid=S.activeSem, safe=p=>p.then(r=>r||[],e=>{ console.warn("dashboard read failed",e); return null; });
+  const [students,groups,cons,tts,reps,recs]=await Promise.all([
+    safe(DB.list("students",{semesterId:sid})),safe(DB.list("panelGroups",{semesterId:sid})),
+    safe(DB.list("consultations",{semesterId:sid})),safe(DB.list("timetables",{semesterId:sid})),
+    safe(DB.list("cocReports",{semesterId:sid})),safe(DB.list("appeals",{semesterId:sid}))]);
+  if(!v.isConnected) return;
+  if(!students){ v.append(noticeBar("clay","The students for this semester couldn't be read. Check your connection, then Refresh.")); return; }
+  const thesis=isThesisSem(sem), weeks=sem?.weeks||12;
+  const G=groups||[], C=cons||[], T=tts||[], R=reps||[], A=recs||[];
+  /* Keep the students' own CoC pages in step from here too, not only from
+     CoC panels: a released panel (a reconsideration panel above all) then
+     reaches the student portal even if nobody opens that screen. Writes
+     nothing unless a panel changed since it was last published. */
+  if(groups&&!thesis) syncStudentCoc(G,students).catch(e=>console.warn("CoC sync from the dashboard",e));
+  const today=apToday(), inDays=n=>cocAddDays(today,n);
+  const stuName=id=>students.find(x=>x.id===id)?.name||"a student";
+  const pl=(n,w)=>n+" "+w+(n===1?"":"s");
+
+  /* ---- the numbers ---- */
+  const consOf=id=>C.find(c=>c.studentDocId===id);
+  const noPrin=students.filter(s=>!s.principalUid);
+  const noCons=students.filter(s=>{ const c=consOf(s.id); return !c||(!c.day&&!String(c.meetingLink||"").trim()); });
+  let held=0,att=0; const low=[];
+  C.forEach(c=>{ const x=consultStats(c,weeks); held+=x.held; att+=x.attended;
+    if(x.held>=3&&x.attended/x.held<.75&&students.some(s=>s.id===c.studentDocId)) low.push({c,rate:Math.round(x.attended/x.held*100)}); });
+  const rate=held?Math.round(att/held*100):null;
+  const lastW=cw&&cw>1?cw-1:null;
+  const unlogged=lastW?C.filter(c=>{ const et=weekTime(c,lastW), l=weekLog(c,lastW); return et.day&&l.held!==true&&l.held!==false&&students.some(s=>s.id===c.studentDocId); }):[];
+  const placed=new Set(G.flatMap(groupStudents));
+  const unplaced=students.filter(s=>!placed.has(s.id));
+  const sched=G.reduce((n,g)=>n+scheduledCount(g),0);
+  const openAp=A.filter(r=>!["closed","withdrawn","notaccepted"].includes(r.stage));
+  const apAct=A.filter(r=>["lodged","decided"].includes(r.stage));
+
+  const go=(tab,extra)=>()=>{ if(extra) extra(); goTab(tab); };
+  const kpi=(n,label,sub,tab,tone)=>el("button",{type:"button",class:"db-kpi"+(tone?" "+tone:""),onclick:go(tab),title:"Open "+((S.navIndex||{})[tab]?.label||tab)},
+    el("div",{class:"l"},label),el("div",{class:"n"},String(n)),sub?el("div",{class:"s"},sub):"");
+  const k=el("div",{class:"db-kpis"});
+  k.append(kpi(students.length,"Students",noPrin.length?pl(noPrin.length,"student")+" without a principal":"All allocated","students",noPrin.length?"amber":""));
+  k.append(kpi((students.length-noCons.length)+" / "+students.length,thesis?"Meeting times set":"Consultation times set",
+    noCons.length?noCons.length+" still to set":"Every student has one","consultations",noCons.length?"amber":""));
+  k.append(kpi(rate===null?"—":rate+"%","Attendance",held?att+" of "+pl(held,"meeting")+" attended":"Nothing recorded yet","meetinglog",rate!==null&&rate<75?"clay":""));
+  k.append(kpi(cw?"Week "+cw:(sem?.start&&today<sem.start?"Not started":"—"),"Teaching week",
+    lastW?(unlogged.length?pl(unlogged.length,"meeting")+" from week "+lastW+" not logged":"Week "+lastW+" fully logged"):(sem?.start?"of "+weeks:"No start date set"),
+    "schedule",unlogged.length?"amber":""));
+  if(!thesis){
+    k.append(kpi(sched+" / "+students.length,"CoC scheduled",unplaced.length?pl(unplaced.length,"student")+" not on a panel":G.length?"Everyone is on a panel":"No panels yet","panels",""));
+    k.append(kpi(openAp.length,"Open appeals",apAct.length?apAct.length+" need the office":"Nothing waiting on the office","appeals",apAct.length?"amber":""));
+  }
+  if(messagesOn()&&S.unreadNotes) k.append(kpi(S.unreadNotes,"Unread messages","In supervision threads","notes","blue"));
+  v.append(k);
+
+  /* ---- needs attention ---- */
+  const todo=[];
+  const add=(tone,title,sub,tab,btn,extra)=>todo.push({tone,title,sub,tab,btn,extra});
+  const names=l=>l.slice(0,3).map(x=>x.name||"?").join(", ")+(l.length>3?" and "+(l.length-3)+" more":"");
+  if(noPrin.length) add("amber",pl(noPrin.length,"student")+" without a principal supervisor",names(noPrin),"students","Allocate");
+  if(noCons.length) add("amber",pl(noCons.length,"student")+" with no "+(thesis?"meeting":"consultation")+" time",names(noCons),"consultations","Set times");
+  if(unlogged.length) add("amber",pl(unlogged.length,"meeting")+" from week "+lastW+" not logged yet",
+    [...new Set(unlogged.map(c=>c.principalName||supName(c.supervisorUid)))].slice(0,4).join(", ")+" — attendance is recorded on these","meetinglog","Open attendance");
+  if(low.length) add("clay",pl(low.length,"student")+" below 75% attendance",
+    low.sort((a,b)=>a.rate-b.rate).slice(0,4).map(x=>stuName(x.c.studentDocId)+" ("+x.rate+"%)").join(", "),"meetinglog","Review");
+  const pendTT=T.filter(t=>t.status==="pending");
+  if(!thesis&&pendTT.length) add("blue",pl(pendTT.length,"class time")+" waiting for approval","","timetables","Review");
+  if(!thesis){
+    /* reconsideration panels: the student only sees their time once the
+       panel is finalised AND released to them */
+    G.filter(g=>g.reconsider&&groupStudents(g).length).forEach(g=>{
+      const who=groupStudents(g).map(stuName).join(", ");
+      if(!isFinal(g)) add("clay",(g.label||"Reconsideration panel")+" is still a draft",who+" — finalise it and release it to the assessors and the student","panels","Open panel",()=>{ S.panelOpen=S.panelOpen||{}; S.panelOpen[g.id]=true; });
+      else if(!isStudentReleased(g)) add("clay",(g.label||"Reconsideration panel")+" isn't released to the student",who+" can't see the time in the student portal yet","panels","Release it",()=>{ S.panelOpen=S.panelOpen||{}; S.panelOpen[g.id]=true; });
+    });
+    A.filter(r=>(r.result==="newpanel"||r.dm?.decision==="newpanel")&&!r.panelGid&&["dm","decided","closed"].includes(r.stage)).forEach(r=>
+      add("clay","Set up the reconsideration panel for "+(r.name||"a student"),"The appeal was upheld with a new panel; it hasn't been created yet","appeals","Open appeal",()=>{ S.apOpen=r.id; }));
+    if(G.length&&unplaced.length) add("blue",pl(unplaced.length,"student")+" not on a CoC panel",names(unplaced),"panels","Seat them");
+    const withStu=G.filter(g=>groupStudents(g).length);
+    const noLink=withStu.filter(g=>!String(g.meetingLink||"").trim()&&!(g.slots||[]).some(x=>String(x.link||"").trim()));
+    if(noLink.length) add("amber",pl(noLink.length,"panel")+" without a meeting link",noLink.map(g=>g.label||"Panel").join(", "),"panels","Add links");
+    const noDocs=withStu.filter(g=>!docsLinkOf(g));
+    if(noDocs.length) add("blue",pl(noDocs.length,"panel")+" without a CoC Panel Documents folder",noDocs.map(g=>g.label||"Panel").join(", "),"panels","Add folders");
+    const notStu=withStu.filter(g=>isFinal(g)&&!isStudentReleased(g)&&!g.reconsider);
+    if(notStu.length) add("blue",pl(notStu.length,"finalised panel")+" not released to students yet",notStu.map(g=>g.label||"Panel").join(", "),"panels","Release");
+    /* reports: panels that have sat but whose report isn't approved */
+    const sat=withStu.filter(g=>{ if(!isFinal(g)) return false; const ss=panelSittings(g,students); return ss.length&&ss[ss.length-1].date<today; });
+    const notOpen=sat.filter(g=>{ const r=R.find(x=>x.id===g.id||x.groupId===g.id); return !r||cocWin(r).state==="none"; });
+    const late=sat.filter(g=>{ const r=R.find(x=>x.id===g.id||x.groupId===g.id); return r&&!cocRepLocked(r)&&cocWin(r).state==="closed"; });
+    if(notOpen.length) add("amber",pl(notOpen.length,"panel")+(notOpen.length===1?" has":" have")+" sat but marking isn't open",notOpen.map(g=>g.label||"Panel").join(", "),"cocreports","Open marking");
+    if(late.length) add("clay",pl(late.length,"examination report")+" past the marking window, not approved",late.map(g=>g.label||"Panel").join(", "),"cocreports","Chase");
+    const toRec=A.filter(r=>r.stage==="lodged"), toNotify=A.filter(r=>r.stage==="decided");
+    if(toRec.length) add("amber",pl(toRec.length,"appeal")+" lodged — to receive and route",names(toRec),"appeals","Open appeals",()=>{ S.apFilter="receive"; });
+    if(toNotify.length) add("amber",pl(toNotify.length,"appeal decision")+" to send to the student",names(toNotify),"appeals","Open appeals",()=>{ S.apFilter="notify"; });
+    const dueSoon=openAp.filter(r=>r.a7?.due&&r.a7.due<=inDays(5)&&!["open"].includes(r.stage));
+    if(dueSoon.length) add(dueSoon.some(r=>r.a7.due<today)?"clay":"amber",pl(dueSoon.length,"appeal")+" with a determination due within 5 working days",
+      dueSoon.map(r=>(r.name||"?")+" ("+longDate(r.a7.due)+")").join(", "),"appeals","Open appeals");
+  }
+  /* revised proposals owed, from the released outcome notices */
+  const owed=[];
+  G.forEach(g=>Object.entries(g.outcomesOut||{}).forEach(([id,o])=>{
+    if(!o||!students.some(s=>s.id===id)) return;
+    const P=o.progress; let due="";
+    if(P&&["waiting","more"].includes(P.status)&&P.due) due=P.due;
+    else if(!P&&!o.deferred&&["CMR","MRR"].includes(o.outcome?.code)&&o.dueBy) due=o.dueBy;
+    if(due) owed.push({id,name:o.name||stuName(id),code:o.outcome?.code||"",due});
+  }));
+  const overdue=owed.filter(x=>x.due<today);
+  if(overdue.length) add("clay",pl(overdue.length,"revised proposal")+" overdue",overdue.map(x=>x.name+" ("+x.code+", "+longDate(x.due)+")").join(", "),
+    "cocsummary","Panel summary");
+
+  const ord={clay:0,amber:1,blue:2};
+  todo.sort((a,b)=>ord[a.tone]-ord[b.tone]);
+  const att2=cardShell("Needs attention",el("span",{class:"muted ui",style:"font-size:12.5px"},todo.length?pl(todo.length,"item"):""),"main");
+  if(!todo.length) att2.append(el("div",{class:"db-clear ui"},el("span",{class:"db-ok","aria-hidden":"true"},"✓"),
+    el("div",{},el("b",{},"Nothing needs the office right now."),el("div",{class:"muted"},"Allocations, consultation times, logging and the CoC are all on track for this semester."))));
+  else{
+    const list=el("div",{class:"db-todo ui"});
+    todo.forEach(t=>list.append(el("div",{class:"db-row "+t.tone},el("span",{class:"dot","aria-hidden":"true"}),
+      el("div",{class:"tx"},el("div",{class:"t"},t.title),t.sub?el("div",{class:"s"},t.sub):""),
+      el("button",{class:"btn xs"+(t.tone==="blue"?" ghost":""),onclick:go(t.tab,t.extra)},t.btn+" →"))));
+    att2.append(list);
+  }
+
+  /* ---- coming up: the next 14 days ---- */
+  const ev=[];
+  const horizon=inDays(14);
+  if(!thesis){
+    G.forEach(g=>{
+      const n=groupStudents(g).length; if(!n) return;
+      panelSittings(g,students).forEach(x=>{ if(x.date>=today&&x.date<=horizon)
+        ev.push({date:x.date,time:clockRange(x.start,x.end),kind:g.reconsider?"recon":"coc",title:(g.reconsider?"Reconsideration — ":"CoC — ")+(g.label||"Panel"),
+          sub:pl(n,"student")+(isFinal(g)?"":" · draft")+(x.link?"":" · no meeting link"),tab:"panels"}); });
+      const pd=panelReportDue(g,sem).date, r=R.find(x=>x.id===g.id||x.groupId===g.id);
+      if(pd&&pd>=today&&pd<=horizon&&!cocRepLocked(r)) ev.push({date:pd,time:"",kind:"due",title:"Examination report due — "+(g.label||"Panel"),sub:"Marks and the Chair's approval in the hub",tab:"cocreports"});
+    });
+    openAp.forEach(r=>{ const d=r.a7?.due; if(d&&d>=today&&d<=horizon) ev.push({date:d,time:"",kind:"due",title:"Appeal determination due — "+(r.name||""),sub:(AP_STAGES[r.stage]||{}).label||"",tab:"appeals",extra:()=>{ S.apOpen=r.id; }}); });
+  }
+  owed.filter(x=>x.due>=today&&x.due<=horizon).forEach(x=>ev.push({date:x.due,time:"",kind:"due",title:"Revised proposal due — "+x.name,sub:x.code+" · through Moodle",tab:"cocsummary"}));
+  if(sem?.start&&cw&&cw<weeks){ const b=semWeekBounds(sem,cw+1); if(b){ const d=ymdOf(b.mon); if(d<=horizon) ev.push({date:d,time:"",kind:"week",title:"Week "+(cw+1)+" begins",sub:weekRangeLabel(sem,cw+1),tab:"schedule"}); } }
+  if(sem?.end&&sem.end>=today&&sem.end<=horizon) ev.push({date:sem.end,time:"",kind:"week",title:"Semester ends",sub:sem.label||"",tab:"schedule"});
+  ev.sort((a,b)=>a.date.localeCompare(b.date)||String(a.time).localeCompare(String(b.time)));
+  const up=cardShell("Coming up — next 14 days",el("span",{class:"muted ui",style:"font-size:12.5px"},ev.length?ev.length+(ev.length===1?" entry":" entries"):""),"info");
+  if(!ev.length) up.append(el("div",{class:"muted ui",style:"padding:16px"},"Nothing dated in the next fortnight."));
+  else{
+    const list=el("div",{class:"db-up ui"});
+    let last="";
+    ev.forEach(x=>{
+      if(x.date!==last){ last=x.date; const d=new Date(x.date+"T00:00:00"), n=Math.round((d-new Date(today+"T00:00:00"))/86400000);
+        list.append(el("div",{class:"db-day"+(n===0?" today":"")},(n===0?"Today · ":n===1?"Tomorrow · ":"")+weekdayOf(x.date)+" "+longDate(x.date))); }
+      list.append(el("button",{type:"button",class:"db-ev k-"+x.kind,onclick:go(x.tab,x.extra)},
+        el("span",{class:"tm"},x.time||"All day"),
+        el("span",{class:"bd"},el("span",{class:"t"},x.title),x.sub?el("span",{class:"s"},x.sub):"")));
+    });
+    up.append(list);
+  }
+
+  v.append(el("div",{class:"db-cols"},el("div",{},att2),el("div",{},up)));
+
+  /* ---- shortcuts ---- */
+  const Q=[["students","Students","users"],["schedule","Week planner","calendar"],["meetinglog","Attendance","check"],
+    ...(thesis?[]:[["panels","CoC panels","award"],["cocreports","CoC reports","clipboard"],["appeals","Appeals","scale"]]),
+    ["report","Summary report","chart"],["contacts","Contacts","book"],["settings","Settings","gear"]];
+  v.append(el("div",{class:"db-quick ui"},el("div",{class:"db-qh"},"Go to"),
+    ...Q.filter(([id])=>(S.navIndex||{})[id]).map(([id,l,ic])=>el("button",{type:"button",class:"db-q",onclick:go(id)},navIcon(ic),el("span",{},l)))));
 }
 
 /* ============================================================
@@ -16362,6 +16677,46 @@ async function publishSignInKeys(opts={}){
   return {written,cleared,failed,at};
 }
 
+/* ONE panel changed (its documents folder, a release switch): republish the
+   PIN pages of just the people who can see that panel, for just its
+   semester, from data the screen already holds. The office-wide rebuild
+   (publishSignInKeys) re-reads every semester's students, panels and
+   consultations and rewrites every PIN holder's page, which is what made
+   saving a panel's folder link sit and wait. Each touched page keeps its
+   other semesters exactly as they were. Someone whose page has never been
+   published, or whose PIN changed hands, goes the full route for them alone. */
+async function patchPinViews(sem,data,gs,opts={}){
+  const users=await DB.listUsers();
+  const withPin=users.filter(u=>String(u.pin||"").trim());
+  if(!withPin.length) return {written:0,skipped:true};
+  const list=(Array.isArray(gs)?gs:[gs]).filter(Boolean);
+  const uids=new Set(), mails=new Set();
+  list.forEach(g=>{
+    groupMembers(g).forEach(m=>{ if(m.kind==="internal"&&m.uid) uids.add(m.uid);
+      memberEmails(m).forEach(e=>mails.add(String(e).trim().toLowerCase())); });
+    if(opts.supervisors) groupStudents(g).forEach(id=>{ const st=(data.students||[]).find(x=>x.id===id);
+      if(st){ if(st.principalUid) uids.add(st.principalUid); if(st.coUid) uids.add(st.coUid); } });
+  });
+  const owners={}; users.forEach(x=>{ const k=normPin(x.pin); if(k) (owners[k]=owners[k]||[]).push(x); });
+  const scope=withPin.filter(u=>(owners[normPin(u.pin)]||[]).length===1&&
+    (uids.has(u.id)||emailsOf(u).some(e=>mails.has(String(e).trim().toLowerCase()))));
+  if(!scope.length) return {written:0};
+  const at=Date.now(), ops=[], full=[];
+  await Promise.all(scope.map(async u=>{
+    const key=pinKeyOf(String(u.pin).trim());
+    let cur=null; try{ cur=await DB.getStaffKey(key); }catch(e){ cur=null; }
+    if(!cur||cur.kind!=="pin"||cur.uid!==u.id||!Array.isArray(cur.blocks)){ full.push(u.id); return; }
+    let mine=[];
+    try{ mine=await pinBlocksFor(u,[sem],data); }catch(e){ console.warn("could not build the view for "+(u.name||u.id),e); return; }
+    const keep=cur.blocks.filter(b=>b.semId?b.semId!==sem.id:b.label!==(sem.label||"Semester"));
+    const blocks=keep.concat(mine).sort((a,b)=>(a.label>b.label?-1:1));
+    ops.push({type:"set",coll:"staffKeys",id:key,merge:false,data:{kind:"pin",uid:u.id,who:pinWhoOf(u),blocks,at}});
+  }));
+  if(ops.length) await DB.batchWrite(ops);
+  for(const id of full){ try{ await publishSignInKeys({quiet:true,only:id}); }catch(e){ console.warn("PIN view not refreshed for "+id,e); } }
+  return {written:ops.length,full:full.length};
+}
+
 function pinRuleHelp(){
   const p=(t,st="")=>el("p",{style:"margin:0 0 9px;font-size:14px;line-height:1.5"+(st?";"+st:"")},t);
   const h=t=>el("div",{class:"ui",style:"font-weight:700;margin:14px 0 5px"},t);
@@ -18016,8 +18371,11 @@ function cocDatesStrip(o){
     due.append(el("div",{style:"min-width:0"},el("div",{class:"lb"},"Report due · not a meeting"),
       el("div",{class:"dd"},o.dueTxt)));
   }else{
+    /* With the presentations already on the calendar, "once they are
+       scheduled" was wrong: there is simply no deadline rule set yet. */
     due.append(el("div",{style:"min-width:0"},el("div",{class:"lb"},"Report due"),
-      el("div",{class:"cx-sub"},"Worked out once the presentations are scheduled.")));
+      el("div",{class:"cx-sub"},ss.length?"No deadline set yet — the MRes office will confirm it."
+        :"Worked out once the presentations are scheduled.")));
   }
   return el("div",{class:"cx-dates"+(o.inset?" inset":"")},pres,due);
 }
@@ -18068,7 +18426,7 @@ async function studentCocLoad(en){
   if(!(snap&&snap.kind==="coc")){
     try{
       const groups=await DB.list("panelGroups",{semesterId:en.semesterId});
-      const g=(groups||[]).find(x=>isStudentReleased(x)&&groupStudents(x).includes(en.id))||null;
+      const g=groupOfStudent(groups||[],en.id,isStudentReleased);
       if(g) snap=studentCocSnap(g,en);
     }catch(err){ liveDenied=true; }
   }
@@ -18169,6 +18527,16 @@ async function renderStudentView(sid,enrolments,sems){
     else msgPanel(d);
   }
 
+  /* After a successful appeal: the reconsideration panel this student is on,
+     until that panel's own outcome is released. While it stands it is the
+     thing to show — the earlier outcome is history by then. */
+  function reconOf(d){
+    const s=d.coc?.snap; if(!s||!s.reconsider) return null;
+    const o=d.outcome;
+    if(o&&((s.groupId&&o.groupId===s.groupId)||(!s.groupId&&o.panel===s.panel))) return null;
+    return s;
+  }
+
   /* ---- Hero: who, which semester, who supervises, how far through ---- */
   function hero(d){
     const en=d.en, sem=d.sem;
@@ -18216,17 +18584,21 @@ async function renderStudentView(sid,enrolments,sems){
   const joinBtn=(href,label="Join meeting",cls="btn sm")=>el("a",{class:cls,href,target:"_blank",rel:"noopener",
     style:"text-decoration:none"},spIcon("video",16),label);
 
-  /* ---- Overview ---- */
+  /* ---- Overview ----
+     One screen that answers "what do I need to know?": anything urgent
+     first (a CoC this fortnight, a revision deadline, today's meeting,
+     unread messages), the three "next" tiles, then everything coming up in
+     the next three weeks on one dated list — consultations, classes, the
+     CoC (or the reconsideration panel after an appeal) and deadlines. */
   function homePanel(d){
-    const unread=unreadOf(d);
-    if(unread) panelNode.append(el("div",{class:"sp-alert",role:"status"},
-      spIcon("msg",20),
-      el("div",{class:"grow"},el("b",{},spPlural(unread,"new message"))," from your supervisors"),
-      el("button",{class:"btn sm",onclick:()=>go("msg")},"Read now")));
+    const al=importantAlerts(d);
+    if(al.length) panelNode.append(el("div",{class:"sp-alerts"},...al));
 
     const grid=el("div",{class:"sp-grid"});
     grid.append(nextConsultTile(d), isThesisSem(d.sem)?"":nextClassTile(d), isThesisSem(d.sem)?examTile(d):cocTile(d));
-    panelNode.append(el("div",{},el("div",{class:"sp-label"},"Coming up"),grid));
+    panelNode.append(el("div",{},el("div",{class:"sp-label"},"Next up"),grid));
+
+    panelNode.append(agendaCard(d));
 
     // at a glance
     const stats=attStats(d);
@@ -18236,6 +18608,132 @@ async function renderStudentView(sid,enrolments,sems){
     glance.append(el("div",{class:"row",style:"margin-top:14px"},
       el("button",{class:"btn ghost sm",onclick:()=>go("meet")},"See week by week \u2192")));
     if(stats.held) panelNode.append(glance);
+  }
+
+  /* The revision deadline on a released outcome, while one is owed. */
+  function revisionDue(d){
+    const oc=d.outcome; if(!oc||reconOf(d)) return null;
+    const P=oc.progress;
+    if(P&&["waiting","more"].includes(P.status)&&P.due)
+      return {due:P.due,what:P.status==="more"?"Updated proposal due":"Revised proposal due"};
+    if(!P&&!oc.deferred&&["CMR","MRR"].includes(oc.outcome?.code)&&oc.dueBy)
+      return {due:oc.dueBy,what:"Revised proposal due"};
+    return null;
+  }
+
+  /* Everything dated in the next `days` days (the CoC whenever it is). */
+  function upcomingItems(d,days){
+    const now=new Date(), horizon=new Date(now.getTime()+days*86400000), out=[];
+    if(!d.consErr) d.cons.forEach(c=>spConsultOccurrences(c,d.sem,d.weeks).forEach(o=>{
+      if(!o.start||!o.end||o.end<=now||o.start>horizon||o.cancelled||o.log.held===true) return;
+      out.push({kind:"consult",at:o.start,end:o.end,title:"Consultation"+(c.principalName?" with "+c.principalName:""),
+        sub:["Week "+o.w,o.et.mode].filter(Boolean).join(" \u00B7 "),link:o.et.link||"",tag:o.et.overridden?"Time changed":"",
+        uid:"consult-"+(c.id||"c")+"-w"+o.w});
+    }));
+    if(!d.classErr&&!isThesisSem(d.sem)) d.classes.forEach(t=>{
+      const u=unitById(d.sem,t.unitId);
+      for(let w=1;w<=d.weeks;w++){
+        const date=spDateOf(d.sem,w,t.day); if(!date) break;
+        const st=spAt(date,t.start), en=spAt(date,t.end||t.start);
+        if(en<=now) continue; if(st>horizon) break;
+        out.push({kind:"class",at:st,end:en,title:(u?.code?u.code+" class":"Class"),sub:[u?.name,t.room].filter(Boolean).join(" \u00B7 "),
+          uid:"class-"+(t.id||t.unitId)+"-w"+w});
+      }
+    });
+    const {state,snap}=d.coc||{};
+    if(state==="ok"&&snap?.date&&snap.start&&(!d.outcome||reconOf(d))){
+      const day=spYmdDate(snap.date);
+      if(day&&spDaysUntil(day)>=0) out.push({kind:"coc",at:spAt(day,snap.start),end:spAt(day,snap.end||snap.start),
+        title:snap.reconsider?"CoC reconsideration panel":"Your CoC presentation",
+        sub:[snap.panel,snap.chair?"Chair "+snap.chair:""].filter(Boolean).join(" \u00B7 "),link:snap.link||"",
+        uid:"coc-"+(snap.reconsider?"recon-":"")+d.en.id,go:"coc"});
+    }
+    const rd=revisionDue(d);
+    if(rd){ const day=spYmdDate(rd.due);
+      if(day&&spDaysUntil(day)>=-30) out.push({kind:"due",at:day,allDay:true,date:rd.due,title:rd.what,
+        sub:"Submit through Moodle \u2014 not a meeting",uid:"due-"+d.en.id+"-"+rd.due,go:"coc"}); }
+    return out.sort((a,b)=>a.at-b.at);
+  }
+
+  function agendaCard(d){
+    const DAYS_AHEAD=21;
+    const items=upcomingItems(d,DAYS_AHEAD);
+    const card=el("section",{class:"sp-card sp-agcard"});
+    const timed=items.filter(x=>!x.allDay||x.date);
+    const calBtn=timed.length?el("button",{class:"btn ghost sm",type:"button",title:"Adds everything listed here to your calendar",onclick:()=>{
+      spIcs(timed.map(x=>x.allDay?{uid:x.uid,allDay:true,date:x.date,title:x.title,desc:x.sub,transp:"TRANSPARENT"}
+        :{uid:x.uid,start:x.at,end:x.end>x.at?x.end:new Date(x.at.getTime()+30*60000),title:x.title,desc:[x.sub,x.link?"Join: "+x.link:""].filter(Boolean).join(". "),
+          url:x.link||"",alarms:["-PT15M"]}),"my-mres-schedule.ics");
+      toast("Calendar file downloaded \u2014 open it to add "+timed.length+(timed.length===1?" entry":" entries")+"."); }},spIcon("plus",16),"Add all to calendar"):"";
+    card.append(cardHead("cal","blue","Coming up",
+      "Next three weeks: meetings, classes, CoC and deadlines",calBtn));
+    if(!items.length){
+      card.append(el("div",{class:"sp-empty"},d.sem?.start?"Nothing scheduled in the next three weeks."
+        :"Dates appear here once the MRes office has set this semester's start date."));
+      return card;
+    }
+    let all=false;
+    const list=el("div",{class:"sp-ag"});
+    const KIND={consult:["Meeting","blue"],class:["Class","neutral"],coc:["CoC","accent"],due:["Deadline","amber"]};
+    const paint=()=>{
+      list.replaceChildren();
+      const shown=all?items:items.slice(0,8);
+      let lastDay="";
+      shown.forEach(x=>{
+        const dk=ymdOf(x.at);
+        if(dk!==lastDay){ lastDay=dk; const n=spDaysUntil(x.at);
+          list.append(el("div",{class:"sp-ag-day"+(n===0?" today":"")},
+            n<0?spShortDate(x.at)+" \u00B7 overdue":n===0?"Today \u00B7 "+spShortDate(x.at):n===1?"Tomorrow \u00B7 "+spShortDate(x.at):spShortDate(x.at))); }
+        const [kl,kc]=KIND[x.kind]||["",""];
+        const right=el("div",{class:"sp-ag-act"});
+        if(x.tag) right.append(el("span",{class:"pill pending"},x.tag));
+        if(x.link&&spDaysUntil(x.at)<=1) right.append(joinBtn(x.link,"Join","btn xs"));
+        else if(x.go) right.append(el("button",{class:"btn xs ghost",type:"button",onclick:()=>go(x.go)},"Details"));
+        list.append(el("div",{class:"sp-ag-row k-"+x.kind},
+          el("div",{class:"sp-ag-t"},x.allDay?"All day":clockTime(pad2(x.at.getHours())+":"+pad2(x.at.getMinutes()))),
+          el("div",{style:"min-width:0"},
+            el("div",{class:"sp-ag-h"},el("span",{class:"sp-ag-k "+kc},kl),x.title),
+            x.sub?el("div",{class:"sp-ag-s"},x.sub):""),
+          right));
+      });
+      if(items.length>8) list.append(el("button",{class:"btn ghost sm sp-more",type:"button",onclick:()=>{ all=!all; paint(); }},
+        all?"Show fewer":"Show all "+items.length));
+    };
+    paint();
+    card.append(list);
+    return card;
+  }
+
+  /* The few things worth interrupting the page for. */
+  function importantAlerts(d){
+    const out=[];
+    const box=(tone,icon,body,...acts)=>el("div",{class:"sp-alert "+tone,role:"status"},spIcon(icon,20),
+      el("div",{class:"grow"},...body),...acts);
+    /* the CoC (or the reconsideration panel) within a fortnight */
+    const {state,snap}=d.coc||{}, recon=reconOf(d);
+    if(state==="ok"&&snap?.date&&(!d.outcome||recon)){
+      const day=spYmdDate(snap.date), n=day?spDaysUntil(day):-1;
+      if(day&&n>=0&&n<=14) out.push(box(n<=2?"amber":"blue","award",
+        [el("b",{},(recon?"CoC reconsideration panel":"Your CoC")+" "+(n===0?"is today":n===1?"is tomorrow":"is in "+n+" days")),
+         " \u2014 "+weekdayOf(snap.date)+" "+longDate(snap.date)+", "+clockRange(snap.start,snap.end)+"."],
+        n===0&&snap.link?joinBtn(snap.link,"Join"):el("button",{class:"btn sm",onclick:()=>go("coc")},"Details")));
+    }
+    /* a revised proposal owed */
+    const rd=revisionDue(d);
+    if(rd){ const day=spYmdDate(rd.due), n=day?spDaysUntil(day):null;
+      if(n!==null&&n<=14) out.push(box(n<0?"clay":"amber","clock",
+        [el("b",{},rd.what+" "+(n<0?"\u2014 "+spPlural(-n,"day")+" overdue":n===0?"today":n===1?"tomorrow":"in "+n+" days")),
+         " \u00B7 "+longDate(rd.due)+". Submit through Moodle."],
+        el("button",{class:"btn sm",onclick:()=>go("coc")},"See my CoC"))); }
+    /* a consultation today */
+    const nx=d.consErr?null:spNextConsult(d);
+    if(nx&&spDaysUntil(nx.o.date)===0) out.push(box("blue","video",
+      [el("b",{},"Consultation today"),", "+clockRange(nx.o.et.start,nx.o.et.end)+(nx.c.principalName?" with "+nx.c.principalName:"")+"."],
+      nx.o.et.link?joinBtn(nx.o.et.link,"Join"):""));
+    const unread=unreadOf(d);
+    if(unread) out.push(box("blue","msg",[el("b",{},spPlural(unread,"new message"))," from your supervisors"],
+      el("button",{class:"btn sm",onclick:()=>go("msg")},"Read now")));
+    return out;
   }
 
   function nextConsultTile(d){
@@ -18318,9 +18816,11 @@ async function renderStudentView(sid,enrolments,sems){
     panelNode.append(c);
   }
   function cocTile(d){
-    const t=el("section",{class:"sp-card sp-tile"},el("div",{class:"sp-label",style:"margin:0"},spIcon("award",14),"Confirmation of Candidature"));
+    const recon=reconOf(d);
+    const t=el("section",{class:"sp-card sp-tile"+(recon?" sp-tile-hl":"")},el("div",{class:"sp-label",style:"margin:0"},spIcon("award",14),
+      recon?"CoC reconsideration panel":"Confirmation of Candidature"));
     const {state,snap}=d.coc;
-    if(d.outcome){
+    if(d.outcome&&!recon){
       const oc=d.outcome, code=oc.deferred?"Deferred":oc.outcome.code;
       t.append(el("div",{class:"sp-big",style:"margin-top:8px"},"Outcome released"),
         el("div",{class:"sp-tags"},el("span",{class:"pill "+(code==="C"?"approved":code==="NC"?"missed":"pending")},code),
@@ -18332,11 +18832,13 @@ async function renderStudentView(sid,enrolments,sems){
     if(state!=="ok"){
       t.append(el("div",{class:"sp-empty"},
         state==="error"?"Your CoC details can't be loaded right now."
-        :state==="noTime"?"You are on "+(snap.panel||"a panel")+". Your presentation time is still being arranged."
+        :state==="noTime"?(recon?"A newly constituted panel ("+(snap.panel||"reconsideration panel")+") will reconsider your candidature. Your time is still being arranged."
+          :"You are on "+(snap.panel||"a panel")+". Your presentation time is still being arranged.")
         :"Still being arranged. Your time will be emailed to you and will appear here once it is set."));
       return t;
     }
     const day=spYmdDate(snap.date), cd=day?spCountdown(day):null;
+    if(recon) t.append(el("div",{class:"sp-tags",style:"margin:8px 0 2px"},el("span",{class:"pill blue"},"After your appeal")));
     t.append(el("div",{class:"sp-when"},day?spDateTile(day):"",
       el("div",{style:"min-width:0"},
         el("div",{class:"sp-big"},day?weekdayOf(snap.date):longDate(snap.date)),
@@ -18521,10 +19023,21 @@ async function renderStudentView(sid,enrolments,sems){
   /* ---- CoC ---- */
   function cocPanel(d){
     const {state,snap}=d.coc;
+    const recon=reconOf(d);
     const c=el("section",{class:"sp-card"});
-    c.append(cardHead("award","amber","My Confirmation of Candidature",""));
+    c.append(cardHead("award",recon?"blue":"amber",recon?"My CoC reconsideration":"My Confirmation of Candidature",
+      recon?"A newly constituted CoC Panel, after your appeal":""));
+    /* The earlier outcome, shown under a reconsideration panel's time
+       rather than in place of it. */
+    const earlier=()=>{ if(!recon||!d.outcome) return;
+      panelNode.append(el("details",{class:"sp-card sp-earlier"},
+        el("summary",{},el("b",{},"Your earlier outcome"),el("span",{class:"muted"}," — "+(d.outcome.panel||"original panel")+" · "+(d.outcome.deferred?"Deferred":d.outcome.outcome?.code||""))),
+        el("div",{style:"margin-top:12px"},cocOutcomeView(d.outcome)))); };
+    if(recon) c.append(el("div",{class:"sp-alert soft",role:"note",style:"margin:0 0 14px"},spIcon("award",18),
+      el("div",{class:"grow"},el("b",{},"Your appeal was upheld. "),
+        "A newly constituted CoC Panel will reconsider your candidature. You present your proposal again at the time below; the panel's outcome replaces the earlier one once it is released.")));
     /* Once the office releases the outcome, it is what this card is for. */
-    if(d.outcome){
+    if(d.outcome&&!recon){
       c.append(el("div",{class:"sp-label",style:"margin:0 0 10px"},"Your outcome"),cocOutcomeView(d.outcome),
         el("p",{class:"sp-note",style:"margin-top:12px"},"Please discuss this outcome with your supervisors."));
       panelNode.append(c);
@@ -18543,7 +19056,7 @@ async function renderStudentView(sid,enrolments,sems){
     if(state==="noTime"){
       c.append(el("p",{style:"margin:0 0 8px"},"You are on ",el("b",{},snap.panel||"a panel"),"."),
         el("div",{class:"sp-empty"},"Your presentation time is still being arranged. It will appear here once it is set."));
-      panelNode.append(c); return;
+      panelNode.append(c); earlier(); return;
     }
     const day=spYmdDate(snap.date), cd=day?spCountdown(day):null;
     c.append(el("div",{class:"sp-coc-top"},
@@ -18569,8 +19082,8 @@ async function renderStudentView(sid,enrolments,sems){
     if(snap.link) acts.append(joinBtn(snap.link,"Join my CoC","btn"));
     else acts.append(el("span",{class:"pill pending"},"Meeting link to follow"));
     if(day&&spDaysUntil(day)>=0) acts.append(el("button",{class:"btn ghost",onclick:()=>{
-      spIcs([{uid:"coc-"+(d.en.id||sid),start:spAt(day,snap.start),end:spAt(day,snap.end||snap.start),
-        title:"Confirmation of Candidature \u2014 "+(snap.panel||"panel"),
+      spIcs([{uid:"coc-"+(recon?"recon-":"")+(d.en.id||sid),start:spAt(day,snap.start),end:spAt(day,snap.end||snap.start),
+        title:(recon?"CoC reconsideration":"Confirmation of Candidature")+" \u2014 "+(snap.panel||"panel"),
         desc:"Presentation "+(snap.presMins||"")+" min"+(snap.qaMins?", then "+snap.qaMins+" min Q&A":"")+
           ". Chair: "+(snap.chair||"TBC")+"."+(snap.link?" Join: "+snap.link:""),url:snap.link||""}],"CoC.ics");
       toast("Calendar file downloaded \u2014 open it to add your CoC."); }},spIcon("plus",16),"Add to calendar"));
@@ -18587,6 +19100,7 @@ async function renderStudentView(sid,enrolments,sems){
     ];
     tips.append(el("ul",{class:"sp-check"},...items.map(t=>el("li",{},spIcon("check",14),el("span",{},t)))));
     panelNode.append(tips);
+    earlier();
   }
 
   /* ---- Messages ---- */
@@ -18780,7 +19294,7 @@ async function pinBlocksFor(u,sems,preload,opts={}){
          An assessor on an unreleased panel still sees nothing here; once it
          is released to its ASSESSORS, the panel appears in the section
          above, which is where an assessor's view of it belongs. */
-      const g=groups.find(x=>groupStudents(x).includes(s.id)&&(opts.all||isFinal(x)));
+      const g=groupOfStudent(groups,s.id,x=>opts.all||isFinal(x));
       let coc=null;
       if(g){
         const sl=slotOfStudent(g,s.id), d=sl?slotDate(g,sl):"", pp=sl?slotParts(g,sl):null;
@@ -18826,7 +19340,7 @@ async function pinBlocksFor(u,sems,preload,opts={}){
               coc, con, outcome};
     });
 
-    out.push({label:sem.label||"Semester", panels, students:stus});
+    out.push({semId:sem.id, label:sem.label||"Semester", panels, students:stus});
   }
   return out;
 }
@@ -26490,9 +27004,13 @@ function apPanelOfficeBox(ctx){
     const sess=g?groupSessions(g).find(x=>x.id===g.chosenSessionId):null;
     box.append(el("div",{class:"ap-subh",style:"margin-top:0"},"Reconsideration panel"),
       el("div",{class:"row",style:"gap:8px;flex-wrap:wrap;align-items:center"},el("span",{class:"pill "+(g?.finalized?"approved":"pending")},g?.finalized?"Finalised":"Draft — to finalise"),
+        /* The student's portal shows the time only once the panel is
+           released to them — the step most easily missed. */
+        g?el("span",{class:"pill "+(isStudentReleased(g)?"approved":"missed")},isStudentReleased(g)?"Visible to the student":"Not visible to the student yet"):"",
         el("b",{},rec.panelLabel||g?.label||"Panel"),el("span",{class:"muted"},sess?apWhen(sess):""),
         el("button",{class:"btn xs",onclick:()=>{ S.panelOpen=S.panelOpen||{}; S.panelOpen[rec.panelGid]=true; goTab("panels"); }},"Open on CoC panels →")),
-      el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},"On CoC panels: check it, finalise, release it to the assessors (and the time to the student). Open marking on CoC reports as usual — the panel uses the same examination report form."));
+      el("p",{class:"muted",style:"margin:6px 0 0;font-size:12.5px"},"On CoC panels: check it, finalise, release it to the assessors and ",el("b",{},"release it to the student"),
+        " — their portal then shows the reconsideration time ahead of the earlier outcome. Open marking on CoC reports as usual — the panel uses the same examination report form."));
     return box;
   }
   box.append(el("div",{class:"ap-subh",style:"margin-top:0"},"Reconsideration panel — set it up"));
@@ -27530,14 +28048,20 @@ function modal(title,bodyNode,onSave,saveLabel="Save"){
   }
   saveBtn.onclick=async()=>{
     saveBtn.disabled=true;
+    /* Say that something is happening — a save that waits on the network
+       used to look exactly like a button that had not been pressed. */
+    const label=saveBtn.textContent;
+    const busy=setTimeout(()=>{ if(saveBtn.disabled){ saveBtn.classList.add("is-busy"); saveBtn.textContent="Saving\u2026"; } },250);
+    const idle=()=>{ clearTimeout(busy); saveBtn.classList.remove("is-busy"); saveBtn.textContent=label; };
     try{
       const ok=await onSave();
+      idle();
       saveBtn.disabled=false;
       if(ok!==false)close();
     }catch(err){
       // e.g. Firestore "Missing or insufficient permissions" — show it,
       // don't fail silently with the modal stuck open
-      saveBtn.disabled=false;
+      idle(); saveBtn.disabled=false;
       console.error(err);
       toast((err&&err.message)||"Could not save — check your connection or permissions.",true);
     }
